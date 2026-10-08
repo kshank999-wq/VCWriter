@@ -1,31 +1,41 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from "react";
 import {
   canRestore,
+  describeRecoveryPoints,
   discardedText,
+  inBrowserStorage,
   restoreDiscardedVersion,
   type ProjectFile,
   type SyncConflict,
-} from '@vcwriter/domain';
-import type { SnapshotSummary } from '../../preload/index';
+} from "@vcwriter/domain";
+import type { SnapshotSummary } from "../../preload/index";
 
 const REASON_LABEL: Record<string, string> = {
-  autosave: 'Autosave',
-  manual: 'Manual',
-  pre_migration: 'Before a format upgrade',
-  pre_sync: 'Before a sync that had conflicts',
+  autosave: "Autosave",
+  manual: "Manual",
+  pre_migration: "Before a format upgrade",
+  pre_sync: "Before a sync that had conflicts",
 };
 
 const when = (iso: string): string => new Date(iso).toLocaleString();
 
 const size = (bytes: number): string =>
-  bytes < 1024 ? `${bytes} B` : bytes < 1024 * 1024 ? `${Math.round(bytes / 1024)} KB` : `${(bytes / 1048576).toFixed(1)} MB`;
+  bytes < 1024
+    ? `${bytes} B`
+    : bytes < 1024 * 1024
+      ? `${Math.round(bytes / 1024)} KB`
+      : `${(bytes / 1048576).toFixed(1)} MB`;
 
 interface Props {
   file: ProjectFile;
   path: string;
   conflicts: SyncConflict[];
   onRestoreVersion(next: ProjectFile): void;
-  onRestoreSnapshot(loaded: { path: string; file: ProjectFile; contentHash: string }): void;
+  onRestoreSnapshot(loaded: {
+    path: string;
+    file: ProjectFile;
+    contentHash: string;
+  }): void;
   onConflictResolved(id: string): void;
 }
 
@@ -72,7 +82,9 @@ export function RecoveryPanel({
     }
     onRestoreVersion(restoreDiscardedVersion(file, conflict));
     onConflictResolved(conflict.id);
-    setMessage(`Put back the other version of “${conflict.label}”. It will go out on the next sync.`);
+    setMessage(
+      `Put back the other version of “${conflict.label}”. It will go out on the next sync.`,
+    );
     setError(null);
   };
 
@@ -80,66 +92,112 @@ export function RecoveryPanel({
     setBusy(true);
     setError(null);
     setMessage(null);
-    const result = await window.vcwriter.restoreSnapshot({ path, snapshotId: snapshot.id });
+    const result = await window.vcwriter.restoreSnapshot({
+      path,
+      snapshotId: snapshot.id,
+    });
     setBusy(false);
 
     if (!result.ok || !result.data) {
-      setError(result.error ?? 'That snapshot could not be restored');
+      setError(result.error ?? "That snapshot could not be restored");
       return;
     }
     onRestoreSnapshot(result.data);
-    setMessage(`Restored the copy from ${when(snapshot.createdAt)}. The version you had was snapshotted first.`);
+    setMessage(
+      `Restored the copy from ${when(snapshot.createdAt)}. The version you had was snapshotted first.`,
+    );
     void refresh();
   };
 
+  /**
+   * **Absent rather than standing empty** (addendum 33 §12). Driving the
+   * preview put *Overwritten by a sync — nothing has been overwritten* at the
+   * top of the page on a host that has no sync and never will, which is the
+   * same fault the sentence below it had just lost: a section advertising
+   * what this host cannot do, and the first thing a writer sees on the page
+   * they came to for the other one. It stands on the desktop, where a
+   * conflict is a real thing and this is where it would appear.
+   */
+  const syncs = !inBrowserStorage(path);
+
   return (
     <div className="recovery">
-      <section>
-        <h2>Overwritten by a sync</h2>
-        {conflicts.length === 0 ? (
-          <p className="muted">Nothing has been overwritten. Conflicts from a sync are listed here.</p>
-        ) : (
-          <ul className="recovery-list">
-            {conflicts.map((conflict) => {
-              const text = discardedText(conflict);
-              const open = expanded === conflict.id;
-              return (
-                <li key={conflict.id}>
-                  <div className="recovery-row">
-                    <div>
-                      <strong>{conflict.label}</strong>
-                      <p className="muted">
-                        Kept the version from {conflict.kept === 'local' ? 'this computer' : 'elsewhere'} (
-                        {when(conflict.kept === 'local' ? conflict.localUpdatedAt : conflict.remoteUpdatedAt)}).
-                        The other was written{' '}
-                        {when(conflict.kept === 'local' ? conflict.remoteUpdatedAt : conflict.localUpdatedAt)}.
-                      </p>
-                    </div>
-                    <div className="recovery-actions">
-                      {text ? (
-                        <button type="button" onClick={() => setExpanded(open ? null : conflict.id)}>
-                          {open ? 'Hide' : 'Show what was overwritten'}
+      {syncs ? (
+        <section>
+          <h2>Overwritten by a sync</h2>
+          {conflicts.length === 0 ? (
+            <p className="muted">
+              Nothing has been overwritten. Conflicts from a sync are listed
+              here.
+            </p>
+          ) : (
+            <ul className="recovery-list">
+              {conflicts.map((conflict) => {
+                const text = discardedText(conflict);
+                const open = expanded === conflict.id;
+                return (
+                  <li key={conflict.id}>
+                    <div className="recovery-row">
+                      <div>
+                        <strong>{conflict.label}</strong>
+                        <p className="muted">
+                          Kept the version from{" "}
+                          {conflict.kept === "local"
+                            ? "this computer"
+                            : "elsewhere"}{" "}
+                          (
+                          {when(
+                            conflict.kept === "local"
+                              ? conflict.localUpdatedAt
+                              : conflict.remoteUpdatedAt,
+                          )}
+                          ). The other was written{" "}
+                          {when(
+                            conflict.kept === "local"
+                              ? conflict.remoteUpdatedAt
+                              : conflict.localUpdatedAt,
+                          )}
+                          .
+                        </p>
+                      </div>
+                      <div className="recovery-actions">
+                        {text ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpanded(open ? null : conflict.id)
+                            }
+                          >
+                            {open ? "Hide" : "Show what was overwritten"}
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          className="primary"
+                          onClick={() => restoreVersion(conflict)}
+                        >
+                          Put that version back
                         </button>
-                      ) : null}
-                      <button type="button" className="primary" onClick={() => restoreVersion(conflict)}>
-                        Put that version back
-                      </button>
+                      </div>
                     </div>
-                  </div>
-                  {open && text ? <pre className="recovery-text">{text}</pre> : null}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
+                    {open && text ? (
+                      <pre className="recovery-text">{text}</pre>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      ) : null}
 
       <section>
         <h2>Snapshots</h2>
-        <p className="muted">
-          Recovery points taken as you write, before a format upgrade, and before a sync that had conflicts.
-          Restoring takes a snapshot of what you have now first, so it is never a one-way door.
-        </p>
+        {/* **One copy of the promise, and it differs by host** (addendum 33
+            §12): on a disk these sit beside the project, and in a browser
+            they are in that browser — which is the one thing somebody
+            relying on this net has to be told. */}
+        <p className="muted">{describeRecoveryPoints(path)}</p>
         {snapshots.length === 0 ? (
           <p className="muted">No snapshots yet for this project.</p>
         ) : (
@@ -150,13 +208,23 @@ export function RecoveryPanel({
                   <div>
                     {/* A named point says its name; one taken by a timer has
                         nothing true to say but when (addendum 07 §9). */}
-                    <strong>{snapshot.label?.trim() || when(snapshot.createdAt)}</strong>
+                    <strong>
+                      {snapshot.label?.trim() || when(snapshot.createdAt)}
+                    </strong>
                     <p className="muted">
-                      {snapshot.label?.trim() ? when(snapshot.createdAt) : REASON_LABEL[snapshot.reason] ?? snapshot.reason}
-                      {snapshot.sizeBytes > 0 ? ` · ${size(snapshot.sizeBytes)}` : ''}
+                      {snapshot.label?.trim()
+                        ? when(snapshot.createdAt)
+                        : (REASON_LABEL[snapshot.reason] ?? snapshot.reason)}
+                      {snapshot.sizeBytes > 0
+                        ? ` · ${size(snapshot.sizeBytes)}`
+                        : ""}
                     </p>
                   </div>
-                  <button type="button" disabled={busy} onClick={() => void restore(snapshot)}>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void restore(snapshot)}
+                  >
                     Restore
                   </button>
                 </div>

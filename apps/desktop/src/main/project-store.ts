@@ -5,8 +5,11 @@ import {
   PROJECT_FORMAT_VERSION,
   ProjectFormatError,
   parseProjectFile,
+  RECOVERY_REASONS,
   serializeProjectFile,
+  snapshotsToDrop,
   type ProjectFile,
+  type RecoveryReason,
 } from '@vcwriter/domain';
 
 /**
@@ -39,7 +42,8 @@ export interface LoadedProject {
   contentHash: string;
 }
 
-export type SnapshotReason = 'autosave' | 'manual' | 'pre_migration' | 'pre_sync';
+/** The domain's word for it, so the two hosts share one vocabulary (§12). */
+export type SnapshotReason = RecoveryReason;
 
 export interface SnapshotSummary {
   id: string;
@@ -50,13 +54,11 @@ export interface SnapshotSummary {
   reason: SnapshotReason;
 }
 
-const REASONS: SnapshotReason[] = ['autosave', 'manual', 'pre_migration', 'pre_sync'];
-
-/** Snapshots that are the only copy of something, and are never pruned away. */
-const IRREPLACEABLE: SnapshotReason[] = ['pre_migration', 'pre_sync'];
-
 const reasonOf = (name: string): SnapshotReason =>
-  REASONS.find((reason) => name.includes(`.${reason}.`)) ?? 'manual';
+  RECOVERY_REASONS.find((reason) => name.includes(`.${reason}.`)) ?? 'manual';
+
+/** The stamp a snapshot's name opens with, back as the time it was taken. */
+const stampOf = (name: string): string => name.split('.')[0] ?? name;
 
 const hash = (contents: string): string => createHash('sha256').update(contents).digest('hex');
 
@@ -128,26 +130,24 @@ export const writeSnapshot = async (
   return snapshotPath;
 };
 
+/**
+ * **Which points go is the domain's rule** (addendum 33 §12). It was written
+ * out here while there was one host keeping recovery points; the browser
+ * preview keeps them too now, and *what may be thrown away* is the one part
+ * of this whose mistakes show up only when somebody needs the copy that is
+ * no longer there — so both hosts ask `snapshotsToDrop` and neither holds a
+ * second answer. The reasons that are the only copy of a document are
+ * `IRREPLACEABLE` there, which is where that rule now lives.
+ *
+ * A disk has no quota to keep under, so no budget is passed.
+ */
 const pruneSnapshots = async (directory: string): Promise<void> => {
-  const entries = (await readdir(directory)).filter((name) => name.endsWith(`.${PROJECT_EXTENSION}`)).sort();
-
-  // Pre-migration and pre-sync snapshots are the only copy of a document that
-  // no longer exists anywhere — the pre-upgrade file, and the local state a
-  // merge overwrote. Rolling autosaves must never push one of those out.
-  const disposable = entries.filter((name) => !IRREPLACEABLE.includes(reasonOf(name)));
-  const excess = disposable.length - MAX_SNAPSHOTS;
-  for (let i = 0; i < excess; i += 1) {
-    const name = disposable[i];
-    if (name) await unlink(join(directory, name)).catch(() => undefined);
-  }
-
-  // They are not unbounded either: a writer who syncs a conflicted project
-  // daily should not accumulate a year of them.
-  const preSync = entries.filter((name) => reasonOf(name) === 'pre_sync');
-  for (let i = 0; i < preSync.length - MAX_PRE_SYNC_SNAPSHOTS; i += 1) {
-    const name = preSync[i];
-    if (name) await unlink(join(directory, name)).catch(() => undefined);
-  }
+  const entries = (await readdir(directory)).filter((name) => name.endsWith(`.${PROJECT_EXTENSION}`));
+  const going = snapshotsToDrop(
+    entries.map((name) => ({ id: name, createdAt: stampOf(name), reason: reasonOf(name), sizeBytes: 0 })),
+    { keep: MAX_SNAPSHOTS, keepPreSync: MAX_PRE_SYNC_SNAPSHOTS },
+  );
+  for (const name of going) await unlink(join(directory, name)).catch(() => undefined);
 };
 
 export const listSnapshots = async (projectPath: string): Promise<SnapshotSummary[]> => {

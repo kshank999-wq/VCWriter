@@ -109,3 +109,49 @@ describe('recovering what a sync overwrote', () => {
     expect(screen.getByRole('alert').textContent).toMatch(/scene it belonged to is gone/i);
   });
 });
+
+/**
+ * **Where the copies are kept, and what this host can do** (addendum 33 §12,
+ * from Ken: *do the preview saved snapshots*).
+ *
+ * The preview keeps recovery points now, and two things about that page are
+ * the host's rather than the module's: a browser's copies are in that
+ * browser, and a browser has no sync for anything to be overwritten by.
+ */
+describe('the recovery page on each host', () => {
+  const show = (path: string) => {
+    (window as unknown as { vcwriter: unknown }).vcwriter = {
+      listSnapshots: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+      restoreSnapshot: vi.fn(),
+    };
+    render(
+      <RecoveryPanel
+        file={createProjectFile({ title: 'Lighthouse', format: 'screenplay' })}
+        path={path}
+        conflicts={[]}
+        onRestoreVersion={() => undefined}
+        onRestoreSnapshot={() => undefined}
+        onConflictResolved={() => undefined}
+      />,
+    );
+  };
+
+  it('tells a browser writer that the copies live in this browser', () => {
+    show('browser://Lighthouse.vcw');
+    expect(document.body.textContent).toMatch(/kept in this browser/i);
+    expect(document.body.textContent).toMatch(/clearing its data/i);
+  });
+
+  it('leaves the sync section out where there is no sync', () => {
+    // It stood at the top of the page saying nothing had been overwritten, on
+    // a host where nothing ever can be — above the half they came for.
+    show('browser://Lighthouse.vcw');
+    expect(screen.queryByText(/Overwritten by a sync/i)).toBeNull();
+  });
+
+  it('keeps it on the desktop, where a conflict is a real thing', () => {
+    show('/tmp/lighthouse.vcw');
+    expect(screen.getByText(/Overwritten by a sync/i)).toBeDefined();
+    expect(document.body.textContent).toMatch(/before a sync that had conflicts/i);
+  });
+});

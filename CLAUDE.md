@@ -5981,6 +5981,55 @@ push live; the build takes a minute or two.
   caught rather than a reader. Driven: the chapter's Title in the Inspector read
   *The Harbour*, typing *The Lighthouse* changed the heading in the manuscript
   beside it, and the chapters headed I, II and III were untouched.
+  **§12 is the recovery points the preview did not keep**, from Ken after §10
+  (*do the preview saved snapshots*) — §10's own named gap, and addendum 09
+  §15's shape a third time in its worst instance: not a feature reading as
+  unbuilt but **the safety net not being there** on the one build he uses.
+  **The caller was asking all along**, `useProject` having set `snapshot: true`
+  every twentieth save since autosave was written while the bridge took the
+  flag and did nothing with it. The moment there are two hosts keeping copies,
+  **which may be thrown away has to live in one place** — the only part of this
+  whose mistakes are invisible until somebody wants the copy that is gone — so
+  `snapshots.ts` holds `IRREPLACEABLE` (a pre-upgrade file and the state a
+  merge overwrote exist nowhere else) and `snapshotsToDrop`, and the desktop's
+  hand-written `pruneSnapshots` asks it with **its own suite unedited and
+  green**, which is the proof the two agree. **What is not shared is how much
+  room there is**: a disk shrugs at thirty copies and a browser's quota is
+  shared with every other site, so the preview passes a **budget in bytes**,
+  and **the newest is never dropped by it** — a copy too big for the whole
+  budget is still the one a writer wants. `RecoveryReason` is named that
+  because **`SnapshotReason` is taken** by `entities/revision.ts`, whose
+  `snapshots` collection sits in every project document and which nothing has
+  ever written (a recovery point being a copy beside a project rather than a
+  row inside it), the **seventh** name stepped around. The preview keeps them
+  in a second object store at **database version 2** — the upgrade adds a
+  store and touches no project, pinned by seeding a version-1 database — and a
+  point holds **the bytes rather than the object**, which is what the desktop
+  keeps and what lets an older build's point be read by this one. Three rules
+  carry the writing of one: **a recovery point must never cost somebody their
+  save** (the quota may refuse at any moment, so it is tried, pruned against,
+  tried once more, and then the project is saved and nothing is said — a notice
+  about the net while the work landed being a fault report about something that
+  did not fail), **pruning runs after the new point is in** (making room first
+  drops a copy that is still the best there is if the write then fails), and
+  **restoring is itself reversible**, what the writer has now being kept first.
+  Two more one-liners: a point **before a format upgrade** rewrites anything,
+  and **deleting a project takes its points**, keeping them making the row's
+  own *this cannot be undone in a browser* untrue and leaving copies nothing
+  could reach. `describeRecoveryPoints` is **one copy of the promise read off
+  the path** (`describePhoneShelf`'s rule): on a disk they sit beside the
+  project, and in a browser **they are in that browser**, clearing the site's
+  data taking them — addendum 29 §1's `browser://` said rather than hidden.
+  **And looking at it caught the other half**: the page opened on *Overwritten
+  by a sync — nothing has been overwritten*, a heading above the thing the
+  writer came for on a host that has no sync and never will; absent there now
+  and kept on the desktop. Driven in the real preview: a save asking for a
+  point leaves *Autosave · 7 KB*, and **Restore** brought *The Lamp* and its
+  logline back from a document that had been wrecked and saved over, with the
+  wrecked state then on the list and restorable in turn. **Still not done and
+  named**: the preview keeps no copy **off this machine** — a browser's storage
+  is one a writer can clear and a private window never had, *Download .vcw*
+  being the only copy that leaves it and a press somebody has to remember.
   `addendum-34-project-folder.md` is **where new projects go**, from Ken (*when
   creating your project, there needs to be on that page the ability to set that
   file location and it'll save it in a file or a cloud drive and remember where

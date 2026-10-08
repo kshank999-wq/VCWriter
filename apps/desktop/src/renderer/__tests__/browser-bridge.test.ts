@@ -83,3 +83,124 @@ describe('browser bridge', () => {
     }
   });
 });
+
+/**
+ * **Recovery points in the preview** (addendum 33 §12, from Ken: *do the
+ * preview saved snapshots*).
+ *
+ * The desktop has kept rolling copies beside every project since it was
+ * written and this host answered `listSnapshots` with an empty list — which
+ * is how a second book imported over a finished story left nothing at all to
+ * go back to. What is pinned here is the act and the promise: a point is
+ * taken when the renderer asks for one, the writer can read them back, and
+ * restoring one keeps what they had first.
+ */
+describe('the recovery points a browser keeps', () => {
+  const bridgeWithProject = async (title: string) => {
+    const bridge = createBrowserBridge();
+    const created = await bridge.createProject({ title, format: 'screenplay' });
+    return { bridge, ...created.data! };
+  };
+
+  it('takes one when the save asks for it, and none when it does not', async () => {
+    // `useProject` has set this flag every twentieth save since autosave was
+    // written; this host read it and did nothing with it.
+    const { bridge, path, file, contentHash } = await bridgeWithProject('Recovery');
+    const quiet = { ...file, project: { ...file.project, logline: 'one' } };
+    await bridge.saveProject({ path, file: quiet, previousHash: contentHash });
+    expect((await bridge.listSnapshots(path)).data).toHaveLength(0);
+
+    const asked = { ...file, project: { ...file.project, logline: 'two' } };
+    await bridge.saveProject({ path, file: asked, snapshot: true });
+    const points = (await bridge.listSnapshots(path)).data!;
+    expect(points).toHaveLength(1);
+    expect(points[0]!.reason).toBe('autosave');
+    expect(points[0]!.sizeBytes).toBeGreaterThan(0);
+  });
+
+  it('puts the saved copy back, and keeps what you had first', async () => {
+    const { bridge, path, file } = await bridgeWithProject('Restore');
+    const early = { ...file, project: { ...file.project, title: 'As it was' } };
+    await bridge.saveProject({ path, file: early, snapshot: true });
+    const later = { ...file, project: { ...file.project, title: 'After the accident' } };
+    await bridge.saveProject({ path, file: later });
+
+    const point = (await bridge.listSnapshots(path)).data![0]!;
+    const back = await bridge.restoreSnapshot({ path, snapshotId: point.id });
+    expect(back.data?.file.project.title).toBe('As it was');
+    expect((await bridge.openProjectAtPath(path)).data?.file.project.title).toBe('As it was');
+
+    // Restoring is itself reversible: what was there is on the list now.
+    const after = (await bridge.listSnapshots(path)).data!;
+    expect(after).toHaveLength(2);
+    expect(after.some((one) => one.reason === 'manual')).toBe(true);
+    const kept = after.find((one) => one.reason === 'manual')!;
+    const undone = await bridge.restoreSnapshot({ path, snapshotId: kept.id });
+    expect(undone.data?.file.project.title).toBe('After the accident');
+  });
+
+  it('takes one before a format upgrade rewrites anything', async () => {
+    const { bridge, path, file } = await bridgeWithProject('Older');
+    // A document written by an older build, as it would sit in the store.
+    await bridge.saveProject({ path, file: { ...file, formatVersion: 1 } as never });
+    const opened = await bridge.openProjectAtPath(path);
+    expect(opened.ok).toBe(true);
+    const points = (await bridge.listSnapshots(path)).data!;
+    expect(points.map((one) => one.reason)).toContain('pre_migration');
+  });
+
+  it('takes the points with the project, so the row’s own sentence stays true', async () => {
+    const { bridge, path, file } = await bridgeWithProject('Deleted');
+    await bridge.saveProject({ path, file: { ...file, project: { ...file.project, logline: 'x' } }, snapshot: true });
+    expect((await bridge.listSnapshots(path)).data).toHaveLength(1);
+    await bridge.deleteProject(path);
+    expect((await bridge.listSnapshots(path)).data).toHaveLength(0);
+  });
+
+  it('keeps one project’s points to itself', async () => {
+    const one = await bridgeWithProject('Mine');
+    const two = await bridgeWithProject('Theirs');
+    await one.bridge.saveProject({ path: one.path, file: { ...one.file, project: { ...one.file.project, logline: 'a' } }, snapshot: true });
+    expect((await one.bridge.listSnapshots(one.path)).data).toHaveLength(1);
+    expect((await two.bridge.listSnapshots(two.path)).data).toHaveLength(0);
+  });
+});
+
+/**
+ * **The browser that has been writing here for months** (§12). Adding the
+ * points means a database version, and an upgrade that lost a project would
+ * be this feature causing the thing it exists to prevent.
+ */
+describe('opening a store written before there were recovery points', () => {
+  const atVersionOne = (record: unknown): Promise<void> =>
+    new Promise((resolve, reject) => {
+      const wipe = indexedDB.deleteDatabase('vcwriter-preview');
+      wipe.onerror = () => reject(wipe.error);
+      wipe.onsuccess = () => {
+        const open = indexedDB.open('vcwriter-preview', 1);
+        open.onupgradeneeded = () => open.result.createObjectStore('projects', { keyPath: 'path' });
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const db = open.result;
+          const put = db.transaction('projects', 'readwrite').objectStore('projects').put(record);
+          put.onerror = () => reject(put.error);
+          put.onsuccess = () => {
+            db.close();
+            resolve();
+          };
+        };
+      };
+    });
+
+  it('keeps every project and starts keeping points', async () => {
+    const seed = createBrowserBridge();
+    const made = (await seed.createProject({ title: 'Already here', format: 'novel' })).data!;
+    await atVersionOne({ path: made.path, file: made.file, contentHash: made.contentHash, savedAt: new Date().toISOString() });
+
+    const bridge = createBrowserBridge();
+    const listed = (await bridge.listProjects()).data!;
+    expect(listed.map((one) => one.title)).toContain('Already here');
+    await bridge.saveProject({ path: made.path, file: { ...made.file, project: { ...made.file.project, logline: 'now' } }, snapshot: true });
+    expect((await bridge.listSnapshots(made.path)).data).toHaveLength(1);
+  });
+});

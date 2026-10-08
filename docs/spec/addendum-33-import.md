@@ -523,3 +523,113 @@ rather than a reader.
 On an imported collection at 1440×900: the chapter's Title in the Inspector
 read *The Harbour*, typing *The Lighthouse* changed the heading in the
 manuscript beside it, and the chapters headed I, II and III were untouched.
+
+## 12. The recovery points the preview did not keep
+
+From Ken, after §10: *do the preview saved snapshots.*
+
+§10 found the cause of the lost story and named what it did not fix — the
+desktop keeps rolling copies beside every project (spec §15, *no manuscript
+data loss*) and the browser preview answered `listSnapshots` with `ok([])`
+and `restoreSnapshot` with *not available here*. That is addendum 09 §15's
+shape for the third time, and the worst instance of it: not a feature reading
+as unbuilt, but **the safety net not being there** on the one build Ken uses.
+
+### The caller was asking all along
+
+`useProject` has set `snapshot: true` on every twentieth save since autosave
+was written, and the browser bridge took the flag and did nothing with it. So
+the work is not a mechanism, it is the other end of one that already runs.
+
+### One rule about throwing a copy away
+
+The moment there are two hosts keeping recovery points, **which of them may
+be pruned has to live in one place**: it is the only part of this whose
+mistakes are invisible until somebody goes looking for the copy that is no
+longer there. `snapshots.ts` in the domain holds it — `IRREPLACEABLE` (a
+pre-upgrade file and the state a merge overwrote exist nowhere else, so a
+rolling autosave must never push one out) and `snapshotsToDrop`, a reading
+over the list. The desktop's `pruneSnapshots` wrote that out by hand and asks
+it now, with its own suite unedited and green, which is the proof the two
+agree.
+
+**What is not shared is how much room there is.** A disk shrugs at thirty
+copies of a book; a browser's quota is shared with every other site and a
+project carrying pictures runs to megabytes, so the preview also passes a
+**budget in bytes** — a limit the desktop has no use for and does not pass.
+The newest point is never dropped by the budget: a copy too big for the whole
+of it is still the one a writer wants, and dropping it to satisfy arithmetic
+would be the module deleting the only thing it has in order to stay tidy.
+
+`RecoveryReason` is named that because **`SnapshotReason` is taken** — by
+`entities/revision.ts`, whose `snapshots` collection sits inside every project
+document and which nothing has ever written, a recovery point being a copy
+beside a project rather than a row inside it. Its vocabulary is not this one
+either, so merging them would rename what is already on writers' disks. The
+seventh name this project has stepped around.
+
+### What the preview keeps
+
+A second object store in the same database, at version 2 — the upgrade **adds
+a store and touches no project**, so a browser that has been writing here for
+months opens with everything it had, which a test pins by seeding a version-1
+database and opening it.
+
+A point holds **the bytes rather than the object**, which is what the desktop
+keeps and what makes one written by an older build readable by this one: it is
+parsed on the way back out like any file.
+
+Three rules carry the writing of one.
+
+**A recovery point must never cost somebody their save.** The quota is the
+browser's and it may refuse at any moment, so the write is tried, pruned
+against, tried once more, and if it still will not go the project is saved and
+nothing is said — a notice about the net while the work itself landed would be
+a fault report about something that did not fail.
+
+**Pruning runs after the new point is in**, not before: making room first
+would drop a copy that is still the best one there is if the write then fails.
+
+**Restoring is itself reversible** (spec §19): what the writer has now is kept
+first, so a restore chosen in a hurry is one more row on the same list rather
+than the second thing lost in a morning.
+
+Two more, each one line. A point is taken **before a format upgrade rewrites
+anything**, which is the desktop's own reading of the version the bytes
+declare. And deleting a project **takes its points with it** — keeping them
+would make the row's own sentence (*this cannot be undone in a browser*)
+untrue and leave copies nothing could reach, the Recovery page needing an open
+project to list any.
+
+### What the page says, on each host
+
+`describeRecoveryPoints` is one copy of the promise, read off the path
+(`describePhoneShelf`'s rule). On a disk the points sit beside the project and
+a sync that had conflicts leaves one. In a browser there is no sync, and **the
+copies are in that browser**: clearing the site's data takes them, and a copy
+saved to a disk is the one that outlives it. That is the `browser://` of
+addendum 29 §1 — said rather than hidden — about the one thing somebody
+relying on this net has to know.
+
+And **looking at it caught the other half**: the page opened on *Overwritten
+by a sync — nothing has been overwritten*, a heading standing above the thing
+the writer came for, on a host that has no sync and never will. Absent there
+now; it stands on the desktop, where a conflict is a real thing and this is
+where it appears.
+
+### Driven
+
+In the real preview at 1440×900: a save asking for a point leaves one
+(*Autosave · 7 KB*), the page lists it under the browser's own sentence with
+no sync section above it, and pressing **Restore** on it brought *The Lamp*
+and its logline back from a document that had been wrecked and saved over —
+with the wrecked state then on the list as a manual point, which restored in
+turn.
+
+### Still not done
+
+The preview keeps no copy **off this machine**. The net is a browser's own
+storage, which a writer can clear and a private window never had; *Download
+.vcw* is the only copy that leaves it, and that is a press somebody has to
+remember. A scheduled export, or the cloud sync the desktop has, is the
+answer and is named rather than half-built.

@@ -1,4 +1,5 @@
 import {
+  PROJECT_FORMAT_VERSION,
   copyTitle,
   createProjectFile,
   freeName,
@@ -11,11 +12,13 @@ import {
   renderPrintDocumentHtml,
   renderSheetDocumentHtml,
   serializeProjectFile,
+  snapshotsToDrop,
   suggestedBookFileName,
   suggestedExportFileName,
   type CaptureItem,
   type ProjectFile,
   type LearningSuggestion,
+  type RecoveryReason,
   type SceneVerdict,
 } from '@vcwriter/domain';
 import type { DesktopApiResult, OpenResult, VcWriterApi } from '../preload/index';
@@ -35,7 +38,21 @@ import type { DesktopApiResult, OpenResult, VcWriterApi } from '../preload/index
 
 const DB_NAME = 'vcwriter-preview';
 const STORE = 'projects';
+const SNAPSHOTS = 'snapshots';
 const NOT_HERE = 'Not available in the browser preview; use the desktop application.';
+
+/**
+ * **How many recovery points a project keeps here, and how much room they may
+ * take** (addendum 33 §12).
+ *
+ * The desktop keeps thirty and never thinks about the disk. A browser's
+ * storage is a quota shared with every other site, and a project carrying
+ * pictures runs to megabytes, so there is a **budget in bytes as well as a
+ * count** — the one rule the two hosts do not share, because a disk has no
+ * such limit to pass.
+ */
+const KEEP_SNAPSHOTS = 20;
+const SNAPSHOT_BUDGET_BYTES = 40 * 1024 * 1024;
 
 interface StoredProject {
   path: string;
@@ -44,31 +61,59 @@ interface StoredProject {
   savedAt: string;
 }
 
+/**
+ * A recovery point, kept as **the bytes rather than the object** — which is
+ * what the desktop keeps, and what makes a point written by an older build
+ * readable by this one: it is parsed on the way back out like any file.
+ */
+interface StoredSnapshot {
+  id: string;
+  path: string;
+  createdAt: string;
+  reason: RecoveryReason;
+  sizeBytes: number;
+  text: string;
+}
+
 const ok = <T>(data: T): DesktopApiResult<T> => ({ ok: true, data });
 const fail = <T>(error: string): DesktopApiResult<T> => ({ ok: false, error });
 
 const openDatabase = (): Promise<IDBDatabase> =>
   new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, 1);
+    // Version 2 adds the recovery points (§12). The upgrade **adds a store
+    // and touches no project**, so a browser that has been writing here for
+    // months opens at the new version with everything it had.
+    const request = indexedDB.open(DB_NAME, 2);
     request.onupgradeneeded = () => {
       if (!request.result.objectStoreNames.contains(STORE)) {
         request.result.createObjectStore(STORE, { keyPath: 'path' });
+      }
+      if (!request.result.objectStoreNames.contains(SNAPSHOTS)) {
+        const made = request.result.createObjectStore(SNAPSHOTS, { keyPath: 'id' });
+        made.createIndex('path', 'path');
       }
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error ?? new Error('IndexedDB refused to open'));
   });
 
-const withStore = async <T>(mode: IDBTransactionMode, run: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> => {
+const withNamed = async <T>(
+  name: string,
+  mode: IDBTransactionMode,
+  run: (store: IDBObjectStore) => IDBRequest<T>,
+): Promise<T> => {
   const db = await openDatabase();
   return new Promise<T>((resolve, reject) => {
-    const transaction = db.transaction(STORE, mode);
-    const request = run(transaction.objectStore(STORE));
+    const transaction = db.transaction(name, mode);
+    const request = run(transaction.objectStore(name));
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error ?? new Error('IndexedDB request failed'));
     transaction.oncomplete = () => db.close();
   });
 };
+
+const withStore = <T>(mode: IDBTransactionMode, run: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> =>
+  withNamed(STORE, mode, run);
 
 const readAll = () => withStore<StoredProject[]>('readonly', (store) => store.getAll() as IDBRequest<StoredProject[]>);
 const remove = (path: string) => withStore<undefined>('readwrite', (store) => store.delete(path) as IDBRequest<undefined>);
@@ -94,6 +139,64 @@ const pathFor = async (title: string): Promise<string> => {
   // Nothing is ever replaced, which is `freeName`'s one rule — the same one
   // the desktop asks when it names a file in a folder (addendum 34).
   return freeName(`browser://${base}`, (candidate) => taken.has(candidate), '.vcw');
+};
+
+// ------------------------------------------------------- recovery points
+
+const snapshotsFor = (path: string) =>
+  withNamed<StoredSnapshot[]>(SNAPSHOTS, 'readonly', (store) =>
+    store.index('path').getAll(path) as IDBRequest<StoredSnapshot[]>,
+  );
+
+const putSnapshot = (record: StoredSnapshot) =>
+  withNamed<IDBValidKey>(SNAPSHOTS, 'readwrite', (store) => store.put(record));
+
+const dropSnapshot = (id: string) =>
+  withNamed<undefined>(SNAPSHOTS, 'readwrite', (store) => store.delete(id) as IDBRequest<undefined>);
+
+/**
+ * **Keep a copy of this project as it stands** (addendum 33 §12).
+ *
+ * Three rules, and the first is the one that matters: **a recovery point must
+ * never cost somebody their save.** The quota is the browser's and it can
+ * refuse at any moment, so the write is tried, pruned against and tried once
+ * more, and if it still will not go the project is saved and nothing is said —
+ * a notice about the net while the work itself landed would be a fault report
+ * about something that did not fail.
+ *
+ * The pruning asks the domain (`snapshotsToDrop`), so this host and the
+ * desktop throw away the same points, and it runs **after** the new one is in
+ * rather than before: pruning to make room first would drop a copy that is
+ * still the best there is if the write then fails anyway.
+ */
+const keepSnapshot = async (path: string, text: string, reason: RecoveryReason): Promise<void> => {
+  const createdAt = new Date().toISOString();
+  const record: StoredSnapshot = {
+    id: `${path}#${createdAt}#${reason}`,
+    path,
+    createdAt,
+    reason,
+    sizeBytes: text.length,
+    text,
+  };
+  const prune = async () => {
+    const going = snapshotsToDrop(await snapshotsFor(path), {
+      keep: KEEP_SNAPSHOTS,
+      budgetBytes: SNAPSHOT_BUDGET_BYTES,
+    });
+    for (const id of going) await dropSnapshot(id).catch(() => undefined);
+  };
+  try {
+    await putSnapshot(record);
+  } catch {
+    await prune().catch(() => undefined);
+    try {
+      await putSnapshot(record);
+    } catch {
+      return;
+    }
+  }
+  await prune().catch(() => undefined);
 };
 
 const store = async (path: string, file: ProjectFile): Promise<OpenResult> => {
@@ -352,6 +455,16 @@ export const createBrowserBridge = (): BrowserBridge => {
       try {
         const record = await read(path);
         if (!record) return fail('That project is no longer in this browser');
+        /**
+         * **Before an upgrade rewrites anything** (§12), which is the one
+         * recovery point that is the only copy of a document — the desktop
+         * has taken it since `loadProject` was written, and the reading is
+         * the same: the version the bytes declare, against this build's.
+         */
+        const declared = (record.file as { formatVersion?: number })?.formatVersion;
+        if (typeof declared === 'number' && declared < PROJECT_FORMAT_VERSION) {
+          await keepSnapshot(path, JSON.stringify(record.file), 'pre_migration');
+        }
         const file = parseProjectFile(record.file);
         current = { path, file };
         return ok({ path, file, contentHash: record.contentHash });
@@ -366,6 +479,15 @@ export const createBrowserBridge = (): BrowserBridge => {
         current = { path: input.path, file: input.file };
         if (contentHash === input.previousHash) return ok({ contentHash, written: false });
         await write({ path: input.path, file: input.file, contentHash, savedAt: new Date().toISOString() });
+        /**
+         * **The caller was asking all along** (addendum 33 §12). `useProject`
+         * has set `snapshot` every twentieth save since autosave was written
+         * and this host read the flag and did nothing with it — addendum 09
+         * §15's `ok([])` in its third shape, and the one that cost Ken a
+         * finished story. Taken after the write, so a recovery point is never
+         * a copy of something that failed to save.
+         */
+        if (input.snapshot) await keepSnapshot(input.path, serializeProjectFile(input.file), 'autosave');
         return ok({ contentHash, written: true });
       } catch (error) {
         return fail((error as Error).message);
@@ -454,6 +576,15 @@ export const createBrowserBridge = (): BrowserBridge => {
     async deleteProject(path) {
       try {
         await remove(path);
+        /**
+         * **The recovery points go with it** (§12). Keeping them would make
+         * the row's own sentence — *this cannot be undone in a browser* —
+         * untrue, and leave copies nothing can reach, the Recovery page
+         * needing an open project to list any.
+         */
+        for (const record of await snapshotsFor(path).catch(() => [])) {
+          await dropSnapshot(record.id).catch(() => undefined);
+        }
         if (current?.path === path) current = null;
         return ok({ deleted: true, recoverable: false });
       } catch (error) {
@@ -461,8 +592,50 @@ export const createBrowserBridge = (): BrowserBridge => {
       }
     },
 
-    listSnapshots: async () => ok([]),
-    restoreSnapshot: async () => fail(NOT_HERE),
+    /**
+     * **The recovery points this browser holds for a project** (§12), newest
+     * first, which is the order somebody looking for *the one from before I
+     * did that* reads them in.
+     */
+    async listSnapshots(path) {
+      try {
+        const records = await snapshotsFor(path);
+        return ok(
+          records
+            .map((record) => ({
+              id: record.id,
+              path: record.path,
+              createdAt: record.createdAt,
+              sizeBytes: record.sizeBytes,
+              reason: record.reason,
+            }))
+            .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+        );
+      } catch (error) {
+        return fail((error as Error).message);
+      }
+    },
+
+    /**
+     * **Restoring is itself reversible** (§12, and spec §19): what the writer
+     * has now is kept first, so a restore chosen in a hurry is one more row on
+     * the same list rather than the second thing lost in a morning.
+     */
+    async restoreSnapshot(input) {
+      try {
+        const records = await snapshotsFor(input.path);
+        const wanted = records.find((record) => record.id === input.snapshotId);
+        if (!wanted) return fail('That recovery point is no longer in this browser');
+        const file = parseProjectFile(JSON.parse(wanted.text));
+        const now = await read(input.path);
+        if (now) await keepSnapshot(input.path, serializeProjectFile(now.file), 'manual');
+        const result = await store(input.path, file);
+        current = { path: result.path, file };
+        return ok(result);
+      } catch (error) {
+        return fail((error as Error).message);
+      }
+    },
 
     async exportPdf(input) {
       if (!printDocument(input)) return fail('The browser blocked the print window');
