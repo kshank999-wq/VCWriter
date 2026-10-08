@@ -29,6 +29,21 @@ export interface UseProjectResult {
   error: string | null;
   lastSavedAt: string | null;
   createProject(input: { title: string; format: ProjectFormat; author?: string }): Promise<void>;
+  /**
+   * **A project arriving** (addendum 33 §10, from Ken: *instead of adding it
+   * at the end it erased everything I did and all my work is gone*).
+   *
+   * An import used to be adopted with `replace`, which keeps the **path**:
+   * so a second book imported with one open was written into the open
+   * project's own file, over a finished story, with no ask, no undo (a
+   * different document drops the history) and — in the preview, where
+   * `listSnapshots` answers with nothing — no copy anywhere to go back to.
+   *
+   * *A new project* has to mean one. This flushes what is open and makes a
+   * file of its own for the document that arrived, exactly as starting a
+   * project does, so the one that was open is saved, closed and still there.
+   */
+  createFrom(file: ProjectFile): Promise<void>;
   openProject(): Promise<void>;
   openProjectAtPath(path: string): Promise<void>;
   /** Apply a domain mutation; the result is queued for autosave. */
@@ -247,6 +262,20 @@ export const useProject = (writable = true): UseProjectResult => {
     [runOpen],
   );
 
+  const createFrom = useCallback(
+    async (next: ProjectFile) => {
+      await runOpen(
+        window.vcwriter.createProject({
+          title: next.project.title,
+          format: next.project.format,
+          author: next.project.author,
+          file: next,
+        }),
+      );
+    },
+    [runOpen],
+  );
+
   const openProject = useCallback(async () => {
     await runOpen(window.vcwriter.openProject());
   }, [runOpen]);
@@ -378,6 +407,7 @@ export const useProject = (writable = true): UseProjectResult => {
     redo,
     canUndo: writable && steps.past > 0,
     canRedo: writable && steps.future > 0,
+    createFrom,
     replace,
     adoptLoaded,
     saveNow: flush,

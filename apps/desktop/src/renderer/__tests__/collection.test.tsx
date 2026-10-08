@@ -2,13 +2,20 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beginStory, createProjectFile, episodes, importChoices, storiesOf, type ProjectFile } from '@vcwriter/domain';
-import { AddStoriesDialog } from '../components/AddStoriesDialog';
+import { ImportDialog } from '../components/ImportDialog';
 import { menusFor } from '../menus';
 import { buildDocx, wordParagraph } from './zip-fixture';
 
 /**
  * A collection of stories (addendum 22): adding stories from files, and the
  * menu item that offers it on a collection alone.
+ *
+ * **One dialog since addendum 33 §10.** *More stories* and *More episodes*
+ * had a screen of their own, with none of the controls the import dialog
+ * grew — no marks, no passage split, nothing to say where a story divides —
+ * and Ken asked for *the same formatting dialog box*. Two screens that import
+ * a story are two answers to what an import is, so these drive the one that
+ * is left, with the kind saying where it lands.
  */
 
 afterEach(cleanup);
@@ -37,21 +44,38 @@ const HARBOUR = () =>
     wordParagraph('Nobody came, and the tide went out.'),
   ]);
 
+/** The dialog as the workspace renders it, with nothing landed yet. */
+const adding = (file: ProjectFile, made: ProjectFile[], kind: 'stories' | 'episodes' = 'stories') =>
+  render(
+    <ImportDialog
+      open
+      kind={kind}
+      file={file}
+      landed={null}
+      onClose={() => {}}
+      onImported={(next) => made.push(next)}
+      onAdded={(next) => made.push(next)}
+    />,
+  );
+
 describe('adding stories to a collection', () => {
   it('reads each file as a story, lists them, and adds them after the last', async () => {
     const start = beginStory(createProjectFile({ title: 'Tales', format: 'short_story' }), { title: 'The Road' }).file;
     const made: ProjectFile[] = [];
-    render(<AddStoriesDialog open file={start} onClose={() => {}} onAdded={(next) => made.push(next)} />);
-    expect((screen.getByRole('button', { name: 'Add the story' }) as HTMLButtonElement).disabled).toBe(true);
+    adding(start, made);
+    expect((screen.getByRole('button', { name: 'Add to the end' }) as HTMLButtonElement).disabled).toBe(true);
 
-    choose([fileNamed('harbour.docx', HARBOUR()), fileNamed('the-lamp.txt', 'The lamp had been in the family.\n\nIt was the first thing she reached for.'), fileNamed('notes.pdf', 'x')]);
-    await screen.findByText('2 stories');
-    expect(screen.getByText('The Harbour')).toBeTruthy();
-    expect(document.querySelector('.import-list')?.textContent).toContain('2 sections · 11 words');
-    expect(screen.getByText('the-lamp')).toBeTruthy();
-    expect(screen.getByText(/notes.pdf is not a Word document or a text file/)).toBeTruthy();
+    choose([
+      fileNamed('harbour.docx', HARBOUR()),
+      fileNamed('the-lamp.txt', 'The lamp had been in the family.\n\nIt was the first thing she reached for.'),
+      fileNamed('notes.pdf', 'x'),
+    ]);
+    await screen.findByLabelText('Files in order');
+    expect(document.querySelector('.import-order')?.textContent).toContain('The Harbour');
+    expect(document.querySelector('.import-order')?.textContent).toContain('the-lamp');
+    expect(screen.getByText(/notes.pdf: That is not a Word document or a text file/)).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add 2 stories' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add to the end' }));
     await waitFor(() => expect(made).toHaveLength(1));
     const stories = storiesOf(made[0]!);
     expect(stories.map((story) => story.placed.marker.title)).toEqual(['The Road', 'The Harbour', 'the-lamp']);
@@ -62,13 +86,17 @@ describe('adding stories to a collection', () => {
   it('puts the stories in the order the arrows say', async () => {
     const start = createProjectFile({ title: 'Tales', format: 'short_story' });
     const made: ProjectFile[] = [];
-    render(<AddStoriesDialog open file={start} onClose={() => {}} onAdded={(next) => made.push(next)} />);
+    adding(start, made);
     choose([fileNamed('harbour.docx', HARBOUR()), fileNamed('the-lamp.txt', 'The lamp had been in the family.')]);
-    await screen.findByText('2 stories');
+    await screen.findByLabelText('Files in order');
     fireEvent.click(screen.getByRole('button', { name: 'Move the-lamp up' }));
-    expect([...document.querySelectorAll('.import-order-title')].map((node) => node.textContent)).toEqual(['1. the-lamp', '2. The Harbour']);
-    fireEvent.click(screen.getByRole('button', { name: 'Add 2 stories' }));
+    expect([...document.querySelectorAll('.import-order-title')].map((node) => node.textContent)).toEqual([
+      '1. the-lamp',
+      '2. The Harbour',
+    ]);
+    fireEvent.click(screen.getByRole('button', { name: 'Add to the end' }));
     await waitFor(() => expect(made).toHaveLength(1));
+    // The seeded section the project is born with is still ahead of them.
     expect(storiesOf(made[0]!).map((story) => story.placed.marker.title)).toEqual(['the-lamp', 'The Harbour']);
   });
 
@@ -106,16 +134,22 @@ describe('adding episodes to a series', () => {
   it('reads each script as an episode after the last, numbered on its page', async () => {
     const start = createProjectFile({ title: 'Harbour', format: 'series' });
     const made: ProjectFile[] = [];
-    render(<AddStoriesDialog open file={start} onClose={() => {}} onAdded={(next) => made.push(next)} />);
+    adding(start, made, 'episodes');
     expect(screen.getByLabelText('Add episodes to the series')).toBeTruthy();
-    expect((screen.getByRole('button', { name: 'Add the episode' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: 'Add to the end' }) as HTMLButtonElement).disabled).toBe(true);
 
-    choose([fileNamed('pilot.fdx', FDX('PILOT', 'INT. PRECINCT - NIGHT', 'MAEVE')), fileNamed('wreck.fdx', FDX('THE WRECK', 'EXT. HARBOUR - DAY', 'DR HALE')), fileNamed('notes.txt', 'x')], 'Episode files');
-    await screen.findByText('2 episodes');
-    expect(document.querySelector('.import-list')?.textContent).toContain('1 scene · 2 words');
-    expect(screen.getByText(/notes.txt is not a Final Draft document/)).toBeTruthy();
+    choose(
+      [
+        fileNamed('pilot.fdx', FDX('PILOT', 'INT. PRECINCT - NIGHT', 'MAEVE')),
+        fileNamed('wreck.fdx', FDX('THE WRECK', 'EXT. HARBOUR - DAY', 'DR HALE')),
+        fileNamed('notes.txt', 'x'),
+      ],
+      'Episode files',
+    );
+    await screen.findByLabelText('Files in order');
+    expect(screen.getByText(/notes.txt: That is not a Final Draft document/)).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add 2 episodes' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add to the end' }));
     await waitFor(() => expect(made).toHaveLength(1));
     const all = episodes(made[0]!);
     expect(all.map((episode) => [episode.label, episode.title])).toEqual([
@@ -124,5 +158,75 @@ describe('adding episodes to a series', () => {
     ]);
     expect(all[1]?.marker.titlePage?.episode).toBe('Episode 2');
     expect(made[0]!.characters.map((person) => person.name)).toEqual(['MAEVE', 'DR HALE']);
+  });
+});
+
+/**
+ * **The next story** (addendum 33 §10, from Ken: *there needs to be a button
+ * for next story. And when you add it, it adds it onto the end… this will
+ * allow you to bring in finished works*).
+ *
+ * What is pinned is the round, because the fault it replaces was a second
+ * import **making a second book**: the dialog stays up, says what is in, and
+ * the file chosen next goes on the end of what it just made.
+ */
+describe('one story at a time', () => {
+  it('stays open after the first and says what the collection holds', async () => {
+    const made: ProjectFile[] = [];
+    const view = render(
+      <ImportDialog
+        open
+        kind="collection"
+        file={null}
+        landed={null}
+        onClose={() => {}}
+        onImported={(next, names) => made.push(next) && names}
+        onAdded={(next) => made.push(next)}
+      />,
+    );
+    choose([fileNamed('harbour.docx', HARBOUR())]);
+    await screen.findByText(/What the document is/);
+    fireEvent.click(screen.getByRole('button', { name: 'Import' }));
+    await waitFor(() => expect(made).toHaveLength(1));
+
+    // The workspace hands back what landed, exactly as it does on the screen.
+    const first = made[0]!;
+    view.rerender(
+      <ImportDialog
+        open
+        kind="collection"
+        file={first}
+        landed={{ file: first, names: ['The Harbour'] }}
+        onClose={() => {}}
+        onImported={(next) => made.push(next)}
+        onAdded={(next) => made.push(next)}
+      />,
+    );
+    expect(document.querySelector('.import-landed')?.textContent).toContain('The Harbour');
+    expect(screen.getByRole('button', { name: 'Import another story…' })).toBeTruthy();
+  });
+
+  it('adds the next document to the end rather than making a second book', async () => {
+    const first = beginStory(createProjectFile({ title: 'Tales', format: 'short_story' }), { title: 'The Road' }).file;
+    const made: ProjectFile[] = [];
+    render(
+      <ImportDialog
+        open
+        kind="collection"
+        file={first}
+        landed={{ file: first, names: ['The Road'] }}
+        onClose={() => {}}
+        onImported={(next) => made.push(next)}
+        onAdded={(next) => made.push(next)}
+      />,
+    );
+    choose([fileNamed('harbour.docx', HARBOUR())]);
+    await screen.findByText(/What the document is/);
+    fireEvent.click(screen.getByRole('button', { name: 'Add to the end' }));
+    await waitFor(() => expect(made).toHaveLength(1));
+    // The same project, one story longer — never a new one, which is what
+    // overwrote a finished story.
+    expect(made[0]!.project.id).toBe(first.project.id);
+    expect(storiesOf(made[0]!).map((story) => story.placed.marker.title)).toEqual(['The Road', 'The Harbour']);
   });
 });

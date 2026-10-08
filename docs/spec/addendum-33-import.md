@@ -370,3 +370,156 @@ the page it landed on — 3 sections, 12 paragraphs, no alert. The surfaces test
 is §9's missing one in addendum 29 §2's shape: **every window that carries the
 lapse bar must carry this one**, so a third window added later fails there
 rather than shipping silent.
+
+## 10. The import that erased a finished story
+
+From Ken, and it is the worst report this project has had:
+
+> I just finished editing and adding pictures and everything to a story and
+> fixing it all and then when I went to import another one that's part of the
+> same book and collection instead of adding it at the end it erased
+> everything I did and all my work is gone. So if you select collection, and
+> you bring in one story, there needs to be a button for next story. And when
+> you add it, it adds it onto the end.
+
+### What happened, read rather than guessed
+
+`adoptImport` called `project.replace`, which is the **cloud merge's** door:
+it takes a whole document and **keeps the path**. So a second book imported
+with one open was written into the open project's own file. Three things then
+made it final rather than merely wrong:
+
+- **Nothing asked.** The chooser's heading says *A new project*, which was
+  true of the document and not of the file it landed in.
+- **Nothing could take it back.** `replace` calls `forget()`, and it is right
+  to — a merge from the cloud is not this writer's act — so the undo stack
+  went with the document it belonged to.
+- **Nothing had a copy.** The desktop keeps rolling snapshots beside the
+  project; the preview, which is the build Ken uses, answers `listSnapshots`
+  with `ok([])`. Addendum 09 §15's own lesson, and here it is not a feature
+  reading as unbuilt but the **safety net not being there**.
+
+### A new project is a project
+
+`createProject` takes a document now — one optional field in the preload type,
+the main handler and the browser bridge — and `project.createFrom` goes
+through `runOpen`, which **flushes what is open first** and then adopts what
+comes back. So the project in front of the writer is saved and left exactly
+where it is, and the document that arrived gets a file of its own, named after
+its own title, in the folder a new project goes in (addendum 34).
+
+It fixes a second case nobody had reported: an import from the **welcome
+screen** called `replace` with no path at all, so the autosave had nowhere to
+write and the project existed in memory and nowhere else.
+
+The chooser says it, once, under the heading rather than on four rows
+(addendum 20 §9k): *The project you have open is saved and stays as it is.
+This one opens in a file of its own.*
+
+And `addImported` refuses what it cannot be sure of: `update` writes what it
+is given into whatever is open, so an append arriving while the window still
+stood in the project before it would write a second book over the first.
+**An append that would land on another project changes nothing at all.**
+
+### The next story, from the same dialog
+
+*More stories* and *More episodes* had a dialog of their own — 236 lines that
+read a document, listed what it found, and had **none of the controls this one
+grew**: no marks, no passage split, nothing to say where a story divides. Two
+screens that import a story are two answers to what an import is, and Ken
+asked for *the same formatting dialog box*. There is one now, and the kind
+says where it lands.
+
+So the round is the same code path the second file of a multi-file import
+already took. After a landing on a format made of parts the dialog **stays
+up** and says what is in and how many the collection now holds, with *Import
+another story…* beside *Done*. The next document is appended to what the last
+round made.
+
+Three decisions.
+
+**What has landed is held by the workspace, not by the dialog.** The first
+landing turns a window with no project into one with a project, which is a
+different tree — React unmounts the dialog and builds it again between the
+rounds, so state kept there is lost exactly where *Import another* is pressed.
+
+**Another round waits for the project to be open.** Making a project is the
+host's work and takes a moment; an append sent before the window is standing
+in it would be written over the project still open, which is the fault this
+section exists to remove. It is refused rather than raced.
+
+**What landed is named off the project, not off the files.** Driving it, a
+document whose own title made the story *The Harbour* was announced as
+**ken-harbour** — the file it came out of — an inch from a rail that said
+otherwise.
+
+### Driven
+
+At 1440×900 in the preview. A collection imported from one document: the
+dialog stays up reading *The Harbour is in. 1 story in the collection now.*;
+a second document through *Import another story…* gives *In For A Pound is in.
+2 stories in the collection now.* and the Layout rail lists both. Then the act
+that lost the work: with that collection open, *Import…* ▸ *A novel* makes
+**The Lamp and the Lighthouse** and opens it — and the browser's own library
+then holds **both** projects, the collection still carrying its story.
+
+Looking at it caught two wordings: *2 storys*, which is what `${noun}s`
+gives, and the file name standing where the story's name belongs.
+
+### Deliberately not built
+
+**Snapshots in the preview.** The browser bridge answers `listSnapshots` with
+nothing, so a browser has no copy of a project before a destructive act. The
+cause of this report is gone, and the net is not there; it is named here
+rather than half-built, and it is the next thing this file should grow.
+
+## 11. The numerals, and a name typed once
+
+From Ken in the same message:
+
+> I merged two sections and made it one chapter. I would like it to
+> automatically update the title headings if they're Roman numerals. And
+> currently, in the actual passage, you have to rename it in the heading. If
+> you rename it in the chapter portion, it should rename that heading also.
+> So you don't have to go to do it in two places.
+
+A story imported from a manuscript is divided at its numerals (§10 of addendum
+21), and those numerals arrive as **heading elements in the writing**, which is
+right: they are what the document said. The cost is that the book then holds a
+stored copy of something derived — *which chapter this is* — and the unit's
+title and the heading it opens with are two strings nothing kept in step.
+
+`section-numbers.ts` is two rules.
+
+**A bare numeral is the program's counting and is kept in step.** Nothing else
+is: a heading with words in it is the writer's, and renumbering *The
+Lighthouse* would be this program rewriting somebody's manuscript, which
+Layout's own rule forbids outright. The style is **read back off what is
+there** — roman or arabic, capitals or not, the full stop or not — so a book
+set in lower-case roman stays in lower-case roman and nothing here decides
+what a numeral looks like. The count restarts at each division, which is
+`divisionSpan`'s rule read over units: chapter one of the second story is
+chapter one.
+
+It runs at the two acts that change how many chapters a division has — a merge
+and a removal — rather than being offered as a command, because *automatically*
+was the ask and a button here would be a second thing to remember.
+
+**A name is typed once.** Renaming a chapter renames the heading it opens
+with, **where the two were saying the same thing**; where the writer has made
+them differ, both are theirs and neither is touched, and where a unit has no
+heading there is nothing to keep in step (§9l already stands the title in on
+the page). It lives in `updateUnit` beside `retitlePlans` for that function's
+own stated reason — *rename it in either place and it is renamed in both* — so
+every surface that renames a chapter gets it without being told, and no screen
+has to remember a second call.
+
+`sectionLabel` is named that because `labelFor` is the Writers Room's: the
+sixth name this project has stepped around, and the second the compiler caught
+rather than a reader.
+
+### Driven
+
+On an imported collection at 1440×900: the chapter's Title in the Inspector
+read *The Harbour*, typing *The Lighthouse* changed the heading in the
+manuscript beside it, and the chapters headed I, II and III were untouched.

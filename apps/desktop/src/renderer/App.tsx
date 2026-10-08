@@ -84,7 +84,6 @@ import { EpisodeRail } from './components/EpisodeRail';
 import { StoryRail } from './components/StoryRail';
 import { ImportDialog } from './components/ImportDialog';
 import { ImportChooser } from './components/ImportChooser';
-import { AddStoriesDialog } from './components/AddStoriesDialog';
 import { ProjectsDialog } from './components/ProjectsDialog';
 import { NewEpisodeDialog } from './components/NewEpisodeDialog';
 import { useWritingClock } from './use-writing-clock';
@@ -147,7 +146,14 @@ export default function App() {
   // menu item where there were two, and no screen titled for the wrong thing.
   const [chooserOpen, setChooserOpen] = useState(false);
   const [importKind, setImportKind] = useState<ImportKind | null>(null);
-  const [importStoriesOpen, setImportStoriesOpen] = useState(false);
+  /**
+   * **What this import run has brought in so far** (addendum 33 §10). It is
+   * held here rather than in the dialog because the first landing turns a
+   * window with no project into one with a project, which is a different tree:
+   * the dialog is built again between the rounds, and state kept there is lost
+   * exactly where *Import another* is pressed.
+   */
+  const [imported, setImported] = useState<{ file: ProjectFile; names: string[] } | null>(null);
   const [editorTab, setEditorTab] = useState<'daily' | 'final' | 'grid' | 'index' | 'polarity'>('daily');
   const [account, setAccount] = useState<AccountStatus>({ configured: false, signedIn: false, email: null });
   const [syncing, setSyncing] = useState(false);
@@ -610,14 +616,15 @@ export default function App() {
    * is open and can act on it, which is why it lives here and not there.
    */
   /**
-   * Where each kind goes (addendum 33). Four make a project and open the
-   * import dialog knowing which; two add to the collection or series that is
-   * open; two are Research's own, and go to the room that already does them
-   * rather than to a second copy built on this menu.
+   * Where each kind goes (addendum 33). Six open the import dialog knowing
+   * which — four making a project and two adding to the one open, which is
+   * **one screen** since §10: a second dialog that imported a story was a
+   * second answer to what an import is, and it had none of the controls this
+   * one grew. Two are Research's own, and go to the room that already does
+   * them rather than to a second copy built on this menu.
    */
   const chooseImport = useCallback(
     (kind: ImportKind) => {
-      if (kind === 'stories' || kind === 'episodes') return setImportStoriesOpen(true);
       if (kind === 'notes' || kind === 'graphics') {
         setResearchAt(kind === 'notes' ? 'importer' : 'graphics');
         return detached.includes('research') ? openPane('research') : setResearchOpen(true);
@@ -640,12 +647,65 @@ export default function App() {
    * manuscript being the thing to look at.
    */
   const adoptImport = useCallback(
-    (imported: ProjectFile) => {
-      project.replace(imported);
-      if (landsInLayout(imported.project.format)) setLayoutOpen(true);
+    (file: ProjectFile) => {
+      /**
+       * **A project arriving lands in a project** (addendum 33 §10, from Ken:
+       * *instead of adding it at the end it erased everything I did and all my
+       * work is gone*).
+       *
+       * This was `project.replace`, which keeps the **path** — so a book
+       * imported with one open was written into the open project's own file,
+       * over a finished story, with no ask and nothing to go back to: a
+       * different document drops the undo history, and the preview answers
+       * `listSnapshots` with nothing at all. *A new project* has to mean one,
+       * so what is open is flushed and left where it is and the document that
+       * arrived gets a file of its own.
+       */
+      void project.createFrom(file);
+      if (landsInLayout(file.project.format)) setLayoutOpen(true);
     },
     [project],
   );
+
+  /**
+   * **The next story, into the project that is open** (addendum 33 §10, from
+   * Ken: *there needs to be a button for next story. And when you add it, it
+   * adds it onto the end*). The same dialog, the same marks, the same order
+   * list — only where it lands differs, which is what the kind says.
+   */
+  const addImported = useCallback(
+    (next: ProjectFile) => {
+      /**
+       * **Never onto another project.** `update` writes what it is given into
+       * whatever is open, so an append that arrived while the window was still
+       * standing in the project before it would write a second book over the
+       * first — which is the fault this section exists to remove, said once
+       * more where it could come back.
+       */
+      project.update((current) => (current.project.id === next.project.id ? next : current));
+    },
+    [project],
+  );
+
+  /** The import dialog's two landings, each remembering what came in. */
+  const landImport = useCallback(
+    (file: ProjectFile, names: string[]) => {
+      adoptImport(file);
+      setImported({ file, names });
+    },
+    [adoptImport],
+  );
+  const addToImport = useCallback(
+    (file: ProjectFile, names: string[]) => {
+      addImported(file);
+      setImported({ file, names });
+    },
+    [addImported],
+  );
+  const closeImport = useCallback(() => {
+    setImportKind(null);
+    setImported(null);
+  }, []);
 
   const runCommand = useCallback(
     (command: CommandId) => {
@@ -908,8 +968,11 @@ export default function App() {
           <ImportDialog
             open
             kind={importKind}
-            onClose={() => setImportKind(null)}
-            onImported={adoptImport}
+            file={null}
+            landed={imported}
+            onClose={closeImport}
+            onImported={landImport}
+            onAdded={addToImport}
           />
         ) : null}
 
@@ -1596,17 +1659,11 @@ export default function App() {
         <ImportDialog
           open
           kind={importKind}
-          onClose={() => setImportKind(null)}
-          onImported={adoptImport}
-        />
-      ) : null}
-
-      {file && (isCollection(file.project.format) || file.project.format === 'series') ? (
-        <AddStoriesDialog
-          open={importStoriesOpen}
           file={file}
-          onClose={() => setImportStoriesOpen(false)}
-          onAdded={(next) => project.update(() => next)}
+          landed={imported}
+          onClose={closeImport}
+          onImported={landImport}
+          onAdded={addToImport}
         />
       ) : null}
 

@@ -174,3 +174,52 @@ describe('what the writer is told', () => {
     expect(screen.getByRole('button', { name: 'Check again' })).toBeTruthy();
   });
 });
+
+/**
+ * **A project arriving does not land on the one that is open** (addendum 33
+ * §10, from Ken: *instead of adding it at the end it erased everything I did
+ * and all my work is gone*).
+ *
+ * The import was adopted with `replace`, which keeps the **path** — so the
+ * document that arrived was written into the open project's own file, over a
+ * finished story, with no ask, no undo (a different document drops the
+ * history) and, in the preview, no snapshot anywhere to go back to. What is
+ * pinned here is the act: the host is asked to **make a project** from it,
+ * and the file the writer had open is never written with somebody else's
+ * book.
+ */
+describe('a project arriving while one is open', () => {
+  it('is made into a project of its own, and never written over the open file', async () => {
+    const api = host(LIVE) as unknown as Record<string, unknown>;
+    const open = createProjectFile({ title: 'Harbour Tales', format: 'short_story' });
+    const arriving = createProjectFile({ title: 'Another Book', format: 'novel' });
+    api.createProject = vi.fn(async () => ({
+      ok: true,
+      data: { path: '/books/another-book.vcw', file: arriving, contentHash: 'new' },
+    }));
+    const seen = renderHook(() => {
+      const access = useWritingAccess();
+      return { access, project: useProject(access.writable) };
+    });
+    await act(async () => undefined);
+    act(() =>
+      seen.result.current.project.adoptLoaded({ path: '/books/harbour.vcw', file: open, contentHash: 'old' }),
+    );
+
+    await act(async () => {
+      await seen.result.current.project.createFrom(arriving);
+    });
+
+    // The host was asked for a project, and handed the document to make it from.
+    const made = api.createProject as ReturnType<typeof vi.fn>;
+    expect(made).toHaveBeenCalledTimes(1);
+    expect((made.mock.calls[0]![0] as { file?: ProjectFile }).file?.project.id).toBe(arriving.project.id);
+    // And nothing of the arriving book was ever written to the open path.
+    const saves = (api.saveProject as ReturnType<typeof vi.fn>).mock.calls as Array<[{ path: string; file: ProjectFile }]>;
+    for (const [call] of saves) {
+      expect(call.path === '/books/harbour.vcw' && call.file.project.id === arriving.project.id).toBe(false);
+    }
+    // The writer is standing in the new one, in its own file.
+    expect(seen.result.current.project.path).toBe('/books/another-book.vcw');
+  });
+});

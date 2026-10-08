@@ -323,7 +323,10 @@ export const createBrowserBridge = (): BrowserBridge => {
 
     async createProject(input) {
       try {
-        const file = createProjectFile(input);
+        // A document given, or an empty one (addendum 33 §10) — the same
+        // rule as the desktop's, so an import lands in its own entry here
+        // too rather than over the one the writer has open.
+        const file = input.file ? parseProjectFile(input.file) : createProjectFile(input);
         const result = await store(await pathFor(input.title), file);
         current = { path: result.path, file };
         return ok(result);

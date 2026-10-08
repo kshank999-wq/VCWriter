@@ -312,7 +312,7 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
     'project:create',
     async (
       _event,
-      input: { title: string; format: ProjectFormat; author?: string; logline?: string },
+      input: { title: string; format: ProjectFormat; author?: string; logline?: string; file?: ProjectFile },
     ): Promise<DesktopApiResult<OpenResult>> => {
       try {
         /**
@@ -327,7 +327,13 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
         const stem = suggestedFileName(input.title, 'as');
         const name = freeName(stem, (candidate) => here.has(candidate), `.${PROJECT_EXTENSION}`);
 
-        const file = createProjectFile(input);
+        /**
+         * **A document given, or an empty one** (addendum 33 §10). An import
+         * is a project arriving, and it must arrive in a file of its own:
+         * adopting it into the open project's path wrote a new book over
+         * whatever was there.
+         */
+        const file = input.file ? parseProjectFile(input.file) : createProjectFile(input);
         const saved = await saveProject(join(folder, name), file);
         await rememberHome(folder);
         await rememberRecent(saved.path, file.project.title);

@@ -68,6 +68,18 @@ export function ImportChooser({ open, format, onClose, onChoose }: ImportChooser
 
           <div className="page-setup-body">
             <h4>A new project</h4>
+            {/* **What becomes of the one that is open** (addendum 33 §10,
+                from Ken: *instead of adding it at the end it erased
+                everything I did and all my work is gone*). It used to be
+                written into the open project's own file. It is a project now
+                — its own file, and the one in front of the writer saved and
+                left where it is — and the heading could not say that on its
+                own, so it is said once under it rather than on four rows. */}
+            {format !== null ? (
+              <p className="muted small">
+                The project you have open is saved and stays as it is. This one opens in a file of its own.
+              </p>
+            ) : null}
             <ul className="import-choices">{making.map(row)}</ul>
 
             {into.length > 0 ? (

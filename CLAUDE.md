@@ -5906,6 +5906,81 @@ push live; the build takes a minute or two.
   test is §9's missing one in addendum 29 §2's shape: **every window that
   carries the lapse bar must carry this one**, so a third window added later
   fails there rather than shipping silent.
+  **§10 is the import that erased a finished story**, from Ken, and it is the
+  worst report this project has had (*I just finished editing and adding
+  pictures and everything to a story… instead of adding it at the end it
+  erased everything I did and all my work is gone*). **`adoptImport` called
+  `project.replace`, which is the cloud merge's door and keeps the path** — so
+  a second book imported with one open was written into the open project's own
+  **file**, and three things made it final: nothing asked (the heading says *A
+  new project*, true of the document and not of the file it landed in),
+  nothing could take it back (`replace` calls `forget()`, rightly — a merge
+  from the cloud is not this writer's act), and **nothing had a copy**, the
+  desktop keeping rolling snapshots beside the project while the preview — the
+  build Ken uses — answers `listSnapshots` with `ok([])`, addendum 09 §15's
+  lesson where it is not a feature reading as unbuilt but **the safety net not
+  being there**. So **a new project is a project**: `createProject` takes a
+  document now (one optional field in the preload type, the main handler and
+  the browser bridge) and `createFrom` goes through `runOpen`, which **flushes
+  what is open first**, so the project in front of the writer is saved and left
+  where it is and the document that arrived gets a file of its own — which
+  fixes a second case nobody reported, an import from the **welcome screen**
+  calling `replace` with no path at all, so the autosave had nowhere to write
+  and the project existed in memory and nowhere else. The chooser says it once
+  under the heading rather than on four rows (addendum 20 §9k), and
+  `addImported` **refuses what it cannot be sure of** — `update` writes what it
+  is given into whatever is open, so an append that would land on another
+  project changes nothing at all. **The next story is the same dialog**:
+  *More stories* and *More episodes* had a screen of their own, 236 lines that
+  read a document and had **none of the controls this one grew** (no marks, no
+  passage split, nothing to say where a story divides), which is two answers to
+  what an import is and is why Ken asked for *the same formatting dialog box* —
+  one now, with the kind saying where it lands, so the round is the code path
+  the second file of a multi-file import already took. Three decisions: **what
+  has landed is held by the workspace** (the first landing turns a window with
+  no project into one with a project, a different tree, so React builds the
+  dialog again between the rounds and state kept there is lost exactly where
+  *Import another* is pressed), **another round waits for the project to be
+  open** (an append sent before the window stands in it would be written over
+  the project still open — refused rather than raced), and **what landed is
+  named off the project rather than off the files**, driving it having
+  announced *The Harbour* as **ken-harbour** an inch from a rail that said
+  otherwise. Driven at 1440×900: the dialog stays up reading *The Harbour is
+  in. 1 story in the collection now*, a second document through *Import another
+  story…* gives *2 stories*, and then the act that lost the work — a novel
+  imported with that collection open — leaves **both** projects in the
+  browser's own library, the collection still carrying its story. Looking at it
+  caught *2 storys*, which is what `${noun}s` gives. **Deliberately not built
+  and named**: snapshots in the preview, the cause being gone and the net still
+  absent.
+  **§11 is the numerals, and a name typed once**, from Ken in the same message
+  (*I merged two sections and made it one chapter. I would like it to
+  automatically update the title headings if they're Roman numerals… if you
+  rename it in the chapter portion, it should rename that heading also*). A
+  story imported from a manuscript is divided at its numerals (addendum 21
+  §10) and those numerals arrive as **heading elements in the writing**, which
+  is right — they are what the document said — and the cost is that the book
+  holds a stored copy of something derived, with the unit's title and the
+  heading it opens with two strings nothing kept in step. `section-numbers.ts`
+  is two rules. **A bare numeral is the program's counting and is kept in
+  step**, and nothing else is: a heading with words in it is the writer's, and
+  renumbering *The Lighthouse* would be this program rewriting somebody's
+  manuscript, which Layout's own rule forbids outright. The style is **read
+  back off what is there** (roman or arabic, capitals or not, the stop or not),
+  the count **restarts at each division** — `divisionSpan`'s rule over units, so
+  chapter one of the second story is chapter one — and it runs at the two acts
+  that change how many chapters a division has rather than as a command,
+  *automatically* being the ask. **A name is typed once**: renaming a chapter
+  renames the heading it opens with **where the two were saying the same
+  thing**, leaves a heading the writer made differ alone, and does nothing
+  where a unit has no heading (§9l already stands the title in); it lives in
+  `updateUnit` beside `retitlePlans` for that function's own stated reason —
+  *rename it in either place and it is renamed in both* — so every surface gets
+  it without being told. `sectionLabel` is named that because `labelFor` is the
+  Writers Room's, the **sixth** name stepped around and the second the compiler
+  caught rather than a reader. Driven: the chapter's Title in the Inspector read
+  *The Harbour*, typing *The Lighthouse* changed the heading in the manuscript
+  beside it, and the chapters headed I, II and III were untouched.
   `addendum-34-project-folder.md` is **where new projects go**, from Ken (*when
   creating your project, there needs to be on that page the ability to set that
   file location and it'll save it in a file or a cloud drive and remember where

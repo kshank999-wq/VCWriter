@@ -4,6 +4,7 @@ import { orderKeyForIndex } from './ordering.js';
 // Where the plan and the script meet: a scene bound to a node on a board, or
 // to a row in an outline, is the same object as it.
 import { retitlePlans, unbindRemovedFromPlans } from './planning.js';
+import { renumberSections, retitleHeading } from './section-numbers.js';
 import { nowIso } from './entities/common.js';
 import {
   TRACK_COLOURS,
@@ -1151,13 +1152,26 @@ export const updateUnit = (
   if (!file.units.some((unit) => unit.id === unitId)) {
     throw new DomainError(`Scene/chapter ${unitId} does not exist`);
   }
+  const was = file.units.find((unit) => unit.id === unitId)?.title ?? '';
   const next = touchProject({
     ...file,
     units: file.units.map((unit) => (unit.id === unitId ? touch({ ...unit, ...patch }) : unit)),
   });
   // Half of "rename it in either place and it is renamed in both" (addendum
   // 03 §6): a scene bound to a node on the board is the same object as it.
-  return patch.title === undefined ? next : retitlePlans(next, { unitId }, patch.title);
+  if (patch.title === undefined) return next;
+  /**
+   * **The other half, and the same sentence** (addendum 33 §11, from Ken: *if
+   * you rename it in the chapter portion, it should rename that heading
+   * also. So you don't have to go to do it in two places*). A chapter
+   * imported from a manuscript opens with a **heading element** carrying its
+   * name, and nothing kept the two in step — so a chapter renamed in the rail
+   * went on printing the old name on its own page. It lives here beside
+   * `retitlePlans` for that function's reason: a rename is one act whoever
+   * asks for it, and a second call every surface must remember is a surface
+   * that forgets.
+   */
+  return retitleHeading(retitlePlans(next, { unitId }, patch.title), unitId, was, patch.title);
 };
 
 /**
@@ -1216,10 +1230,16 @@ export const removeUnit = (file: ProjectFile, unitId: StructuralUnitId): Project
   const removed = new Set<string>([unitId, ...removedBeatIds]);
   const markers = reanchorMarkers(file, new Set<string>([unitId]));
 
+  /**
+   * **And the numerals count again** (addendum 33 §11). Removing a chapter is
+   * the other act that changes how many a division has, so a book headed I,
+   * II, III does not end up headed I, III with nothing run — the merge's own
+   * rule, said at the second place the count can change.
+   */
   // A card pointing at a scene that has left the script claims to be real and
   // cannot say what it is, so it goes back to being a plan. A marker the
   // re-anchoring dropped takes its Chapter row back to a plan the same way.
-  return unbindRemovedFromPlans(
+  return renumberSections(unbindRemovedFromPlans(
     touchProject({
       ...file,
       units: file.units.filter((unit) => unit.id !== unitId),
@@ -1228,7 +1248,7 @@ export const removeUnit = (file: ProjectFile, unitId: StructuralUnitId): Project
       links: withoutLinksTouching(file, removed),
     }),
     { units: new Set<string>([unitId as string]), beats: removedBeatIds, markers: droppedMarkers(file, markers) },
-  );
+  ));
 };
 
 export const removeBeat = (file: ProjectFile, beatId: BeatId): ProjectFile => {

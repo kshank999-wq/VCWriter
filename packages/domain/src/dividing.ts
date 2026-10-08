@@ -1,6 +1,7 @@
 import { addBeat, addMarker, addUnit, moveBeat, removeBeat, removeUnit, splitUnit, updateBeat } from './mutations.js';
 import { beatsForUnit, unitsInStoryOrder } from './selectors.js';
 import { defaultMarkerKind } from './markers.js';
+import { renumberSections } from './section-numbers.js';
 import type { ProjectFile } from './project-file.js';
 import type { Beat, StructuralUnit } from './entities/structure.js';
 import type { ManuscriptElement } from './entities/manuscript.js';
@@ -350,5 +351,14 @@ export const joinUnits = (file: ProjectFile, unitIds: readonly StructuralUnitId[
   const keep = run[0]!.id;
   let working = file;
   for (const unit of run.slice(1)) working = mergeUnitInto(working, keep, unit.id);
-  return working;
+  /**
+   * **And the numerals count again** (addendum 33 §11, from Ken: *I merged two
+   * sections and made it one chapter. I would like it to automatically update
+   * the title headings if they're Roman numerals*). A merge is one of the two
+   * acts that change how many chapters a division has, and a heading that is
+   * a bare numeral is the program's counting rather than the writer's words —
+   * so it is put back in step here, where the count changed, rather than left
+   * for somebody to retype down the rest of the book.
+   */
+  return renumberSections(working);
 };

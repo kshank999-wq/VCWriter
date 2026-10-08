@@ -113,6 +113,13 @@ export interface VcWriterApi {
     format: ProjectFormat;
     author?: string;
     logline?: string;
+    /**
+     * A document to make the project **from**, rather than an empty one
+     * (addendum 33 §10). An import is a project arriving, so it lands in a
+     * file of its own; without this it was adopted into the open project's
+     * file, which overwrote whatever was in it.
+     */
+    file?: ProjectFile;
   }): Promise<DesktopApiResult<OpenResult>>;
   openProject(): Promise<DesktopApiResult<OpenResult>>;
   openProjectAtPath(path: string): Promise<DesktopApiResult<OpenResult>>;

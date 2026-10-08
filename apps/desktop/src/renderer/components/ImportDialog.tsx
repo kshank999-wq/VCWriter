@@ -5,6 +5,7 @@ import {
   appendImportedStory,
   buildProjectFromImport,
   CHAPTER_MARKS,
+  defaultMarkerKind,
   defaultSplit,
   describeMarks,
   docxToImport,
@@ -70,9 +71,26 @@ interface ImportDialogProps {
    * on every kind that already said.
    */
   kind: ImportKind;
+  /**
+   * The project that is open, where there is one. It is what *More stories*
+   * and *More episodes* add to, and what the **next round** of an import adds
+   * to once the first has landed (addendum 33 §10).
+   */
+  file: ProjectFile | null;
+  /**
+   * **What this run has already brought in** (addendum 33 §10). It is held by
+   * the workspace rather than here because the first landing turns a window
+   * with no project into one with a project — two different trees, so this
+   * component is unmounted and built again between the rounds, and state kept
+   * here would be the thing a writer loses exactly when they press *Import
+   * another*.
+   */
+  landed: { file: ProjectFile; names: string[] } | null;
   onClose(): void;
-  /** Adopt the built project. It arrives unsaved: the writer says where. */
-  onImported(file: ProjectFile): void;
+  /** A project arriving: it is made in a file of its own (addendum 33 §10). */
+  onImported(file: ProjectFile, names: string[]): void;
+  /** A story or an episode added to the end of the project that is open. */
+  onAdded(file: ProjectFile, names: string[]): void;
 }
 
 /** A file as read: once, as a script; or a Word document, read for whichever format is chosen. */
@@ -160,6 +178,31 @@ const readPart = async (chosen: File, prose: boolean): Promise<Part> => {
 /** A format that is made of parts, each of which may arrive as its own file. */
 const takesSeveral = (format: ProjectFormat): boolean => format === 'series' || isCollection(format);
 
+/**
+ * How many parts the project holds now (addendum 33 §10) — a reading off the
+ * markers, so it answers after each round without anything being counted up
+ * here. A collection's stories and a series' episodes are both markers of
+ * their format's own kind, which is what `defaultMarkerKind` says.
+ */
+const partsOfProject = (file: ProjectFile) =>
+  file.markers.filter((marker) => marker.kind === defaultMarkerKind(file.project.format));
+
+const countParts = (file: ProjectFile): number => partsOfProject(file).length;
+
+/**
+ * **What the ones that just arrived are called in the book** (addendum 33
+ * §10). Read off the project rather than off the files, because the two can
+ * differ and the writer is looking at the first: driving it, a document whose
+ * own title made the story *The Harbour* was announced as **ken-harbour**,
+ * the name of the file it came out of, an inch from a rail that said
+ * otherwise. The typed names stand in where a format has no divisions to read.
+ */
+const landedNames = (file: ProjectFile, count: number, fallback: readonly string[]): string[] => {
+  const parts = partsOfProject(file);
+  if (parts.length < count) return [...fallback];
+  return parts.slice(parts.length - count).map((marker, at) => marker.title.trim() || fallback[at] || 'Untitled');
+};
+
 /** What the kind is called at the top, and which files it will read. */
 const WORDS: Record<string, { title: string; picker: string; accept: string; explain: string }> = {
   script: {
@@ -183,6 +226,20 @@ const WORDS: Record<string, { title: string; picker: string; accept: string; exp
     explain:
       'A Word document (.docx) or plain text. Its headings become sections, its pictures become figures, and the face and size each paragraph was set in are kept.',
   },
+  stories: {
+    picker: 'Story files',
+    title: 'Add stories to the collection',
+    accept: '.docx,.txt,.md,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain',
+    explain:
+      'One document per story, added after the last story already in this collection. Nothing already here is touched. Once they are read you put them in order and say where each story divides.',
+  },
+  episodes: {
+    picker: 'Episode files',
+    title: 'Add episodes to the series',
+    accept: '.fdx,.docx,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    explain:
+      'One document per episode, added after the last episode already in this series. Nothing already here is touched. Each opens on a title page of its own, numbered after the ones already there.',
+  },
   collection: {
     picker: 'Story files',
     title: 'Import a collection of short stories',
@@ -195,15 +252,33 @@ const WORDS: Record<string, { title: string; picker: string; accept: string; exp
   },
 };
 
-export function ImportDialog({ open, kind, onClose, onImported }: ImportDialogProps) {
+/**
+ * **Whether this import adds to the project that is open** (addendum 33 §10).
+ *
+ * *More stories* and *More episodes* were a second dialog of their own, which
+ * read a document, listed what it found and had **none of the controls this
+ * one grew** — no marks, no passage split, nothing to say where a story
+ * divides. Two screens that import a story are two answers to what an import
+ * is, and Ken asked for *the same formatting dialog box*. So there is one, and
+ * the kind says where it lands.
+ */
+const addsToProject = (kind: ImportKind): boolean => kind === 'stories' || kind === 'episodes';
+
+export function ImportDialog({ open, kind, file, landed, onClose, onImported, onAdded }: ImportDialogProps) {
   const dialog = useModal(open);
   const picker = useRef<HTMLInputElement>(null);
   const [stage, setStage] = useState<Stage>({ kind: 'waiting' });
-  const [format, setFormat] = useState<ProjectFormat>(formatForKind(kind) ?? 'screenplay');
+  const adding = addsToProject(kind);
+  const [format, setFormat] = useState<ProjectFormat>(
+    () => (adding ? (file?.project.format ?? 'short_story') : (formatForKind(kind) ?? 'screenplay')),
+  );
+
   // Which of the four signals divides the document (addendum 33), and how
   // much of a chapter goes in a beat. Both start where the format says.
   const [marks, setMarks] = useState<ChapterMarks>(ALL_CHAPTER_MARKS);
-  const [split, setSplit] = useState<PassageSplit>(() => defaultSplit(formatForKind(kind) ?? 'screenplay'));
+  const [split, setSplit] = useState<PassageSplit>(() =>
+    defaultSplit(addsToProject(kind) ? (file?.project.format ?? 'short_story') : (formatForKind(kind) ?? 'screenplay')),
+  );
   const [fileCast, setFileCast] = useState(true);
   const [keepLocations, setKeepLocations] = useState(true);
   // One story or many (addendum 22 §2): only the short-story format asks.
@@ -264,23 +339,56 @@ export function ImportDialog({ open, kind, onClose, onImported }: ImportDialogPr
     setStage(left.length === 0 ? { kind: 'waiting' } : { ...stage, parts: left });
   };
 
+  /**
+   * **Onto the end, or into a project of its own** (addendum 33 §10).
+   *
+   * `into` is what this round appends to: the project this dialog made a
+   * moment ago, or the one that was already open where the kind adds to it.
+   * With neither, a project is built — and `adoptImport` now gives that
+   * document a **file of its own** rather than writing it over the open one,
+   * which is what lost Ken a finished story.
+   */
   const finish = () => {
     if (!script || stage.kind !== 'read') return;
+    const named = (part: Part): string => scriptOf(part, format, marks).title || bareName(part.name);
+    const into = landed?.file ?? (adding ? file : null);
+    if (into) {
+      let next = into;
+      const names: string[] = [];
+      for (const part of stage.parts) {
+        const one = scriptOf(part, format, marks);
+        const title = one.title || bareName(part.name);
+        const added = format === 'series' ? appendImportedEpisode(next, one, { title }) : appendImportedStory(next, one, { title });
+        if (!added) continue;
+        next = added.file;
+        names.push(title);
+      }
+      if (names.length === 0) return;
+      onAdded(next, landedNames(next, names.length, names));
+      setStage({ kind: 'waiting' });
+      return;
+    }
     let built = buildProjectFromImport(script, { format, fileCast, keepLocations, stories, passages: split }).file;
     // A series' first script is its first episode, on a page of its own,
     // so that what follows is the second (addendum 22 §4a).
     if (format === 'series') built = ensureFirstEpisode(built, { title: script.title || bareName(stage.parts[0]!.name) });
+    const names = [named(stage.parts[0]!)];
     if (takesSeveral(format)) {
       for (const part of stage.parts.slice(1)) {
         const next = scriptOf(part, format, marks);
         const title = next.title || bareName(part.name);
         const added = format === 'series' ? appendImportedEpisode(built, next, { title }) : appendImportedStory(built, next, { title });
-        if (added) built = added.file;
+        if (added) {
+          built = added.file;
+          names.push(title);
+        }
       }
     }
-    onImported(built);
+    onImported(built, landedNames(built, takesSeveral(format) ? names.length : 1, names));
     setStage({ kind: 'waiting' });
-    onClose();
+    // **A format made of parts stays open and offers the next one**, which is
+    // the whole of Ken's ask; anything else is one document and is done.
+    if (!takesSeveral(format)) onClose();
   };
 
   const close = () => {
@@ -288,8 +396,20 @@ export function ImportDialog({ open, kind, onClose, onImported }: ImportDialogPr
     onClose();
   };
 
+  /**
+   * Whether another round may be asked for yet. A project made here is
+   * adopted by the host, and until the window is actually standing in it an
+   * append would be written **over the project still open** — which is the
+   * fault this section exists to remove, so it is refused rather than raced.
+   */
+  const ready = landed === null || (file !== null && file.project.id === landed.file.project.id);
+  /** The step that says what is in and offers the next one (addendum 33 §10). */
+  const showLanded = landed !== null && stage.kind === 'waiting';
+
   const nouns = nounsFor(format);
   const partNoun = format === 'series' ? 'episode' : isCollection(format) ? 'story' : null;
+  // *Storys* is what `${noun}s` gives, which driving it duly printed.
+  const partPlural = format === 'series' ? 'episodes' : isCollection(format) ? 'stories' : null;
   // The noun table calls a series' work a script, which is true of each
   // episode and not of what the files together make.
   const wholeNoun = format === 'series' ? 'series' : nouns.work.toLowerCase();
@@ -318,7 +438,37 @@ export function ImportDialog({ open, kind, onClose, onImported }: ImportDialogPr
               }}
             />
 
-            {stage.kind === 'waiting' ? <p className="muted">{words.explain}</p> : null}
+            {stage.kind === 'waiting' && !showLanded ? <p className="muted">{words.explain}</p> : null}
+
+            {/* **What landed, and the offer of the next one** (addendum 33
+                §10, from Ken: *there needs to be a button for next story. And
+                when you add it, it adds it onto the end*). A finished work is
+                brought in one document at a time, so the screen stays up and
+                says what it now holds rather than closing and leaving a
+                writer to find the menu again. */}
+            {showLanded && landed ? (
+              <div className="import-landed">
+                <p>
+                  {landed.names.length === 1 ? (
+                    <>
+                      <strong>{landed.names[0]}</strong> is in.
+                    </>
+                  ) : (
+                    <>
+                      <strong>{landed.names.length}</strong> {partPlural ?? 'documents'} are in: {landed.names.join(', ')}.
+                    </>
+                  )}{' '}
+                  {partNoun && partPlural
+                    ? `${countParts(landed.file)} ${countParts(landed.file) === 1 ? partNoun : partPlural} in the ${wholeNoun} now.`
+                    : ''}
+                </p>
+                <p className="muted small">
+                  {ready
+                    ? `Another ${partNoun ?? 'document'} goes on the end, after what is already here. Nothing already in the ${wholeNoun} is touched.`
+                    : 'Opening it…'}
+                </p>
+              </div>
+            ) : null}
 
             {stage.kind === 'reading' ? (
               <p className="muted">Reading {stage.count === 1 ? 'the document' : `${stage.count} documents`}…</p>
@@ -539,15 +689,33 @@ export function ImportDialog({ open, kind, onClose, onImported }: ImportDialogPr
           </div>
 
           <footer className="page-setup-actions">
-            <button type="button" className="ghost" onClick={close}>
-              Cancel
-            </button>
-            <button type="button" className="ghost" onClick={() => picker.current?.click()}>
-              {script ? 'Choose others…' : 'Choose files…'}
-            </button>
-            <button type="button" className="primary" disabled={!script} onClick={finish}>
-              Import
-            </button>
+            {showLanded ? (
+              <>
+                <button type="button" className="ghost" onClick={close}>
+                  Done
+                </button>
+                <button
+                  type="button"
+                  className="primary"
+                  disabled={!ready}
+                  onClick={() => picker.current?.click()}
+                >
+                  {partNoun === 'episode' ? 'Import another episode…' : 'Import another story…'}
+                </button>
+              </>
+            ) : (
+              <>
+                <button type="button" className="ghost" onClick={close}>
+                  {landed ? 'Done' : 'Cancel'}
+                </button>
+                <button type="button" className="ghost" onClick={() => picker.current?.click()}>
+                  {script ? 'Choose others…' : 'Choose files…'}
+                </button>
+                <button type="button" className="primary" disabled={!script} onClick={finish}>
+                  {landed || adding ? 'Add to the end' : 'Import'}
+                </button>
+              </>
+            )}
           </footer>
         </>
       ) : null}

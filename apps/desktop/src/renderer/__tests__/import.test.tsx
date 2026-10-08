@@ -88,7 +88,7 @@ const SCREENPLAY = () =>
 
 describe('importing a script', () => {
   it('shows what it found before it makes anything of it', async () => {
-    render(<ImportDialog open kind="script" onClose={() => {}} onImported={() => {}} />);
+    render(<ImportDialog file={null} landed={null} onAdded={() => {}} open kind="script" onClose={() => {}} onImported={() => {}} />);
     // Nothing to import until a file is chosen.
     expect((screen.getByRole('button', { name: 'Import' }) as HTMLButtonElement).disabled).toBe(true);
 
@@ -106,7 +106,7 @@ describe('importing a script', () => {
 
   it('makes a project broken into scenes with the cast filed', async () => {
     const made: ProjectFile[] = [];
-    render(<ImportDialog open kind="script" onClose={() => {}} onImported={(file) => made.push(file)} />);
+    render(<ImportDialog file={null} landed={null} onAdded={() => {}} open kind="script" onClose={() => {}} onImported={(file) => made.push(file)} />);
     choose('lighthouse.fdx', FDX);
     await screen.findByText('Who is in it');
 
@@ -131,7 +131,7 @@ describe('importing a script', () => {
   });
 
   it('says so plainly when the file is none of the kinds it reads', async () => {
-    render(<ImportDialog open kind="script" onClose={() => {}} onImported={() => {}} />);
+    render(<ImportDialog file={null} landed={null} onAdded={() => {}} open kind="script" onClose={() => {}} onImported={() => {}} />);
     choose('notes.txt', 'just some notes');
     await screen.findByRole('alert');
     expect(screen.getByRole('alert').textContent).toMatch(/not a Final Draft document, a Word document or a PDF/);
@@ -146,7 +146,7 @@ describe('importing a script', () => {
     // kind was answered at the door and the document is read by its headings
     // from the first.
     const made: ProjectFile[] = [];
-    render(<ImportDialog open kind="novel" onClose={() => {}} onImported={(file) => made.push(file)} />);
+    render(<ImportDialog file={null} landed={null} onAdded={() => {}} open kind="novel" onClose={() => {}} onImported={(file) => made.push(file)} />);
     choose('lighthouse.docx', NOVEL(), 'Manuscript file');
     await screen.findByText('The Lighthouse — K. Shank');
     expect(screen.queryByLabelText('Format')).toBeNull();
@@ -184,7 +184,7 @@ describe('importing a script', () => {
     // off the document does not divide at all, which is what a manuscript
     // whose numerals are page numbers needs.
     const made: ProjectFile[] = [];
-    render(<ImportDialog open kind="novel" onClose={() => {}} onImported={(file) => made.push(file)} />);
+    render(<ImportDialog file={null} landed={null} onAdded={() => {}} open kind="novel" onClose={() => {}} onImported={(file) => made.push(file)} />);
     choose('lighthouse.docx', NOVEL(), 'Manuscript file');
     await screen.findByText('The Lighthouse — K. Shank');
 
@@ -209,12 +209,12 @@ describe('importing a script', () => {
     // always landed in, so the screen says so first. The rule is
     // `landsInLayout`'s and not this component's, or the sentence and the
     // room could disagree.
-    render(<ImportDialog open kind="collection" onClose={() => {}} onImported={() => {}} />);
+    render(<ImportDialog file={null} landed={null} onAdded={() => {}} open kind="collection" onClose={() => {}} onImported={() => {}} />);
     choose('lighthouse.docx', NOVEL(), 'Story files');
     await screen.findByText(/The Layout room opens on them/);
 
     cleanup();
-    render(<ImportDialog open kind="novel" onClose={() => {}} onImported={() => {}} />);
+    render(<ImportDialog file={null} landed={null} onAdded={() => {}} open kind="novel" onClose={() => {}} onImported={() => {}} />);
     choose('lighthouse.docx', NOVEL(), 'Manuscript file');
     await screen.findByText('The chapters');
     expect(screen.queryByText(/The Layout room opens on them/)).toBeNull();
@@ -222,7 +222,7 @@ describe('importing a script', () => {
 
   it('reads a Word screenplay by where its paragraphs sit', async () => {
     const made: ProjectFile[] = [];
-    render(<ImportDialog open kind="script" onClose={() => {}} onImported={(file) => made.push(file)} />);
+    render(<ImportDialog file={null} landed={null} onAdded={() => {}} open kind="script" onClose={() => {}} onImported={(file) => made.push(file)} />);
     choose('lighthouse.docx', SCREENPLAY());
     await screen.findByText('Who is in it');
     expect(screen.getByText('MAEVE')).toBeTruthy();
@@ -240,14 +240,14 @@ describe('importing a script', () => {
   });
 
   it('says so when a Word document is not one', async () => {
-    render(<ImportDialog open kind="script" onClose={() => {}} onImported={() => {}} />);
+    render(<ImportDialog file={null} landed={null} onAdded={() => {}} open kind="script" onClose={() => {}} onImported={() => {}} />);
     choose('broken.docx', '<html><body>not a document</body></html>');
     await screen.findByRole('alert');
     expect(screen.getByRole('alert').textContent).toMatch(/not a Word document/);
   });
 
   it('says so when the file claims to be Final Draft and is not', async () => {
-    render(<ImportDialog open kind="script" onClose={() => {}} onImported={() => {}} />);
+    render(<ImportDialog file={null} landed={null} onAdded={() => {}} open kind="script" onClose={() => {}} onImported={() => {}} />);
     choose('broken.fdx', '<html><body>not a script</body></html>');
     await screen.findByRole('alert');
     expect(screen.getByRole('alert').textContent).toMatch(/not a Final Draft document/);
@@ -259,7 +259,7 @@ describe('importing a script', () => {
    */
   it('brings a series in a file at a time, each episode on a page of its own, in the order listed', async () => {
     const made: ProjectFile[] = [];
-    render(<ImportDialog open kind="script" onClose={() => {}} onImported={(file) => made.push(file)} />);
+    render(<ImportDialog file={null} landed={null} onAdded={() => {}} open kind="script" onClose={() => {}} onImported={(file) => made.push(file)} />);
     chooseMany([fileNamed('lighthouse.fdx', FDX), fileNamed('wreck.fdx', WRECK), fileNamed('notes.txt', 'x')]);
     await screen.findByText('Who is in it');
     // A screenplay is one document: the rest are said to be left out.
@@ -290,7 +290,7 @@ describe('importing a script', () => {
 
   it('leaves a file out when asked, and imports one file as it always did', async () => {
     const made: ProjectFile[] = [];
-    render(<ImportDialog open kind="script" onClose={() => {}} onImported={(file) => made.push(file)} />);
+    render(<ImportDialog file={null} landed={null} onAdded={() => {}} open kind="script" onClose={() => {}} onImported={(file) => made.push(file)} />);
     chooseMany([fileNamed('lighthouse.fdx', FDX), fileNamed('wreck.fdx', WRECK)]);
     await screen.findByText('Who is in it');
     fireEvent.change(screen.getByLabelText('Format'), { target: { value: 'series' } });
