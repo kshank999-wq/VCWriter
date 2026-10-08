@@ -37,6 +37,7 @@ import {
   titlePageShown,
   titleTemplateOf,
   titleTemplatePatch,
+  partCarriesOwnWords,
   partTakesBlankBack,
   updatePart,
   type BookPart,
@@ -248,6 +249,25 @@ function Body({
    * copy of them would be a second answer to all five.
    */
   const isTitle = part.kind === 'title_page';
+  /** Whether this page prints words of the writer's own (§17e): a dedication, an epigraph. */
+  const ownWords = partCarriesOwnWords(part.kind);
+  /**
+   * **What those words are called, in one place** (§17e). The field's own
+   * label and the tile over it name the same thing, and a tile reading *set in
+   * type from the book’s title* over a box holding a dedication is the half
+   * title's vocabulary reaching a page it does not describe — the fault §6c
+   * removed from seventeen components, in copy rather than in a noun.
+   */
+  const wordsName = part.kind === 'epigraph' ? 'The quotation' : 'The dedication';
+  const modes = useMemo(
+    () =>
+      MODES.map((one) =>
+        one.id === 'text' && ownWords
+          ? { ...one, label: 'The words', hint: `${wordsName}, set in the book’s own type` }
+          : one,
+      ),
+    [ownWords, wordsName],
+  );
   const plan = useMemo(() => partsOf(file), [file]);
   const fields = titlePageFieldsOf(part);
   const said = titlePageContent(file, part, plan);
@@ -544,7 +564,7 @@ function Body({
               {showElements ? <span className="muted small dp-tally">{titlePageShown(part)} of 7 shown</span> : null}
             </h3>
             <div className="dp-tiles">
-              {MODES.map((one) => (
+              {modes.map((one) => (
                 <button
                   key={one.id}
                   type="button"
@@ -595,6 +615,29 @@ function Body({
                   })}
                 </ul>
               </>
+            ) : mode === 'text' && ownWords ? (
+              /**
+               * **The words on this page are the writer's** (§17e, from Ken:
+               * *when I add a dedication page, it doesn't allow me to actually
+               * add any text to it*).
+               *
+               * It did not, and this is §15c's rule failing in the direction
+               * it warns about: the screen that replaced the part dialog
+               * carried the half title's and the title page's controls and not
+               * this one, so a dedication opened on *Title from the book* — a
+               * page offering a writer the book's title and no way to type a
+               * dedication, over a page that prints only what they type.
+               */
+              <label className="field dp-words">
+                <span>{wordsName}</span>
+                <textarea
+                  aria-label="The words on this page"
+                  rows={4}
+                  placeholder={part.kind === 'epigraph' ? 'A line, and who said it.' : 'For whom, and why.'}
+                  value={part.text}
+                  onChange={(event) => onUpdate((current) => updatePart(current, part.id, { text: event.target.value }))}
+                />
+              </label>
             ) : mode === 'text' ? (
               <div className="dp-slot">
                 <div>
@@ -1031,13 +1074,17 @@ function Body({
                 <p className="muted small">
                   {part.backBlank
                     ? `This page takes a right-hand leaf and nothing prints on its reverse${
-                        // **The next left-hand page, not the next page.** A
-                        // copyright page is a verso by convention, so blanking
-                        // the title page's back sends it two leaves on and
-                        // leaves a second blank between — which a writer sees
-                        // in the rail and would otherwise read as a fault.
-                        isTitle ? ', so the copyright page moves to the next left-hand page' : ''
-                      }. The blanks are counted with the rest and carry no page numbers — which is what a page printed on different paper needs.`
+                        // **Said before the press** (§17e, from Ken: *it left
+                        // an additional page blank*). Everything after this
+                        // page moves on by one, and a page that opens on a
+                        // right-hand page may then leave a blank in front of
+                        // itself — so the book usually gains two leaves rather
+                        // than one. That is the pagination doing what it
+                        // should, and a writer who reads it here rather than
+                        // counting afterwards is not surprised by it; the rail
+                        // lists every leaf, blank or not, with its reason.
+                        isTitle ? ', so the copyright page moves to the leaf after it' : ''
+                      }. What follows moves on a page, and a page that opens on a right-hand page may leave another blank in front of it, so the book often gains two leaves. The blanks are counted with the rest, carry no page numbers, and are listed in the rail — which is what a page printed on different paper needs.`
                     : `The page after this one prints on its reverse${
                         isTitle ? ', which by convention is the copyright page' : ''
                       }.`}

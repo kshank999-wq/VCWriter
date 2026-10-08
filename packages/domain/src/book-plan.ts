@@ -244,6 +244,22 @@ export const mayAdd = (file: ProjectFile, kind: PartKind): boolean =>
 export const partTakesInsets = (kind: PartKind): boolean =>
   PART_INFO[kind].carries === 'text' && kind !== 'dedication' && kind !== 'epigraph' && kind !== 'copyright';
 
+/**
+ * **Whether the words on this page are the writer's own** (§17e, from Ken:
+ * *when I add a dedication page, it doesn't allow me to actually add any text
+ * to it*).
+ *
+ * A half title and a title page print the **book's** title, read from one
+ * place (§3a), and a copyright page prints its own fields (§15). A dedication
+ * and an epigraph print `part.text` and nothing else, which nothing but the
+ * part dialog could ever type — and the part dialog stopped being reachable
+ * for them the day the designed-page screen took the double-click (§9n) and
+ * the inspector that held the only other route was removed (§9u). So the
+ * screen that replaced it asks this and carries the box.
+ */
+export const partCarriesOwnWords = (kind: PartKind): boolean =>
+  partPlacement(kind) === 'block' && PART_INFO[kind].carries === 'text' && kind !== 'copyright';
+
 const withInsets = (file: ProjectFile, partId: string, change: (insets: PartInset[]) => PartInset[]): ProjectFile =>
   writeParts(
     file,
@@ -661,7 +677,21 @@ const partOwnBlocks = (
           id: part.id,
           kind: 'copyright',
           numbering,
-          starts: 'verso',
+          /**
+           * **It takes the next page** (§17e, from Ken: *I added the title page
+           * and said leave the back of it blank, but it left an additional page
+           * blank*).
+           *
+           * This was `verso`, and the convention it was written for is not *a
+           * left-hand page* but **the back of the title page** — which the
+           * pagination gives it for nothing, a title page being a recto one
+           * page long. So the force bought nothing where it was right and cost
+           * a page where it was not: with the title page's back left blank
+           * (§17d) the copyright page skipped the recto after it, and the
+           * reader met **a wholly blank spread** in the front matter, a blank
+           * right-hand page being the one thing a book does not do by accident.
+           */
+          starts: 'page',
           display: true,
           folio: false,
           partId: part.id,
@@ -1108,7 +1138,7 @@ export const blankSpot = (place: PagePlace, page: Pick<BookPageRow, 'blankFor'>)
  * It is a **reading over the rows**, so the reason for any page is answerable
  * from any screen without threading neighbours through it.
  */
-export type BlankReason = 'writer' | 'back' | 'recto';
+export type BlankReason = 'writer' | 'back' | 'page_back' | 'recto';
 
 export const blankReason = (rows: readonly BookPageRow[], sheet: number): BlankReason | null => {
   const page = rows.find((one) => one.sheet === sheet);
@@ -1119,17 +1149,46 @@ export const blankReason = (rows: readonly BookPageRow[], sheet: number): BlankR
   // where a picture opens a division, the leaf after it being the recto gap
   // the cutter left; the screen then told the writer it was a back page
   // nobody had asked for.
-  if (page.blankBack) return 'back';
+  //
+  // **The back of what** is a fourth reason (§17e). §9i wrote this flag for a
+  // picture, and §17d gave a part the same switch and §9r a chapter page, so
+  // *the back of the picture in front of it* was said of a title page. Asking
+  // the page before which it is, is **not** the guess removed above: the block
+  // has already said this leaf is a back, and the page in front only says what
+  // it is the back **of** — the same reading `pageRemoval` makes to decide
+  // whose switch the × reaches.
+  if (page.blankBack) {
+    return rows.find((one) => one.sheet === sheet - 1)?.figureId ? 'back' : 'page_back';
+  }
   return 'recto';
 };
 
-/** The reason in words, in one place, for the help text and both refusals. */
-export const sayBlankReason = (reason: BlankReason): string =>
-  reason === 'writer'
-    ? 'you put it here'
-    : reason === 'back'
-      ? 'it is the back of the picture in front of it, kept empty so nothing shows through'
-      : 'the page after it opens on a right-hand page';
+/**
+ * The reason in words, in one place, for the help text and both refusals.
+ *
+ * **Who the sentence is about** (§17e). The help text stands on the blank
+ * leaf's own screen, where *it* is the blank; a refusal stands on the page the
+ * leaf is in front of, where *this one* is that page — and the `recto` reason
+ * is the one that goes actively wrong when the two are confused, *the page
+ * after it opens on a right-hand page* then naming the page after **this**
+ * one, which is not the reason for anything. So the voice is asked for rather
+ * than guessed, and there is one function rather than two copies of three
+ * reasons: §9w's own finding (*a sentence whose second half has no referent*)
+ * one clause in.
+ */
+export const sayBlankReason = (reason: BlankReason, about: 'the leaf' | 'the page behind it' = 'the leaf'): string => {
+  const here = about === 'the leaf';
+  if (reason === 'writer') return here ? 'you put it here' : 'you put it there';
+  // The back of a picture reads the same either way: *it* can only be the
+  // blank, the picture being named in the same breath.
+  if (reason === 'back') return 'it is the back of the picture in front of it, kept empty so nothing shows through';
+  if (reason === 'page_back') {
+    return here
+      ? 'the page in front of it is set to leave its back blank'
+      : 'the page in front of this one is set to leave its back blank';
+  }
+  return here ? 'the page after it opens on a right-hand page' : 'this page opens on a right-hand page';
+};
 
 /** What a press would do, or why it may not be asked for (§9r). */
 export interface BlankOffer {
@@ -1199,7 +1258,7 @@ export const blankOffer = (place: PagePlace, rows: readonly BookPageRow[], sheet
       refusal:
         standing === 'writer'
           ? 'A blank page already stands in front of this one, because you put it there. Its own page takes it away again.'
-          : `A blank page already stands in front of this one, because ${sayBlankReason(standing)}.`,
+          : `A blank page already stands in front of this one, because ${sayBlankReason(standing, 'the page behind it')}.`,
     };
   }
   return { spot, act: 'Put a blank page here…', refusal: null };
@@ -1234,7 +1293,7 @@ export const partBlankOffer = (
       refusal:
         standing === 'writer'
           ? 'A blank page already stands in front of this one, because you put it there. Its own page takes it away again.'
-          : `A blank page already stands in front of this one, because ${sayBlankReason(standing)}.`,
+          : `A blank page already stands in front of this one, because ${sayBlankReason(standing, 'the page behind it')}.`,
     };
   }
   return { spot: part.id, act: 'Put a blank page before this one', refusal: null };
@@ -1403,8 +1462,27 @@ export const setChapterRecto = (file: ProjectFile, markerId: string, recto: bool
   }),
 });
 
-/** Ask for that leaf, or stop asking. Only what differs from the default is stored. */
-export const setBackBlank = (file: ProjectFile, elementId: string, blank: boolean): ProjectFile => ({
+/**
+ * Ask for that leaf, or stop asking. Only what differs from the default is
+ * stored.
+ *
+ * **One act for all three, like `setBlankPage`** (§17e). It read the
+ * manuscript and nothing else, which was the whole of what §9i needed — a
+ * picture's back — and then §17d gave a **part** the same switch and §9r gave
+ * a **chapter page** one, so the act had three callers and could answer for
+ * one. The cost showed where the room reaches the field from a page rather
+ * than from a record: the leaf behind the title page had no × on it, and the
+ * sentence beside it named the recto rule, which is the reason for a different
+ * leaf two pages away. Which collection an id is in is a fact the caller
+ * should not have to carry, and that is this function's twin's own argument.
+ */
+export const setBackBlank = (file: ProjectFile, id: string, blank: boolean): ProjectFile => {
+  if (partsOf(file).some((part) => part.id === id)) return setPartBlank(file, id, 'back', blank);
+  if (file.markers.some((marker) => (marker.id as string) === id)) return setChapterBlank(file, id, 'back', blank);
+  return setElementBackBlank(file, id, blank);
+};
+
+const setElementBackBlank = (file: ProjectFile, elementId: string, blank: boolean): ProjectFile => ({
   ...file,
   beats: file.beats.map((beat) => ({
     ...beat,

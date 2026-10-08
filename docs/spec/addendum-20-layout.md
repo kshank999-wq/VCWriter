@@ -2946,6 +2946,137 @@ pagination. One block is inserted and the convention does the rest; the screen
 says *the next left-hand page* because of it, and a test pins the pair so the
 second blank is not later "fixed" as a fault.
 
+> **§17e overturns that last paragraph.** The test pinned *where the copyright
+> page landed* and not **what a reader sees**: the second blank was a
+> right-hand page, so the two together made a wholly blank spread. The
+> copyright page takes the next page now, and the assertion was rewritten
+> rather than worked around.
+
+## 17e. Every page accounted for, and the words on a dedication
+
+From Ken in one message, three reports: *in the layout page, I added the title
+page and said, leave the back of it blank, but it left an additional page
+blank*; *all pages need to be accounted for blank or not and blank pages need
+to be able to be added and removed easily and show up in the outliner in the
+left*; *when I add a dedication page, it doesn't allow me to actually add any
+text to it.*
+
+The first two are **one report counted twice**, and the second half is the more
+important one.
+
+### 1. The additional blank page
+
+**The arithmetic was correct and he was still right.** Measured before a line
+was written: a novel's front matter is 26 sheets, asking for the title page's
+back to be blank made it 28, and that is the pagination doing what it should —
+everything after the leaf moves on by one, and the contents page opens on a
+right-hand page, so a blank falls in front of it. Two leaves, both earned.
+
+What was wrong is **which leaves**. §17d forced the copyright page to a
+`verso`, which was written to keep the convention *a copyright page is the back
+of the title page* — and **the force bought nothing where the convention
+holds**: a title page is a recto one page long, so the page after it is a verso
+whether or not anything says so. Where it bit was exactly where the writer had
+asked for something else: with a blank behind the title page, the next leaf is
+a recto, the force skipped it, and the two blanks fell **side by side**. A
+reader turning that spread meets two facing pages with nothing on them, which
+no book does by accident.
+
+So the copyright page takes the **next page**. Nothing about a book that has
+not asked changes — the whole suite passed on it, which is the proof — and
+§17d's own assertion, which pinned the old answer, was **rewritten rather than
+worked around**: it checked where the copyright page landed and never what the
+reader sees.
+
+The remaining +2 is **said before the press** rather than discovered
+afterwards. The switch's note names it, says the blanks are counted, carry no
+page numbers, and are listed in the rail, which is the other half of his
+message answered in the same sentence.
+
+### 2. Every page accounted for
+
+A book that grew by two leaves could not be **asked where they had gone**,
+because **a part claimed no pages at all**. §9m made a division's pages a range
+so every page of the story falls under exactly one row; the front matter was
+never given the same treatment, so the blank between the half title and the
+title page, and the back-blank leaf itself, belonged to no row, appeared nowhere
+in the rail, and had no × — which is the stray page §9w and §9x each found one
+instance of and fixed one instance of.
+
+`pagesUnder` now claims a part's pages the way it claims a division's: the page
+a part's row already names, and whatever leaves stand in front of it waiting to
+be given to somebody. `rowHasUnder` grows a part branch, so a part folds open
+**only where it holds more than the page its row has already named** — a half
+title stays one row, a title page with a leaf in front of it gets an arrow.
+Driven on his own book: Title page *iii* folds onto *Page ii Blank · Page iii
+Page · Page iv Blank*, and Contents *vii* onto *Page vi Blank · Page vii Page*.
+
+Two things fell out of that, both of them faults that could only be seen once
+the leaves had rows.
+
+**The × on the leaf he had asked for refused.** §9i wrote `pageRemoval`'s
+back-blank branch for a **picture**, which was everything there was; §17d then
+gave a **part** the same switch and §9r a **chapter page**, and neither reached
+it. So the one leaf in the book a writer had deliberately asked for was the one
+with no act on it, under a sentence naming the recto rule — the reason for a
+different leaf two pages away. The cause is one asymmetry: `setBlankPage` reads
+which of three collections an id names and says in its own comment that *which
+of them an id names is a fact the caller should not have to carry*, and
+`setBackBlank` — the same act said of the other side of the leaf — walked the
+manuscript and nothing else. It reads all three now, so `pageRemoval` needs no
+third branch and the act is the same act. Driven: 26 → 28 → 26.
+
+**The sentence named a picture that was not there.** `blankBack` is one flag
+for two things, so *it is the back of the picture in front of it* was said of a
+title page. `page_back` is a fourth `BlankReason`, and asking the page in front
+which it is, is **not** the guess §9w removed: the block has already said this
+leaf is a back, and the page in front only says what it is the back **of** —
+the same reading `pageRemoval` makes to decide whose switch the × reaches.
+
+And a third, found by reading the screen: **the refusal named the wrong page**.
+`sayBlankReason` is one reading for the help text and both refusals, and the
+help text stands on the **blank leaf's** own screen while a refusal stands on
+**the page the leaf is in front of** — so *the page after it opens on a
+right-hand page*, true of the leaf, read on the title page's card as a claim
+about the copyright page, which is the reason for nothing. The voice is asked
+for rather than guessed (`'the leaf'` or `'the page behind it'`), in one
+function rather than two copies of four reasons; it is §9w's own finding — *a
+sentence whose second half has no referent* — one clause further in. Only the
+`recto` reason goes actively wrong either way, which is why it survived.
+
+### 3. The words on a dedication
+
+He was right and **nothing was broken in the page**: `part.text` has been
+printed by `partOwnBlocks` since §5, and the box that wrote it was
+`PartFields`' — which stood in the Layout inspector until §9u deleted that
+column, after §9n had routed the double-click to the designed page's own
+screen. So the route landed on a screen with every control for the **look** of
+a dedication and nowhere to type the dedication. It is **§15c's own rule
+failing in the other direction**: that section found a route passing *through*
+the screen it replaced, and this is a route carried without what the screen it
+replaced alone could do — *routing past a screen without carrying its controls
+is how a fix loses a feature*, written there about the copyright page's type
+and true here about a dedication's words.
+
+`partCarriesOwnWords` is the predicate, and it is **a rule rather than a list
+of kinds**: a page carries its own words where it is a `block`, carries `text`,
+and is not the copyright page, which prints its own record (§15). So a
+dedication and an epigraph get the box; the half title and the title page do
+not, their words being `bookNames`' — a box there would be a second answer to
+what those pages say rather than the only one, which is §16d's distinction read
+from the other side (this is not one field with two doors, it is two fields).
+
+Driving it caught the wording fault: the first tile read **Title text — set in
+type from the book's title** over a box holding a dedication, which is the half
+title's vocabulary reaching a page it does not describe — §6c's sweep in copy
+rather than in a noun. It reads the same name the field below it does, from one
+place, so the two cannot disagree.
+
+What the tests pin is the **gesture** (§15a), which is what this section is
+about three times over: a writer who adds a dedication must be able to type
+into the screen the act opens, a leaf a writer asked for must have an act on
+its row, and a book that grows must be able to say where.
+
 ## 9r. A blank page wherever you want, and one on a chapter page's back
 
 From Ken: *the chapter page we have a blank on the back, and you should be

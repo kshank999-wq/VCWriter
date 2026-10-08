@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import {
+  addPart,
   createProjectFile,
   partStyleOf,
   partTemplateOf,
@@ -55,14 +56,14 @@ function Harness({
 }: {
   onFile?: (file: ProjectFile) => void;
   picked?: string[];
-  kind?: 'half_title' | 'title_page';
+  kind?: 'half_title' | 'title_page' | 'dedication' | 'epigraph';
   start?: () => ProjectFile;
 }) {
   const [file, setFile] = useState(start ?? book);
   return (
     <DesignedPageDialog
       file={file}
-      part={kind === 'title_page' ? titlePage(file) : halfTitle(file)}
+      part={partsOf(file).find((part) => part.kind === kind) ?? halfTitle(file)}
       laying={null}
       onUpdate={(change) =>
         setFile((current) => {
@@ -383,8 +384,29 @@ describe('leaving the back of a page blank', () => {
     render(<Harness kind="title_page" />);
     expect(screen.getByText(/which by convention is the copyright page/)).toBeTruthy();
     fireEvent.click(screen.getByLabelText('Leave the back of this page blank'));
-    expect(screen.getByText(/the copyright page moves to the next left-hand page/)).toBeTruthy();
+    /**
+     * **§17d said *the next left-hand page* and it is the leaf after it now**
+     * (§17e, from Ken: *I added the title page and said, leave the back of it
+     * blank, but it left an additional page blank*). The copyright page was
+     * forced to a verso, which bought nothing where the convention holds —
+     * the page after a one-page recto is a verso anyway — and where a blank
+     * stood between, it skipped a leaf and the two blanks made a spread with
+     * nothing on it.
+     */
+    expect(screen.getByText(/the copyright page moves to the leaf after it/)).toBeTruthy();
     expect(screen.getByText(/printed on different paper/)).toBeTruthy();
+  });
+
+  it('says the book will gain two leaves before the press, rather than leaving it to be counted', () => {
+    // The arithmetic is correct and was inexplicable: everything after the
+    // page moves on by one, and the contents page opens on a right-hand page,
+    // so a second blank falls in front of it. What was missing is saying so.
+    render(<Harness kind="title_page" />);
+    fireEvent.click(screen.getByLabelText('Leave the back of this page blank'));
+    expect(screen.getByText(/the book often gains two leaves/)).toBeTruthy();
+    // And where they go: the rail lists every leaf, which is the other half
+    // of Ken's report in the same message.
+    expect(screen.getByText(/listed in the rail/)).toBeTruthy();
   });
 
   it('no longer states the copyright page’s side as a fixed convention', () => {
@@ -397,5 +419,70 @@ describe('leaving the back of a page blank', () => {
   it('offers it on the half title too, that being a leaf of its own', () => {
     render(<Harness kind="half_title" />);
     expect(screen.getByLabelText('Leave the back of this page blank')).toBeTruthy();
+  });
+});
+
+/**
+ * **The words on a page whose words are its own** (addendum 20 §17e, from Ken:
+ * *when I add a dedication page, it doesn't allow me to actually add any text
+ * to it*).
+ *
+ * He was right and nothing was broken in the page: `part.text` has been
+ * printed by `partOwnBlocks` since §5, and the box that wrote it was
+ * `PartFields`' — which stood in the Layout inspector until §9u deleted the
+ * column, after §9n had routed the double-click here. So the route landed on a
+ * screen with every control for the **look** of a dedication and nowhere to
+ * type the dedication: §15c's own rule failing in the other direction, a route
+ * carried without what the screen it replaced alone could do.
+ *
+ * What these pin is the **gesture** (§15a) rather than the control: a writer
+ * who adds a dedication must be able to type into the screen the double-click
+ * opens, and on the three pages whose words are read from elsewhere there must
+ * be no box at all, a second answer being worse than none.
+ */
+describe('the words on a dedication and an epigraph', () => {
+  const withPart = (kind: 'dedication' | 'epigraph') => () => addPart(book(), kind).file;
+
+  it('takes the dedication’s own words, and writes them on the part', () => {
+    let seen: ProjectFile | null = null;
+    render(<Harness kind="dedication" start={withPart('dedication')} onFile={(file) => (seen = file)} />);
+    const box = screen.getByLabelText('The words on this page');
+    fireEvent.change(box, { target: { value: 'For Mara, who read it first.' } });
+    const part = partsOf(seen as unknown as ProjectFile).find((one) => one.kind === 'dedication')!;
+    expect(part.text).toBe('For Mara, who read it first.');
+  });
+
+  it('names the field for the page it is on', () => {
+    render(<Harness kind="dedication" start={withPart('dedication')} />);
+    expect(screen.getByText('The dedication')).toBeTruthy();
+    cleanup();
+    render(<Harness kind="epigraph" start={withPart('epigraph')} />);
+    expect(screen.getByText('The quotation')).toBeTruthy();
+  });
+
+  it('does not say the words come from the book’s title on a page where they do not', () => {
+    // The tile over the box is the half title's own vocabulary, and on a
+    // dedication it described a page this is not — §6c's sweep in copy rather
+    // than in a noun. It reads the same name the field below it does.
+    render(<Harness kind="dedication" start={withPart('dedication')} />);
+    const tile = screen.getByRole('button', { name: /The words/ });
+    expect(tile.textContent).toMatch(/The dedication, set in the book’s own type/);
+    expect(screen.queryByText(/Set in type from the book’s title/)).toBeNull();
+    cleanup();
+    // And it is untouched on the two pages it was written for.
+    render(<Harness kind="title_page" />);
+    expect(screen.getByText(/Set in type from the book’s title/)).toBeTruthy();
+  });
+
+  it('is absent on a page whose words are read from elsewhere', () => {
+    // A half title and a title page print `bookNames`, and a copyright page
+    // prints its own record — so a box here would be a second answer to what
+    // those pages say rather than the only one (§16d's distinction from the
+    // other side: this is not one field with two doors, it is two fields).
+    render(<Harness kind="half_title" />);
+    expect(screen.queryByLabelText('The words on this page')).toBeNull();
+    cleanup();
+    render(<Harness kind="title_page" />);
+    expect(screen.queryByLabelText('The words on this page')).toBeNull();
   });
 });

@@ -3329,7 +3329,79 @@ push live; the build takes a minute or two.
   **left-hand** page, two leaves on, a second blank falling out of the
   pagination; one block is inserted and the convention does the rest, the
   screen says *the next left-hand page*, and a test pins the pair so the
-  second blank is not later "fixed" as a fault.
+  second blank is not later "fixed" as a fault — **which §17e overturns**.
+  **§17e is every page accounted for, and the words on a dedication**, from Ken
+  in one message (*I added the title page and said, leave the back of it blank,
+  but it left an additional page blank*; *all pages need to be accounted for
+  blank or not and blank pages need to be able to be added and removed easily
+  and show up in the outliner in the left*; *when I add a dedication page, it
+  doesn't allow me to actually add any text to it*), and the first two are **one
+  report counted twice**. **The arithmetic was correct and he was still right**:
+  measured first, a novel's front matter is 26 sheets and the back-blank makes
+  it 28 either way — everything after the leaf moves on by one and the contents
+  page opens on a right-hand page, so a blank falls in front of it — and what
+  was wrong is **which leaves**. §17d forced the copyright page to a `verso` to
+  keep *the back of the title page*, and **the force bought nothing where the
+  convention holds** (a title page is a recto one page long, so the page after
+  it is a verso anyway); where it bit is exactly where the writer asked for
+  something else — with a blank behind the title page the next leaf is a recto,
+  the force skipped it, and the two blanks fell **side by side**, a spread with
+  nothing on either page, which no book does by accident. It takes the next page
+  now, §17d's own assertion **rewritten rather than worked around** (it pinned
+  where the copyright page landed and never what the reader sees), and the
+  remaining +2 is **said before the press**. **The second half is the more
+  important one**: a book that grew by two leaves could not be asked where they
+  had gone, because **a part claimed no pages at all** — §9m made a division's
+  pages a range and the front matter never got the same treatment, so the leaf
+  between the half title and the title page, and the back-blank itself, were
+  under no row, listed nowhere and had no ×, which is §9w's and §9x's stray page
+  a third time. `pagesUnder` claims a part's pages the way it claims a
+  division's and `rowHasUnder` folds a part **only where it holds more than the
+  page its row already named**, so a half title stays one row; driven, Title page
+  *iii* folds onto *Page ii Blank · Page iii Page · Page iv Blank*. Two faults
+  then showed that only a row could show. **The × on the leaf he had asked for
+  refused**: §9i wrote `pageRemoval`'s back-blank branch for a **picture**,
+  §17d then gave a part the same switch and §9r a chapter page, and neither
+  reached it — so the one leaf in the book somebody had deliberately asked for
+  was the one with no act, under a sentence naming the recto rule, the reason
+  for a different leaf two pages away. One asymmetry caused it: `setBlankPage`
+  reads which of three collections an id names and says in its own comment that
+  **which of them an id names is a fact the caller should not have to carry**,
+  while `setBackBlank` — the same act said of the other side of the leaf —
+  walked the manuscript alone; it reads all three now, so `pageRemoval` needs no
+  third branch and the act is the same act (driven: 26 → 28 → 26). **And the
+  sentence named a picture that was not there**, `blankBack` being one flag for
+  two things, so `page_back` is a fourth `BlankReason` — and asking the page in
+  front which it is, is **not** the guess §9w removed, the block having already
+  said this leaf is a back and the page in front only saying what it is the back
+  **of**. A third came from reading the screen: **the refusal named the wrong
+  page**, `sayBlankReason` being one reading for the help text (which stands on
+  the **leaf's** own screen) and both refusals (which stand on **the page the
+  leaf is in front of**), so *the page after it opens on a right-hand page* read
+  on the title page's card as a claim about the copyright page; the voice is
+  **asked for rather than guessed**, in one function rather than two copies of
+  four reasons, and only `recto` goes actively wrong either way, which is why it
+  survived. **The dedication was a route carried without what the screen it
+  replaced alone could do**: `part.text` has printed since §5 and the box that
+  wrote it was `PartFields`', which stood in the inspector until §9u deleted the
+  column after §9n had routed the double-click to the designed page's screen —
+  **§15c's own rule failing in the other direction**, that section having found
+  a route passing *through* the screen it replaced and its sentence (*routing
+  past a screen without carrying its controls is how a fix loses a feature*)
+  being true here of a dedication's words. `partCarriesOwnWords` is **a rule
+  rather than a list of kinds** (a `block` that carries `text` and is not the
+  copyright page, which prints its own record), so a dedication and an epigraph
+  get the box while the half title and the title page do not, their words being
+  `bookNames`' — §16d's distinction from the other side, this being two fields
+  rather than one field with two doors. Driving it caught the wording: the first
+  tile read **Title text — set in type from the book's title** over a box
+  holding a dedication, the half title's vocabulary reaching a page it does not
+  describe (§6c's sweep in copy rather than in a noun); it reads the same name
+  the field below it does, from one place. What the tests pin is the **gesture**
+  (§15a), which is what the section is about three times over — a writer who
+  adds a dedication must be able to type into the screen the act opens, a leaf a
+  writer asked for must have an act on its row, and a book that grows must be
+  able to say where.
   **§9r is a blank page wherever you want**, from Ken (*the chapter page we
   have a blank on the back, and you should be able to enter a blank page
   wherever you want*), then, a minute later, *tried to put a blank page on the

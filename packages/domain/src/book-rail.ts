@@ -242,7 +242,15 @@ export const bookRows = (file: ProjectFile): BookRow[] => {
  * pointed at the laid pages. Every page of the story is then under exactly
  * one row by construction, rather than by every unit happening to be listed.
  *
- * A part's page is nobody's: a part has a row of its own and does not fold.
+ * **And a part's pages are the part's** (§17e, from Ken: *all pages need to be
+ * accounted for blank or not… and show up in the outliner in the left*). A
+ * part used to claim none — *a part has a row of its own and does not fold* —
+ * which is true of the page it prints on and false of every leaf around it:
+ * the blank verso before a title page that opens on a right-hand one, and the
+ * back-blank §17d puts behind it, belonged to no row at all and so appeared
+ * **nowhere in the rail**, which is why a book that grew by two pages could
+ * not be asked where they had gone. A part folds now wherever it holds more
+ * than the one page its row already names.
  */
 export const pagesUnder = (
   rows: readonly BookRow[],
@@ -250,6 +258,7 @@ export const pagesUnder = (
 ): Map<string, BookPageRow[]> => {
   const sections = new Set(rows.filter((row) => row.kind === 'section').map((row) => row.id));
   const chapters = new Set(rows.filter((row) => row.kind === 'chapter').map((row) => row.id));
+  const parts = new Set(rows.filter((row) => row.kind === 'part').map((row) => row.id));
   const under = new Map<string, BookPageRow[]>();
   const put = (id: string, page: BookPageRow) => {
     const held = under.get(id);
@@ -272,6 +281,16 @@ export const pagesUnder = (
   let waiting: BookPageRow[] = [];
   for (const page of pages) {
     if (page.partId !== null) {
+      // The part's own page, and whatever stood unclaimed in front of it —
+      // the leaf its recto rule left there, which is nobody else's. `current`
+      // goes back to nothing afterwards, so a leaf standing between the front
+      // matter and chapter one is still held for the **division** it is there
+      // for (§9w) rather than falling to the part before it.
+      const owner = parts.has(page.partId) ? page.partId : null;
+      if (owner !== null) {
+        for (const held of waiting) put(owner, held);
+        put(owner, page);
+      }
       current = null;
       marker = null;
       waiting = [];
@@ -353,6 +372,11 @@ export const rowHasUnder = (
   folds: ReadonlyMap<string, readonly BookPageRow[]>,
   row: BookRow,
 ): boolean => {
+  // **A part folds where it holds more than its own page** (§17e). Its row
+  // already names the page it prints on, so an arrow over that one page alone
+  // would open onto what the row has just said; a leaf either side of it is
+  // another matter, and until now appeared nowhere.
+  if (row.kind === 'part') return (folds.get(row.id) ?? []).length > 1;
   if (!divides(row)) return false;
   if ((folds.get(row.id) ?? []).length > 0) return true;
   const at = rows.indexOf(row);
@@ -471,13 +495,36 @@ export const pageRemoval = (file: ProjectFile, rows: readonly BookPageRow[], she
    */
   if (page.blank) {
     if (page.blankBack) {
-      const picture = rows.find((one) => one.sheet === sheet - 1)?.figureId;
+      const before = rows.find((one) => one.sheet === sheet - 1);
+      const picture = before?.figureId;
       if (picture) {
         return {
           id: picture,
           what: 'back',
           act: 'Take this page away',
           comfort: 'The picture before it stops leaving its back blank. The picture stays where it is.',
+          refusal: null,
+        };
+      }
+      /**
+       * **The leaf behind a page of the book** (§17e, from Ken: *I added the
+       * title page and said, leave the back of it blank, but it left an
+       * additional page blank*). §9i wrote this branch for a picture, which
+       * was everything it had; §17d then gave a **part** the same switch and
+       * §9r a **chapter page**, and neither reached here — so the one leaf a
+       * writer had deliberately asked for was the one with no × and a sentence
+       * about the recto rule, which is the reason for a different leaf
+       * altogether. `setBackBlank` reads which record the id names, so this
+       * needs no third branch and the act is the same act.
+       */
+      const owner = before?.partId ?? before?.markerId ?? null;
+      if (owner) {
+        return {
+          id: owner,
+          what: 'back',
+          act: 'Take this page away',
+          comfort:
+            'The page before it stops leaving its back blank, so what follows prints on its reverse again. The book may lose more than this one leaf.',
           refusal: null,
         };
       }

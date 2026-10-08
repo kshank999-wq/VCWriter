@@ -481,7 +481,12 @@ describe('the room', () => {
 
     // Folded to begin with: a chapter is one row until somebody asks.
     expect(document.querySelectorAll('.layout-rail-page')).toHaveLength(0);
-    fireEvent.click(rail.getAllByLabelText(/^Show what is under /)[0]!);
+    // The fold on the **chapter**, named rather than taken as the first one on
+    // the rail: since §17e a part folds too (it holds its own page and the leaf
+    // its recto rule left in front of it), so *the first row with a fold* is
+    // the half title.
+    const chapter = document.querySelector('.layout-rail-chapter') as HTMLElement;
+    fireEvent.click(within(chapter).getByLabelText(/^Show what is under /));
     const pages = document.querySelectorAll('.layout-rail-page');
     expect(pages.length).toBeGreaterThan(0);
     // **Each row is its page** (§9l, from Ken: *it should say page two, page
@@ -1363,6 +1368,14 @@ describe('the room', () => {
     }
     return Array.from(document.querySelectorAll('.layout-rail-page')) as HTMLElement[];
   };
+  /**
+   * The pages **of the story**, which is what these are about. Since §17e a
+   * part folds too, so the front matter's own leaves are rows of the rail as
+   * well — and they come first, which is what the plain *the first page row*
+   * these used to take now finds. The front matter numbers in roman and the
+   * story in arabic, so the figure says which is which.
+   */
+  const storyPages = (): HTMLElement[] => openPages().filter((row) => /Page \d/.test(row.textContent ?? ''));
 
   it('gives every page row a ×, which is the whole of the report', () => {
     /**
@@ -1383,7 +1396,7 @@ describe('the room', () => {
     // His *stray page that has a bunch of information on it*: writing as far
     // as the manuscript is concerned, and no other screen will take it out.
     render(<Harness initial={novel()} />);
-    const words = openPages().find((row) => !/Blank|Illustration/.test(row.textContent ?? ''))!;
+    const words = storyPages().find((row) => !/Blank|Illustration/.test(row.textContent ?? ''))!;
     expect(words).toBeTruthy();
     const before = latest!.beats.flatMap((beat) => beat.manuscript.elements).length;
     fireEvent.click(within(words).getByLabelText(/^Remove page /));
@@ -1398,7 +1411,7 @@ describe('the room', () => {
     const file = novel();
     const second = contentsDivisions(file)[1]!;
     render(<Harness initial={setChapterBlank(file, second.marker.id as string, 'before', true)} />);
-    const leaf = openPages().find((row) => /Blank/.test(row.textContent ?? '') && /Blank/.test(row.textContent ?? ''));
+    const leaf = storyPages().find((row) => /Blank/.test(row.textContent ?? ''));
     expect(leaf).toBeTruthy();
     fireEvent.click(within(leaf as HTMLElement).getByLabelText(/^Remove page /));
     // Asked once inline, with what would go said beside it.
@@ -1414,7 +1427,7 @@ describe('the room', () => {
      * else, on the screen he had opened to get rid of the page (§9x).
      */
     render(<Harness initial={novel()} />);
-    const words = openPages().find((row) => !/Blank|Illustration/.test(row.textContent ?? ''))!;
+    const words = storyPages().find((row) => !/Blank|Illustration/.test(row.textContent ?? ''))!;
     fireEvent.doubleClick(words.querySelector('.layout-rail-name') as HTMLElement);
     const panel = document.querySelector('.layout-page-dialog') as HTMLElement;
     const act = within(panel).getByRole('button', { name: 'Take this page away' });

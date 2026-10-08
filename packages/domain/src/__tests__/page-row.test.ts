@@ -267,6 +267,20 @@ describe('why a page is blank', () => {
     expect(sayBlankReason('recto')).toMatch(/right-hand page/);
   });
 
+  it('says it of whichever page the sentence stands on', () => {
+    /**
+     * **The voice is asked for rather than guessed** (§17e). A refusal stands
+     * on the page the leaf is in front of, and the `recto` reason read in the
+     * leaf's own voice there named *the page after this one* — the copyright
+     * page, which is the reason for nothing. The other two read alike either
+     * way, which is why the fault was only ever in one of three.
+     */
+    expect(sayBlankReason('recto', 'the leaf')).toBe('the page after it opens on a right-hand page');
+    expect(sayBlankReason('recto', 'the page behind it')).toBe('this page opens on a right-hand page');
+    expect(sayBlankReason('writer', 'the page behind it')).toBe('you put it there');
+    expect(sayBlankReason('back', 'the page behind it')).toBe(sayBlankReason('back'));
+  });
+
   it('is nothing at all on a page that is not blank', () => {
     const file = collection();
     const rows = lay(file).rows;
@@ -471,11 +485,10 @@ describe('a page standing in front of the division it belongs to', () => {
     const under = pagesUnder(railed, rows);
     const claimed = new Set([...under.values()].flat().map((page) => page.sheet));
     const art = rows.find((page) => page.says === 'Illustration')!;
-    // Every page from the picture onwards is under a row. A leaf among the
-    // front matter is still nobody's, which §9m settled: a part has a row of
-    // its own and does not fold.
+    // Every page from the picture onwards is under a row — and since §17e a
+    // part's pages are the part's too, so there is no page left over.
     for (const page of rows) {
-      if (page.partId !== null || page.sheet < art.sheet) continue;
+      if (page.sheet < art.sheet) continue;
       expect(claimed.has(page.sheet)).toBe(true);
     }
     // And the picture's own page is under the story, where `bookRows` puts

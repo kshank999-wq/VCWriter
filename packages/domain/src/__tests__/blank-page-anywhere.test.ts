@@ -301,6 +301,16 @@ describe('a page that already has a leaf in front of it', () => {
     // The same sentence, so the same correction (§9w).
     expect(offer.refusal).toMatch(/A blank page already stands in front of this one, because/);
     expect(offer.refusal).not.toMatch(/says why/);
+    /**
+     * **And it names the page in hand** (§17e). The reason is said in the
+     * leaf's voice on the leaf's own screen and in this page's voice here: in
+     * the leaf's voice the sentence read *because the page after it opens on a
+     * right-hand page*, where *it* is now this page, so it named the copyright
+     * page as the reason for a blank two leaves away — §9w's own missing
+     * referent one clause in.
+     */
+    expect(offer.refusal).toMatch(/because this page opens on a right-hand page/);
+    expect(offer.refusal).not.toMatch(/the page after it/);
   });
 
   it('offers a part its leaf where nothing stands in front of it', () => {

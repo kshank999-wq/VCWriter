@@ -73,17 +73,35 @@ describe('a page that leaves its back blank', () => {
     expect(asked[at + 2]!.kind).toBe('copyright');
   });
 
-  it('inserts one blank block, and the copyright page’s verso does the rest', () => {
-    // **Worth pinning, because it looks like a fault and is not.** A
-    // copyright page is a verso by convention, so blanking the title page's
-    // back sends it to the *next left-hand page* — two leaves on, with a
-    // second blank falling out of the pagination rather than out of here.
-    // One block is added; the screen says *the next left-hand page* rather
-    // than *the next leaf* because of it.
+  it('inserts one blank block, and the copyright page takes the next page', () => {
+    /**
+     * **§17d pinned this the other way round and was wrong** (§17e, from Ken:
+     * *I added the title page and said leave the back of it blank, but it left
+     * an additional page blank*).
+     *
+     * The copyright page was forced to a `verso`, so blanking the title page's
+     * back sent it two leaves on and a second blank fell out of the
+     * pagination — which the old assertion called correct arithmetic. It
+     * checked where the copyright page landed and not **what the reader
+     * sees**: the second blank was a right-hand page, so the two together made
+     * a wholly blank spread in the front matter. The convention a copyright
+     * page keeps is *the back of the title page*, which the pagination gives
+     * it for nothing; it takes the next page now.
+     */
     const start = book();
     const asked = blocksOf(updatePart(start, titleId(start), { backBlank: true }));
     expect(asked.filter((one) => one.kind === 'blank')).toHaveLength(1);
-    expect(asked.find((one) => one.kind === 'copyright')!.starts).toBe('verso');
+    expect(asked.find((one) => one.kind === 'copyright')!.starts).toBe('page');
+  });
+
+  it('still prints the copyright page on the back of the title page where nothing stands between', () => {
+    // Which is why the force bought nothing: a title page is a recto one page
+    // long, so the page after it is a verso whether or not anything says so.
+    const blocks = blocksOf(book());
+    const at = blocks.findIndex((one) => one.kind === 'title_page');
+    expect(blocks[at]!.starts).toBe('recto');
+    expect(blocks[at + 1]!.kind).toBe('copyright');
+    expect(blocks[at + 1]!.starts).toBe('page');
   });
 });
 
