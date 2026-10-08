@@ -396,20 +396,21 @@ describe('whether a picture may be asked for on this page', () => {
      * page in the **back matter**. One reading now, so a picture asked for on
      * a page goes on that page or is refused in a sentence.
      *
-     * §9aa then gave a leaf in the story somewhere to put one, which is what
-     * §9w's refusal had sent the writer one page along to do by hand — so what
-     * this still pins is the half that has not changed: a leaf among the front
-     * pages is refused, because a part's picture is the part's own and would
-     * draw on the page ahead. It names the route instead of only refusing,
-     * which is the sentence §9w was right about.
+     * §9aa gave a leaf in the story somewhere to put one and §9ab gave a leaf
+     * among the front pages a **position** — so what this pins now is the
+     * promise that outlasted both: a picture asked for on a page lands on
+     * that page or is refused, and never at the back of the book. Where the
+     * leaf takes one it is a page of its own standing exactly there.
      */
     const file = collection();
     const leaf = lay(file).rows.find((row) => row.blank && row.partId === null)!;
     const offer = offerOn(file, leaf.sheet);
+    expect(offer.refusal).toBeNull();
+    // No record of its own, so nothing to hang a picture from — and the part
+    // it stands in front of, which is where the page of art goes in.
     expect(offer.spot).toBeNull();
     expect(offer.of).toBeNull();
-    expect(offer.refusal).toMatch(/page of art/);
-    expect(offer.refusal).toMatch(/\+ Add/);
+    expect(offer.newPageBefore).not.toBeNull();
   });
 
   it('is offered on a page of the story, and names the element it goes before', () => {

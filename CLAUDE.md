@@ -3330,6 +3330,57 @@ push live; the build takes a minute or two.
   pagination; one block is inserted and the convention does the rest, the
   screen says *the next left-hand page*, and a test pins the pair so the
   second blank is not later "fixed" as a fault — **which §17e overturns**.
+  **§9ab is a break you can make, and a page you can put in anywhere**, from
+  Ken in four messages about one afternoon (*I should be able to insert a page
+  at any point. That page can be anything. It can be a chapter page. It can be
+  a picture page. It can be a blank page. Right now, it's locking me out if
+  it's a blank page* … *in the menu, there's no way to add a chapter page,
+  which might solve the problem* … *the story is still there, but it now no
+  longer shows up in the left menu bar* … *each story needs to be held together
+  not merged with other stories*). **Measured first on three imported
+  stories**: the × on a story's own page answers *the break goes, the words
+  stay* — honest, and §9x put it there deliberately — and the book then reads
+  *In For A Pound gone from the Layout rail, gone from the Stories rail, every
+  word of it still in the book*, its six pages filed under the story after it.
+  **Two faults, the same one from two ends.** The break had a × and **no
+  inverse**: nothing anywhere could start a division on writing that exists,
+  *+ New story* making a new empty section at the end, so one press took a
+  story out with no way back — the one thing a room full of × buttons may never
+  have. `divisionStart`/`startDivision` are `divisionRemoval`/`removeDivision`'s
+  exact inverses in `trackRemoval`'s shape, and **a division begins where a
+  section begins** is the one rule (a marker sits on a unit, so starting one
+  mid-section is splitting the writing, which is the manuscript's act);
+  `opensUnitId` joins `BookPageRow` for it, `unitId` being carried forward and
+  so answering the other question. **It opens its own page, because it arrives
+  unnamed** — the name went with the marker, and a row reading *Story* where
+  *The Harbour* was is the loss reported twice — which is §9u's *a page made
+  opens*, and a division's page **is** its chapter page, so it is also the item
+  he asked for by name. And **writing no division claims is listed rather than
+  merged**, at depth 0 because it is inside nothing: `unplacedSections` **was
+  already that reading** (addendum 22 §8) with four tests as its only callers,
+  so it is `unclaimedUnits` narrowed to a collection now, one answer, silent
+  where a book has no divisions at all (a novel nobody cut into chapters is the
+  story) and loud on a collection, whose writing always belongs to a story. The
+  Stories rail says it too with the same act beside it. **+ Add inserts where
+  you are** (it appended to the end of its half, so a page added on page vi
+  landed after the index and had to be dragged back — §9aa's own detour one
+  menu over), and **§9aa's front-matter refusal was the lock-out he reported**,
+  naming that detour as a sentence: a leaf there has no record to hang a
+  picture from and **has a position**, so `newPageBefore` puts the page of art
+  exactly there, taking the leaf as `takesLeaf` does in the story. Driving
+  caught the half that would have shipped broken — **the panel gated its
+  picture buttons on `offer.spot`** and this answer names no record, so the
+  front leaf drew **no buttons at all** while the domain answered perfectly:
+  whether a picture may be put here is whether anything **refuses** it, never
+  whether the offer names a record. **The back of the page is a tick** (his
+  own ask), addendum 02 §4a's switch exactly — a label that is the act it
+  would perform says nothing about the state, and pressing it is the one thing
+  that changes the answer; every other back-blank in the room was already a
+  checkbox. Driven at 1440×900: the × leaves I, II, III standing as their own
+  rows, the Add menu offers *Start a story here… — The 3 sections from here to
+  the next story become one story*, and after it the rail is **identical to the
+  import**; a page of art asked for on the leaf between the half title and the
+  title page lands on page ii with the book still 18 pages.
   **§9aa is every page being a page you can put something on**, from Ken (*I'm
   trying to put a picture on a page that is blank and there's nothing I can do
   to edit it… I want to put it on the page after, which is before the next

@@ -21,6 +21,7 @@ import {
   threadLayout,
   timelineArcs,
   removeDivision,
+  startDivision,
   type BeatId,
   type TrackId,
   type ProjectFile,
@@ -1630,6 +1631,9 @@ export default function App() {
             if (selectedBeat && going.has(selectedBeat.unitId as string)) setSelectedBeatId(null);
             project.update((current) => removeDivision(current, story.placed.marker.id));
           }}
+          // The × above and this are inverses (§9ab): writing whose break has
+          // gone is listed, and one press gives it back.
+          onClaim={(unitId) => project.update((current) => startDivision(current, unitId as never))}
         />
       ) : null}
 

@@ -681,6 +681,50 @@ describe('the room', () => {
     expect(screen.queryByLabelText("The part's text")).toBeNull();
   });
 
+  /**
+   * **§9ab, from Ken** (*I should be able to insert a page at any point. That
+   * page can be anything*). A new part was appended to the end of its half,
+   * so adding a page while standing on page vi put it after the index and the
+   * writer had to drag it back — the detour this section removes twice. It
+   * goes in **in front of the page in hand**, which is the blank leaf's own
+   * rule said of a page.
+   */
+  it('puts a new page in where the writer is standing, rather than at the end', () => {
+    render(<Harness initial={novel()} />);
+    const rail = within(document.querySelector('.layout-rail') as HTMLElement);
+    fireEvent.click(rail.getByText('Copyright'));
+    fireEvent.click(screen.getByRole('button', { name: 'Add to the book' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /^Dedication/ }));
+    const kinds = partsOf(latest as ProjectFile).map((part) => part.kind);
+    expect(kinds.indexOf('dedication')).toBe(kinds.indexOf('copyright') - 1);
+  });
+
+  /**
+   * **The break a writer can make** (§9ab, from Ken after a × took one away:
+   * *in the menu, there's no way to add a chapter page, which might solve the
+   * problem*). It is `removeDivision`'s inverse, and what the gesture test has
+   * to pin is that a writer can **reach** it: the act can be perfect and the
+   * story stays lost if nothing on any screen offers it.
+   */
+  it('offers the break on a page that opens a section, and refuses where none does', () => {
+    render(<Harness initial={novel()} />);
+    const rail = within(document.querySelector('.layout-rail') as HTMLElement);
+    const chapter = document.querySelector('.layout-rail-chapter') as HTMLElement;
+    fireEvent.click(within(chapter).getByLabelText(/^Show what is under /));
+    const page = (Array.from(document.querySelectorAll('.layout-rail-page')) as HTMLElement[]).find((one) =>
+      /Chapter opens/.test(one.textContent ?? ''),
+    )!;
+    fireEvent.click(page.querySelector('.layout-rail-name') as HTMLElement);
+    fireEvent.click(screen.getByRole('button', { name: 'Add to the book' }));
+    const item = screen.getAllByRole('menuitem').find((one) => /^Start a chapter here/.test(one.textContent ?? ''));
+    expect(item).toBeDefined();
+    // It is greyed with the reason where a chapter already begins, rather
+    // than absent: absence is what read as *there is no way to do this*.
+    expect((item as HTMLButtonElement).disabled).toBe(true);
+    expect(item!.getAttribute('title') ?? '').toMatch(/already begins/);
+    expect(rail).toBeDefined();
+  });
+
   it('offers a once-only part only once', () => {
     render(<Harness initial={novel()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Add to the book' }));

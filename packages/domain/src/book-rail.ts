@@ -1,7 +1,7 @@
 import { contentsDivisions, type PlacedMarker } from './markers.js';
 import { beatsInScript } from './selectors.js';
 import { removeFigure } from './instructional.js';
-import { divisionSpan, divisionRemoval, removeDivision } from './outline-binding.js';
+import { divisionSpan, divisionRemoval, removeDivision, unclaimedUnits } from './outline-binding.js';
 import { isCollection } from './formats.js';
 import {
   blankReason,
@@ -116,14 +116,14 @@ const partRow = (file: ProjectFile, part: BookPart, depth: number): BookRow => (
  * because moving a chapter inside a story is moving the writing and that is
  * the Outliner's to do.
  */
-const sectionRow = (unit: StructuralUnit): BookRow => ({
+const sectionRow = (unit: StructuralUnit, depth = 1): BookRow => ({
   id: unit.id as string,
   kind: 'section',
   unit,
   half: 'body',
   title: unit.title.trim(),
   label: '',
-  depth: 1,
+  depth,
   draggable: false,
 });
 
@@ -169,6 +169,29 @@ export const bookRows = (file: ProjectFile): BookRow[] => {
   // Pictures before the first chapter belong to no chapter, so they stand
   // where they are rather than being hidden under one.
   for (const figure of figures) if (figure.markerId === null) rows.push(figureRow(figure, 0));
+
+  /**
+   * **Writing that no division claims is listed rather than merged** (§9ab,
+   * from Ken: *the story is still there, but it now no longer shows up in the
+   * left menu bar* … *each story needs to be held together not merged with
+   * other stories*).
+   *
+   * Everything here reads the markers, so sections ahead of the first break
+   * had no row — and `pagesUnder` then held their pages for the **next**
+   * division, which is §9w's rule doing exactly the wrong thing with them:
+   * one story's pages listed under another's name, with the story itself
+   * nowhere. Measured on his book after a × took a break away: two sections
+   * and six pages of *In For A Pound* filed under *Simple Pleasures*.
+   *
+   * They stand at **depth 0**, because they are inside nothing — that is the
+   * whole fact about them — and `unclaimedUnits` answers only where the book
+   * has divisions at all, so a novel that was never broken into chapters is
+   * untouched.
+   */
+  for (const unit of unclaimedUnits(file)) {
+    rows.push(sectionRow(unit, 0));
+    for (const figure of figures) if (figure.unitId === (unit.id as string)) rows.push(figureRow(figure, 1));
+  }
 
   for (const placed of contentsDivisions(file)) {
     const id = placed.marker.id as string;

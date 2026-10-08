@@ -2952,6 +2952,130 @@ second blank is not later "fixed" as a fault.
 > copyright page takes the next page now, and the assertion was rewritten
 > rather than worked around.
 
+## 9ab. A break you can make, and a page you can put in anywhere
+
+From Ken in four messages about one afternoon: *I should be able to insert a
+page at any point. That page can be anything. It can be a chapter page. It can
+be a picture page. It can be a blank page. Right now, it's locking me out if
+it's a blank page, saying there's nothing I can do with it* … *in the menu,
+there's no way to add a chapter page, which might solve the problem* … *now
+we're back where we started, to where I took away the blank pages trying to put
+in a story page. And now the story is still there, but it now no longer shows
+up in the left menu bar* … *it no longer shows up in the tab to the right but
+the story is still there — each story needs to be held together not merged with
+other stories.*
+
+### What was measured, before a line was written
+
+Reproduced on a collection of three imported stories. Pressing the × on the
+first story's own page answers *The story break goes. Its sections stay where
+they are, ahead of the first story; not a word is cut* — which is honest, and
+§9x put that × on every page deliberately. The book then reads: **In For A
+Pound is gone from the Layout rail, gone from the Stories rail, and every word
+of it is still in the book**, with its six pages quietly filed under the story
+that follows. Two rails and a page count all saying nothing is missing.
+
+So there are two faults and they are the same fault from two ends.
+
+### The break had a × and no inverse
+
+Nothing in the program could start a division on writing that already exists.
+Not the Layout rail, not the Add menu, and not the Stories rail, whose **+ New
+story** makes a *new empty section at the end* — a different act, and the only
+one on offer. One press therefore took a story out of the book with no way back
+to the state before it, which is the one thing a room full of × buttons may
+never have.
+
+`divisionStart` and `startDivision` in `outline-binding.ts` are
+`divisionRemoval` and `removeDivision`'s exact inverses, in `trackRemoval`'s
+shape, and **a division begins where a section begins** is the one rule: a
+marker sits on a unit, so starting one mid-section would mean splitting the
+writing, and that is the manuscript's act and not this room's. The refusal says
+so rather than quietly starting it a page early. `BookPageRow` gained
+`opensUnitId` for it — `unitId` is carried forward so a page knows which section
+it is *in*, and placing a marker needs the other question.
+
+**It opens its own page, because it arrives unnamed.** The name was on the
+marker that went, so nothing can give it back, and a row reading *Story* where
+*The Harbour* used to be is the loss reported a second time; the page a division
+opens on is where its name is typed, so the act turns to it — §9u's *a page made
+opens*, and a route rather than a second box in the menu. A division's page **is**
+its chapter page, so this is also the item he asked for by name.
+
+### Writing no division claims is listed, not merged
+
+Every reading that lists the book reads the markers, so sections ahead of the
+first break had no row — and `pagesUnder` then held their pages for the **next**
+division, which is §9w's rule doing exactly the wrong thing with them. They
+stand at **depth 0**, because they are inside nothing, which is the whole fact
+about them.
+
+**The reading already existed and nothing ever asked it.** `unplacedSections`
+was written for addendum 22 §8 — *the sections of a collection no story has
+claimed* — and its only callers were four tests. It is `unclaimedUnits`
+narrowed to a collection now, one answer rather than two, and the general one
+answers for a novel's chapters too. It is silent where a book has **no**
+divisions at all: a novel nobody has cut into chapters is the story, and
+listing every unit would invent a complaint about a book that is fine. A
+collection is the exception and says why — a collection's writing always
+belongs to a story, so a collection with no markers has every section
+unclaimed, which is addendum 22 §8's broken state said out loud.
+
+The Stories rail says it too, with the same act beside it: a line reading *3
+sections stand ahead of the first story, in the book but in no story* and a
+press that gives the break back.
+
+### A page you can put in, where you are
+
+**+ Add inserted at the end of its half.** Adding a page while standing on page
+vi put it after the index, and then it had to be dragged back — the two-step
+detour §9aa was written to remove, met again one menu over. `addPart` takes a
+position and the menu passes the page in hand, so a new page goes in **in front
+of it**: the blank leaf's own rule (`blankBefore`) said of a page, one meaning
+for *insert here*.
+
+**And §9aa's front-matter refusal was the lock-out he reported.** It named a
+route — *+ Add puts one in, and its row drags to where you want it* — which is
+that same detour written as a sentence. A leaf among the front or back pages
+has no record to hang a picture from; what it has is a **position**, so
+`pictureOffer` answers with `newPageBefore` and the page of art goes in exactly
+there, taking the leaf as a story's page-figure does (§9aa's `takesLeaf`).
+
+Driving it found the half that would have shipped broken: **the panel gated its
+picture buttons on `offer.spot`**, and this answer names no record, so the
+front leaf drew **no buttons at all** with the domain answering perfectly the
+whole time. Whether a picture may be put here is whether anything **refuses**
+it, never whether the offer names a record — which also covers the next kind of
+answer without being told.
+
+### The back of the page is a tick
+
+From Ken: *for the back of the page in the dialog box, just make it a check
+mark so you know. And can toggle that on and off.* He is right, and it is
+addendum 02 §4a's switch exactly: the control's label was the act it would
+perform (*Print on the back of this page*), which says nothing about the state
+it is in, so a writer had to press it to find out — and pressing it is the one
+thing that changes the answer. Every other back-blank in the room has been a
+checkbox since it was written; this one was the odd one out.
+
+### Driving it
+
+At 1440×900 on three imported stories. As imported the rail reads *The Harbour
+· In For A Pound · Falling*; the × leaves **I, II, III standing as their own
+rows** at pages 1–3 rather than vanishing; the Add menu on page 1 offers *Start
+a story here… — The 3 sections from here to the next story become one story*;
+and after it, with the name typed on the page it opens, the rail is **identical
+to the import**. A page of art asked for on the leaf between the half title and
+the title page lands on page ii, and the book stays 18 pages.
+
+### Named rather than built
+
+A **designed page standing alone mid-story** — §9aa's own leftover — is now
+reachable for the case that mattered, because a division's page is a designed
+page and a division can be started. A designed page with no division behind it
+still needs §9i's blocker lifted (a part that can stand between two pages of the
+story), and nobody has asked for that yet.
+
 ## 9aa. Every page is a page you can put something on
 
 From Ken: *I'm trying to put a picture on a page that is blank and there's

@@ -138,6 +138,8 @@ import {
   removeBookPage,
   movePictureTo,
   partBlankOffer,
+  divisionStart,
+  startDivision,
   chapterPageSchema,
   setBlankPage,
   setChapterBlank,
@@ -245,7 +247,18 @@ type ArtTarget =
       takesLeaf?: string | null;
     }
   /** Into a part: cut into its words where it has them, a page of its own where it has not. */
-  | { kind: 'part'; partId: string; as: 'measure' | 'page' | 'free' }
+  | {
+      kind: 'part';
+      partId: string;
+      as: 'measure' | 'page' | 'free';
+      /**
+       * Where a **new** page of art goes in, where this is a leaf's answer
+       * rather than the part's own (§9ab): the part it stands in front of.
+       */
+      before?: string | null;
+      /** The writer's own leaf it takes, as a story page-figure does (§9aa). */
+      takesLeaf?: string | null;
+    }
   /** A logotype in place of a designed page's title (§9n). */
   | { kind: 'logo'; partId: string }
   /** The page as a piece of art, edge to edge (§8). */
@@ -285,6 +298,7 @@ const NO_PICTURE: PictureOffer = {
   note: null,
   takesLeaf: null,
   ownPageOnly: false,
+  newPageBefore: null,
   refusal: 'Choose a page first: the picture goes at the top of it.',
 };
 
@@ -734,6 +748,14 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
    */
   const chosenRow = selectedSheet === null ? undefined : pageRows.find((row) => row.sheet === selectedSheet);
   const pageBlank = selectedSheet === null ? NO_BLANK : blankOffer(place, pageRows, selectedSheet);
+  /**
+   * **Whether a division may be started on the page in hand** (§9ab), which is
+   * `divisionRemoval`'s inverse and so the thing that makes the × on a
+   * division's page an act a writer can take back. A marker sits on a unit, so
+   * it is the section that **opens** here rather than the one in force — the
+   * row says which, and `divisionStart` refuses the rest in a sentence.
+   */
+  const pageDivision = divisionStart(file, (chosenRow?.opensUnitId ?? null) as never);
   /** What the page in hand is called in the book, for the buttons that act on it. */
   const chosen = pages.find((one) => one.sheet === selectedSheet);
   const chosenPage =
@@ -770,6 +792,22 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
      * reported. Every control that calls this now reads `offer` first, so the
      * fallthrough has nothing left to catch and is gone.
      */
+    /**
+     * **A leaf among the front or back pages becomes a page of art, here**
+     * (§9ab). It is the only answer with no `spot`, a leaf standing in front
+     * of a part having no record of its own to hang a picture from — what it
+     * has instead is a **position**, which is what the page of art takes.
+     */
+    if (offer.newPageBefore) {
+      importArt({
+        kind: 'part',
+        partId: offer.newPageBefore,
+        as: 'page',
+        before: offer.newPageBefore,
+        takesLeaf: offer.takesLeaf,
+      });
+      return;
+    }
     if (!offer.spot) {
       setMessage(offer.refusal);
       return;
@@ -898,12 +936,20 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
             setSelectedRowId(part.id);
             return addPartInset(added.file, part.id, { assetId: assetId as string }).file;
           }
-          const made = addPart(added.file, 'plate', { assetId, inFront: part ? halfOf(part) === 'front' : false });
+          const made = addPart(
+            added.file,
+            'plate',
+            { assetId, inFront: part ? halfOf(part) === 'front' : false },
+            // Where the leaf was, where a leaf asked for it (§9ab); appended
+            // to its half where the Add menu asked with no page in hand.
+            target.before ?? null,
+          );
           if (made.partId) {
             setSelectedRowId(made.partId);
             turnTo.current = made.partId;
           }
-          return made.file;
+          // The leaf becomes the page of art, as it does in the story (§9aa).
+          return target.takesLeaf ? setBlankPage(made.file, target.takesLeaf, false) : made.file;
         }
 
         return added.file;
@@ -972,6 +1018,44 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
         onUpdate((current) => setBlankPage(current, spot, !taking));
       },
     },
+    /**
+     * **The break a writer can make** (§9ab, from Ken after a × took one
+     * away: *the story is still there, but it now no longer shows up in the
+     * left menu bar* … *in the menu, there's no way to add a chapter page,
+     * which might solve the problem*).
+     *
+     * It is `removeDivision`'s exact inverse and the reason that × stopped
+     * being the one act in this room nobody could take back: §9x gave every
+     * page a × and answered a division's page with *the break goes and the
+     * words stay*, and nothing anywhere could put one back on writing that
+     * already existed — *+ New story* makes a **new empty section at the
+     * end**, which is a different act and the one thing on offer. A division's
+     * page *is* its chapter page, so this is also the item he asked for by
+     * name.
+     */
+    {
+      label: pageDivision.act ?? `Start a ${noun.toLowerCase()} here…`,
+      disabled: pageDivision.refusal,
+      note: pageDivision.comfort || null,
+      onPick: () => {
+        const spot = pageDivision.unitId;
+        if (!spot) return;
+        /**
+         * **It opens its own page, because it arrives unnamed** (§9ab).
+         * The name was on the marker that went, so nothing can give it
+         * back — and a row reading *Story* where *The Harbour* used to be
+         * is the loss reported a second time. The page a division opens on
+         * is where its name is typed, so the act turns to it: §9u's *a page
+         * made opens*, and a route rather than a second box here.
+         */
+        onUpdate((current) => {
+          const next = startDivision(current, spot);
+          const made = next.markers.find((one) => (one.unitId as string) === spot);
+          if (made) window.setTimeout(() => openChapterPage(made.id as string), 0);
+          return next;
+        });
+      },
+    },
     'rule',
     ...(isCollection(file.project.format)
       ? [{ label: 'New story', onPick: () => onUpdate((current) => beginStory(current, { title: 'New story' }).file) }]
@@ -980,7 +1064,15 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
       label: PART_INFO[kind].name,
       onPick: () =>
         onUpdate((current) => {
-          const made = addPart(current, kind);
+          /**
+           * **It goes in where the writer is standing** (§9ab, from Ken: *I
+           * should be able to insert a page at any point*). It appended to
+           * the end of its half, so adding a page while looking at page vi
+           * put it after the index — and then it had to be dragged back,
+           * which is the detour this section removes twice. In front of the
+           * page in hand, the blank leaf's own rule.
+           */
+          const made = addPart(current, kind, {}, chosenRow?.partId ?? null);
           if (made.partId) {
             setSelectedRowId(made.partId);
             // **A page made opens** (§9u). While there was a column the new
@@ -3681,7 +3773,7 @@ function StoryPageSection({
                   // screen that offered nothing, which read as a page nothing
                   // could be done to.
                   `It is blank because ${sayBlankReason(why)}. It counts as a page and prints no number.${
-                    offer.spot ? ' A picture put here fills this leaf rather than adding a page.' : ''
+                    offer.refusal ? '' : ' A picture put here fills this leaf rather than adding a page.'
                   }`
                 : page.says === 'Chapter opens'
                   ? 'The chapter opens on it. A picture put here goes in before it, and the chapter moves down.'
@@ -3692,7 +3784,14 @@ function StoryPageSection({
       </h3>
       {page.figureId ? null : (
         <div className="layout-page-acts">
-          {offer.spot ? (
+          {/* **Whether a picture may be put here is whether anything refuses
+              it** (§9ab), never whether the offer names a record. A leaf among
+              the front or back pages answers with a **position** and no
+              `spot` — there is nothing on it to hang a picture from — so
+              gating on the record drew no buttons at all on exactly the page
+              Ken reported being locked out of, with the domain answering
+              perfectly the whole time. */}
+          {!offer.refusal ? (
             <>
               <button type="button" className="small" onClick={onPut}>
                 Put a picture on this page…
@@ -3771,14 +3870,25 @@ function StoryPageSection({
               there is no back to leave, the next page being the middle of the
               chapter, and a control that did something there would be doing
               what nobody could predict. */}
+          {/* **A tick rather than a button that flips its words** (§9ab, from
+              Ken: *for the back of the page in the dialog box, just make it a
+              check mark so you know. And can toggle that on and off*). He is
+              right, and it is addendum 02 §4a's switch exactly: a control
+              whose label is the act it would perform says nothing about the
+              state it is in, so a writer had to press it to find out — and
+              pressing it is the one thing that changes the answer. Every
+              other back-blank in the room has been a checkbox since it was
+              written; this one was the odd one out. */}
           {place.opensMarkerId && place.opensAlone ? (
-            <button
-              type="button"
-              className="small"
-              onClick={() => onChapterBack(place.opensMarkerId as string, !chapterBack)}
-            >
-              {chapterBack ? 'Print on the back of this page' : 'Leave the back of this page blank'}
-            </button>
+            <label className="field field-check layout-page-check">
+              <input
+                type="checkbox"
+                aria-label="Leave the back of this page blank"
+                checked={chapterBack}
+                onChange={(event) => onChapterBack(place.opensMarkerId as string, event.target.checked)}
+              />
+              <span>Leave the back of this page blank</span>
+            </label>
           ) : null}
         </div>
       )}

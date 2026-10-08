@@ -1,5 +1,13 @@
 import { useState } from 'react';
-import { divisionRemoval, isCollection, storiesOf, type ProjectFile, type Story } from '@vcwriter/domain';
+import {
+  divisionRemoval,
+  divisionStart,
+  isCollection,
+  storiesOf,
+  unplacedSections,
+  type ProjectFile,
+  type Story,
+} from '@vcwriter/domain';
 
 /**
  * The stories, down the right-hand edge of a collection (addendum 22 §3).
@@ -32,11 +40,16 @@ interface StoryRailProps {
   onOpenPage(story: Story): void;
   onNew(): void;
   onRemove(story: Story): void;
+  /** Give the writing ahead of the first story a break of its own (§9ab). */
+  onClaim(unitId: string): void;
 }
 
-export function StoryRail({ file, open, onOpen, currentUnitId, onGo, onOpenPage, onNew, onRemove }: StoryRailProps) {
+export function StoryRail({ file, open, onOpen, currentUnitId, onGo, onOpenPage, onNew, onRemove, onClaim }: StoryRailProps) {
   if (!isCollection(file.project.format)) return null;
   const stories = storiesOf(file);
+  /** The sections no story claims, and what making them one would do. */
+  const loose = unplacedSections(file);
+  const start = divisionStart(file, (loose[0]?.id ?? null) as never);
   const here = currentUnitId ? stories.find((story) => story.sections.some((unit) => (unit.id as string) === currentUnitId)) : undefined;
 
   return (
@@ -75,6 +88,33 @@ export function StoryRail({ file, open, onOpen, currentUnitId, onGo, onOpenPage,
               })}
             </ul>
           )}
+
+          {/**
+           * **Writing that no story claims says so, and can be made one**
+           * (§9ab, from Ken: *it no longer shows up in the tab to the right
+           * but the story is still there — each story needs to be held
+           * together not merged with other stories*).
+           *
+           * This list reads the markers, so a story whose break has gone is
+           * not on it while every word of it is still in the book. The honest
+           * row is not a story — it has no marker to be one — it is a line
+           * saying the writing is there and a press that gives it back its
+           * break, which is `divisionStart`'s act and not `+ New story`'s: one
+           * gathers writing that exists, the other makes an empty section at
+           * the end.
+           */}
+          {loose.length > 0 ? (
+            <div className="episode-loose">
+              <p className="muted small">
+                {loose.length === 1 ? '1 section stands' : `${loose.length} sections stand`} ahead of the first story,
+                in the book but in no story.
+              </p>
+              <button type="button" className="small" onClick={() => onClaim(loose[0]!.id as string)}>
+                {start.act ?? 'Make them a story'}
+              </button>
+              {start.comfort ? <p className="muted small">{start.comfort}</p> : null}
+            </div>
+          ) : null}
 
           <button type="button" className="primary episode-new" onClick={onNew}>
             + New story

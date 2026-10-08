@@ -128,15 +128,31 @@ export const addPart = (
   file: ProjectFile,
   kind: PartKind,
   input: Partial<Omit<BookPart, 'id' | 'kind'>> = {},
+  /**
+   * **Where it goes in** (§9ab, from Ken: *I should be able to insert a page
+   * at any point. That page can be anything*). The id of the part it stands
+   * **in front of**, which is the blank leaf's own rule (`blankBefore`) said
+   * of a page: one meaning for *insert here*, and the page in hand moves
+   * down. Null appends to its half, which is what every caller did before and
+   * what the menu still does where no page is in hand.
+   */
+  before: string | null = null,
 ): { file: ProjectFile; partId: string | null } => {
   const parts = partsOf(file);
   if (PART_INFO[kind].once && parts.some((part) => part.kind === kind)) return { file, partId: null };
   const part = bookPartSchema.parse({ ...input, id: newId() as string, kind });
   const half = halfOf(part);
+  // Only within its own half: the story stands between them and nothing
+  // crosses it, which is `movePart`'s rule and the reason a dedication
+  // cannot be inserted in front of the index.
+  const at = before === null ? -1 : parts.findIndex((one) => one.id === before && halfOf(one) === half);
+  if (at !== -1) {
+    return { file: writeParts(file, [...parts.slice(0, at), part, ...parts.slice(at)]), partId: part.id };
+  }
   if (half === 'front') {
     const last = parts.map((one) => halfOf(one)).lastIndexOf('front');
-    const at = last === -1 ? 0 : last + 1;
-    return { file: writeParts(file, [...parts.slice(0, at), part, ...parts.slice(at)]), partId: part.id };
+    const put = last === -1 ? 0 : last + 1;
+    return { file: writeParts(file, [...parts.slice(0, put), part, ...parts.slice(put)]), partId: part.id };
   }
   return { file: writeParts(file, [...parts, part]), partId: part.id };
 };
@@ -1409,6 +1425,19 @@ export interface PictureOffer {
    * mechanism cannot keep; what it can keep is the page.
    */
   ownPageOnly: boolean;
+  /**
+   * **The part a new page of art would stand in front of** (§9ab, from Ken:
+   * *right now, it's locking me out if it's a blank page, saying there's
+   * nothing I can do with it*).
+   *
+   * §9aa gave a leaf in the story somewhere to put a picture and left a leaf
+   * among the front or back pages refusing, with a sentence naming a route:
+   * *+ Add puts one in, and its row drags to where you want it*. That is the
+   * two-step detour §9aa was itself written to remove — the writer pointed at
+   * a page and was told to make the thing elsewhere and drag it back. The
+   * page of art goes **here** instead, which is `addPart`'s new position.
+   */
+  newPageBefore: string | null;
   /** Why a picture may not be asked for here, in a sentence a writer can act on. */
   refusal: string | null;
 }
@@ -1422,6 +1451,7 @@ export const pictureOffer = (place: PagePlace, rows: readonly BookPageRow[], she
     note: null,
     takesLeaf: null,
     ownPageOnly: false,
+    newPageBefore: null,
     refusal,
   });
   if (!page) return none('The book is still being set.');
@@ -1442,19 +1472,27 @@ export const pictureOffer = (place: PagePlace, rows: readonly BookPageRow[], she
   }
   if (!place.elementId && !place.partId) {
     /**
-     * **A leaf in front of a part takes a page of art rather than a picture**
-     * (§9aa). §9aa's walk forward stops at a part without answering with it,
+     * **A leaf among the front or back pages takes a page of art, here**
+     * (§9ab). §9aa's walk forward stops at a part without answering with it,
      * because a part's picture is its own art or an inset in its words: put
      * there, a picture asked for on the leaf would draw on the page ahead,
-     * which is §9w's fault wearing a different control. What goes on a leaf
-     * among the front or back pages is a page of art, which this room has had
-     * since §9 — so the refusal names that route rather than leaving a writer
-     * at a page that says nothing can be done to it.
+     * which is §9w's fault wearing a different control. So the answer is not
+     * that part but **a new page of art standing where the leaf is** — which
+     * §9aa named as a route and made the writer walk, and which `addPart`'s
+     * position now does in one press.
      */
-    if (page.blank && rows.some((one) => one.sheet > sheet && one.partId !== null)) {
-      return none(
-        'A picture on a leaf among the front or back pages is a page of art: + Add puts one in, and its row drags to where you want it.',
-      );
+    const ahead = rows.find((one) => one.sheet > sheet && one.partId !== null);
+    if (page.blank && ahead) {
+      return {
+        spot: null,
+        of: null,
+        beforeOpening: false,
+        note: null,
+        takesLeaf: page.blankFor,
+        ownPageOnly: true,
+        newPageBefore: ahead.partId,
+        refusal: null,
+      };
     }
     /**
      * **A page with nothing of the book on it and nothing of the book after
@@ -1493,6 +1531,7 @@ export const pictureOffer = (place: PagePlace, rows: readonly BookPageRow[], she
     note: leaf
       ? `A picture of its own will stand on page ${leaf.counted}: the leaf in front of this page is empty, and it fills that rather than adding one.`
       : null,
+    newPageBefore: null,
     refusal: null,
   };
 };
@@ -2005,6 +2044,13 @@ export interface BookPageRow {
    * The rail folds a row on whichever of the two it stands for.
    */
   unitId: string | null;
+  /**
+   * The section that **opens** on this page, as against the one in force
+   * (§9ab). `unitId` is carried forward so a page in the middle of a section
+   * knows which it is in; starting a division needs the other question, a
+   * marker sitting on a unit and so being placeable only where one begins.
+   */
+  opensUnitId: string | null;
   /** The part it belongs to, where it is front or back matter rather than story. */
   partId: string | null;
   /** The picture that **is** the page, where it is one — what the inspector edits. */
@@ -2094,6 +2140,7 @@ export const bookPageRows = (
       says,
       markerId: part ? null : marker,
       unitId: part ? null : unit,
+      opensUnitId: part ? null : (opened?.unitId ?? null),
       partId: part?.partId ?? null,
       figureId: art?.id ?? null,
       elementId: on.find((block) => BODY_KINDS.has(block.kind))?.id ?? null,

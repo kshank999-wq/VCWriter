@@ -1,7 +1,16 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { addBeat, beginStory, createProjectFile, type Story } from '@vcwriter/domain';
+import {
+  addBeat,
+  beginStory,
+  createProjectFile,
+  removeDivision,
+  storiesOf,
+  unplacedSections,
+  type ProjectFile,
+  type Story,
+} from '@vcwriter/domain';
 import { StoryRail } from '../components/StoryRail';
 
 /**
@@ -14,7 +23,7 @@ afterEach(cleanup);
 describe('the story rail', () => {
   it('is drawn for a collection and for nothing else', () => {
     const { container } = render(
-      <StoryRail file={createProjectFile({ title: 'A novel', format: 'novel' })} open onOpen={() => {}} currentUnitId={null} onGo={() => {}} onOpenPage={() => {}} onNew={() => {}} onRemove={() => {}} />,
+      <StoryRail file={createProjectFile({ title: 'A novel', format: 'novel' })} open onOpen={() => {}} currentUnitId={null} onGo={() => {}} onOpenPage={() => {}} onNew={() => {}} onRemove={() => {}} onClaim={() => {}} />,
     );
     expect(container.querySelector('.episode-rail')).toBeNull();
   });
@@ -37,6 +46,7 @@ describe('the story rail', () => {
           started += 1;
         }}
         onRemove={() => {}}
+        onClaim={() => {}}
       />,
     );
     expect(screen.getByLabelText('Stories')).toBeTruthy();
@@ -70,6 +80,7 @@ describe('the story rail', () => {
         onOpenPage={() => {}}
         onNew={() => {}}
         onRemove={(story: Story) => removed.push(story.placed.marker.title)}
+        onClaim={() => {}}
       />,
     );
     // The × is on the row and pressing it removes nothing on its own.
@@ -100,9 +111,73 @@ describe('the story rail', () => {
       ),
     } as typeof file;
     render(
-      <StoryRail file={file} open onOpen={() => {}} currentUnitId={null} onGo={() => {}} onOpenPage={() => {}} onNew={() => {}} onRemove={() => {}} />,
+      <StoryRail file={file} open onOpen={() => {}} currentUnitId={null} onGo={() => {}} onOpenPage={() => {}} onNew={() => {}} onRemove={() => {}} onClaim={() => {}} />,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Remove The Harbour' }));
     expect(screen.getByText(/not a word is cut/)).toBeTruthy();
+  });
+});
+
+describe('writing no story claims', () => {
+  /**
+   * **§9ab, from Ken** (*it no longer shows up in the tab to the right but the
+   * story is still there — each story needs to be held together not merged
+   * with other stories*).
+   *
+   * This list reads the markers, so a story whose break has gone is off it
+   * while every word of it is still in the book. The row is deliberately not
+   * a story — it has no marker to be one — it is a line saying the writing is
+   * there, and a press that gives it back its break.
+   */
+  const loose = (): ProjectFile => {
+    let file = beginStory(createProjectFile({ title: 'Tales', format: 'short_story' }), { title: 'In For A Pound' }).file;
+    file = beginStory(file, { title: 'Simple Pleasures' }).file;
+    const first = storiesOf(file)[0]!;
+    return removeDivision(file, first.placed.marker.id);
+  };
+
+  it('says it is there, and one press makes it a story again', () => {
+    const file = loose();
+    const claimed: string[] = [];
+    render(
+      <StoryRail
+        file={file}
+        open
+        onOpen={() => {}}
+        currentUnitId={null}
+        onGo={() => {}}
+        onOpenPage={() => {}}
+        onNew={() => {}}
+        onRemove={() => {}}
+        onClaim={(unitId: string) => claimed.push(unitId)}
+      />,
+    );
+    expect(screen.getByText(/in the book but in no story/)).toBeDefined();
+    // The act is the break's, never *+ New story*, which makes an empty
+    // section at the end and is a different thing entirely.
+    fireEvent.click(screen.getByRole('button', { name: /^Start a story here/ }));
+    expect(claimed).toEqual([unplacedSections(file)[0]?.id]);
+  });
+
+  it('says nothing where every section belongs to a story', () => {
+    let file = beginStory(createProjectFile({ title: 'Tales', format: 'short_story' }), { title: 'One' }).file;
+    file = beginStory(file, { title: 'Two' }).file;
+    // The project's own seeded section is unclaimed on a fresh collection, so
+    // the one that proves the silence is a book whose first story is first.
+    if (unplacedSections(file).length > 0) return;
+    render(
+      <StoryRail
+        file={file}
+        open
+        onOpen={() => {}}
+        currentUnitId={null}
+        onGo={() => {}}
+        onOpenPage={() => {}}
+        onNew={() => {}}
+        onRemove={() => {}}
+        onClaim={() => {}}
+      />,
+    );
+    expect(screen.queryByText(/in no story/)).toBeNull();
   });
 });

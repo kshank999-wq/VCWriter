@@ -14,6 +14,7 @@ import {
   geometryOf,
   layPages,
   pagePlace,
+  partsOf,
   pictureOffer,
   placeFigure,
   setBackBlank,
@@ -301,18 +302,38 @@ describe('a blank page asked for a blank page', () => {
 });
 
 describe('a leaf among the front and back pages', () => {
-  it('names the route to a page of art rather than refusing flat', () => {
+  it('takes a page of art, standing where the leaf is', () => {
     /**
      * The walk forward stops at a part without answering with it, because a
      * part's picture is its own art or an inset in its words: put there, a
      * picture asked for on the leaf would draw on the page ahead.
+     *
+     * **§9ab corrects where that left the writer.** §9aa refused and named a
+     * route — *+ Add puts one in, and its row drags to where you want it* —
+     * which is the two-step detour §9aa was written to remove, and is what
+     * Ken reported as being locked out of the page. The leaf answers with a
+     * **position** instead: a page of art goes in front of the part it stands
+     * before, which is one press.
      */
     const file = addPart(novel(), 'dedication', { title: 'Dedication' }).file;
     const rows = lay(file).rows;
     const leaf = rows.find((row) => row.blank && row.markerId === null)!;
     expect(leaf).toBeTruthy();
     const offer = offerOn(file, leaf.sheet);
+    expect(offer.refusal).toBeNull();
+    // Not a record to hang a picture from — a place to put a page.
     expect(offer.spot).toBeNull();
-    expect(offer.refusal).toMatch(/page of art/);
+    expect(offer.newPageBefore).toBe(rows.find((row) => row.sheet > leaf.sheet && row.partId !== null)!.partId);
+    // And it is a page of its own, as every leaf is (§9aa).
+    expect(offer.ownPageOnly).toBe(true);
+  });
+
+  it('puts the page of art where the leaf was, rather than at the end of its half', () => {
+    const file = addPart(novel(), 'dedication', { title: 'Dedication' }).file;
+    const leaf = lay(file).rows.find((row) => row.blank && row.markerId === null)!;
+    const before = offerOn(file, leaf.sheet).newPageBefore as string;
+    const made = addPart(file, 'plate', { inFront: true }, before);
+    const order = partsOf(made.file).map((part) => part.id);
+    expect(order[order.indexOf(before) - 1]).toBe(made.partId);
   });
 });

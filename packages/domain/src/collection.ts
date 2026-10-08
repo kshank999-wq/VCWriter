@@ -4,7 +4,7 @@ import { storyMarkerSchema } from './entities/structure.js';
 import { addMarker, addUnit } from './mutations.js';
 import { unitsInStoryOrder } from './selectors.js';
 import { placedMarkers, type PlacedMarker } from './markers.js';
-import { divisionSpan } from './outline-binding.js';
+import { divisionSpan, unclaimedUnits } from './outline-binding.js';
 import { isCollection } from './formats.js';
 import { BARE_LABEL } from './importing.js';
 import { chapterName, materialiseScenes } from './import-build.js';
@@ -51,13 +51,20 @@ export const storiesOf = (file: ProjectFile): Story[] => {
     });
 };
 
-/** The sections of a collection no story has claimed: those before the first marker. */
-export const unplacedSections = (file: ProjectFile): StructuralUnit[] => {
-  if (!isCollection(file.project.format)) return [];
-  const order = unitsInStoryOrder(file);
-  const first = order.findIndex((unit) => file.markers.some((marker) => marker.kind === 'chapter' && marker.unitId === unit.id));
-  return first === -1 ? order : order.slice(0, first);
-};
+/**
+ * The sections of a collection no story has claimed: those before the first
+ * marker.
+ *
+ * **It is `unclaimedUnits` narrowed to a collection** (§9ab). This was written
+ * for addendum 22 §8 and is the reading that would have made Ken's loss
+ * visible the moment it happened — and **nothing on any screen ever asked
+ * it**, so a story could leave both rails and stay in the book with every
+ * test green. The general one answers for a novel's chapters too; this name
+ * stays because the collection is where *every* section belongs to a story,
+ * which is the one clause the two do not share.
+ */
+export const unplacedSections = (file: ProjectFile): StructuralUnit[] =>
+  isCollection(file.project.format) ? unclaimedUnits(file) : [];
 
 /**
  * **Which of a document's headings would begin a story** (addendum 22 §8).

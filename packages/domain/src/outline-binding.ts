@@ -1,7 +1,8 @@
 import { addBeat, addMarker, addUnit, moveBeat, moveUnit, removeMarker, removeUnit } from './mutations.js';
 import { beatsForUnit, tracksInOrder, unitsInStoryOrder } from './selectors.js';
 import { orderKeyBetween } from './ordering.js';
-import { nounsFor } from './formats.js';
+import { isCollection, nounsFor } from './formats.js';
+import { defaultMarkerKind } from './markers.js';
 import { nowIso } from './entities/common.js';
 import { findOutline, findOutlineItem, outlineChildren, outlineParent, outlinesOf } from './outline.js';
 import { claimedInScript, retitleScript } from './planning.js';
@@ -408,6 +409,115 @@ export const divisionRemoval = (file: ProjectFile, markerId: StoryMarkerId): str
     return `The ${noun} break goes. ${one ? 'Its section stays' : 'Its sections stay'} where ${one ? 'it is' : 'they are'}, ahead of the first ${noun}; not a word is cut.`;
   }
   return `The ${noun} break goes. ${one ? 'Its section joins' : 'Its sections join'} the one before; not a word is cut.`;
+};
+
+/**
+ * **The writing that no division claims** (§9ab, from Ken: *the story is still
+ * there, but it now no longer shows up in the left menu bar… each story needs
+ * to be held together not merged with other stories*).
+ *
+ * A division is a marker over the sections that follow it, so the sections
+ * **ahead of the first marker** belong to nothing — and every reading that
+ * lists the book reads the markers, so that writing is listed nowhere while
+ * its pages are quietly filed under the division that follows. That is how a
+ * story disappears from both rails and stays in the book, which is what Ken
+ * met after a × took a break away.
+ *
+ * It answers only where the book **has** divisions. Where there are none the
+ * story is simply the story, and listing every section as unclaimed would
+ * invent a complaint about a book nobody has broken.
+ */
+export const unclaimedUnits = (file: ProjectFile): StructuralUnit[] => {
+  const kind = defaultMarkerKind(file.project.format);
+  const starts = new Set(file.markers.filter((one) => one.kind === kind).map((one) => one.unitId as string));
+  /**
+   * **Where a book with no divisions at all has none of these.** A collection's
+   * writing always belongs to a story — that is what the format is — so a
+   * collection with no markers has every section unclaimed, which is addendum
+   * 22 §8's broken state said out loud. Any other format need not be divided:
+   * a novel nobody has cut into chapters is the story, and listing every unit
+   * would invent a complaint about a book that is fine.
+   */
+  if (starts.size === 0 && !isCollection(file.project.format)) return [];
+  const out: StructuralUnit[] = [];
+  for (const unit of unitsInStoryOrder(file)) {
+    if (starts.has(unit.id as string)) break;
+    out.push(unit);
+  }
+  return out;
+};
+
+/** What starting a division here would do, or why it may not be asked for. */
+export interface DivisionStart {
+  /** The section it would begin at. Null where it may not be asked for. */
+  unitId: StructuralUnitId | null;
+  /** The button's words, where there is a button. */
+  act: string | null;
+  /** What a press would do, in the format's own nouns. */
+  comfort: string;
+  /** Why there is none, in a sentence a writer can act on. */
+  refusal: string | null;
+}
+
+/**
+ * **Whether a division may be started here** (§9ab), the exact inverse of
+ * `divisionRemoval` — and the thing whose absence made that × the one act in
+ * the room a writer could not take back.
+ *
+ * §9x put a × on every page and answered a division's own page with *the
+ * break goes and the words stay*, which is honest. What it never asked is
+ * whether anything could put the break **back**: nothing in Layout, nothing
+ * on the Stories rail (*+ New story* makes a new empty section at the end,
+ * which is a different act), and nothing in the Add menu — so a press on a
+ * page lost a story out of both rails with no way to the state before it.
+ *
+ * **A division begins where a section begins**, which is the one rule here. A
+ * marker sits on a unit, so starting one mid-section would mean splitting the
+ * writing, and that is the manuscript's act and not this room's; the refusal
+ * says so rather than quietly starting it a page early.
+ */
+export const divisionStart = (file: ProjectFile, unitId: StructuralUnitId | null): DivisionStart => {
+  const noun = nounsFor(file.project.format).division.toLowerCase();
+  const none = (refusal: string): DivisionStart => ({ unitId: null, act: null, comfort: '', refusal });
+  if (unitId === null) {
+    return none(`A ${noun} begins where a section begins. Choose a page that opens one.`);
+  }
+  const unit = file.units.find((one) => one.id === unitId);
+  if (!unit) return none('The book is still being set.');
+  const kind = defaultMarkerKind(file.project.format);
+  const standing = file.markers.find((one) => one.unitId === unitId);
+  if (standing && standing.kind === kind) {
+    return none(`A ${noun} already begins on this page.`);
+  }
+  // How much writing it would gather: from here to the next break of its own
+  // kind, which is `divisionSpan`'s rule asked before the marker exists.
+  const order = unitsInStoryOrder(file);
+  const at = order.findIndex((one) => one.id === unitId);
+  const starts = new Set(file.markers.filter((one) => one.kind === kind).map((one) => one.unitId as string));
+  let held = 0;
+  for (let next = at; next < order.length; next += 1) {
+    if (next > at && starts.has(order[next]!.id as string)) break;
+    held += 1;
+  }
+  return {
+    unitId,
+    act: `Start a ${noun} here…`,
+    comfort: `The ${held === 1 ? 'section' : `${held} sections`} from here to the next ${noun} ${
+      held === 1 ? 'becomes' : 'become'
+    } one ${noun}. Not a word is cut.`,
+    refusal: null,
+  };
+};
+
+/**
+ * Start one. **It refuses the same things again** (`trackRemoval`'s shape), so
+ * a caller cannot get past the reading by not reading it — and it is
+ * `addMarker`, which has updated a marker already standing on a unit since it
+ * was written, so there is no second idea here of what a division is.
+ */
+export const startDivision = (file: ProjectFile, unitId: StructuralUnitId, title = ''): ProjectFile => {
+  if (divisionStart(file, unitId).unitId === null) return file;
+  return addMarker(file, { unitId, title, kind: defaultMarkerKind(file.project.format) }).file;
 };
 
 /**
