@@ -44,6 +44,16 @@ const HARBOUR = () =>
     wordParagraph('Nobody came, and the tide went out.'),
   ]);
 
+/** A second story, for the two chosen together. */
+const POUND = () =>
+  buildDocx([
+    wordParagraph('In For A Pound', { style: 'Title' }),
+    wordParagraph('I', { align: 'center' }),
+    wordParagraph('He counted the coins twice.'),
+    wordParagraph('II', { align: 'center' }),
+    wordParagraph('Then once more, for luck.'),
+  ]);
+
 /** The dialog as the workspace renders it, with nothing landed yet. */
 const adding = (file: ProjectFile, made: ProjectFile[], kind: 'stories' | 'episodes' = 'stories') =>
   render(
@@ -185,7 +195,7 @@ describe('one story at a time', () => {
       />,
     );
     choose([fileNamed('harbour.docx', HARBOUR())]);
-    await screen.findByText(/What the document is/);
+    await screen.findByText(/This document is one story/);
     fireEvent.click(screen.getByRole('button', { name: 'Import' }));
     await waitFor(() => expect(made).toHaveLength(1));
 
@@ -221,12 +231,56 @@ describe('one story at a time', () => {
       />,
     );
     choose([fileNamed('harbour.docx', HARBOUR())]);
-    await screen.findByText(/What the document is/);
+    await screen.findByText(/This document is one story/);
     fireEvent.click(screen.getByRole('button', { name: 'Add to the end' }));
     await waitFor(() => expect(made).toHaveLength(1));
     // The same project, one story longer — never a new one, which is what
     // overwrote a finished story.
     expect(made[0]!.project.id).toBe(first.project.id);
     expect(storiesOf(made[0]!).map((story) => story.placed.marker.title)).toEqual(['The Road', 'The Harbour']);
+  });
+});
+
+/**
+ * **Several stories at once** (addendum 22 §8, from Ken: *I imported three
+ * stories and only two of them show up… it seems to have merged two stories
+ * that were imported at the same time, naming it with the second*).
+ *
+ * *One story or many* was asked of **the first document** and applied to it
+ * alone, so the first file was read by a control the rest never saw. What is
+ * pinned is the gesture rather than the control: **a story per file**, each
+ * named, and no question put where the files have already answered it.
+ */
+describe('several stories chosen together', () => {
+  it('makes a story of each file, named, and does not ask what the first one is', async () => {
+    const made: ProjectFile[] = [];
+    render(
+      <ImportDialog
+        open
+        kind="collection"
+        file={null}
+        landed={null}
+        onClose={() => {}}
+        onImported={(next) => made.push(next)}
+        onAdded={(next) => made.push(next)}
+      />,
+    );
+    choose([fileNamed('harbour.docx', HARBOUR()), fileNamed('pound.docx', POUND())]);
+    await screen.findByLabelText('Files in order');
+    // The files answered it, so the radio is absent rather than deciding the
+    // first document on its own.
+    expect(screen.queryByLabelText('A collection')).toBeNull();
+    expect(screen.queryByLabelText('One story')).toBeNull();
+    expect(document.querySelector('.import-more')?.textContent).toContain('each after it is the next story');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Import' }));
+    await waitFor(() => expect(made).toHaveLength(1));
+    const stories = storiesOf(made[0]!);
+    expect(stories.map((story) => story.placed.marker.title)).toEqual(['The Harbour', 'In For A Pound']);
+    // Neither holds the other's sections, which is the merge he reported.
+    expect(stories.map((story) => story.sections.map((unit) => unit.title))).toEqual([
+      ['I', 'II'],
+      ['I', 'II'],
+    ]);
   });
 });

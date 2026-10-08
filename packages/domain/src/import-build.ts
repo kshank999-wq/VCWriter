@@ -142,8 +142,15 @@ export interface MaterialiseOptions {
    * it into sections, the first is the story's own title and is not repeated,
    * and each later one stays in the manuscript as a heading, so no words are
    * lost to the choice.
+   *
+   * `stories` is a collection read as one (addendum 22 §8): **a named heading
+   * begins a story and a bare numeral never does.** *I*, *1*, *One* is how a
+   * short story divides inside itself (addendum 21 §10), so a numeral made a
+   * story carries no name at all — a collection numbers nothing, so there is
+   * no label either — and the writer is handed a row with nothing on it. It
+   * stays a heading in the words instead, the way `sections` keeps one.
    */
-  headings?: 'markers' | 'sections';
+  headings?: 'markers' | 'sections' | 'stories';
   /**
    * How much of a chapter goes in a beat (addendum 33). Defaults to the
    * format's own answer, so every caller that existed before the choice did
@@ -230,12 +237,22 @@ export const materialiseScenes = (script: ImportedScript, options: MaterialiseOp
   const markers: StoryMarker[] = [];
   const assets: Asset[] = [];
   const prose = isProseFormat(format);
-  // Whether a heading here becomes a chapter marker rather than a line of the
-  // manuscript — which is also what decides who owns the chapter's name.
-  const markersHere = prose && options.headings !== 'sections';
+  /**
+   * Whether this scene's heading becomes a marker rather than a line of the
+   * manuscript — which is also what decides who owns the division's name.
+   * Asked per scene rather than per document, because `stories` answers it
+   * from the heading itself: a named one begins a story, a numeral does not.
+   */
+  const marksHere = (heading: string): boolean => {
+    if (!prose) return false;
+    if (options.headings === 'sections') return false;
+    if (options.headings === 'stories') return !BARE_LABEL.test(heading.trim());
+    return true;
+  };
   let words = 0;
 
   scenes.forEach((scene, index) => {
+    const markersHere = marksHere(scene.heading);
     const unitId = newId<StructuralUnitId>();
     const orderKey = options.after === null ? (fresh[index] ?? orderKeyBetween(null, null)) : orderKeyBetween(previous, null);
     previous = orderKey;
@@ -273,7 +290,7 @@ export const materialiseScenes = (script: ImportedScript, options: MaterialiseOp
 
     const elements: ManuscriptElement[] = [];
     if (scene.heading.trim().length > 0) {
-      if (prose && options.headings === 'sections') {
+      if (prose && !markersHere) {
         // One story: the first heading is its title, said on the marker the
         // caller places; every later one stays a heading in the words.
         //
@@ -283,6 +300,10 @@ export const materialiseScenes = (script: ImportedScript, options: MaterialiseOp
         // usually by the file on disk. Dropping it as the title lost the
         // numeral, so the first chapter of every imported story had no
         // opening while the rest did.
+        //
+        // In `stories` the only heading that reaches here *is* a bare label,
+        // so it is kept wherever it falls: the numeral is the division inside
+        // the story and the story's own name comes from the document.
         if (index > 0 || BARE_LABEL.test(scene.heading.trim())) {
           elements.push(
             manuscriptElementSchema.parse({ id: newId<ManuscriptElementId>(), type: 'heading', text: chapterName(scene.heading) || scene.heading.trim() }),
@@ -456,6 +477,9 @@ export const buildProjectFromImport = (script: ImportedScript, options: ImportOp
     after: null,
     sequenceLabels: true,
     ...(oneStory ? { headings: 'sections' as const } : {}),
+    // A collection read as one: a named heading begins a story and a numeral
+    // divides it (addendum 22 §8).
+    ...(isCollection(format) && !oneStory ? { headings: 'stories' as const } : {}),
     ...(options.passages ? { passages: options.passages } : {}),
   });
   const { units, beats, assets, words } = made;
@@ -463,22 +487,46 @@ export const buildProjectFromImport = (script: ImportedScript, options: ImportOp
   // (addendum 22 §2): the document's first heading where it had one, else
   // the title. A collection has the marker per heading the builder made.
   const firstHeading = chapterName(script.scenes.find((scene) => scene.heading.trim().length > 0)?.heading ?? '');
-  const markers: StoryMarker[] =
-    oneStory && units[0]
-      ? [
-          storyMarkerSchema.parse({
-            id: newId<StoryMarkerId>(),
-            projectId,
-            unitId: units[0].id,
-            kind: 'chapter',
-            // The document's own name before the project's: each file is a
-            // story, and a collection's first file names the book as well.
-            title: firstHeading || script.title.trim() || title,
-            createdAt: timestamp,
-            updatedAt: timestamp,
-          }),
-        ]
-      : made.markers;
+  /** What a story brought in as a whole document is called. */
+  const storyName = firstHeading || script.title.trim() || title;
+  const storyMarker = (unitId: StructuralUnitId, named: string): StoryMarker =>
+    storyMarkerSchema.parse({
+      id: newId<StoryMarkerId>(),
+      projectId,
+      unitId,
+      kind: 'chapter',
+      title: named,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    });
+  /**
+   * **A collection's first story begins at its first section** (addendum 22
+   * §8). A document that opens before its first named heading — front matter,
+   * a dedication, an epigraph — otherwise leaves sections in front of every
+   * story, and a section no story claims is one **nothing lists**: absent from
+   * the Stories rail and from Layout's, while the book draws its pages under
+   * whatever division follows them (addendum 20 §9w). From the writer's chair
+   * that is two stories merged into one and named after the second, which is
+   * what Ken reported.
+   *
+   * So the first story is pulled back onto the first section rather than the
+   * words being left outside it — the opening of a story is part of that
+   * story, and nothing is invented — and a reading that found no story at all
+   * makes the whole document one, named off the document. It is here rather
+   * than in a repair a caller must remember, because this is the one place a
+   * collection's stories are made.
+   */
+  const collectionMarkers = (): StoryMarker[] => {
+    const first = units[0];
+    if (!first) return [];
+    if (oneStory) return [storyMarker(first.id, storyName)];
+    const stories = made.markers.filter((marker) => marker.kind === 'chapter');
+    const opening = stories[0];
+    if (!opening) return [storyMarker(first.id, storyName)];
+    if (opening.unitId === first.id) return made.markers;
+    return made.markers.map((marker) => (marker.id === opening.id ? { ...marker, unitId: first.id } : marker));
+  };
+  const markers: StoryMarker[] = isCollection(format) ? collectionMarkers() : made.markers;
 
   // ---------------------------------------------------------- the locations
   //

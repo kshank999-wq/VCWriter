@@ -360,7 +360,112 @@ correct for the one that did not.
 Measured on a three-episode series: *Pilot* spans its own two scenes rather
 than all six, and removing the middle episode takes two units, not four.
 
-## 8. What each stage built
+## 8. Several stories at once
+
+From Ken, in three messages about one import:
+
+> I imported three stories. And in the layout under stories, only two of them
+> show up… in the stories pop out right menu, it shows only two stories also.
+> But that story is there, and it's the first story. I'm able to add pictures
+> to it and organize it and everything. So it just doesn't show up anywhere
+> else except for in the layout screen book view. But it was imported.
+
+> It seems to have merged two stories that were imported at the same time… if
+> you are importing one and the other, I think it is just putting them both
+> together. And naming it with the second story was. Because the third story
+> I imported separately.
+
+> It imported the first story inside the second story and it did all the
+> chapter pages correct, but it didn't name them. It just gave them page
+> numbers… So I should just import these one at a time unless there's a fix
+> for that. Or we shouldn't allow the stories to be imported together.
+
+### §8.1. What was wrong
+
+**One control was asked of the first document and applied to it alone.** §2's
+*one story or many* is a real question about a single file — a document's
+headings divide one story into sections, or begin a story each, and the
+document cannot say which — and the fieldset said so in its own legend: *what
+the **first** document is. So with several files chosen, the first was read by
+a rule the rest never saw, and the two halves of one import disagreed:
+
+- **Read as a collection**, his first document divided at its numerals. A
+  numeral is a bare label, `chapterName` reads a bare label as **naming
+  nothing** (a chapter's number is derived — addendum 02 §12a), and a
+  collection **numbers nothing** by default, so `placedMarkers` gives such a
+  marker no label either. The result is a run of stories with nothing on
+  them — his *it did all the chapter pages correct, but it didn't name them,
+  it just gave them page numbers*. Where the document's first scene carried
+  no heading at all, the reading produced **no marker whatsoever** and the
+  project had no first story.
+- **Every file after it** went through `appendImportedStory`, which reads a
+  document as **one** story and names it. So the second arrived whole and
+  named.
+
+A section no story claims is one **nothing lists**: `storiesOf` reads the
+markers, so the Stories rail and Layout's rail both skip it, while the book
+draws its pages under whatever division follows them (addendum 20 §9w, *pages
+no row claims are held and given to the next division*). Which is exactly
+what he saw — *it imported the first story inside the second story*, the
+first story present in the book view, reachable, editable, and named nowhere.
+
+### §8.2. A bare numeral never begins a story
+
+`materialiseScenes` grows a third reading, `headings: 'stories'`, beside
+`markers` and `sections`: **a named heading begins a story and a numeral
+divides one.** *I*, *1*, *One* is how a short story divides inside itself
+(addendum 21 §10) and it stays a heading in the words, exactly as `sections`
+keeps one, so not a word is lost to the choice and §6 goes on drawing it as a
+chapter of the story.
+
+`storyHeadings` is the one reading of which of a document's headings would
+begin a story, so the screen that offers *a collection* counts what the
+import would actually make. It used to count every heading, which on his
+document promised three stories and delivered three nameless ones.
+
+### §8.3. A collection's first story begins at its first section
+
+The words in front of the first named heading — front matter, a dedication,
+an epigraph — are the opening of the first story rather than a story of their
+own, so the first story's marker is **pulled back onto the first section**
+rather than those words being left outside every story. Nothing is invented,
+and a reading that found no story at all makes the whole document one, named
+off the document.
+
+It lives in `buildProjectFromImport`, where a collection's story markers are
+made, rather than in a repair a caller has to remember — `ensureFirstStory`
+was written as `ensureFirstEpisode`'s twin and **deleted**, because the
+builder already places the marker in the one-story case and a second thing
+answering *which sections is this story* is a second answer.
+
+### §8.4. The question is only put where there is one
+
+- **Several documents answer it**: each file is a story, so the fieldset is
+  absent and the first document is read exactly as every one after it. What
+  the screen says instead is already there — *the first makes the collection;
+  each after it is the next story, on a page of its own*.
+- **A document with no named heading answers it too**: there is nothing in it
+  that could begin another story, so the fieldset is **absent with the reason
+  in its place** rather than offering a choice whose second answer produces
+  the same thing — or, as it did, nothing.
+- **A document with named headings is asked**, and the row now names them
+  (*2 of them here: The Harbour, In For A Pound*) rather than only counting,
+  because a number is a promise and the names are the evidence.
+
+**Several at once is kept rather than withdrawn.** Ken offered *we shouldn't
+allow the stories to be imported together*, and §4a built it for an editor
+with a drawer of manuscripts; the fault was never the togetherness, it was
+the first file being read by a control the others could not see.
+
+Driven at 1440×900 on three documents, his own sequence — two chosen
+together, then one separately: the Layout rail reads *The Harbour · In For A
+Pound · Falling*, the Stories rail reads the same three with their sections
+and words, and no section stands outside a story. One numeral-divided
+document on its own draws no fieldset and the sentence in its place; one
+document with two named headings draws the fieldset, names both, and makes
+two stories out of the one file.
+
+## 9. What each stage built
 
 - **Stage 1, the reading.** `isCollection`, the noun table's *Collection*,
   `markerNoun` taking the format, `defaultMarkerNumbering` giving a

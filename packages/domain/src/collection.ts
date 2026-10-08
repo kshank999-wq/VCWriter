@@ -6,6 +6,7 @@ import { unitsInStoryOrder } from './selectors.js';
 import { placedMarkers, type PlacedMarker } from './markers.js';
 import { divisionSpan } from './outline-binding.js';
 import { isCollection } from './formats.js';
+import { BARE_LABEL } from './importing.js';
 import { chapterName, materialiseScenes } from './import-build.js';
 import type { ProjectFile } from './project-file.js';
 import type { ImportedScript } from './importing.js';
@@ -57,6 +58,24 @@ export const unplacedSections = (file: ProjectFile): StructuralUnit[] => {
   const first = order.findIndex((unit) => file.markers.some((marker) => marker.kind === 'chapter' && marker.unitId === unit.id));
   return first === -1 ? order : order.slice(0, first);
 };
+
+/**
+ * **Which of a document's headings would begin a story** (addendum 22 §8).
+ *
+ * A named one does. **A bare numeral never does**: *I*, *1*, *One* is how a
+ * short story divides inside itself (addendum 21 §10), and a numeral made a
+ * story carries no name — `chapterName` reads a bare label as naming nothing,
+ * because a chapter's number is derived, and a collection numbers nothing, so
+ * there is no label either and the writer is handed a row with nothing on it.
+ *
+ * One reading, so the screen that offers *a collection — each chapter heading
+ * begins a story* counts what the import would actually make, and asks the
+ * question only where there is one to ask.
+ */
+export const storyHeadings = (script: ImportedScript): string[] =>
+  script.scenes
+    .map((scene) => scene.heading.trim())
+    .filter((heading) => heading.length > 0 && !BARE_LABEL.test(heading));
 
 /**
  * Start a new story at the end of the collection: a fresh section, and a

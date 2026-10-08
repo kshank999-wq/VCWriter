@@ -4339,6 +4339,55 @@ push live; the build takes a minute or two.
   Layout rail had been saying it too, one fix serving both. The × is **in the
   box, hidden until hover or focus** (hidden rather than absent, so the
   keyboard reaches it) and **asks inline** with that sentence beside it.
+  **§8 is several stories at once**, from Ken in three messages about one
+  import (*I imported three stories and… only two of them show up*; *it seems
+  to have merged two stories that were imported at the same time… naming it
+  with the second*; *it did all the chapter pages correct, but it didn't name
+  them, it just gave them page numbers*). **One control was asked of the first
+  document and applied to it alone**: §2's *one story or many* is a real
+  question about a single file and the fieldset said so in its own legend —
+  *what the **first** document is* — so with several files chosen the first
+  was read by a rule the rest never saw, and the two halves of one import
+  disagreed. Read as a **collection**, a document divided at numerals makes a
+  story per numeral; a numeral is a bare label, `chapterName` reads one as
+  **naming nothing** (the number is derived, addendum 02 §12a) and a
+  collection **numbers nothing**, so `placedMarkers` gives it no label
+  either — a run of stories with nothing on them, and where the first scene
+  carried no heading, **no marker at all**. Every file after it went through
+  `appendImportedStory`, which reads a document as **one** story and names it.
+  And **a section no story claims is one nothing lists**: `storiesOf` reads
+  the markers, so both rails skip it while the book draws its pages under the
+  division that follows (addendum 20 §9w) — his *it imported the first story
+  inside the second*, the first story present, editable, and named nowhere.
+  Three things. **A bare numeral never begins a story**: `materialiseScenes`
+  grows a third reading, `headings: 'stories'`, where a named heading begins
+  one and a numeral stays a heading in the words exactly as `sections` keeps
+  one, so not a word is lost and §6 goes on drawing it as a chapter of the
+  story; `storyHeadings` is the one reading of which headings would begin
+  one, so the screen offering *a collection* counts what the import would
+  **make** rather than every heading. **A collection's first story begins at
+  its first section** — the words in front of the first named heading are that
+  story's opening rather than a story of their own, so the marker is pulled
+  back rather than the words left outside every story, and a reading that
+  found none makes the whole document one; it lives in `buildProjectFromImport`
+  where a collection's markers are made rather than in a repair a caller must
+  remember, `ensureFirstStory` having been written as `ensureFirstEpisode`'s
+  twin and **deleted**, the builder already placing the marker in the
+  one-story case and a second thing answering *which sections is this story*
+  being a second answer. And **the question is put only where there is one**:
+  several documents answer it (each file is a story, so the fieldset is absent
+  and the first is read exactly as the rest), a document with no named heading
+  answers it too (**absent with the reason in its place**, a second answer
+  that produces the same thing — or nothing — being no choice), and a document
+  with named headings is asked with the headings **named** rather than only
+  counted. **Several at once is kept rather than withdrawn**: Ken offered *we
+  shouldn't allow the stories to be imported together* and §4a built it for an
+  editor with a drawer of manuscripts — the fault was never the togetherness,
+  it was the first file being read by a control the others could not see. Two
+  assertions waited on the fieldset over a document that has nothing to divide
+  at and were **updated rather than worked around**. Driven on his own
+  sequence: the Layout rail and the Stories rail both read *The Harbour · In
+  For A Pound · Falling*, with no section outside a story.
   **§7a is the episode rail**, from Ken, and the rail was the easy half:
   wiring it found that an episode marker's kind is `episode` and
   **`chapterSpan` read `chapter` outright**, so an episode spanned to the end

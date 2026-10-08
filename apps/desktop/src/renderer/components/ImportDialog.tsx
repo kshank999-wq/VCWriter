@@ -18,6 +18,7 @@ import {
   readDocx,
   readFinalDraft,
   readLaidOutLines,
+  storyHeadings,
   textToProse,
   type ChapterMarks,
   type DocxDocument,
@@ -292,6 +293,18 @@ export function ImportDialog({ open, kind, file, landed, onClose, onImported, on
     [parts, format, marks],
   );
   const prose = isProseFormat(format);
+  /**
+   * **Only where there is a question left to ask** (addendum 22 §8).
+   *
+   * One story or many was asked of *the first document* and applied to it
+   * alone, so with several files the first was read by a control the rest
+   * never saw — the fault Ken reported as two stories merged into one and
+   * named after the second. Several documents **answer** it: each file is a
+   * story. And a document whose headings are all bare numerals answers it
+   * too, a numeral never beginning a story, so there is nothing to divide at.
+   */
+  const storyHeads = useMemo(() => (script ? storyHeadings(script) : []), [script]);
+  const asksOneOrMany = format === 'short_story' && parts.length === 1 && storyHeads.length > 0;
   // The kind already said what this is, so the only format question left is
   // *which* script — and on a book there is none at all.
   const formats = prose ? PROSE_FORMATS : FORMATS;
@@ -368,10 +381,20 @@ export function ImportDialog({ open, kind, file, landed, onClose, onImported, on
       setStage({ kind: 'waiting' });
       return;
     }
-    let built = buildProjectFromImport(script, { format, fileCast, keepLocations, stories, passages: split }).file;
+    const firstName = script.title || bareName(stage.parts[0]!.name);
+    // **With several documents each one is a story** (addendum 22 §8): the
+    // files answered the question, so the first is read exactly as every one
+    // after it rather than by a control the rest never saw.
+    let built = buildProjectFromImport(script, {
+      format,
+      fileCast,
+      keepLocations,
+      stories: asksOneOrMany ? stories : 'one',
+      passages: split,
+    }).file;
     // A series' first script is its first episode, on a page of its own,
     // so that what follows is the second (addendum 22 §4a).
-    if (format === 'series') built = ensureFirstEpisode(built, { title: script.title || bareName(stage.parts[0]!.name) });
+    if (format === 'series') built = ensureFirstEpisode(built, { title: firstName });
     const names = [named(stage.parts[0]!)];
     if (takesSeveral(format)) {
       for (const part of stage.parts.slice(1)) {
@@ -384,7 +407,12 @@ export function ImportDialog({ open, kind, file, landed, onClose, onImported, on
         }
       }
     }
-    onImported(built, landedNames(built, takesSeveral(format) ? names.length : 1, names));
+    // One document read as a collection makes several stories out of one
+    // file, so what arrived is counted off the project rather than off the
+    // files — a sentence naming one story over a project holding four is the
+    // screen disagreeing with the import that just ran.
+    const arrived = takesSeveral(format) ? Math.max(names.length, countParts(built)) : 1;
+    onImported(built, landedNames(built, arrived, names));
     setStage({ kind: 'waiting' });
     // **A format made of parts stays open and offers the next one**, which is
     // the whole of Ken's ask; anything else is one document and is done.
@@ -568,20 +596,31 @@ export function ImportDialog({ open, kind, file, landed, onClose, onImported, on
                     document cannot say which it is (addendum 22 §2): its
                     headings divide one story into sections, or begin a story
                     each. Asked here, where it is decided. */}
-                {format === 'short_story' ? (
+                {asksOneOrMany ? (
                   <fieldset className="import-stories">
-                    <legend>What the {parts.length > 1 ? 'first document' : 'document'} is</legend>
+                    <legend>What the document is</legend>
                     <label>
                       <input type="radio" name="import-stories" aria-label="One story" checked={stories === 'one'} onChange={() => setStories('one')} />
                       One story — its headings divide it into sections, and the first names it.
                     </label>
                     <label>
                       <input type="radio" name="import-stories" aria-label="A collection" checked={stories === 'many'} onChange={() => setStories('many')} />
-                      A collection — each chapter heading begins a story
-                      {script ? ` (${script.scenes.filter((scene) => scene.heading.trim().length > 0).length} of them here)` : ''}. More can be added later from
-                      File ▸ Add stories to the collection…
+                      A collection — each named heading begins a story ({storyHeads.length} of{' '}
+                      {storyHeads.length === 1 ? 'it' : 'them'} here: {storyHeads.slice(0, 3).join(', ')}
+                      {storyHeads.length > 3 ? '…' : ''}). A numeral on its own divides a story rather than
+                      beginning one. More can be added later from File ▸ Add stories to the collection…
                     </label>
                   </fieldset>
+                ) : format === 'short_story' && parts.length === 1 ? (
+                  // **Absent with the reason in its place.** Nothing in this
+                  // document could begin a story — its divisions are numerals,
+                  // which is how a short story divides inside itself — so it
+                  // comes in as one and there is no question to put.
+                  <p className="muted small">
+                    This document is one story. Nothing in it is a heading that would begin another — a numeral on
+                    its own divides a story rather than beginning one. Add the next from File ▸ Add stories to the
+                    collection…
+                  </p>
                 ) : null}
                 {/* **Said before the press**, because the room that opens is
                     not the one an import has always landed in (addendum 33,
