@@ -2952,6 +2952,134 @@ second blank is not later "fixed" as a fault.
 > copyright page takes the next page now, and the assertion was rewritten
 > rather than worked around.
 
+## 9aa. Every page is a page you can put something on
+
+From Ken: *I'm trying to put a picture on a page that is blank and there's
+nothing I can do to edit it. So I don't want to put the picture at the end of
+the story. I want to put it on the page after, which is before the next
+chapter. But the page opposite of that, it just says blank. “This page is
+blank. There's nothing on it for a picture to stand before. Put the picture on
+the page after it, and it will come here.” Every page should be editable… the
+functionality should not be there's a page and it snaps the picture to the page
+before it. It should be on the page that I set.*
+
+**Measured before a line was written.** On his own novel, imported, every
+chapter runs a page and the recto rule leaves the verso after it empty — so a
+blank leaf stands between every pair of chapters, which is exactly where an
+illustration facing a chapter belongs. The leaf's own screen carried **one
+sentence and one button**: no picture, no box, no graphic, no route to the
+chapter's page. The sentence told him to go to the page after it and put the
+picture there, from where the cutter would bring it back here. **Two
+redirections to land where he pointed in the first place**, and each step
+individually defensible.
+
+### The rule is `pagePlace`'s own sentence finished
+
+That function's doc has said since §9a that *a page is not a record — it is
+where the laying happened to cut — so a press on one is answered by reading
+what is **on** it*. The half never written is the one a blank leaf needs:
+**and where nothing is on it, by reading what it stands in front of.**
+
+The two are the same position. A page of its own takes the next page there
+is, so the cutter **fills an empty leaf rather than adding one** (§9w) — which
+is why what is asked for here lands here, and why this is the existing rule
+applied one page along rather than a second answer about leaves. It lives in
+`pagePlace` for the reason that decides every question of this shape in this
+project: **every act built on it is covered the day it is written**, where a
+reading only `pictureOffer` asked would leave the next one broken again.
+`standsBefore` says which page the answer was read off, so a caller that asks
+what a page **is** can still tell it from what may be put on it.
+
+Three things are deliberately **not** carried over from the page ahead.
+`opensAlone` stays false, because the chapter does not open here and the back
+of its own page is set from that page — two leaves a sheet apart being two
+different sides of paper. A **part** does not answer at all: a part's picture
+is its own art or an inset in its words, so a leaf in the front matter given
+one would draw on the page ahead, which is the very fault this fixes; the walk
+stops there and the refusal **names the route** (*+ Add puts a page of art in,
+and its row drags to where you want it*) rather than saying nothing can be
+done. `opensMarkerId` **is** carried, because §9t's hoist has to know the leaf
+stands in front of a division's whole opening rather than between a
+collection's two.
+
+### A leaf and a page of its own are the same page said two ways
+
+§9i already says a blank leaf the writer puts in is *the same mechanism pointed
+the other way* as a picture page. So they are the same page: somebody who asked
+for a leaf here and now says what stands on it **meant one page and not two**.
+`takesLeaf` names the record whose leaf is being taken and the act clears it as
+the picture goes in — left in, the leaf slides behind the picture and the
+picture reads as having landed a page early, which is the complaint in his own
+last sentence. The cutter's own empty leaf names nothing, being filled rather
+than removed.
+
+### What a leaf can carry, and what it cannot
+
+**A page of its own, and nothing else.** A box is cut into the words and a
+vector graphic is set over them, so on a page with no words both would ride a
+block that is on the page ahead and draw **there** — §9w's fault wearing two
+more controls. Both are **absent rather than greyed**, in the panel and in the
+Add menu alike, that being the menu's own idiom for what does not apply.
+§8c's claim that a vector graphic is offered *on every page, a blank leaf
+included* stays one the mechanism cannot keep; what it can keep is the page.
+
+**A leaf kept empty on purpose is refused**, naming the switch. The back of a
+picture and the back of a page whose own screen asked for one exist in order
+to have nothing on them, so the sentence says which it is and where that is
+turned off — the one blank the walk forward is right about and the room must
+still say no to.
+
+**A second blank is refused with the reason.** The walk makes a leaf answer
+with a record, which *Put a blank page here* would hang another leaf on; two
+blanks in front of one page is not what anybody means while standing on a
+blank page.
+
+### The route to the chapter's page
+
+*I should be able to set any page as a chapter page.* The leaf exists because
+the chapter after it opens on a right-hand page, and **that rule is set on
+that chapter's own page** (§9x) — so the leaf now carries *Set the next
+chapter's page…*, which is `place.opensMarkerId` rather than the second walk
+over the pieces this read before and which could only answer for one page. It
+reads `nounsFor`, the old label having said *chapter* outright, which on a
+collection is a story.
+
+### Driving it
+
+At 1440×900 on the imported novel. Before: page 4's screen offered *Take this
+page away* and a sentence. After: *Put a picture on this page…*, *Set the next
+chapter's page…*, *Take this page away* — and the picture lands on **page 4**,
+edge to edge, facing chapter 3 on page 5, with the book still 26 pages. A leaf
+put in by hand on page 11 reads *Illustration* once the picture is in, the book
+staying at 28 rather than growing to 29. His own sequence — a picture, then a
+blank page, then the chapter page — leaves the leaf he put in exactly where he
+put it. Walking all twenty page rows and opening each one's screen: every blank
+leaf of the story offers the picture and the route, and the leaf in the front
+matter names the + Add page of art.
+
+Looking at it caught the fault of the day, and it is this project's own:
+**the same fact said twice**. A chapter's opening page drew *A picture of its
+own will stand on page 4: the leaf in front of this page is empty* and then,
+under it, *A blank page already stands in front of this one, because this page
+opens on a right-hand page* — two sentences set on the identical condition,
+§9y's objection one sentence along. The second is for the Add menu's greyed
+item, which needs a reason in its title; in the panel it is left off where the
+first has said it, and off a blank leaf entirely, where *This page is blank
+already* under a button that puts a picture on it reads as a refusal of that
+button and is the heading's own word repeated.
+
+### Named rather than half-built
+
+**A designed page standing on its own in the middle of the story** — a number,
+a title, type and a rule, on a leaf that is not a chapter's opening. That is a
+chapter page without a chapter, and it is one of two things, neither of them
+small: a **chapter break** placed here, which cuts the writing and is the
+Outliner's act rather than this room's; or a **part that can stand between two
+pages of the story**, which is §9i's named blocker (*a part has nowhere to be
+between page six and page seven*) and would mean `beforeMarkerId` on kinds
+other than a plate. What a leaf can be given today is a page of art, edge to
+edge, which is what the four templates of §19 §7 call `full_page`.
+
 ## 9z. A picture lands where it is drawn
 
 From Ken: *I was trying to fill the bottom of a last page of a section with a

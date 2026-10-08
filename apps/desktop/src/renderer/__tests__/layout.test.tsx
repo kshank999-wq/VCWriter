@@ -590,6 +590,43 @@ describe('the room', () => {
     expect(panel.textContent).not.toMatch(/epigraph|Book title/i);
   });
 
+  it('offers a picture on a blank leaf, where the screen used to offer nothing', () => {
+    /**
+     * **§9aa, from Ken** (*I'm trying to put a picture on a page that is blank
+     * and there's nothing I can do to edit it… Every page should be
+     * editable*). Measured before the change: the leaf's own screen carried
+     * one sentence and one button, and the sentence sent him to the page after
+     * it to do by hand what the cutter would then undo.
+     *
+     * What this pins is the **gesture** (§15a): a writer standing on the leaf
+     * can reach the act. The domain's suite can say what the offer answers all
+     * day and a screen that draws no button reads exactly like the feature not
+     * being there, which is what the first report was.
+     */
+    render(<Harness initial={novel()} />);
+    const chapter = document.querySelector('.layout-rail-chapter') as HTMLElement;
+    fireEvent.click(within(chapter).getByLabelText(/^Show what is under /));
+    const leaf = (Array.from(document.querySelectorAll('.layout-rail-page')) as HTMLElement[]).find((page) =>
+      /Blank/.test(page.textContent ?? ''),
+    )!;
+    expect(leaf).toBeTruthy();
+    fireEvent.doubleClick(leaf.querySelector('.layout-rail-name') as HTMLElement);
+    const panel = document.querySelector('.layout-page-dialog') as HTMLElement;
+    expect(panel.hasAttribute('open')).toBe(true);
+    expect(within(panel).getByRole('button', { name: 'Put a picture on this page…' })).toBeDefined();
+    /**
+     * And **only** that one. A box is cut into the words and a graphic is set
+     * over them, so on a page with no words both would ride a block that is on
+     * the page ahead and draw there — absent rather than greyed, the menu's
+     * own idiom for what does not apply.
+     */
+    expect(within(panel).queryByRole('button', { name: 'Draw a box for a picture…' })).toBeNull();
+    expect(within(panel).queryByRole('button', { name: 'Add a vector graphic…' })).toBeNull();
+    // And the route to the page that decides whether this leaf exists at all
+    // (§9x's recto rule is set on the chapter's own page).
+    expect(within(panel).getByRole('button', { name: 'Set the next chapter’s page…' })).toBeDefined();
+  });
+
   it('writes the trim and says what was worked out from it', () => {
     render(<Harness initial={novel()} />);
     openBookSettings();

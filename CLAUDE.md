@@ -3330,6 +3330,56 @@ push live; the build takes a minute or two.
   pagination; one block is inserted and the convention does the rest, the
   screen says *the next left-hand page*, and a test pins the pair so the
   second blank is not later "fixed" as a fault — **which §17e overturns**.
+  **§9aa is every page being a page you can put something on**, from Ken (*I'm
+  trying to put a picture on a page that is blank and there's nothing I can do
+  to edit it… I want to put it on the page after, which is before the next
+  chapter… Every page should be editable… it should be on the page that I
+  set*). **Measured first**: on his novel every chapter runs a page and the
+  recto rule leaves the verso after it empty, so a leaf stands between every
+  pair of chapters — exactly where an illustration facing a chapter belongs —
+  and that leaf's screen carried **one sentence and one button**, the sentence
+  sending him to the page *after* it to do by hand what the cutter would then
+  undo: **two redirections to land where he pointed in the first place**. The
+  fix is **`pagePlace`'s own sentence finished** — *a press on a page is
+  answered by reading what is on it*, **and where nothing is on it, by reading
+  what it stands in front of**, which is the same position, a page of its own
+  taking the next page there is and so **filling an empty leaf rather than
+  adding one** (§9w). It lives in `pagePlace` for the reason that settles every
+  question of this shape here: **every act built on it is covered the day it is
+  written**, where a reading only `pictureOffer` asked would leave the next one
+  broken again; `standsBefore` says which page the answer came off, so a caller
+  asking what a page **is** can still tell it from what may go on it. Three
+  things are **not** carried from the page ahead — `opensAlone` (the chapter
+  does not open here, and the back of its own page is two sides of paper away),
+  and a **part** at all (a part's picture is its own art or an inset in its
+  words, so a leaf given one would draw on the page ahead; the walk stops there
+  and the refusal **names the route**, *+ Add puts a page of art in*) — while
+  `opensMarkerId` **is**, §9t's hoist having to know the leaf stands in front of
+  a division's whole opening. **A leaf and a page of its own are the same page
+  said two ways** (§9i's own sentence), so somebody who asked for a leaf and
+  then says what stands on it **meant one page**: `takesLeaf` names the record
+  and the act clears the leaf as the picture goes in, since left in it slides
+  behind the picture and reads as the picture landing a page early. A leaf
+  carries **a page of its own and nothing else** — a box is cut into words and
+  a graphic set over them, so on a page with none both would ride a block that
+  is on the page ahead, **absent rather than greyed** in the panel and the Add
+  menu alike — a **leaf kept empty on purpose is refused naming the switch**,
+  and a **second blank is refused with the reason**. *Set any page as a chapter
+  page* is answered by the **route**: the leaf exists because the chapter after
+  it opens recto and that rule is on that chapter's own page, so *Set the next
+  chapter's page…* stands here, read off `place.opensMarkerId` rather than the
+  second walk it kept before, in `nounsFor`'s word rather than *chapter*
+  outright. Driven at 1440×900: the picture lands on **page 4** facing chapter
+  3, the book still 26 pages; a leaf put in by hand reads *Illustration* with
+  the book staying at 28 rather than 29; and walking all twenty page rows,
+  every blank leaf of the story offers the picture and the route. Looking at it
+  caught **the same fact said twice** — *the leaf in front of this page is
+  empty* and *a blank page already stands in front of this one* are set on the
+  identical condition (§9y one sentence along), so the second is left to the
+  Add menu's greyed title. **Named rather than half-built**: a *designed* page
+  standing alone mid-story, which is a chapter page without a chapter and so is
+  either a chapter break (cutting the writing, the Outliner's) or §9i's named
+  blocker, a part that can stand between two pages of the story.
   **§9z is a picture landing where it is drawn**, from Ken (*I was trying to
   fill the bottom of a last page of a section with a picture but it doesn't
   allow me to move the picture around or place it somewhere, it places it and

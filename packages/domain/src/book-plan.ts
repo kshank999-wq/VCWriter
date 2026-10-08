@@ -1251,26 +1251,38 @@ export const blankOffer = (place: PagePlace, rows: readonly BookPageRow[], sheet
   const page = rows.find((one) => one.sheet === sheet);
   if (!page) return { spot: null, act: null, refusal: 'The book is still being set.' };
   const spot = blankSpot(place, page);
-  /**
-   * **Why there is no leaf to be had here** (§9y). These two answered with
-   * silence, which was enough while the only caller was a panel that simply
-   * drew no button — and is not enough for the Add menu, where an item with
-   * no reason in its title is `pictureOffer`'s own fault before it was one
-   * reading. A leaf hangs on a record, so a page with nothing of the book on
-   * it has nothing for one to stand before.
-   */
-  if (spot === null) {
-    return {
-      spot: null,
-      act: null,
-      refusal: page.blank
-        ? 'This page is blank already. A leaf goes in front of a page with something on it.'
-        : 'Nothing of the book stands on this page for a leaf to go in front of.',
-    };
-  }
   // Taking away the leaf a writer put in is never refused: it is the only
   // place that leaf can be found again (§9i).
   if (page.blankFor) return { spot, act: 'Take this blank page away', refusal: null };
+  /**
+   * **A page that is already blank** (§9aa). §9aa makes a leaf answer with the
+   * page it stands in front of, so that it can be given a picture — and that
+   * answer is a **record**, which this act would hang a second leaf on. Two
+   * blanks in front of one page is not what anybody means by *put a blank page
+   * here* while standing on a blank page, so it is refused with the reason,
+   * which the page's own × acts on.
+   */
+  if (page.blank) {
+    const why = blankReason(rows, sheet);
+    return {
+      spot: null,
+      act: null,
+      refusal: why
+        ? `This page is blank already, because ${sayBlankReason(why)}.`
+        : 'This page is blank already.',
+    };
+  }
+  /**
+   * **Why there is no leaf to be had here** (§9y). This answered with silence,
+   * which was enough while the only caller was a panel that simply drew no
+   * button — and is not enough for the Add menu, where an item with no reason
+   * in its title is `pictureOffer`'s own fault before it was one reading. A
+   * leaf hangs on a record, so a page with nothing of the book on it has
+   * nothing for one to stand before.
+   */
+  if (spot === null) {
+    return { spot: null, act: null, refusal: 'Nothing of the book stands on this page for a leaf to go in front of.' };
+  }
   const standing = blankReason(rows, sheet - 1);
   if (standing) {
     /**
@@ -1378,25 +1390,81 @@ export interface PictureOffer {
   beforeOpening: boolean;
   /** Where a page of its own will really land, said only where it is not this page. */
   note: string | null;
+  /**
+   * **The record whose blank leaf this picture takes** (§9aa), where the
+   * writer put one in. A leaf and a page of its own are the same mechanism
+   * pointed two ways (§9i), so they are the same page: somebody who asked for
+   * a leaf here and then says what is on it meant one page and not two, and
+   * the act clears the leaf as it puts the picture in. Null everywhere else,
+   * the cutter's own empty leaf being filled rather than removed.
+   */
+  takesLeaf: string | null;
+  /**
+   * **Whether the only picture this page can carry is a page of its own**
+   * (§9aa). A blank leaf *is* a page and is not a page of text, so a box cut
+   * into the words and a graphic set over them have nothing to stand against:
+   * both would ride a block that is on the page ahead and draw there, which is
+   * §9w's own fault wearing a different control. §8c's claim that a vector
+   * graphic is offered *on every page, a blank leaf included* is still one the
+   * mechanism cannot keep; what it can keep is the page.
+   */
+  ownPageOnly: boolean;
   /** Why a picture may not be asked for here, in a sentence a writer can act on. */
   refusal: string | null;
 }
 
 export const pictureOffer = (place: PagePlace, rows: readonly BookPageRow[], sheet: number): PictureOffer => {
   const page = rows.find((one) => one.sheet === sheet);
-  const none = (refusal: string): PictureOffer => ({ spot: null, of: null, beforeOpening: false, note: null, refusal });
+  const none = (refusal: string): PictureOffer => ({
+    spot: null,
+    of: null,
+    beforeOpening: false,
+    note: null,
+    takesLeaf: null,
+    ownPageOnly: false,
+    refusal,
+  });
   if (!page) return none('The book is still being set.');
+  /**
+   * **A leaf kept empty on purpose is not a page to fill** (§9aa). The back of
+   * a picture, and the back of a page whose own screen asks for one, exist in
+   * order to have nothing on them — so the refusal names the switch and where
+   * it is, rather than the reason for a different leaf. It is the one blank the
+   * forward walk is right about and the room must still say no to.
+   */
+  if (page.blank) {
+    const why = blankReason(rows, sheet);
+    if (why === 'back' || why === 'page_back') {
+      return none(
+        `This leaf is kept empty because ${sayBlankReason(why)}. Print on that back, from the page in front of it, and a picture can stand here.`,
+      );
+    }
+  }
   if (!place.elementId && !place.partId) {
     /**
-     * **A page with nothing of the book on it has nothing for a picture to go
-     * before.** A leaf is not a record — it is where the cutter stopped — so
-     * there is no paragraph, no part and no chapter on it to hang a picture
-     * from, and §8c's claim that a vector graphic is offered *on every page, a
-     * blank leaf included* was one the mechanism could not keep.
+     * **A leaf in front of a part takes a page of art rather than a picture**
+     * (§9aa). §9aa's walk forward stops at a part without answering with it,
+     * because a part's picture is its own art or an inset in its words: put
+     * there, a picture asked for on the leaf would draw on the page ahead,
+     * which is §9w's fault wearing a different control. What goes on a leaf
+     * among the front or back pages is a page of art, which this room has had
+     * since §9 — so the refusal names that route rather than leaving a writer
+     * at a page that says nothing can be done to it.
+     */
+    if (page.blank && rows.some((one) => one.sheet > sheet && one.partId !== null)) {
+      return none(
+        'A picture on a leaf among the front or back pages is a page of art: + Add puts one in, and its row drags to where you want it.',
+      );
+    }
+    /**
+     * **A page with nothing of the book on it and nothing of the book after
+     * it.** A leaf is not a record — it is where the cutter stopped — so there
+     * is no paragraph, no part and no chapter to hang a picture from, and
+     * §9aa's walk forward has found none either.
      */
     return none(
       page.blank
-        ? 'This page is blank, so there is nothing on it for a picture to stand before. Put the picture on the page after it, and it will come here.'
+        ? 'This page is blank and nothing of the book follows it, so there is nowhere for a picture to stand.'
         : 'Nothing of the book stands on this page yet.',
     );
   }
@@ -1406,6 +1474,8 @@ export const pictureOffer = (place: PagePlace, rows: readonly BookPageRow[], she
   return {
     spot: place.elementId ?? place.partId,
     of: place.elementId ? 'story' : 'part',
+    takesLeaf: page.blankFor,
+    ownPageOnly: page.blank,
     /**
      * **The page the division opens on**, which is the fact the writer has
      * just stated by pointing at it. Where the opening and the first words
@@ -1768,31 +1838,63 @@ export interface PagePlace {
    * that shape — gating on the flag offered the control on none of them.
    */
   opensAlone?: boolean;
+  /**
+   * **The page this place was read off, where that is not this page** (§9aa,
+   * from Ken: *I'm trying to put a picture on a page that is blank and there's
+   * nothing I can do to edit it… every page should be editable*).
+   *
+   * A blank leaf carries nothing of the book, so for ten sections this
+   * answered *nowhere* and every act built on it was absent — a picture, a
+   * graphic, the route to the chapter's own page — on the one page in the book
+   * a writer most often wants to use, and the one they deliberately put in.
+   *
+   * The sentence in this function's own doc finishes itself: a press on a page
+   * is answered by reading what is **on** it, and where nothing is on it, by
+   * reading what it stands **in front of**. The two are the same position — a
+   * page of its own takes the next page there is, so the cutter fills an empty
+   * leaf rather than adding one (§9w) — which is why what is asked for here
+   * lands here, and why this is the existing rule applied one page along
+   * rather than a second answer.
+   *
+   * Null wherever a page answers for itself, so a caller that must know what a
+   * page **is** (rather than what may go on it) can tell them apart.
+   */
+  standsBefore?: number | null;
 }
 
-export const pagePlace = (pages: readonly BookPage[], blocks: readonly BookBlock[], sheet: number): PagePlace => {
-  const page = pages.find((one) => one.sheet === sheet);
-  const index = new Map(blocks.map((block) => [block.id, block]));
-  const place: PagePlace = { elementId: null, partId: null, markerId: null, opensMarkerId: null, opensAlone: false };
-  if (!page) return place;
-  // The chapter in force is read from the last opening at or before the page,
-  // so a page in the middle of a chapter still knows which chapter it is in.
-  for (const block of blocks) {
-    if (block.kind !== 'chapter_opening') continue;
-    const at = pages.find((one) => one.pieces.some((piece) => piece.blockId === block.id));
-    if (at && at.sheet <= sheet) place.markerId = block.id;
-  }
+/**
+ * What stands on one laid page: `pagePlace`'s answer for a page that has
+ * something of the book on it, lifted out so the walk forward over a blank
+ * leaf (§9aa) can ask the same question of the page ahead rather than keeping
+ * a second, coarser copy of it.
+ */
+const onPage = (
+  page: BookPage,
+  index: Map<string, BookBlock>,
+  blocks: readonly BookBlock[],
+): Required<Pick<PagePlace, 'elementId' | 'partId' | 'opensMarkerId' | 'opensAlone'>> => {
+  let elementId: string | null = null;
+  let partId: string | null = null;
   for (const piece of page.pieces) {
     const block = index.get(piece.blockId);
     if (!block) continue;
-    if (block.partId && !place.partId) place.partId = block.partId;
+    if (block.partId && !partId) partId = block.partId;
     // **Never a block that stands in for a missing heading** (§9s): its id
     // names the unit, so every act built on this answer would look it up in
     // the manuscript, find nothing and change nothing. The first *real*
     // element is the answer, and what is anchored to it is emitted in front
     // of the stand-in, so the whole opening moves on together.
-    if (BODY_KINDS.has(block.kind) && !block.standsIn && !place.elementId) place.elementId = block.id;
+    if (BODY_KINDS.has(block.kind) && !block.standsIn && !elementId) elementId = block.id;
   }
+  /**
+   * **Which chapter opens *on* this page** (§9r), as against the chapter in
+   * force, which every page inside one has. A blank leaf and a blank back are
+   * the chapter page's own, so the room has to tell the page a chapter opens
+   * on from the pages that merely follow it.
+   */
+  const opening = page.pieces
+    .map((piece) => index.get(piece.blockId))
+    .find((block) => block?.kind === 'chapter_opening');
   /**
    * **A page that only opens a chapter still has somewhere to put a picture**
    * (§9p, from Ken: *I tried to put a picture in chapter one and it didn't
@@ -1805,28 +1907,74 @@ export const pagePlace = (pages: readonly BookPage[], blocks: readonly BookBlock
    * that page or on the next: putting a figure before it now puts it before
    * the opening, so the picture takes this page and the chapter opens after.
    */
+  if (!elementId && !partId && opening) {
+    const from = blocks.findIndex((block) => block.id === opening.id);
+    // The first **real** element, for §9s's reason: a stand-in head names
+    // the unit, so answering with one sends every act looking for an
+    // element that is not there.
+    const next = blocks.slice(from + 1).find((block) => BODY_KINDS.has(block.kind) && !block.standsIn);
+    if (next) elementId = next.id;
+  }
+  return {
+    elementId,
+    partId,
+    opensMarkerId: opening ? opening.id : null,
+    opensAlone: opening !== undefined && page.pieces.length === 1,
+  };
+};
+
+export const pagePlace = (pages: readonly BookPage[], blocks: readonly BookBlock[], sheet: number): PagePlace => {
+  const page = pages.find((one) => one.sheet === sheet);
+  const index = new Map(blocks.map((block) => [block.id, block]));
+  const place: PagePlace = {
+    elementId: null,
+    partId: null,
+    markerId: null,
+    opensMarkerId: null,
+    opensAlone: false,
+    standsBefore: null,
+  };
+  if (!page) return place;
+  // The chapter in force is read from the last opening at or before the page,
+  // so a page in the middle of a chapter still knows which chapter it is in.
+  for (const block of blocks) {
+    if (block.kind !== 'chapter_opening') continue;
+    const at = pages.find((one) => one.pieces.some((piece) => piece.blockId === block.id));
+    if (at && at.sheet <= sheet) place.markerId = block.id;
+  }
+  Object.assign(place, onPage(page, index, blocks));
+  /**
+   * **A blank leaf answers with the page it stands in front of** (§9aa).
+   *
+   * Three things are deliberately **not** carried over from that page. The
+   * chapter does **not** open here, so `opensAlone` stays false and the back
+   * of the chapter's own page is still set from that page rather than from
+   * this leaf — two leaves a sheet apart being two different sides of paper.
+   * Nor does a **part** answer: a part's picture is the part's own art or an
+   * inset in its words, so a leaf in the front matter given one would put it
+   * on the page ahead rather than on itself, which is the very fault this
+   * fixes. `opensMarkerId` **is** carried, because §9t's hoist needs to know
+   * the leaf stands in front of a division's whole opening rather than
+   * between a collection's two — and `opensAlone` is what gates the controls
+   * that would otherwise be fooled by it.
+   */
   if (!place.elementId && !place.partId) {
-    const at = page.pieces.findIndex((piece) => index.get(piece.blockId)?.kind === 'chapter_opening');
-    if (at !== -1) {
-      const from = blocks.findIndex((block) => block.id === page.pieces[at]!.blockId);
-      // The first **real** element, for §9s's reason: a stand-in head names
-      // the unit, so answering with one sends every act looking for an
-      // element that is not there.
-      const next = blocks.slice(from + 1).find((block) => BODY_KINDS.has(block.kind) && !block.standsIn);
-      if (next) place.elementId = next.id;
+    for (const after of pages) {
+      if (after.sheet <= sheet) continue;
+      const ahead = onPage(after, index, blocks);
+      if (!ahead.elementId) {
+        // A part ahead ends the walk rather than being skipped past: the leaf
+        // stands in front of *that* page, and looking further would answer
+        // with a page of the story on the other side of the front matter.
+        if (ahead.partId) break;
+        continue;
+      }
+      place.elementId = ahead.elementId;
+      place.opensMarkerId = ahead.opensMarkerId;
+      place.standsBefore = after.sheet;
+      break;
     }
   }
-  /**
-   * **Which chapter opens *on* this page** (§9r), as against the chapter in
-   * force, which every page inside one has. A blank leaf and a blank back are
-   * the chapter page's own, so the room has to tell the page a chapter opens
-   * on from the pages that merely follow it.
-   */
-  const opening = page.pieces
-    .map((piece) => index.get(piece.blockId))
-    .find((block) => block?.kind === 'chapter_opening');
-  place.opensMarkerId = opening ? opening.id : null;
-  place.opensAlone = opening !== undefined && page.pieces.length === 1;
   return place;
 };
 

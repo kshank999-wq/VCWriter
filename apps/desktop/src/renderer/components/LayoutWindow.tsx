@@ -237,6 +237,12 @@ type ArtTarget =
       as: 'measure' | 'page' | 'free';
       /** Whether it stands in front of the division's opening (§9w). */
       beforeOpening?: boolean;
+      /**
+       * The record whose blank leaf this picture **takes** (§9aa): a leaf and
+       * a page of its own are the same page said two ways, so the leaf goes
+       * as the picture arrives rather than standing in front of it.
+       */
+      takesLeaf?: string | null;
     }
   /** Into a part: cut into its words where it has them, a page of its own where it has not. */
   | { kind: 'part'; partId: string; as: 'measure' | 'page' | 'free' }
@@ -277,6 +283,8 @@ const NO_PICTURE: PictureOffer = {
   of: null,
   beforeOpening: false,
   note: null,
+  takesLeaf: null,
+  ownPageOnly: false,
   refusal: 'Choose a page first: the picture goes at the top of it.',
 };
 
@@ -767,7 +775,13 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
       return;
     }
     if (offer.of === 'story') {
-      importArt({ kind: 'story', elementId: offer.spot, as, beforeOpening: as === 'page' && offer.beforeOpening });
+      importArt({
+        kind: 'story',
+        elementId: offer.spot,
+        as,
+        beforeOpening: as === 'page' && offer.beforeOpening,
+        takesLeaf: as === 'page' ? offer.takesLeaf : null,
+      });
       return;
     }
     importArt({ kind: 'part', partId: offer.spot, as });
@@ -838,7 +852,18 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
             setSelectedRowId(made.elementId as string);
             turnTo.current = made.elementId as string;
           }
-          return made.file;
+          /**
+           * **The leaf becomes the picture** (§9aa, from Ken: *I put a picture
+           * in, and then put a blank page… it should be on the page that I
+           * set*).
+           *
+           * A blank leaf and a page of its own are the same mechanism pointed
+           * two ways (§9i), so they are the same page: a writer who asked for
+           * a leaf here and now says what stands on it meant one page. Left
+           * in, the leaf would slide to the back of the picture and read as
+           * the picture having landed a page early.
+           */
+          return target.takesLeaf ? setBlankPage(made.file, target.takesLeaf, false) : made.file;
         }
 
         // A logotype and a page of art are **the part's own pictures**
@@ -895,11 +920,23 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
    * of the book, which are what the menu used to be entirely.
    */
   const addEntries: MenuEntry[] = [
-    {
-      label: 'Picture…',
-      disabled: pageOffer.refusal,
-      onPick: () => importPicture('measure'),
-    },
+    /**
+     * **A leaf takes a page of its own and nothing else** (§9aa), so these two
+     * are **absent** rather than greyed on one — the menu's own idiom, where
+     * an item that cannot be done *now* is greyed with the reason and one that
+     * does not apply is absent, and a picture cut into the words does not
+     * apply to a page that has none. The panel does exactly the same with the
+     * same two controls, which is why neither carries a sentence.
+     */
+    ...(pageOffer.ownPageOnly
+      ? []
+      : ([
+          {
+            label: 'Picture…',
+            disabled: pageOffer.refusal,
+            onPick: () => importPicture('measure'),
+          },
+        ] as MenuEntry[])),
     {
       label: 'Picture on a page of its own…',
       disabled: pageOffer.refusal,
@@ -907,11 +944,15 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
       note: pageOffer.note,
       onPick: () => importPicture('page'),
     },
-    {
-      label: 'Draw a box for a picture…',
-      disabled: laying ? null : 'The book is still being set',
-      onPick: () => setDrawing(NEW_BOX),
-    },
+    ...(pageOffer.ownPageOnly
+      ? []
+      : ([
+          {
+            label: 'Draw a box for a picture…',
+            disabled: laying ? null : 'The book is still being set',
+            onPick: () => setDrawing(NEW_BOX),
+          },
+        ] as MenuEntry[])),
     /**
      * **A blank page, from the button a writer presses to put a page in**
      * (§9y, Ken's own words). It is read where it lands, exactly as the
@@ -1142,14 +1183,29 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
   const pageMarker = (page: BookPageRow): string | null => pageFormat(page).markerId;
 
   const pageFormat = (page: BookPageRow): { label: string | null; markerId: string | null } => {
+    const place = pagePlaceFor(page.sheet);
+    /**
+     * **The route is there on the leaf too** (§9aa, from Ken: *I should be
+     * able to set any page as a chapter page*).
+     *
+     * `pagePlace` reads the opening off the page itself and, on a blank leaf,
+     * off the page it stands in front of — and that is the chapter whose own
+     * page decides whether this leaf exists at all, the recto rule being set
+     * there (§9x). So the leaf in front of a chapter now reaches it, which is
+     * the screen a writer standing on an unexplained empty page needs; it is
+     * `place.opensMarkerId` rather than a second walk over the pieces, which
+     * is what this read before and could only answer for one page.
+     */
+    if (place.opensMarkerId) {
+      // Nothing names a unit itself (addendum 16 §6c): this read *chapter*
+      // outright, which on a collection is a story.
+      const what = noun.toLowerCase();
+      return {
+        label: place.standsBefore == null ? `Set this ${what}’s page…` : `Set the next ${what}’s page…`,
+        markerId: place.opensMarkerId,
+      };
+    }
     if (page.says !== 'Chapter opens') return { label: null, markerId: null };
-    const opens = laying
-      ? laying.laid.pages
-          .find((one) => one.sheet === page.sheet)
-          ?.pieces.map((piece) => laying.blocks.find((block) => block.id === piece.blockId))
-          .find((block) => block?.kind === 'chapter_opening')
-      : undefined;
-    if (opens) return { label: 'Set this chapter’s page…', markerId: opens.id };
     return { label: 'How openings look', markerId: null };
   };
 
@@ -1796,6 +1852,17 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
                   anchor && current.beats.some((beat) => beat.manuscript.elements.some((one) => (one.id as string) === anchor.elementId))
                     ? anchor
                     : null;
+                /**
+                 * **A box is cut into the words, so it wants words** (§9aa).
+                 * A blank leaf answers with the page it stands in front of so
+                 * that a picture can be put on it — and a box drawn here would
+                 * take that answer literally and cut into the text on *that*
+                 * page, which is a picture landing where nobody drew it.
+                 */
+                if (pageRows.find((one) => one.sheet === sheet)?.blank) {
+                  setMessage('A blank leaf is a page rather than a page of text. Put a picture on it and the picture is the page.');
+                  return;
+                }
                 // A box drawn where the story is not cannot hold a figure:
                 // the parts carry their pictures themselves.
                 if (!at.elementId) {
@@ -3608,7 +3675,14 @@ function StoryPageSection({
                   // can work out how to be rid of. The three used to be
                   // written out here; `blankReason` is the one place that
                   // knows, so the refusals can say them too (§9w).
-                  `It is blank because ${sayBlankReason(why)}. It counts as a page and prints no number.`
+                  //
+                  // **And a leaf is a page you can put something on** (§9aa):
+                  // the sentence said why it was there and stopped, under a
+                  // screen that offered nothing, which read as a page nothing
+                  // could be done to.
+                  `It is blank because ${sayBlankReason(why)}. It counts as a page and prints no number.${
+                    offer.spot ? ' A picture put here fills this leaf rather than adding a page.' : ''
+                  }`
                 : page.says === 'Chapter opens'
                   ? 'The chapter opens on it. A picture put here goes in before it, and the chapter moves down.'
                   : 'Story text. A picture put here goes in before the words on it, and they move down.'}{' '}
@@ -3623,15 +3697,25 @@ function StoryPageSection({
               <button type="button" className="small" onClick={onPut}>
                 Put a picture on this page…
               </button>
-              <button type="button" className={drawing ? 'small on' : 'small'} onClick={onDraw}>
-                {drawing ? 'Drawing the box…' : 'Draw a box for a picture…'}
-              </button>
-              {/* A vector graphic (§8c, from Ken: *add a vector graphic …
-                  anywhere on the page, and then they can resize that also.
-                  But it has a transparent background*). */}
-              <button type="button" className="small" onClick={onVector}>
-                Add a vector graphic…
-              </button>
+              {/* **A leaf takes a page of its own and nothing else** (§9aa).
+                  A box is cut into the words and a graphic is set over them,
+                  so on a page with no words both would ride a block that is
+                  on the page ahead and draw there — §9w's own fault wearing
+                  two more controls. Absent rather than greyed, the picture
+                  above being what this page can have. */}
+              {offer.ownPageOnly ? null : (
+                <>
+                  <button type="button" className={drawing ? 'small on' : 'small'} onClick={onDraw}>
+                    {drawing ? 'Drawing the box…' : 'Draw a box for a picture…'}
+                  </button>
+                  {/* A vector graphic (§8c, from Ken: *add a vector graphic …
+                      anywhere on the page, and then they can resize that also.
+                      But it has a transparent background*). */}
+                  <button type="button" className="small" onClick={onVector}>
+                    Add a vector graphic…
+                  </button>
+                </>
+              )}
             </>
           ) : null}
           {/* **Where a picture asked for here will really land** (§9w): said
@@ -3666,8 +3750,22 @@ function StoryPageSection({
               nothing of the book on it the picture above has just said the
               same thing about the same page. Where it has, this one is left
               off; where the refusal is the one about the leaf already in
-              front, there is nothing above it and it stands. */}
-          {blank.refusal && !offer.refusal ? <p className="muted small">{blank.refusal}</p> : null}
+              front, there is nothing above it and it stands.
+
+              **And not on a leaf** (§9aa). *This page is blank already* under
+              a button that puts a picture on it reads as a refusal of that
+              button, and it is the heading's own word said a second time —
+              the sentence is for the Add menu's title, where a greyed item
+              needs a reason, and the ? above says why this page is blank.
+
+              **And not under the note** (§9aa, measured on the screen). The
+              two are set on the same condition — a leaf standing empty in
+              front of this page — so where the picture has just named it and
+              said which page it means, this one is that fact a second time in
+              weaker words, which is §9y's own objection one sentence along. */}
+          {blank.refusal && !offer.refusal && !offer.note && !page.blank ? (
+            <p className="muted small">{blank.refusal}</p>
+          ) : null}
           {/* **A blank on the chapter page's back** (§9r, Ken's own words).
               Absent where the chapter opens with its own first paragraph:
               there is no back to leave, the next page being the middle of the

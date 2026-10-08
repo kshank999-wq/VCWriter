@@ -347,6 +347,8 @@ describe('moving a picture to another page', () => {
       of: 'story',
       beforeOpening: true,
       note: null,
+      takesLeaf: null,
+      ownPageOnly: false,
       refusal: null,
     });
     const after = lay(moved).rows;
@@ -364,6 +366,8 @@ describe('moving a picture to another page', () => {
       of: 'story',
       beforeOpening: false,
       note: null,
+      takesLeaf: null,
+      ownPageOnly: false,
       refusal: null,
     });
     const element = moved.beats
@@ -384,22 +388,28 @@ describe('whether a picture may be asked for on this page', () => {
     return pictureOffer(pagePlace(laid.pages, blocks, sheet), rows, sheet);
   };
 
-  it('is refused on a blank leaf, which had put the picture at the back of the book', () => {
+  it('never puts the picture at the back of the book, which is what it used to do', () => {
     /**
      * The fault Ken reported, exactly: the menu refused here and said *Choose
      * a page first*, the **+ Picture** button carried the same words in its
      * title and acted anyway, and what it did was `addPart('plate')` — an art
      * page in the **back matter**. One reading now, so a picture asked for on
      * a page goes on that page or is refused in a sentence.
+     *
+     * §9aa then gave a leaf in the story somewhere to put one, which is what
+     * §9w's refusal had sent the writer one page along to do by hand — so what
+     * this still pins is the half that has not changed: a leaf among the front
+     * pages is refused, because a part's picture is the part's own and would
+     * draw on the page ahead. It names the route instead of only refusing,
+     * which is the sentence §9w was right about.
      */
     const file = collection();
-    const leaf = lay(file).rows.find((row) => row.blank)!;
+    const leaf = lay(file).rows.find((row) => row.blank && row.partId === null)!;
     const offer = offerOn(file, leaf.sheet);
     expect(offer.spot).toBeNull();
     expect(offer.of).toBeNull();
-    expect(offer.refusal).toMatch(/nothing on it for a picture to stand before/);
-    // And it says where it can go instead, rather than only refusing.
-    expect(offer.refusal).toMatch(/page after it/);
+    expect(offer.refusal).toMatch(/page of art/);
+    expect(offer.refusal).toMatch(/\+ Add/);
   });
 
   it('is offered on a page of the story, and names the element it goes before', () => {
