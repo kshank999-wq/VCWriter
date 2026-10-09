@@ -2,7 +2,7 @@ import { contentsDivisions, type PlacedMarker } from './markers.js';
 import { beatsInScript } from './selectors.js';
 import { removeFigure } from './instructional.js';
 import { divisionSpan, divisionRemoval, removeDivision, unclaimedUnits, type DivisionRemoval } from './outline-binding.js';
-import { isCollection } from './formats.js';
+import { isCollection, nounsFor } from './formats.js';
 import {
   blankReason,
   bookFigures,
@@ -12,6 +12,7 @@ import {
   removeBookFigure,
   setBackBlank,
   setChapterRecto,
+  setSheetBefore,
   removePart,
   sayBlankReason,
   blankPagesAt,
@@ -494,7 +495,7 @@ export interface PageRemoval {
   /** What the act needs: the leaf's own spot, the picture, or the chapter. */
   id: string | null;
   /** Which act it is, so one × can serve six kinds of page. */
-  what: 'leaf' | 'picture' | 'words' | 'back' | 'recto' | 'division' | null;
+  what: 'leaf' | 'picture' | 'words' | 'back' | 'recto' | 'between' | 'division' | null;
   /** The ×'s label, where there is one. */
   act: string | null;
   /** What goes with it, said beside the ask. */
@@ -529,6 +530,26 @@ export const pageRemoval = (file: ProjectFile, rows: readonly BookPageRow[], she
    * press away, so the × reaches it.
    */
   if (page.blank) {
+    /**
+     * **The sheet between two whole works** (addendum 22 §9). It is the one
+     * blank in the room that is neither the writer's nor the cutter's: the
+     * book is **set** to leave it, so the × would have to reach a setting
+     * that governs every one of them at once — which is not what a × on one
+     * page means. It refuses and **names where the decision lives**, in §9x's
+     * shape rather than §9w's: disabled with the reason in its title, because
+     * absence is what read as *there's no way to delete those pages*.
+     */
+    if (page.blankBetween) {
+      // Nothing names a unit itself (addendum 16 §6c).
+      const one = nounsFor(file.project.format).division.toLowerCase();
+      return {
+        id: page.blankBetween,
+        what: 'between',
+        act: 'Take this page away',
+        comfort: `The blank sheet goes — both its pages. Only this ${one} stops being separated by one; every other ${one} keeps its sheet, and Book settings is where they are all decided.`,
+        refusal: null,
+      };
+    }
     if (page.blankBack) {
       const before = rows.find((one) => one.sheet === sheet - 1);
       const picture = before?.figureId;
@@ -671,6 +692,10 @@ export const removeBookPage = (file: ProjectFile, page: BookPageRow, what: PageR
   if (what.what === 'picture') return removeBookFigure(file, what.id);
   if (what.what === 'back') return setBackBlank(file, what.id, false);
   if (what.what === 'recto') return setChapterRecto(file, what.id, false);
+  // **This work's separation, never the book's** (addendum 22 §9): the ×
+  // stands on one page and a setting that reached every division at once
+  // would be a control acting on something nobody is looking at.
+  if (what.what === 'between') return setSheetBefore(file, what.id, false);
   if (what.what === 'words') return cutElements(file, page.elementIds);
   if (what.what === 'division') return removeDivision(file, what.id as never);
   return file;

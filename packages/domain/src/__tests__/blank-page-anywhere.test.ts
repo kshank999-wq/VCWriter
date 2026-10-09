@@ -18,6 +18,7 @@ import {
   partsOf,
   setBlankPage,
   setBlankPages,
+  setBookSettings,
   SHEET,
   setChapterBlank,
   unitsInStoryOrder,
@@ -381,9 +382,26 @@ describe('a page that already has a leaf in front of it', () => {
 });
 
 describe('a book nobody has asked anything of', () => {
-  it('is laid exactly as it was', () => {
+  /**
+   * **One thing about a collection moves, and it is meant to** (addendum 22
+   * §9, from Ken: *between stories, there needs to be a full blank sheet*).
+   * He asked for it as a requirement rather than as an option, so the setting
+   * defaults on and this is the one place an existing book is laid
+   * differently from the day before — a separation a reader is meant to feel.
+   *
+   * What this pins either side of it: the sheet is the **only** thing added,
+   * and with the setting off the book is exactly what it was. The assertion
+   * it replaces said *nothing is added at all*, which was true until this
+   * and is now the wrong claim rather than a failing one.
+   */
+  it('is laid as it was, but for the sheet between its stories', () => {
     const file = collection();
-    expect(shape(file).filter((one) => one === 'blank')).toHaveLength(0);
+    const stories = file.markers.length;
+    expect(stories).toBeGreaterThan(1);
+    // A separation is between two things, so one fewer sheet than there are
+    // stories — the first gets none, the front matter standing in front of it.
+    expect(shape(file).filter((one) => one === 'blank')).toHaveLength((stories - 1) * SHEET);
+    expect(shape(setBookSettings(file, { sheetBetweenWorks: false })).filter((one) => one === 'blank')).toHaveLength(0);
     expect(partsOf(file).every((part) => part.blankBefore === false)).toBe(true);
   });
 });

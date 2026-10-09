@@ -98,6 +98,7 @@ import {
   type PartKind,
   type ProjectFile,
   isCollection,
+  holdsWholeWorks,
   nounsFor,
   chapterLeafContent,
   BOOK_PRESET_NAMES,
@@ -736,7 +737,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
    * forward for the chapter's first element (§9p), so asking the offer is
    * asking the one reading every other surface takes.
    */
-  const offerFor = (sheet: number): PictureOffer => pictureOffer(pagePlaceFor(sheet), pageRows, sheet);
+  const offerFor = (sheet: number): PictureOffer => pictureOffer(pagePlaceFor(sheet), pageRows, sheet, nounPlural.toLowerCase());
   /**
    * **Whether a picture may be asked for on the page in hand, and where it
    * will land** (§9w). The one reading the rail's button, the Add menu and the
@@ -1254,6 +1255,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
     <StoryPageSection
       page={page}
       place={place}
+      divisions={nounPlural.toLowerCase()}
       offer={on}
       remove={pageRemoval(file, pageRows, page.sheet)}
       onRemovePage={() => {
@@ -3150,7 +3152,17 @@ function BookSettingsDialog({
             <FontsSection file={file} onUpdate={onUpdate} />
           </Fold>
           <Fold id="furniture" title="Running heads & page numbers">
-            <FurnitureSection settings={settings} write={write} noun={noun} nounPlural={nounPlural} tops={tops} />
+            <FurnitureSection
+              settings={settings}
+              write={write}
+              noun={noun}
+              nounPlural={nounPlural}
+              tops={tops}
+              /* Absent rather than greyed off a collection and a series
+                 (addendum 22 §9): a chapter is a division *of* a novel, so
+                 there is nothing there for a sheet to separate. */
+              separates={holdsWholeWorks(file.project.format)}
+            />
           </Fold>
           {/* How a division's heading is set (§6a, from Ken: *the story titles
               should be adjustable with a setting*). It used to be a sentence
@@ -3900,9 +3912,16 @@ function StoryPageSection({
   remove,
   onFormat,
   format,
+  divisions,
   openings,
 }: {
   page: BookPageRow;
+  /**
+   * What the book holds, in the format's own plural and lowercased (addendum
+   * 22 §9) — read once by the room and handed down, because nothing names a
+   * unit itself (addendum 16 §6c).
+   */
+  divisions: string;
   /** Where a picture or a leaf asked for on this page would go (§9r). */
   place: PagePlace;
   /** Whether this chapter's page already leaves its back blank. */
@@ -3983,7 +4002,7 @@ function StoryPageSection({
                   // the sentence said why it was there and stopped, under a
                   // screen that offered nothing, which read as a page nothing
                   // could be done to.
-                  `It is blank because ${sayBlankReason(why)}. It counts as a page and prints no number.${
+                  `It is blank because ${sayBlankReason(why, 'the leaf', divisions)}. It counts as a page and prints no number.${
                     offer.refusal ? '' : ' A picture put here fills this leaf rather than adding a page.'
                   }`
                 : page.says === 'Chapter opens'
@@ -4814,12 +4833,15 @@ function FurnitureSection({
   noun,
   nounPlural,
   tops,
+  separates,
 }: {
   settings: BookSettings;
   write(patch: Partial<BookSettings>): void;
   noun: string;
   nounPlural: string;
   tops: string;
+  /** Whether this book holds whole works, and so has anything to separate. */
+  separates: boolean;
 }) {
   const heads = settings.runningHeads;
   const style = runningHeadStyleOf(settings);
@@ -4887,6 +4909,34 @@ function FurnitureSection({
         <input type="checkbox" checked={settings.chaptersOpenRecto} onChange={(event) => write({ chaptersOpenRecto: event.target.checked })} />{' '}
         Every {noun.toLowerCase()} opens on a right-hand page
       </label>
+      {/*
+        **A full blank sheet between one work and the next** (addendum 22 §9,
+        from Ken: *between stories, there needs to be a full blank sheet*).
+
+        It stands beside the recto rule because they are the two things that
+        decide what a reader meets at a division, and only together: the recto
+        rule puts the opening on a right-hand page and may leave the verso in
+        front of it empty, which is a *gap* rather than a separation — one
+        blank side with the previous story printed on its back. This is a
+        sheet, so both sides are empty, and being two pages it cannot change
+        which side anything after it falls on.
+      */}
+      {separates ? (
+        <>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={settings.sheetBetweenWorks}
+              onChange={(event) => write({ sheetBetweenWorks: event.target.checked })}
+            />{' '}
+            A blank sheet between {nounPlural.toLowerCase()}
+          </label>
+          <p className="field-note">
+            Both sides of one leaf, so the reader turns a page with nothing on it. The first {noun.toLowerCase()} gets none — the front
+            matter already stands in front of it.
+          </p>
+        </>
+      ) : null}
       <p className="muted small">
         A head carrying the book or its {nounPlural.toLowerCase()} reads its words from them; what the book is called, and by whom, is under{' '}
         <em>The book</em> above. A head keeps a quarter inch clear of the paper’s edge whatever is set here, or the printer’s trim would take it off.

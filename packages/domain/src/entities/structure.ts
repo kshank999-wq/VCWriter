@@ -423,6 +423,19 @@ export const chapterPageSchema = z.object({
    * what §9x is about. Removing the leaf is removing the reason for it.
    */
   opensRecto: z.boolean().nullable().default(null),
+  /**
+   * **Whether a blank sheet stands in front of this whole work** (addendum 22
+   * §9), null meaning *use the book's* — `opensRecto`'s own shape one line
+   * up, and for its own reason: the sheet is the **book's** decision and the
+   * page it makes is one a writer may want rid of here, so the × on it has
+   * somewhere honest to write. A × that reached the book's setting instead
+   * would take the sheet out from between every story at once, which is a
+   * control acting on something nobody is looking at.
+   *
+   * Read on a collection and a series alone (`holdsWholeWorks`), and never on
+   * the first work there is — a separation is between two things.
+   */
+  sheetBefore: z.boolean().nullable().default(null),
   showNumber: z.boolean().default(true),
   showTitle: z.boolean().default(true),
   /** A few lines under the title: a dedication, an epigraph, a date. */

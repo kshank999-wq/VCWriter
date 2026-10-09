@@ -465,7 +465,97 @@ document on its own draws no fieldset and the sentence in its place; one
 document with two named headings draws the fieldset, names both, and makes
 two stories out of the one file.
 
-## 9. What each stage built
+## 9. A full blank sheet between stories
+
+From Ken, in one sentence: *between stories, there needs to be a full blank
+sheet.*
+
+**Measured first.** Driven on his own three-document import at 1440×900, the
+book read:
+
+```
+Page 4  III opens        ← the last page of The Harbour
+Page 5  In For A Pound   ← the next story, straight on
+```
+
+and between *In For A Pound* and *Falling*, one blank page — which is not a
+sheet at all. It is the **verso the recto rule leaves**: the next story opens
+on a right-hand page, so the page in front of it is empty, and that page is
+the *back of the one the previous story is printed on*. A reader turning it
+has not been told anything ended; they have turned over the last page of the
+story they were reading. The gap and the separation fall in exactly the same
+place and mean opposite things, which is the whole of why he could look at a
+book that already had a blank page there and correctly report that there was
+nothing between his stories.
+
+**A sheet is two pages** (addendum 20 §9ad), and that is what makes this
+buildable as a default rather than as an option somebody has to find. An even
+number cannot change which side anything after it falls on, so every story
+goes on opening exactly where the recto rule already put it and nothing else
+in the book moves — measured over the three stories, the openings are the same
+openings, each one further on by the sheets in front of it and by nothing
+else, and the side of the paper is identical. Two pages a gap, and the only
+figure that varies is the recto gap that was already there.
+
+**It stands in front of everything the next story brings with it** — its
+plates, the pictures facing its opening, the leaves the writer asked for —
+because what it separates is the *works*, and all of that belongs to the one
+beginning.
+
+**On a collection and a series alone.** `holdsWholeWorks` is the predicate
+(§7's own), and the reason is §2's: a chapter is a division *of* a novel, and
+a reader turning from chapter four to chapter five has not finished anything.
+A novel's chapters are untouched, which is what let the whole suite pass with
+one assertion rewritten.
+
+**It defaults on**, and that is the one place an existing book is laid
+differently from the day before. He asked for it as a requirement rather than
+as an option, and a separation a reader is meant to feel is not something to
+be switched on by whoever happens to find the control.
+
+### The × on it, and why it is not the book's setting
+
+The sheet is neither the writer's leaf nor the cutter's, which is a third kind
+of blank this room had not had — so `BlankReason` gains `'between'`, said by
+the **block** rather than inferred from the neighbours for `blankBack`'s own
+reason (§9w): a reading that guessed would be unable to tell it from the recto
+gap, which is the one it most needs to be told apart from.
+
+And the × on either of its two pages had to go somewhere honest. §9x's rule is
+that no page row is without a × — absence is what read as *there's no way to
+delete those pages* — and the obvious target, the book's setting, is **a
+control acting on something nobody is looking at**: a press on page ten would
+take the sheet out from between every story at once. So `sheetBefore` is a
+nullable field on the work's own chapter page, **null meaning use the book's**
+— `opensRecto`'s shape exactly, which is the control standing beside it in the
+same fold and the same kind of decision — and the × writes it for **this**
+story and nothing else, saying so before the press.
+
+A picture asked for on the sheet is **refused**, for the same reason the back
+of a picture is: it exists in order to have nothing on it. The refusal names
+the ×, which is one press away on the same row, rather than a setting in
+another dialog.
+
+### On the screen
+
+*A blank sheet between stories* is a tick in **Book settings ▸ Running heads
+& page numbers**, immediately under *Every story opens on a right-hand page*,
+because those two together are the whole of what a reader meets at a
+division — and **absent rather than greyed** on every format that holds no
+whole works. Its note says what a writer cannot see from the tick: that the
+first story gets none, the front matter already standing in front of it.
+
+`sayBlankReason`'s new voice takes the format's own plural, handed down by
+the room (`nounsFor`), with a default of *works* that is **true of every
+format that can reach the reason** rather than the likelier of two.
+
+Driven at 1440×900 on the three-document import: *The Harbour* ends on page 4,
+a verso, so pages 5 and 6 are one leaf blank on both sides and *In For A
+Pound* still opens on page 7; *In For A Pound* ends on page 9, a recto, so
+leaf 11–12 is the blank sheet, page 10 is the back of page 9, and *Falling*
+still opens on page 13. Every blank page carries a working ×.
+
+## 10. What each stage built
 
 - **Stage 1, the reading.** `isCollection`, the noun table's *Collection*,
   `markerNoun` taking the format, `defaultMarkerNumbering` giving a

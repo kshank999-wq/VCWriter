@@ -395,6 +395,22 @@ export const bookSettingsSchema = z.object({
   ornament: z.string().default(''),
   /** Every chapter opens on a right-hand page, with a blank before it if need be. */
   chaptersOpenRecto: z.boolean().default(true),
+  /**
+   * **A sheet with nothing on either side between one whole work and the
+   * next** (addendum 22 §9, from Ken: *between stories, there needs to be a
+   * full blank sheet*).
+   *
+   * It is a **sheet and never a side** (addendum 20 §9ad), so it cannot change
+   * which side anything after it is on and every story goes on opening exactly
+   * where the recto rule puts it. Read on a collection and a series alone
+   * (`holdsWholeWorks`): a chapter is a division *of* a novel and a reader
+   * turning from chapter four to chapter five has not finished anything.
+   *
+   * It defaults **on**, which is the one thing here that moves an existing
+   * book — a separation a reader is meant to feel, asked for as a
+   * requirement rather than as an option.
+   */
+  sheetBetweenWorks: z.boolean().default(true),
   runningHeads: z
     .object({
       verso: headContentSchema.default('author'),

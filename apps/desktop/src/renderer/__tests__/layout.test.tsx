@@ -1078,6 +1078,42 @@ describe('the room', () => {
     expect(dialog.textContent).toMatch(/double-click it in the book/);
   });
 
+  /**
+   * **A blank sheet between one story and the next** (addendum 22 §9, from
+   * Ken: *between stories, there needs to be a full blank sheet*).
+   *
+   * What this pins is the **gesture** (§15a): the control has to be reachable
+   * where a writer already decides what happens at a division — beside *Every
+   * story opens on a right-hand page*, which is the other half of what a
+   * reader meets there — and it has to be **absent** on a book whose chapters
+   * are divisions of one work, where there is nothing for a sheet to
+   * separate.
+   */
+  it('offers the sheet between stories beside the recto rule, and nowhere on a novel', () => {
+    let file = createProjectFile({ title: 'Tales', format: 'short_story' });
+    file = beginStory(file, { title: 'The Road' }).file;
+    render(<Harness initial={file} onOpenChapterPage={() => undefined} />);
+    openBookSettings();
+    const dialog = screen.getByRole('dialog', { name: 'Book settings' });
+    const box = within(dialog).getByLabelText('A blank sheet between stories') as HTMLInputElement;
+    // On by default: he asked for it as a requirement rather than an option.
+    expect(box.checked).toBe(true);
+    // And it is in the fold that already decides what a reader meets at a
+    // division, rather than somewhere a writer would have to go looking.
+    const fold = box.closest('.layout-fold') ?? dialog;
+    expect(within(fold as HTMLElement).getByLabelText(/opens on a right-hand page/)).toBeDefined();
+    fireEvent.click(box);
+    expect(bookSettingsOf(latest as ProjectFile).sheetBetweenWorks).toBe(false);
+
+    cleanup();
+    render(<Harness initial={novel()} />);
+    openBookSettings();
+    const novelDialog = screen.getByRole('dialog', { name: 'Book settings' });
+    // Absent rather than greyed: a chapter is a division *of* a novel.
+    expect(within(novelDialog).queryByLabelText(/A blank sheet between/)).toBeNull();
+    expect(within(novelDialog).getByLabelText(/opens on a right-hand page/)).toBeDefined();
+  });
+
   it('calls a collection’s divisions stories, everywhere the word is used', () => {
     let file = createProjectFile({ title: 'Tales', format: 'short_story' });
     file = beginStory(file, { title: 'The Road' }).file;

@@ -16,7 +16,7 @@ import { bookNames, bookSettingsOf, setBookSettings } from './book-layout.js';
 import { beatsInScript, unitsInStoryOrder } from './selectors.js';
 import { newId } from './ids.js';
 import { partHasStyle, partLogo, partPlacement, partStyleOf, proseStyleBase, type PartStyle, type PartStylePatch } from './part-style.js';
-import { isCollection } from './formats.js';
+import { holdsWholeWorks, isCollection } from './formats.js';
 import { placeFigure } from './instructional.js';
 import { copyrightLines, copyrightOf, type CopyrightLine } from './copyright-page.js';
 import { titlePageContent, titlePageFieldsOf, type TitlePageContent } from './title-page.js';
@@ -425,6 +425,18 @@ export interface BookBlock {
    * it was a back page nobody had asked for.
    */
   blankBack?: boolean;
+  /**
+   * **This blank block is the sheet the book leaves between one whole work
+   * and the next** (addendum 22 §9, from Ken: *between stories, there needs to
+   * be a full blank sheet*).
+   *
+   * It carries the **marker it stands in front of** rather than a flag, which
+   * is what lets the × on either of its two pages reach the one thing that
+   * made it: it carries no `blankFor`, the writer not having put it here, and
+   * the row's `markerId` is still the work *before* it — the sheet is emitted
+   * before the new work's opening, so the marker in force is the old one.
+   */
+  blankBetween?: string;
   /**
    * **This block is not a manuscript element** (§9s): it stands in for a
    * section's missing heading (§9l), so its id names the *unit* rather than
@@ -1260,12 +1272,18 @@ export const blankSpot = (place: PagePlace, page: Pick<BookPageRow, 'blankFor'>)
  * It is a **reading over the rows**, so the reason for any page is answerable
  * from any screen without threading neighbours through it.
  */
-export type BlankReason = 'writer' | 'back' | 'page_back' | 'recto';
+export type BlankReason = 'writer' | 'between' | 'back' | 'page_back' | 'recto';
 
 export const blankReason = (rows: readonly BookPageRow[], sheet: number): BlankReason | null => {
   const page = rows.find((one) => one.sheet === sheet);
   if (!page || !page.blank) return null;
   if (page.blankFor) return 'writer';
+  // **The sheet between two whole works** (addendum 22 §9). Said by the block
+  // for `blankBack`'s own reason: a reading that guessed from the neighbours
+  // could not tell this from the recto gap, which is the one it most needs to
+  // be told apart from — they fall in the same place and only one of them is
+  // there because somebody asked for a separation.
+  if (page.blankBetween) return 'between';
   // **The block says so** (§9w). This read *the page in front is an
   // illustration, so this is its back*, which is a guess — and wrong exactly
   // where a picture opens a division, the leaf after it being the recto gap
@@ -1298,9 +1316,27 @@ export const blankReason = (rows: readonly BookPageRow[], sheet: number): BlankR
  * reasons: §9w's own finding (*a sentence whose second half has no referent*)
  * one clause in.
  */
-export const sayBlankReason = (reason: BlankReason, about: 'the leaf' | 'the page behind it' = 'the leaf'): string => {
+export const sayBlankReason = (
+  reason: BlankReason,
+  about: 'the leaf' | 'the page behind it' = 'the leaf',
+  /**
+   * What the book holds, in the format's own plural (addendum 22 §9) — the
+   * room reads `nounsFor` and hands it down, because nothing names a unit
+   * itself (addendum 16 §6c).
+   *
+   * The default is **true of every format that can reach this reason** rather
+   * than the likelier of two: only a collection and a series leave a sheet
+   * between their parts, and both hold *whole works* (`holdsWholeWorks` is
+   * named for it), so a caller with no noun to hand says something general
+   * and never something wrong.
+   */
+  divisions = 'works',
+): string => {
   const here = about === 'the leaf';
   if (reason === 'writer') return here ? 'you put it here' : 'you put it there';
+  // One sentence for both voices: *it* can only be the blank either way, the
+  // separation being named in the same breath (`back`'s own shape).
+  if (reason === 'between') return `the book leaves a blank sheet between ${divisions}`;
   // The back of a picture reads the same either way: *it* can only be the
   // blank, the picture being named in the same breath.
   if (reason === 'back') return 'it is the back of the picture in front of it, kept empty so nothing shows through';
@@ -1692,7 +1728,13 @@ export interface PictureOffer {
   refusal: string | null;
 }
 
-export const pictureOffer = (place: PagePlace, rows: readonly BookPageRow[], sheet: number): PictureOffer => {
+export const pictureOffer = (
+  place: PagePlace,
+  rows: readonly BookPageRow[],
+  sheet: number,
+  /** What the book holds, in the format's own plural (addendum 22 §9). */
+  divisions = 'works',
+): PictureOffer => {
   const page = rows.find((one) => one.sheet === sheet);
   const none = (refusal: string): PictureOffer => ({
     spot: null,
@@ -1718,6 +1760,18 @@ export const pictureOffer = (place: PagePlace, rows: readonly BookPageRow[], she
     if (why === 'back' || why === 'page_back') {
       return none(
         `This leaf is kept empty because ${sayBlankReason(why)}. Print on that back, from the page in front of it, and a picture can stand here.`,
+      );
+    }
+    /**
+     * **The sheet between two works is kept empty on purpose too** (addendum
+     * 22 §9), so it refuses for the same reason the backs above do — and
+     * **names the way out**, which is the × on this page's own row: that
+     * takes the separation off this work and nothing else, after which the
+     * page is an ordinary leaf and a picture may stand on it.
+     */
+    if (why === 'between') {
+      return none(
+        `This leaf is kept empty because ${sayBlankReason(why, 'the leaf', divisions)}. The × on its row takes that sheet away, and then a picture can stand here.`,
       );
     }
   }
@@ -1935,6 +1989,22 @@ export const setChapterRecto = (file: ProjectFile, markerId: string, recto: bool
     if ((marker.id as string) !== markerId) return marker;
     const page = chapterPageSchema.parse(marker.page ?? {});
     return { ...marker, page: { ...page, opensRecto: recto } };
+  }),
+});
+
+/**
+ * **Whether a blank sheet stands in front of this whole work** (addendum 22
+ * §9), or back to the book's answer. `setChapterRecto`'s twin, and it is the
+ * act behind the × on either of that sheet's two pages: the pages are not the
+ * thing to remove, the separation that made them is — and it is removed for
+ * **this** work, never for every one of them at once.
+ */
+export const setSheetBefore = (file: ProjectFile, markerId: string, sheet: boolean | null): ProjectFile => ({
+  ...file,
+  markers: file.markers.map((marker) => {
+    if ((marker.id as string) !== markerId) return marker;
+    const page = chapterPageSchema.parse(marker.page ?? {});
+    return { ...marker, page: { ...page, sheetBefore: sheet } };
   }),
 });
 
@@ -2586,6 +2656,14 @@ export interface BookPageRow {
    * guessed from what stands on the page before.
    */
   blankBack: boolean;
+  /**
+   * Where this blank page is one of the two the book leaves **between one
+   * whole work and the next** (addendum 22 §9): the work it stands in front
+   * of, which is what taking the separation away again needs. Said by the
+   * block for `blankBack`'s reason — it falls exactly where the recto gap
+   * falls, and the two mean different things to a reader.
+   */
+  blankBetween: string | null;
   blank: boolean;
   /**
    * **The manuscript elements that stand whole on this page** (§9x): what a ×
@@ -2661,6 +2739,7 @@ export const bookPageRows = (
       elementId: headElement(page, index),
       blankFor: leaf?.blankFor ?? null,
       blankBack: leaf?.blankBack === true,
+      blankBetween: leaf?.blankBetween ?? null,
       blank: empty,
       elementIds: page.pieces
         .filter((piece) => piece.cut !== true)
@@ -2896,6 +2975,19 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
   let opensChapter = false;
   /** On a collection a story's sections are its chapters (addendum 22 §6). */
   const chapters = isCollection(file.project.format);
+  /**
+   * **Whether a sheet stands between one whole work and the next** (addendum
+   * 22 §9, from Ken: *between stories, there needs to be a full blank
+   * sheet*), and how many have gone by — a separation is between two things,
+   * so the first story gets none, the front matter already standing in front
+   * of it.
+   *
+   * On a collection and a series alone (`holdsWholeWorks`): a chapter is a
+   * division *of* a novel, and a reader turning from chapter four to chapter
+   * five has not finished anything.
+   */
+  const separates = holdsWholeWorks(file.project.format);
+  let worksSoFar = 0;
   let pending: BookBlock | null = null;
   /** Free graphics waiting for the next block to ride (§8c). */
   const floating: FigureFree[] = [];
@@ -2978,6 +3070,47 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
         out.push(pending);
         pending = null;
       }
+      /**
+       * **The sheet between one whole work and the next** (addendum 22 §9),
+       * and it stands in front of everything the next work brings with it —
+       * its plates, its facing pictures, the leaves the writer asked for —
+       * because what it separates is the works themselves and all of that
+       * belongs to the one beginning.
+       *
+       * It is a **sheet and never a side** (§9ad), so it cannot change which
+       * side anything after it is on and every story opens exactly where the
+       * recto rule already put it: what a reader gains is a spread with
+       * nothing on either page, which is what finishing something looks like
+       * in a printed book.
+       */
+      if (
+        separates &&
+        worksSoFar > 0 &&
+        // The work's own answer where it has one, the book's otherwise
+        // (`opensRecto`'s shape) — so the × on one of these two pages takes
+        // this separation and leaves every other one standing.
+        (chapterPageSchema.parse(placed.marker.page ?? {}).sheetBefore ?? settings.sheetBetweenWorks)
+      ) {
+        out.push(
+          ...blankPages(SHEET, (suffix) =>
+            block({
+              id: `${placed.marker.id as string}:between:${suffix}`,
+              kind: 'blank',
+              numbering: 'arabic',
+              starts: 'page',
+              display: true,
+              folio: false,
+              unbreakable: true,
+              chapterTitle,
+              // **No `blankFor`**, which is the whole of what it is: the
+              // writer did not put it here, so its rows carry no × and the
+              // way to be rid of it is the setting that makes it.
+              blankBetween: placed.marker.id as string,
+            }),
+          ),
+        );
+      }
+      worksSoFar += 1;
       for (const plate of platesBefore.get(placed.marker.id as string) ?? []) {
         out.push(...partBlocks(plate, 'arabic', chapterTitle));
       }

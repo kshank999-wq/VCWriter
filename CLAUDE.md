@@ -4848,6 +4848,56 @@ push live; the build takes a minute or two.
   at and were **updated rather than worked around**. Driven on his own
   sequence: the Layout rail and the Stories rail both read *The Harbour · In
   For A Pound · Falling*, with no section outside a story.
+  **§9 is a full blank sheet between stories**, from Ken in one sentence
+  (*between stories, there needs to be a full blank sheet*), and **measuring
+  it first is what made the report legible**: his book already had a blank
+  page in that place, so the complaint only parses once you see that the gap
+  and the separation **fall in exactly the same place and mean opposite
+  things**. That page is the verso the recto rule leaves — *the back of the
+  page the last story is printed on* — so a reader turning it has turned over
+  the last leaf of what they were reading rather than been told anything
+  ended. **A sheet is two pages** (addendum 20 §9ad) and that is what makes
+  this a default rather than an option somebody has to find: an even number
+  cannot change which side anything falls on, so measured over three stories
+  every opening is the same opening, further on by the sheets in front of it
+  and by nothing else, with the side of the paper identical — two pages a gap
+  and the only figure that varies is the recto gap that was already there. It
+  stands **in front of everything the next story brings with it** (its plates,
+  the pictures facing its opening, the leaves the writer asked for), what it
+  separates being the works; on a **collection and a series alone**
+  (`holdsWholeWorks`, §2's reason — a chapter is a division *of* a novel and a
+  reader turning from four to five has not finished anything); and it
+  **defaults on**, which is the one place an existing book is laid differently
+  from the day before, because he asked for it as a requirement and a
+  separation a reader is meant to feel is not something to be switched on by
+  whoever finds the control. Being neither the writer's leaf nor the cutter's
+  it is a **third kind of blank**, so `BlankReason` gains `'between'`, **said
+  by the block rather than inferred from the neighbours** for `blankBack`'s
+  own reason (addendum 20 §9w): a reading that guessed could not tell it from
+  the recto gap, which is the one it most needs telling from. And the × on it
+  had to go somewhere honest — §9x's rule is that no page row is without one,
+  and the obvious target, the book's setting, is **a control acting on
+  something nobody is looking at**, a press on page ten taking the sheet from
+  between every story at once; so `sheetBefore` is nullable on the work's own
+  chapter page, **null meaning the book's**, which is `opensRecto`'s shape
+  exactly — the control standing beside it in the same fold and the same kind
+  of decision — and the × writes it for **this** story, saying so before the
+  press. A picture asked for on it is **refused** for the back of a picture's
+  reason (it exists in order to have nothing on it) with the refusal naming
+  the × one press away rather than a setting in another dialog. The tick is
+  under *Every story opens on a right-hand page*, those two being the whole of
+  what a reader meets at a division, **absent rather than greyed** off a
+  format with no whole works, and its note says the thing the tick cannot:
+  the first story gets none. `sayBlankReason`'s new voice takes the format's
+  own plural from the room, with a default of *works* that is **true of every
+  format that can reach the reason** rather than the likelier of two. Driven
+  at 1440×900 on his three documents: *The Harbour* ends on page 4, a verso,
+  so pages 5–6 are one leaf blank on both sides and *In For A Pound* still
+  opens on 7; *In For A Pound* ends on page 9, a recto, so leaf 11–12 is the
+  sheet, page 10 is the back of page 9, and *Falling* still opens on 13, with
+  a working × on every blank page. One assertion — *a book nobody has asked
+  anything of is laid exactly as it was* — pinned a rule this changes on
+  purpose and was **rewritten rather than worked around**.
   **§7a is the episode rail**, from Ken, and the rail was the easy half:
   wiring it found that an episode marker's kind is `episode` and
   **`chapterSpan` read `chapter` outright**, so an episode spanned to the end
