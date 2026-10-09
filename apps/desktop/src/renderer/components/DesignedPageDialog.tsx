@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  SHEET,
   FACE_NAMES,
   FACE_NOTES,
   PART_FACES,
@@ -1046,7 +1047,7 @@ function Body({
               <button
                 type="button"
                 className="small"
-                onClick={() => onUpdate((current) => updatePart(current, part.id, { blankBefore: blankLeaf.leaves + 1 }))}
+                onClick={() => onUpdate((current) => updatePart(current, part.id, { blankBefore: blankLeaf.pages + SHEET }))}
               >
                 {blankLeaf.act}
               </button>
@@ -1055,20 +1056,41 @@ function Body({
               <button
                 type="button"
                 className="small"
-                onClick={() => onUpdate((current) => updatePart(current, part.id, { blankBefore: blankLeaf.leaves - 1 }))}
+                onClick={() => onUpdate((current) => updatePart(current, part.id, { blankBefore: blankLeaf.pages - SHEET }))}
               >
                 {blankLeaf.fewer}
               </button>
             ) : null}
             <p className="muted small">
-              {blankLeaf.leaves === 0
+              {blankLeaf.pages === 0
                 ? 'No blank page stands in front of this one.'
-                : blankLeaf.leaves === 1
+                : blankLeaf.pages === 1
                   ? 'One blank page stands in front of this one.'
-                  : `${blankLeaf.leaves} blank pages stand in front of this one.`}
+                  : `${blankLeaf.pages} blank pages stand in front of this one.`}
             </p>
             {blankLeaf.note ? <p className="muted small">{blankLeaf.note}</p> : null}
             {blankLeaf.refusal ? <p className="muted small">{blankLeaf.refusal}</p> : null}
+            {/* **And half a sheet** (§9ae): the three surfaces that reach this
+                field say the same words, so this one offers the shift too. */}
+            {blankLeaf.shiftBack ? (
+              <button
+                type="button"
+                className="small"
+                onClick={() => onUpdate((current) => updatePart(current, part.id, { blankBefore: blankLeaf.pages - 1 }))}
+              >
+                {blankLeaf.shiftBack}
+              </button>
+            ) : null}
+            {blankLeaf.shiftOn ? (
+              <button
+                type="button"
+                className="small"
+                onClick={() => onUpdate((current) => updatePart(current, part.id, { blankBefore: blankLeaf.pages + 1 }))}
+              >
+                {blankLeaf.shiftOn}
+              </button>
+            ) : null}
+            {blankLeaf.shiftNote ? <p className="muted small">{blankLeaf.shiftNote}</p> : null}
             {partTakesBlankBack(part.kind) ? (
               <>
                 <button

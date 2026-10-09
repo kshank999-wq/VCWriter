@@ -18,7 +18,7 @@ import { z } from 'zod';
  */
 
 /**
- * **How many blank leaves a writer may ask for in one place** (addendum 20
+ * **How many blank pages a writer may ask for in one place** (addendum 20
  * §9ac, from Ken: *you should be able to just put as many pages in between as
  * you want*).
  *
@@ -28,8 +28,16 @@ import { z } from 'zod';
  * ceiling is here because both records that carry the count read it, and a
  * number with no top can be typed into a document by anything and lay a
  * thousand pages nobody asked for.
+ *
+ * **It counts pages rather than leaves** (§9ae, from Ken: *we also need the
+ * ability to shift a page to the left or right… it will shift half a page*).
+ * §9ad's sheet and this shift are the same stored fact at two granularities —
+ * a sheet is two pages and a shift is one — so counting leaves could express
+ * only the first, and a second field for the half would be two records of one
+ * number, free to disagree the first time either is written. The acts differ
+ * and the field does not: a sheet writes two, a shift writes one.
  */
-export const MAX_BLANK_LEAVES = 12;
+export const MAX_BLANK_PAGES = 24;
 
 /** A trim size, in inches. `0 × 0` means the format's own (§3). */
 export const trimSchema = z.object({
@@ -237,12 +245,13 @@ export const bookPartSchema = z.object({
    * could not put a leaf between the title page and the copyright page, or
    * before an appendix, which is where a book most often wants one.
    *
-   * **A count, with `true` its older spelling** (§9ac): *as many pages in
-   * between as you want* is a number, and every page made before this carries
-   * a boolean — so `true` reads as one leaf, nothing is migrated and no book
-   * moves. `leavesBefore` is the one place that resolves it.
+   * **A count of pages, with `true` its older spelling** (§9ac, §9ae): *as
+   * many pages in between as you want* is a number, and every page made
+   * before this carries a boolean — so `true` reads as one whole sheet (two
+   * pages, §9ad), nothing is migrated and no book moves. `pagesBefore` is the
+   * one place that resolves it.
    */
-  blankBefore: z.union([z.boolean(), z.number().int().min(0).max(MAX_BLANK_LEAVES)]).default(false),
+  blankBefore: z.union([z.boolean(), z.number().int().min(0).max(MAX_BLANK_PAGES)]).default(false),
   /**
    * A **logotype** in place of the typed title, on a designed page (§9n): an
    * id in the graphics library, like every other picture the book uses.

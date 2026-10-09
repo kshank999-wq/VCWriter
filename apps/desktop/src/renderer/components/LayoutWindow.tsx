@@ -142,9 +142,11 @@ import {
   startDivision,
   chapterPageSchema,
   blankPagesAt,
+  SHEET,
   setPartBlank,
   setBlankPages,
   setChapterBlank,
+  setChapterRecto,
   plateIntoStory,
   type BookPageRow,
   type PictureOffer,
@@ -312,9 +314,14 @@ const NO_BLANK: BlankOffer = {
   spot: null,
   act: null,
   fewer: null,
-  leaves: 0,
+  pages: 0,
   note: null,
   refusal: 'Choose a page first: the blank sheet goes in front of it.',
+  shiftOn: null,
+  shiftBack: null,
+  shiftNote: null,
+  shiftRefusal: null,
+  shiftFrees: null,
 };
 
 /** i, ii, iii — the front matter's numbers, for the rail. */
@@ -919,7 +926,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
            */
           return target.takesLeaf
             ? setBackBlank(
-                setBlankPages(made.file, target.takesLeaf, blankPagesAt(made.file, target.takesLeaf) - 1),
+                setBlankPages(made.file, target.takesLeaf, blankPagesAt(made.file, target.takesLeaf) - SHEET),
                 made.elementId as string,
                 true,
               )
@@ -973,7 +980,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
           // The art page takes the sheet's front, as it does in the story
           // (§9aa, §9ad), and keeps the back it already had.
           if (!target.takesLeaf || !made.partId) return made.file;
-          const less = setBlankPages(made.file, target.takesLeaf, blankPagesAt(made.file, target.takesLeaf) - 1);
+          const less = setBlankPages(made.file, target.takesLeaf, blankPagesAt(made.file, target.takesLeaf) - SHEET);
           return setPartBlank(less, made.partId, 'back', true);
         }
 
@@ -1051,7 +1058,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
       onPick: () => {
         if (!pageBlank.spot) return;
         const spot = pageBlank.spot;
-        const want = pageBlank.leaves + 1;
+        const want = pageBlank.pages + SHEET;
         onUpdate((current) => setBlankPages(current, spot, want));
       },
     },
@@ -1263,8 +1270,12 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
         setPageDialogSheet(null);
         importPicture('free', on);
       }}
-      onBlank={(id, leaves) => onUpdate((current) => setBlankPages(current, id, leaves))}
+      onBlank={(id, pages) => onUpdate((current) => setBlankPages(current, id, pages))}
       onChapterBack={(markerId, blank) => onUpdate((current) => setChapterBlank(current, markerId, 'back', blank))}
+      /* **The shift, where a rule is what holds the page** (§9ae): one press
+         and one field, the room owning which mechanism moves a page half a
+         sheet rather than the writer. */
+      onShiftFree={(markerId) => onUpdate((current) => setChapterRecto(current, markerId, false))}
       format={pageFormat(page).markerId ? pageFormat(page).label : null}
       onFormat={() => {
         const to = pageFormat(page);
@@ -3746,6 +3757,7 @@ function StoryPageSection({
   onVector,
   onBlank,
   onChapterBack,
+  onShiftFree,
   onRemovePage,
   place,
   chapterBack,
@@ -3780,9 +3792,10 @@ function StoryPageSection({
   onVector(): void;
   /** A blank leaf before this page, wherever it lands (§9r): an element, a part or a chapter. */
   /** How many of the writer's own leaves should stand there (§9ac). */
-  onBlank(id: string, leaves: number): void;
+  onBlank(id: string, pages: number): void;
   /** A blank on the back of a chapter's own leaf (§9r). */
   onChapterBack(markerId: string, blank: boolean): void;
+  onShiftFree(markerId: string): void;
   /**
    * How the page is set (§9l, from Ken: *it should have all the graphic
    * buttons that let you format a page instantly and have all the options for
@@ -3846,6 +3859,25 @@ function StoryPageSection({
           </span>
         </Help>
       </h3>
+      {/* How the opening is set (§9l, §9m), **first** (§9ae, from Ken: *make
+          the set this as a story page at the top of the dialog box*).
+
+          It stood under the pictures, which is addendum 02 §4a's ordering
+          argument the wrong way round: **what a page is comes before what you
+          can put on it**, and on a page a story opens this is the one control
+          that says what the page is. A chapter with a page of its own keeps
+          the **button**, because that page has a sheet to be set against and a
+          dialog that draws it. A chapter inside a story has no page, so its
+          look is the book's — and that is rendered **here** rather than behind
+          a door, the fields being the same component Book settings renders,
+          never a second copy. */}
+      {format ? (
+        <div className="layout-page-acts layout-page-is">
+          <button type="button" className="raised small" onClick={onFormat}>
+            {format}
+          </button>
+        </div>
+      ) : null}
       {page.figureId ? null : (
         <div className="layout-page-acts">
           {/* **Whether a picture may be put here is whether anything refuses
@@ -3904,16 +3936,56 @@ function StoryPageSection({
               the note says what the press really costs where the cutter has
               already left a leaf there, which §9r answered by refusing. */}
           {blank.spot && blank.act ? (
-            <button type="button" className="small" onClick={() => onBlank(blank.spot as string, blank.leaves + 1)}>
+            <button type="button" className="small" onClick={() => onBlank(blank.spot as string, blank.pages + SHEET)}>
               {blank.act}
             </button>
           ) : null}
           {blank.spot && blank.fewer ? (
-            <button type="button" className="small" onClick={() => onBlank(blank.spot as string, blank.leaves - 1)}>
+            <button type="button" className="small" onClick={() => onBlank(blank.spot as string, blank.pages - SHEET)}>
               {blank.fewer}
             </button>
           ) : null}
           {blank.note ? <p className="muted small">{blank.note}</p> : null}
+          {/* **Half a sheet** (§9ae, from Ken: *we also need the ability to
+              shift a page to the left or right… it will shift half a page*).
+              The sheet above is the act that moves nothing across the spine;
+              this is its complement, and the two sit together because they
+              write the same field and a writer choosing between them is
+              choosing one or two pages. `shiftBack` is absent where there is
+              nothing of the writer's own to take, with the reason in its
+              place rather than a button that can only refuse. */}
+          {/* **The reason stands where the controls would** (§9ae). Gating
+              the whole section on the two buttons took the refusal away with
+              them, so a page the book holds on a side said nothing at all —
+              *absent rather than greyed* is a rule about the control and
+              never about the sentence that explains it, which is
+              `pictureOffer`'s own finding (§9w). */}
+          {blank.spot && (blank.shiftOn || blank.shiftBack || blank.shiftRefusal) ? (
+            <>
+              <span className="layout-shift">
+                {blank.shiftBack ? (
+                  <button type="button" className="small" onClick={() => onBlank(blank.spot as string, blank.pages - 1)}>
+                    {blank.shiftBack}
+                  </button>
+                ) : null}
+                {blank.shiftOn ? (
+                  <button
+                    type="button"
+                    className="small"
+                    onClick={() =>
+                      blank.shiftFrees
+                        ? onShiftFree(blank.shiftFrees)
+                        : onBlank(blank.spot as string, blank.pages + 1)
+                    }
+                  >
+                    {blank.shiftOn}
+                  </button>
+                ) : null}
+              </span>
+              {blank.shiftNote ? <p className="muted small">{blank.shiftNote}</p> : null}
+              {blank.shiftRefusal ? <p className="muted small">{blank.shiftRefusal}</p> : null}
+            </>
+          ) : null}
           {/* **Not the fact said twice** (§9y). The refusal now carries a
               sentence where there is no leaf to be had, so the Add menu can
               grey its item with a reason in its title — and on a page with
@@ -3963,19 +4035,6 @@ function StoryPageSection({
           ) : null}
         </div>
       )}
-      {/* How the opening is set (§9l, §9m). A chapter with a page of its own
-          keeps the **button**, because that page has a sheet to be set
-          against and a dialog that draws it. A chapter inside a story has no
-          page, so its look is the book's — and that is rendered **here**
-          rather than behind a door, the fields being the same component Book
-          settings renders, never a second copy. */}
-      {format ? (
-        <div className="layout-page-acts">
-          <button type="button" className="raised small" onClick={onFormat}>
-            {format}
-          </button>
-        </div>
-      ) : null}
       {/*
         **Taking the page away** (§9x, from Ken twice: *there's no way to
         delete those pages* and *there's a stray page that has a bunch of
@@ -4766,7 +4825,7 @@ function PartFields({
         <button
           type="button"
           className="ghost small layout-part-blank"
-          onClick={() => patch({ blankBefore: blank.leaves + 1 })}
+          onClick={() => patch({ blankBefore: blank.pages + SHEET })}
         >
           {blank.act}
         </button>
@@ -4778,13 +4837,37 @@ function PartFields({
         <button
           type="button"
           className="ghost small layout-part-blank"
-          onClick={() => patch({ blankBefore: blank.leaves - 1 })}
+          onClick={() => patch({ blankBefore: blank.pages - SHEET })}
         >
           {blank.fewer}
         </button>
       ) : null}
       {blank.note ? <p className="muted small">{blank.note}</p> : null}
       {blank.refusal ? <p className="muted small">{blank.refusal}</p> : null}
+      {/* **And half a sheet** (§9ae). Three surfaces reach this field and
+          they say the same words, which is what `partBlankOffer` exists for;
+          a part's panel offering the sheet and not the shift would be the
+          same screen doing less than the page's, which is §8's own rule one
+          room in. */}
+      {blank.shiftBack ? (
+        <button
+          type="button"
+          className="ghost small layout-part-blank"
+          onClick={() => patch({ blankBefore: blank.pages - 1 })}
+        >
+          {blank.shiftBack}
+        </button>
+      ) : null}
+      {blank.shiftOn ? (
+        <button
+          type="button"
+          className="ghost small layout-part-blank"
+          onClick={() => patch({ blankBefore: blank.pages + 1 })}
+        >
+          {blank.shiftOn}
+        </button>
+      ) : null}
+      {blank.shiftNote ? <p className="muted small">{blank.shiftNote}</p> : null}
       {/* **The half title and the title page never arrive here either**
           (§9u). `partPlacement` calls both a block, so both have gone to the
           designed-page screen since §9n — and this panel went on holding a

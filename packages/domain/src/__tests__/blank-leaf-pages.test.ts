@@ -23,6 +23,7 @@ import {
   setBackBlank,
   setBlankPage,
   setBlankPages,
+  SHEET,
   updateBeat,
   type BeatId,
   type ProjectFile,
@@ -278,7 +279,7 @@ describe('the leaf the writer put in', () => {
      * around**.
      */
     const front = setBackBlank(
-      setBlankPages(made.file, offer.takesLeaf as string, blankPagesAt(made.file, offer.takesLeaf as string) - 1),
+      setBlankPages(made.file, offer.takesLeaf as string, blankPagesAt(made.file, offer.takesLeaf as string) - SHEET),
       made.elementId as string,
       true,
     );
@@ -323,7 +324,7 @@ describe('a blank page asked for on a blank page', () => {
     const offer = blankOffer(pagePlace(laid.pages, blocks, leaf.sheet), rows, leaf.sheet);
     expect(offer.refusal).toBeNull();
     expect(offer.spot).not.toBeNull();
-    expect(offer.leaves).toBe(0);
+    expect(offer.pages).toBe(0);
     // What a press puts in is a sheet, said before it is pressed (§9ad).
     expect(offer.note).toMatch(/two pages/);
     /**
@@ -338,7 +339,7 @@ describe('a blank page asked for on a blank page', () => {
     const at = opens(file);
     const pages = lay(file).rows.length;
     for (const want of [1, 2, 3]) {
-      const asked = setBlankPages(file, offer.spot as string, want);
+      const asked = setBlankPages(file, offer.spot as string, want * SHEET);
       expect(lay(asked).rows.filter((row) => row.blankFor === offer.spot)).toHaveLength(want * 2);
       expect(opens(asked)).toBe(at + want * 2);
       expect(lay(asked).rows.length).toBe(pages + want * 2);
@@ -350,19 +351,19 @@ describe('a blank page asked for on a blank page', () => {
   it('says how many stand there, and offers to take one away', () => {
     const file = novel();
     const text = lay(file).rows.find((row) => row.says === 'Chapter opens' && row.sheet > 4)!;
-    const asked = setBlankPages(file, placeOn(file, text.sheet).opensMarkerId as string, 2);
+    const asked = setBlankPages(file, placeOn(file, text.sheet).opensMarkerId as string, 2 * SHEET);
     const { blocks, laid, rows } = lay(asked);
     const leaf = rows.find((row) => row.blankFor !== null)!;
     const offer = blankOffer(pagePlace(laid.pages, blocks, leaf.sheet), rows, leaf.sheet);
     expect(offer.act).toBe('Put another blank sheet here…');
-    expect(offer.leaves).toBe(2);
+    expect(offer.pages).toBe(2 * SHEET);
     expect(offer.fewer).toBe('Take one away');
   });
 
   it('takes one leaf and not the run, when a × is pressed on one of them', () => {
     const file = novel();
     const text = lay(file).rows.find((row) => row.says === 'Chapter opens' && row.sheet > 4)!;
-    const asked = setBlankPages(file, placeOn(file, text.sheet).opensMarkerId as string, 3);
+    const asked = setBlankPages(file, placeOn(file, text.sheet).opensMarkerId as string, 3 * SHEET);
     const rows = lay(asked).rows;
     const leaf = rows.find((row) => row.blankFor !== null)!;
     const after = removeBookPage(asked, leaf, pageRemoval(asked, rows, leaf.sheet));

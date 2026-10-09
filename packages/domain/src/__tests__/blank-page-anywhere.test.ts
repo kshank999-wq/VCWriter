@@ -18,6 +18,7 @@ import {
   partsOf,
   setBlankPage,
   setBlankPages,
+  SHEET,
   setChapterBlank,
   unitsInStoryOrder,
   updateBeat,
@@ -311,7 +312,7 @@ describe('a page that already has a leaf in front of it', () => {
     const spot = spotOn(file, sheet)!;
     const pages = shape(file).length;
     for (const want of [1, 2, 3]) {
-      const asked = setBlankPages(file, spot, want);
+      const asked = setBlankPages(file, spot, want * SHEET);
       expect(lay(asked).rows.filter((row) => row.blankFor === spot)).toHaveLength(want * 2);
       expect(shape(asked)).toHaveLength(pages + want * 2);
     }
@@ -360,7 +361,7 @@ describe('a page that already has a leaf in front of it', () => {
     const offer = partBlankOffer(lay(file).rows, { ...part, blankBefore: true });
     expect(offer.act).toBe('Put another blank sheet before this one');
     expect(offer.fewer).toBe('Take the blank sheet away');
-    expect(offer.leaves).toBe(1);
+    expect(offer.pages).toBe(SHEET);
   });
 
   it('offers another on the leaf the writer put in, and says how many there are', () => {
@@ -374,7 +375,7 @@ describe('a page that already has a leaf in front of it', () => {
     const made = lay(with_).rows.find((row) => row.blankFor !== null)!;
     const offer = offerOn(with_, made.sheet);
     expect(offer.act).toBe('Put another blank sheet here…');
-    expect(offer.leaves).toBe(1);
+    expect(offer.pages).toBe(SHEET);
     expect(offer.fewer).toBe('Take the blank sheet away');
   });
 });

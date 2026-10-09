@@ -15,6 +15,7 @@ import {
   removePart,
   sayBlankReason,
   blankPagesAt,
+  SHEET,
   setBlankPages,
   type BookFigure,
   type BookPageRow,
@@ -663,7 +664,10 @@ export const removeBookPage = (file: ProjectFile, page: BookPageRow, what: PageR
   // **One leaf, not all of them** (§9ac): a writer may ask for several in one
   // place now, so a × on one of them takes that one — clearing the count
   // would take a run of pages away for a press on one row.
-  if (what.what === 'leaf') return setBlankPages(file, what.id, blankPagesAt(file, what.id) - 1);
+  // **A × takes the whole sheet, both its pages** (§9ad) — and the count is
+  // in pages since the shift (§9ae), so it says how many that is rather than
+  // leaving `1` to mean half a leaf.
+  if (what.what === 'leaf') return setBlankPages(file, what.id, blankPagesAt(file, what.id) - SHEET);
   if (what.what === 'picture') return removeBookFigure(file, what.id);
   if (what.what === 'back') return setBackBlank(file, what.id, false);
   if (what.what === 'recto') return setChapterRecto(file, what.id, false);

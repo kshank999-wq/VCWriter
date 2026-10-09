@@ -2952,6 +2952,116 @@ second blank is not later "fixed" as a fault.
 > copyright page takes the next page now, and the assertion was rewritten
 > rather than worked around.
 
+## 9ae. Half a sheet, and the page's own route first
+
+From Ken in three messages:
+
+> We also need the ability to shift a page to the left or right. So when you
+> select a page, it will shift half a page. So if it's on the left-hand side,
+> it'll swap it to the right-facing page. If it's on the right, it'll swap it
+> to the back of that page… When I go to add a picture to that page, there
+> needs to be some kind of warning or ask if you want to make this a chapter
+> page, but when I do add the picture, it adds the picture in the right place.
+> But moves that text to the next page.
+
+and, in its own message:
+
+> make the set this as a story page at the top of the dialog box
+
+### The route goes first, because it says what the page *is*
+
+The last of the three is the smallest and the one with a rule under it. *Set
+this story's page…* stood **under** four picture buttons and two sentences, so
+on a page a story opens the one control that says what the page *is* was the
+last thing on the screen. That is addendum 02 §4a's ordering argument the
+wrong way round — **what a thing is comes before what you can do to it** — and
+it is the same control §15c and §16b are about: a route that works and that
+nobody finds reads exactly like a feature nobody built.
+
+What the test pins is the **order** rather than the control, because the
+control was never missing.
+
+### A sheet moves nothing; a shift moves everything
+
+§9ad's whole argument is that a blank page is **two** pages, and that an even
+number cannot change which side anything after it is on. The shift is that
+argument's complement and the only other thing a writer can want in the same
+place: **one** page, which puts this page on the other side of the paper.
+
+So they write **one field**, and the field counts **pages** rather than
+leaves. A second field for the half would be two records of one number, free
+to disagree the first time either is written; `SHEET` is the only place that
+says how many pages a sheet is. `true` remains the older spelling and reads as
+one whole sheet, so nothing is migrated and no book moves.
+
+**On and back are not two directions on the page.** Both land it on the other
+side, parity flipping either way; what differs is whether the book grows or
+shrinks, so they are named for that and the note says which side it lands on.
+
+### The sentence was corrected by measuring
+
+The first draft said a shift *moves every page after it with it*. Driven over
+a collection of three stories, that is false in the general case: a shift
+upstream is taken up by the **next** division the book holds on a right-hand
+page, which is why on twelve chapter openings measured, six cost one page and
+six cost none while the pages in between swapped sides either way. The note
+says *as far as the next opening the book holds on a right-hand page*, and the
+test asserts the **side** rather than the book's length — the length is not
+the ask.
+
+### Where a rule holds the page, the shift frees the rule
+
+The first answer on such a page was a **refusal**, and it was the wrong one. A
+division forced onto a right-hand page already has the verso in front of it
+left empty, so one blank page there is taken up by that gap and nothing moves
+— true, and on a book whose chapters all open recto, which is the default and
+Ken's own book, it made the control refuse on **every page a writer would
+reach for**.
+
+*Move this page to the other side* is one thing a writer wants, and what
+really moves such a page is the **rule** — which §9x already made a
+per-chapter field. So the shift writes `opensRecto` there instead of a blank:
+one control, one sentence, two mechanisms underneath, and which of them
+applies is the room's business rather than the writer's. There is exactly one
+direction to offer, the page being on a right-hand side *because* of the rule.
+
+Driven on a collection: the press takes the leaf in front away, the story
+falls on the other side and the book is a page shorter.
+
+### The picture says what it will do before the press
+
+From Ken's second message. §9p settled the act and it is right — a picture
+that is a page of its own stands **in front of** the opening, which is where
+an illustration facing a chapter belongs. What was missing is that the room
+said so only behind the `?`, so the one consequence a writer cares about
+arrived after the press, and the other act (art **on** the opening, which
+moves nothing) was a button away with nothing joining the two.
+
+It is **one note with two readings**, never two notes: where a leaf already
+stands in front, the picture fills that and the opening does not move at all,
+so the two cases can never both be true.
+
+### What driving it caught
+
+- **The reason vanished with the buttons.** The shift section was gated on its
+  two buttons, so on a page the book holds — the commonest case — the screen
+  said nothing at all. *Absent rather than greyed* is a rule about the control
+  and never about the sentence that explains it (§9w).
+- **A measurement, not a guess.** The stale-build notice is in the DOM at
+  1440 × 47 while a room is open and painted over by it (`z-index: 40`), which
+  is addendum 29 §2's *a room covers the menu bar* pointed at the one bar that
+  says why the program is behaving oddly. **Named rather than fixed here**;
+  it is its own change.
+
+### Not built, and named
+
+- **The drawn box** (Ken, in a message of its own): it lands at the top rather
+  than where the drag was, at full measure rather than the width drawn, on the
+  facing page, and cannot be moved or resized afterwards. §9z is the section
+  about that gesture and this is a report against it, not against the sheet.
+- **A shift on a part's page**, which carries no division rule of its own, so
+  where the cutter holds it there is nothing for the shift to free.
+
 ## 9ad. A blank page is a sheet
 
 From Ken, looking at §9ac in his own book: *The functionality should be no

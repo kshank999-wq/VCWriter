@@ -15854,6 +15854,18 @@ dialog.layout-page-dialog::backdrop {
   margin: 8px 0;
 }
 
+/* **The two shifts are one control with two directions** (§9ae), so they sit
+   together on a line of their own rather than joining the queue of picture
+   buttons above them — two acts that must be read as a pair looking like one
+   is addendum 02 §4a's polarity strip, and here it is also what says they are
+   not a third and fourth way to put a page in. */
+.layout-shift {
+  display: inline-flex;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 /* **Taking the page away is not another way to add something** (§9x). It sat
    among the five picture buttons drawing exactly like them, because `.danger`
    has **no bare rule on this stylesheet** — only rules scoped to other

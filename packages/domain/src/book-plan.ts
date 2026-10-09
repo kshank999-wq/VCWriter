@@ -1,5 +1,5 @@
 import {
-  MAX_BLANK_LEAVES,
+  MAX_BLANK_PAGES,
   PART_KINDS,
   bookPartSchema,
   partInsetSchema,
@@ -595,7 +595,7 @@ const partBlocks = (
    * **As many leaves in front of this page as the writer asked for** (§9ac),
    * each of them a **sheet** rather than a side (§9ad).
    */
-  const front = blankLeaves(leavesBefore(part.blankBefore), (suffix) => leaf(suffix));
+  const front = blankPages(pagesBefore(part.blankBefore), (suffix) => leaf(suffix));
   if (!part.backBlank || !partTakesBlankBack(part.kind)) return [...front, ...own];
   const first = own[0] as BookBlock;
   return [...front, { ...first, starts: 'recto' }, ...own.slice(1), leaf('back')];
@@ -621,12 +621,9 @@ const partBlocks = (
  * take the recto the page after it wanted and cost a third page on half the
  * parities, which is §9ac's own fault wearing the opposite sign.
  */
-const blankLeaves = (leaves: number, make: (suffix: string) => BookBlock): BookBlock[] => {
+const blankPages = (pages: number, make: (suffix: string) => BookBlock): BookBlock[] => {
   const out: BookBlock[] = [];
-  for (let at = 0; at < leaves; at += 1) {
-    const stem = at === 0 ? 'before' : `before:${at + 1}`;
-    out.push(make(stem), make(`${stem}:back`));
-  }
+  for (let at = 0; at < pages; at += 1) out.push(make(at === 0 ? 'before' : `before:${at + 1}`));
   return out;
 };
 
@@ -1165,30 +1162,38 @@ export const backBlank = (element: ManuscriptElement): boolean => element.attrib
  * record, so a blank one is said of the writing it interrupts. The sliding
  * needs nothing — the leaf takes a page and everything after it moves down.
  */
-export const blankBefore = (element: ManuscriptElement): boolean => leavesBefore(element.attributes?.bookBlankBefore) > 0;
+export const blankBefore = (element: ManuscriptElement): boolean => pagesBefore(element.attributes?.bookBlankBefore) > 0;
 
 /**
- * **How many blank leaves stand there** (§9ac, from Ken: *you should be able
+ * **How many blank pages stand there** (§9ac, from Ken: *you should be able
  * to just put as many pages in between as you want*).
  *
  * The flag was a switch, so there was one leaf per place and no second — a
  * writer who wanted a picture page *and* a blank between two stories could
  * ask for one of them and stop. It is a count now, and `true` is its **older
- * spelling**, read as one: nothing is migrated and no book moves, which is
- * `template`/`layout`'s rule and is why the whole suite passed unedited.
+ * spelling**, read as one whole sheet: nothing is migrated and no book moves,
+ * which is `template`/`layout`'s rule.
+ *
+ * **Pages rather than leaves** (§9ae): a sheet is two of these and a shift
+ * across the spine is one, so the unit has to be the smaller of the two or
+ * the shift has no number to be. `SHEET` is the only place that says how many
+ * pages a sheet is, which is what keeps `blankSheets` and the shift from
+ * disagreeing about it.
  *
  * Anything else — absent, false, a string somebody's older build wrote — is
  * none, and the ceiling is the schema's, so a document cannot lay a thousand
  * leaves by carrying a large number.
  */
-export const leavesBefore = (value: unknown): number => {
-  if (value === true) return 1;
+export const SHEET = 2;
+
+export const pagesBefore = (value: unknown): number => {
+  if (value === true) return SHEET;
   if (typeof value !== 'number' || !Number.isFinite(value)) return 0;
-  return Math.max(0, Math.min(MAX_BLANK_LEAVES, Math.floor(value)));
+  return Math.max(0, Math.min(MAX_BLANK_PAGES, Math.floor(value)));
 };
 
-/** How many blank leaves stand before this element (§9ac). */
-export const blanksBefore = (element: ManuscriptElement): number => leavesBefore(element.attributes?.bookBlankBefore);
+/** How many blank pages stand before this element (§9ac). */
+export const blanksBefore = (element: ManuscriptElement): number => pagesBefore(element.attributes?.bookBlankBefore);
 
 /** Put blank pages in before this element, or take them away again (§9ac). */
 export const setBlanksBefore = (file: ProjectFile, elementId: string, count: number): ProjectFile => ({
@@ -1200,7 +1205,7 @@ export const setBlanksBefore = (file: ProjectFile, elementId: string, count: num
       elements: beat.manuscript.elements.map((element) => {
         if ((element.id as string) !== elementId) return element;
         const attributes = { ...element.attributes };
-        const want = leavesBefore(count);
+        const want = pagesBefore(count);
         if (want > 0) attributes.bookBlankBefore = want;
         else delete attributes.bookBlankBefore;
         return { ...element, attributes };
@@ -1209,9 +1214,14 @@ export const setBlanksBefore = (file: ProjectFile, elementId: string, count: num
   })),
 });
 
-/** Put a blank page in before this element, or take every one away again. */
+/**
+ * Put a blank page in before this element, or take every one away again.
+ * **One is a sheet** (§9ad, §9ae): `setBlankPage`'s own reason — the count is
+ * in pages since the shift, so the act that speaks in whole pages says how
+ * many that is.
+ */
 export const setBlankBefore = (file: ProjectFile, elementId: string, blank: boolean): ProjectFile =>
-  setBlanksBefore(file, elementId, blank ? 1 : 0);
+  setBlanksBefore(file, elementId, blank ? SHEET : 0);
 
 /**
  * **Where a blank page asked for on this page goes** (§9r, from Ken: *you
@@ -1315,13 +1325,61 @@ export interface BlankOffer {
    * own × (§9x).
    */
   fewer: string | null;
-  /** How many of the writer's own leaves stand in front of that spot now. */
-  leaves: number;
+  /** How many of the writer's own blank **pages** stand in front of that spot now. */
+  pages: number;
   /** What a press would really cost, where that is not one more page. */
   note: string | null;
   /** Why there is none, in a sentence a writer can act on. */
   refusal: string | null;
+  /**
+   * **Half a sheet** (§9ae, from Ken: *we also need the ability to shift a
+   * page to the left or right. So when you select a page, it will shift half
+   * a page… if it's on the left-hand side, it'll swap it to the right-facing
+   * page. If it's on the right, it'll swap it to the back of that page*).
+   *
+   * A sheet is the act that **moves nothing across the spine** — that is the
+   * whole of §9ad, and an even number of pages cannot change which side
+   * anything is on. This is its complement and the only other thing a writer
+   * can want here: **one** page, which flips this page and every page after
+   * it to the other side of the paper. Both acts write the same field, and
+   * what differs is whether they write one or two.
+   *
+   * On and back are **not** two directions on the page: both land it on the
+   * other side, because parity flips either way. What differs is whether the
+   * book grows or shrinks, so they are named for that and the note says which
+   * side it would land on.
+   */
+  shiftOn: string | null;
+  shiftBack: string | null;
+  /** Which side it would land on, and what it costs every page after it. */
+  shiftNote: string | null;
+  /** Why it cannot move back, where it cannot. */
+  shiftRefusal: string | null;
+  /**
+   * **The division whose own recto rule the shift would turn off** (§9ae).
+   *
+   * Where the book holds a page on a right-hand side, a blank page in front
+   * of it is taken up by the gap that rule already leaves, so adding one is a
+   * press that changes nothing a writer can see. The thing that really moves
+   * such a page is **the rule**, which §9x already made a per-chapter field —
+   * so the shift there writes `opensRecto` rather than a blank, and this is
+   * the id it writes it on. Null wherever the shift is an ordinary page.
+   *
+   * It is the same control and the same words: *what moves this page half a
+   * sheet* is one question, and two buttons for its two mechanisms would be
+   * the writer learning the cutter's rules to use a control about sides.
+   */
+  shiftFrees: string | null;
 }
+
+/**
+ * **The side of the paper a sheet index falls on.** Sheet 1 is the first
+ * recto and stands alone, so an odd sheet is a right-hand page and an even
+ * one is a left-hand page — the one place that knows it, because the shift's
+ * sentence and anything built on it must not disagree about which side a
+ * writer is looking at.
+ */
+export const sideOf = (sheet: number): 'right' | 'left' => (sheet % 2 === 1 ? 'right' : 'left');
 
 /**
  * **Whether a blank leaf may be asked for on this page** (§9r), and what a
@@ -1343,7 +1401,19 @@ export interface BlankOffer {
  */
 export const blankOffer = (place: PagePlace, rows: readonly BookPageRow[], sheet: number): BlankOffer => {
   const page = rows.find((one) => one.sheet === sheet);
-  const none = (refusal: string, leaves = 0): BlankOffer => ({ spot: null, act: null, fewer: null, leaves, note: null, refusal });
+  const none = (refusal: string, pages = 0): BlankOffer => ({
+    spot: null,
+    act: null,
+    fewer: null,
+    pages,
+    note: null,
+    refusal,
+    shiftOn: null,
+    shiftBack: null,
+    shiftNote: null,
+    shiftRefusal: null,
+    shiftFrees: null,
+  });
   if (!page) return none('The book is still being set.');
   const spot = blankSpot(place, page);
   /**
@@ -1369,15 +1439,62 @@ export const blankOffer = (place: PagePlace, rows: readonly BookPageRow[], sheet
    * here is sheets rather than sides. The back of a *page* (§17d) carries no
    * `blankFor` and so is not counted.
    */
-  const leaves = Math.floor(rows.filter((one) => one.blankFor === spot).length / 2);
-  if (leaves >= MAX_BLANK_LEAVES) {
+  const pages = rows.filter((one) => one.blankFor === spot).length;
+  const sheets = Math.floor(pages / SHEET);
+  /**
+   * **The shift, written once** (§9ae). It is the same field as the sheet and
+   * one page rather than two, so it is built here beside it: two readings of
+   * one count could differ about how many pages stand there, which is the one
+   * thing a writer cannot check by looking.
+   */
+  const other = sideOf(sheet) === 'right' ? 'left' : 'right';
+  /**
+   * **A page the book itself holds on one side cannot shift** (§9ae), and
+   * saying so is the whole of why this is a reading rather than two buttons.
+   *
+   * §9r measured it for the sheet: a division that opens on a right-hand page
+   * has already left the verso in front of it empty, so **one** page asked
+   * for there fills the cutter's own gap and the book does not grow — which
+   * means the page does not move and does not change sides, a press that
+   * changes nothing a writer can see. §9ad's sheet escapes it by being two.
+   * The shift cannot, so it is refused here with the rule named and the one
+   * place that rule is set, which is the page's own screen (§9x's
+   * `opensRecto`).
+   */
+  const held = blankReason(rows, sheet - 1) === 'recto';
+  /**
+   * **And where the rule is what holds it, the shift writes the rule** — one
+   * press, because *move this page to the other side* is one thing a writer
+   * wants and the mechanism is the room's business. There is exactly one
+   * direction to offer: the page is on a right-hand side **because** of the
+   * rule, so freeing it can only put it on the left.
+   */
+  const frees = (held ? place.opensMarkerId : null) ?? null;
+  const shift = (room: boolean) => ({
+    shiftOn: frees ? 'Shift it on a page' : room && !held ? 'Shift it on a page' : null,
+    shiftBack: pages > 0 && !held ? 'Shift it back a page' : null,
+    shiftNote: frees
+      ? `This page opens on a right-hand page, which is what holds it there. Shifting it stops that for this page alone, so it falls on the ${other}-hand side and the book is a page shorter.`
+      : (room || pages > 0) && !held
+        ? `Either shift puts this page on the ${other}-hand side of the spread, and the pages after it swap sides with it as far as the next opening the book holds on a right-hand page. A blank sheet is the one that moves nothing.`
+        : null,
+    shiftRefusal:
+      held && !frees
+        ? 'This page opens on a right-hand page, so the book already leaves the page in front of it empty and a single page would be taken up by that gap.'
+        : pages > 0 || held
+          ? null
+          : 'Nothing blank stands in front of this page to take away, so it can only shift on.',
+    shiftFrees: frees,
+  });
+  if (pages + SHEET > MAX_BLANK_PAGES) {
     return {
       spot,
       act: null,
       fewer: 'Take one away',
-      leaves,
+      pages,
       note: null,
-      refusal: `${leaves} blank sheets already stand here, which is as many as one place takes.`,
+      refusal: `${sheets} blank sheets already stand here, which is as many as one place takes.`,
+      ...shift(pages < MAX_BLANK_PAGES),
     };
   }
   /**
@@ -1391,14 +1508,15 @@ export const blankOffer = (place: PagePlace, rows: readonly BookPageRow[], sheet
    */
   return {
     spot,
-    act: leaves === 0 ? 'Put a blank sheet here…' : 'Put another blank sheet here…',
-    fewer: leaves > 0 ? (leaves === 1 ? 'Take the blank sheet away' : 'Take one away') : null,
-    leaves,
+    act: sheets === 0 ? 'Put a blank sheet here…' : 'Put another blank sheet here…',
+    fewer: pages >= SHEET ? (sheets === 1 ? 'Take the blank sheet away' : 'Take one away') : null,
+    pages,
     note:
-      leaves === 0
+      sheets === 0
         ? 'A blank sheet goes in: two pages, so there is nothing on either side of the paper here. Nothing after it changes which side it is on, and a picture put on it later takes the first of the two.'
         : null,
     refusal: null,
+    ...shift(true),
   };
 };
 
@@ -1417,15 +1535,43 @@ export const partBlankOffer = (
   rows: readonly BookPageRow[],
   part: Pick<BookPart, 'id' | 'blankBefore'>,
 ): BlankOffer => {
-  const leaves = leavesBefore(part.blankBefore);
-  if (leaves >= MAX_BLANK_LEAVES) {
+  const pages = pagesBefore(part.blankBefore);
+  const sheets = Math.floor(pages / SHEET);
+  /**
+   * **Which side this part's page falls on** (§9ae), read off the laid rows
+   * rather than guessed: a part knows what it is and not where the cutter put
+   * it, and the shift's sentence is about the side a writer is looking at.
+   */
+  const at = rows.find((one) => one.partId === part.id)?.sheet ?? null;
+  const other = at === null ? null : sideOf(at) === 'right' ? 'left' : 'right';
+  /** The same rule as the page's own screen, asked of a part (§9ae). */
+  const held = at !== null && blankReason(rows, at - 1) === 'recto';
+  // A part carries no division rule of its own, so there is nothing here for
+  // a shift to free — the refusal names the fact and stops.
+  const frees = null;
+  const shift = (room: boolean) => ({
+    shiftOn: room && !held ? 'Shift it on a page' : null,
+    shiftBack: pages > 0 && !held ? 'Shift it back a page' : null,
+    shiftNote:
+      (room || pages > 0) && other && !held
+        ? `Either shift puts this page on the ${other}-hand side of the spread, and the pages after it swap sides with it as far as the next opening the book holds on a right-hand page. A blank sheet is the one that moves nothing.`
+        : null,
+    shiftRefusal: held
+      ? 'This page opens on a right-hand page, so the book already leaves the page in front of it empty and a single page would be taken up by that gap.'
+      : pages > 0
+        ? null
+        : 'Nothing blank stands in front of this page to take away, so it can only shift on.',
+    shiftFrees: frees,
+  });
+  if (pages + SHEET > MAX_BLANK_PAGES) {
     return {
       spot: part.id,
       act: null,
       fewer: 'Take one away',
-      leaves,
+      pages,
       note: null,
-      refusal: `${leaves} blank sheets already stand here, which is as many as one place takes.`,
+      refusal: `${sheets} blank sheets already stand here, which is as many as one place takes.`,
+      ...shift(pages < MAX_BLANK_PAGES),
     };
   }
   /**
@@ -1439,14 +1585,15 @@ export const partBlankOffer = (
    */
   return {
     spot: part.id,
-    act: leaves === 0 ? 'Put a blank sheet before this one' : 'Put another blank sheet before this one',
-    fewer: leaves > 0 ? (leaves === 1 ? 'Take the blank sheet away' : 'Take one away') : null,
-    leaves,
+    act: sheets === 0 ? 'Put a blank sheet before this one' : 'Put another blank sheet before this one',
+    fewer: pages >= SHEET ? (sheets === 1 ? 'Take the blank sheet away' : 'Take one away') : null,
+    pages,
     note:
-      leaves === 0
+      sheets === 0
         ? 'A blank sheet goes in: two pages, so there is nothing on either side of the paper here. Nothing after it changes which side it is on.'
         : null,
     refusal: null,
+    ...shift(true),
   };
 };
 
@@ -1629,9 +1776,29 @@ export const pictureOffer = (place: PagePlace, rows: readonly BookPageRow[], she
      * has already done it, and beside `blankOffer`'s own sentence about the
      * same leaf the two read as one fact said twice.
      */
+    /**
+     * **And where it moves the opening, said before the press** (§9ae, from
+     * Ken: *when I go to add a picture to that page, there needs to be some
+     * kind of warning or ask if you want to make this a chapter page… it adds
+     * the picture in the right place, but moves that text to the next page*).
+     *
+     * The act is right and §9p settled it: a picture that is a page of its own
+     * stands **in front of** the opening, which is where an illustration
+     * facing a chapter belongs. What was missing is that the room said so
+     * only in the `?` — so the one consequence a writer cares about arrived
+     * after the press, and the other act (art **on** the opening, which moves
+     * nothing) was a button away with nothing joining the two.
+     *
+     * The two cases cannot both hold: where a leaf already stands in front,
+     * the picture fills it and the opening does not move at all, which is why
+     * this is one note with two readings rather than two notes that would one
+     * day both be true.
+     */
     note: leaf
       ? `A picture of its own will stand on page ${leaf.counted}: the leaf in front of this page is empty, and it fills that rather than adding one.`
-      : null,
+      : place.opensMarkerId !== null && place.standsBefore === null
+        ? 'A picture of its own goes in front of the opening that stands here, so the opening moves on a page. Setting this page’s own art instead puts the picture on the opening, and nothing moves.'
+        : null,
     newPageBefore: null,
     refusal: null,
   };
@@ -1644,7 +1811,11 @@ export const pictureOffer = (place: PagePlace, rows: readonly BookPageRow[], she
  * holds a second answer.
  */
 export const setBlankPage = (file: ProjectFile, id: string, blank: boolean): ProjectFile =>
-  setBlankPages(file, id, blank ? 1 : 0);
+  // **One is a sheet** (§9ad, §9ae): the switch means *a blank page*, and a
+  // blank page is two sides of paper. The count is in pages since the shift
+  // (§9ae), so the act that still speaks in whole pages says how many that is
+  // rather than leaving `1` to mean a half of one.
+  setBlankPages(file, id, blank ? SHEET : 0);
 
 /**
  * **How many leaves stand there, said in one act** (§9ac, from Ken: *you
@@ -1657,7 +1828,7 @@ export const setBlankPage = (file: ProjectFile, id: string, blank: boolean): Pro
  * thirteen gives twelve and asking for less than none gives none.
  */
 export const setBlankPages = (file: ProjectFile, id: string, count: number): ProjectFile => {
-  const want = leavesBefore(count);
+  const want = pagesBefore(count);
   if (file.beats.some((beat) => beat.manuscript.elements.some((element) => (element.id as string) === id))) {
     return setBlanksBefore(file, id, want);
   }
@@ -1673,9 +1844,9 @@ export const blankPagesAt = (file: ProjectFile, id: string): number => {
     if (element) return blanksBefore(element);
   }
   const part = partsOf(file).find((one) => one.id === id);
-  if (part) return leavesBefore(part.blankBefore);
+  if (part) return pagesBefore(part.blankBefore);
   const marker = file.markers.find((one) => (one.id as string) === id);
-  if (marker) return leavesBefore(chapterPageSchema.parse(marker.page ?? {}).blankBefore);
+  if (marker) return pagesBefore(chapterPageSchema.parse(marker.page ?? {}).blankBefore);
   return 0;
 };
 
@@ -1694,7 +1865,7 @@ export const setPartBlank = (
   updatePart(
     file,
     partId,
-    where === 'before' ? { blankBefore: leavesBefore(blank) } : { backBlank: leavesBefore(blank) > 0 },
+    where === 'before' ? { blankBefore: pagesBefore(blank) } : { backBlank: pagesBefore(blank) > 0 },
   );
 
 /**
@@ -1719,8 +1890,8 @@ export const setChapterBlank = (
       ...marker,
       page:
         where === 'before'
-          ? { ...page, blankBefore: leavesBefore(blank) }
-          : { ...page, backBlank: leavesBefore(blank) > 0 },
+          ? { ...page, blankBefore: pagesBefore(blank) }
+          : { ...page, backBlank: pagesBefore(blank) > 0 },
     };
   }),
 });
@@ -2652,7 +2823,7 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
        * not a side (§9ad).
        */
       out.push(
-        ...blankLeaves(leavesBefore(own.blankBefore), (suffix) =>
+        ...blankPages(pagesBefore(own.blankBefore), (suffix) =>
           block({
             id: `${placed.marker.id as string}:${suffix}`,
             kind: 'blank',
@@ -2754,7 +2925,7 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
           // **As many as the writer asked for** (§9ac), each one a **sheet**
           // and not a side (§9ad).
           out.push(
-            ...blankLeaves(leaves, (suffix) =>
+            ...blankPages(leaves, (suffix) =>
               block({
                 id: `${element.id as string}:${suffix}`,
                 kind: 'blank',

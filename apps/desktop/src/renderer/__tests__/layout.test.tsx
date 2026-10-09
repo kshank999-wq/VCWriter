@@ -8,6 +8,8 @@ import {
   addPart,
   addUnit,
   blankPagesAt,
+  setBookSettings,
+  SHEET,
   bookBlocks,
   outOfContents,
   setChapterBlank,
@@ -591,6 +593,107 @@ describe('the room', () => {
     expect(panel.textContent).not.toMatch(/epigraph|Book title/i);
   });
 
+  /**
+   * **What a page is comes before what you can put on it** (§9ae, from Ken:
+   * *make the set this as a story page at the top of the dialog box*).
+   *
+   * What is pinned is the **order**, which is the whole of the ask: the route
+   * worked and the controls were right, and it stood under four picture
+   * buttons and a sentence, so on a page that opens a story the one control
+   * that says what the page *is* was the last thing on the screen.
+   */
+  it('puts the page’s own route above the pictures on its screen', () => {
+    render(<Harness initial={novel()} />);
+    const chapter = document.querySelector('.layout-rail-chapter') as HTMLElement;
+    fireEvent.click(within(chapter).getByLabelText(/^Show what is under /));
+    const opens = (Array.from(document.querySelectorAll('.layout-rail-page')) as HTMLElement[]).find((page) =>
+      /Chapter opens/.test(page.textContent ?? ''),
+    )!;
+    fireEvent.doubleClick(opens.querySelector('.layout-rail-name') as HTMLElement);
+    const panel = document.querySelector('.layout-page-dialog') as HTMLElement;
+    const route = within(panel).getByRole('button', { name: /’s page…$/ });
+    const picture = within(panel).getByRole('button', { name: 'Put a picture on this page…' });
+    // Document order: the route stands before the first picture button.
+    expect(route.compareDocumentPosition(picture) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  /**
+   * **Half a sheet** (§9ae, from Ken: *we also need the ability to shift a
+   * page to the left or right… it will shift half a page*). The domain can
+   * answer all day; what makes it a feature is a writer being able to reach
+   * it from the page they are standing on, which is §15a.
+   */
+  it('offers the shift beside the sheet, and says which side it lands on', () => {
+    /**
+     * A book whose chapters do **not** open on a right-hand page, which is
+     * the half of the setting that makes a page movable at all: with the rule
+     * on, the cutter has already left the verso in front of every opening
+     * empty and one page is taken up by that gap. Measured on the default
+     * book, every opening is held — which is why this says so rather than
+     * reaching for a page that happens not to be.
+     */
+    render(<Harness initial={setBookSettings(novel(), { chaptersOpenRecto: false })} />);
+    for (const fold of Array.from(document.querySelectorAll('button[aria-label^="Show what is under"]'))) {
+      fireEvent.click(fold as HTMLElement);
+    }
+    const rows = Array.from(document.querySelectorAll('.layout-rail-page')) as HTMLElement[];
+    const first = rows.find((page) => /^Page 1/.test((page.textContent ?? '').trim()))!;
+    expect(first).toBeTruthy();
+    fireEvent.doubleClick(first.querySelector('.layout-rail-name') as HTMLElement);
+    const panel = document.querySelector('.layout-page-dialog') as HTMLElement;
+    const on = within(panel).getByRole('button', { name: 'Shift it on a page' });
+    expect(on).toBeDefined();
+    // Absent rather than a button that can only refuse, with the reason said.
+    expect(within(panel).queryByRole('button', { name: 'Shift it back a page' })).toBeNull();
+    expect(panel.textContent).toMatch(/it can only shift on/);
+    // And the note names the side, which is what the writer is choosing.
+    expect(panel.textContent).toMatch(/-hand side of the spread/);
+    // Pressing it writes **one** page where the sheet writes two (§9ae), so
+    // the way back appears and the sheet is still offered beside it.
+    fireEvent.click(on);
+    const after = document.querySelector('.layout-page-dialog') as HTMLElement;
+    expect(within(after).getByRole('button', { name: 'Shift it back a page' })).toBeDefined();
+    expect(within(after).getByRole('button', { name: /blank sheet here/ })).toBeDefined();
+  });
+
+  /**
+   * **And where a rule is what holds the page, the shift frees it** (§9ae).
+   *
+   * The first answer here was a refusal, and on a book whose chapters all
+   * open on a right-hand page — which is the default and Ken's own book —
+   * that is a control refusing on every page a writer would reach for. The
+   * thing that really moves such a page is the rule, so the press writes
+   * that instead and says so.
+   */
+  it('shifts a page the recto rule holds by freeing that rule', () => {
+    render(<Harness initial={novel()} />);
+    for (const fold of Array.from(document.querySelectorAll('button[aria-label^="Show what is under"]'))) {
+      fireEvent.click(fold as HTMLElement);
+    }
+    const rows = Array.from(document.querySelectorAll('.layout-rail-page')) as HTMLElement[];
+    const held = rows.find((page) => /^Page 3/.test((page.textContent ?? '').trim()))!;
+    expect(held).toBeTruthy();
+    fireEvent.doubleClick(held.querySelector('.layout-rail-name') as HTMLElement);
+    const panel = document.querySelector('.layout-page-dialog') as HTMLElement;
+    const on = within(panel).getByRole('button', { name: 'Shift it on a page' });
+    expect(panel.textContent).toMatch(/which is what holds it there/);
+    expect(panel.textContent).toMatch(/a page shorter/);
+    // One direction only: the rule puts it on a right-hand page, so freeing
+    // it can put it nowhere but the left.
+    expect(within(panel).queryByRole('button', { name: 'Shift it back a page' })).toBeNull();
+    // The sheet is still there: two pages are not absorbed by that gap.
+    expect(within(panel).getByRole('button', { name: /blank sheet here/ })).toBeDefined();
+
+    const freed = (file: ProjectFile) =>
+      file.markers.filter((one) => ((one.page ?? {}) as { opensRecto?: boolean | null }).opensRecto === false).length;
+    // Nothing is set on any chapter until the press, which is `partStyleOf`'s
+    // rule: only what differs from the book is stored.
+    expect(freed(latest as ProjectFile)).toBe(0);
+    fireEvent.click(on);
+    // Exactly one — this page's own chapter, and not the book's setting.
+    expect(freed(latest as ProjectFile)).toBe(1);
+  });
+
   it('offers a picture on a blank leaf, where the screen used to offer nothing', () => {
     /**
      * **§9aa, from Ken** (*I'm trying to put a picture on a page that is blank
@@ -754,7 +857,13 @@ describe('the room', () => {
     expect(again.textContent).toMatch(/^Put another blank sheet here/);
     fireEvent.click(again);
     const marker = (latest as ProjectFile).markers[0]!.id as string;
-    expect(blankPagesAt(latest as ProjectFile, marker)).toBe(2);
+    /**
+     * **Two sheets, which is four pages** (§9ae). The count is in pages since
+     * the shift — a sheet is two of them and a shift is one — so this read 2
+     * when the field counted leaves and is **rewritten rather than worked
+     * around**: what it pins is still two presses of the sheet.
+     */
+    expect(blankPagesAt(latest as ProjectFile, marker)).toBe(2 * SHEET);
   });
 
   /**

@@ -3330,6 +3330,61 @@ push live; the build takes a minute or two.
   pagination; one block is inserted and the convention does the rest, the
   screen says *the next left-hand page*, and a test pins the pair so the
   second blank is not later "fixed" as a fault — **which §17e overturns**.
+  **§9ae is half a sheet, and the page's own route first**, from Ken in three
+  messages (*we also need the ability to shift a page to the left or right. So
+  when you select a page, it will shift half a page… if it's on the left-hand
+  side, it'll swap it to the right-facing page*; *when I go to add a picture to
+  that page, there needs to be some kind of warning or ask if you want to make
+  this a chapter page… it adds the picture in the right place. But moves that
+  text to the next page*; *make the set this as a story page at the top of the
+  dialog box*). The smallest has a rule under it: *Set this story's page…*
+  stood **under** four picture buttons, so on a page a story opens the one
+  control that says what the page **is** was the last thing on the screen —
+  addendum 02 §4a's ordering argument the wrong way round, and what the test
+  pins is the **order**, the control never having been missing. **A sheet
+  moves nothing and a shift moves everything**: §9ad's argument is that two
+  pages cannot change a side, and this is its complement and the only other
+  thing a writer can want in the same place, so the two write **one field** and
+  the field counts **pages** rather than leaves — a second field for the half
+  would be two records of one number, with `SHEET` the one place that says how
+  many pages a sheet is and `true` still reading as a whole one, so nothing is
+  migrated. **On and back are not two directions on the page**, both landing it
+  on the other side because parity flips either way; what differs is whether
+  the book grows or shrinks. **Measuring corrected the sentence**: the first
+  draft said a shift *moves every page after it with it*, and driven over three
+  stories it is taken up by the **next** division the book holds on a
+  right-hand page — six of twelve openings cost a page and six cost none, the
+  pages in between swapping sides either way — so the note says *as far as the
+  next opening the book holds on a right-hand page* and the test asserts the
+  **side**, the length not being the ask. **And where a rule holds the page the
+  shift frees the rule**, which is the half that was first answered with a
+  refusal and answered wrongly: a division forced onto a right-hand page has
+  the verso in front of it left empty already, so one blank page there is
+  absorbed and nothing moves — true, and on a book whose chapters all open
+  recto (the default, and Ken's) it made the control refuse on **every page a
+  writer would reach for**. *Move this page to the other side* is one thing a
+  writer wants and what moves such a page is the **rule**, which §9x already
+  made a per-chapter field, so the shift writes `opensRecto` instead of a
+  blank: one control, one sentence, two mechanisms underneath, and which
+  applies is the room's business rather than the writer's. **The picture says
+  what it will do before the press** — §9p's act is right (a picture of its own
+  stands in front of the opening, which is where a facing illustration belongs)
+  and the room said so only behind the `?`, so the consequence arrived after
+  the press while the other act (art **on** the opening, which moves nothing)
+  was a button away with nothing joining the two; it is **one note with two
+  readings** and never two, a leaf already in front meaning the picture fills
+  that and the opening does not move at all. Driving it caught **the reason
+  vanishing with the buttons** — the shift section was gated on its two
+  controls, so on a page the book holds, the commonest case, the screen said
+  nothing: *absent rather than greyed* is a rule about the control and never
+  about the sentence that explains it (§9w). **Named rather than fixed**: the
+  stale-build notice is in the DOM at 1440 × 47 while a room is open and
+  **painted over by it** (`z-index: 40`), addendum 29 §2's *a room covers the
+  menu bar* pointed at the one bar that says why the program is behaving oddly;
+  and the **drawn box**, which lands at the top rather than where it was
+  dragged, at full measure rather than the width drawn, on the facing page, and
+  cannot be moved or resized afterwards — a report against §9z's gesture rather
+  than against the sheet.
   **§9ad is that a blank page is a sheet**, from Ken looking at §9ac in his
   own book (*I think the problem is, when you enter a blank page, it's entering
   a blank half page… if you insert a blank page, it's blank on front and back,
