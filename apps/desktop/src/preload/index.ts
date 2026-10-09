@@ -207,7 +207,15 @@ export interface VcWriterApi {
     html?: string;
     /** The paper for the book: the trim, in inches. */
     paper?: { width: number; height: number };
-  }): Promise<DesktopApiResult<{ path: string; pageCount: number } | null>>;
+    /**
+     * Where the file went, and how many pages it came to. **`path` is null
+     * where nothing has been written** — a browser cannot make a PDF itself,
+     * so it opens the document in a window and saving it is the writer's
+     * press (addendum 20 §9ah); null for the whole result still means the
+     * writer cancelled. One reading says what either answer means
+     * (`sayExport` in `printing.ts`), so no screen writes its own.
+     */
+  }): Promise<DesktopApiResult<{ path: string | null; pageCount: number } | null>>;
   /**
    * Write an export's files into a folder of their own (addendum 23 §7): the
    * writer picks where, the folder is made there, and every file goes in.

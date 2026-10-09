@@ -271,6 +271,21 @@ const describeDocument = (input: PrintInput): { name: string; what: string } => 
 };
 
 /**
+ * Which act the window is opened for: a printer, or a file.
+ *
+ * They are two different asks and only one of them can go wrong in the
+ * dialog, which is why the window says different things. *Print…* asks for
+ * a printer and the dialog is the whole of it. *Export the book…* asks for
+ * **a file**, and in a browser the print dialog is the only road to one —
+ * so that road has a destination to choose and a setting to turn off, and
+ * getting either wrong is what Ken spent an afternoon on.
+ */
+type PrintAct = 'print' | 'save';
+
+/** The one control in the print window; its handler is attached, not written. */
+const PRINT_BUTTON_ID = 'vcw-print-go';
+
+/**
  * A browser has no `printToPDF`; its print dialog is the only way to a file.
  * The dialog belongs to the browser, so what it stamps on a page — the date,
  * the tab's title, the URL, a page count — is its own setting and not ours,
@@ -278,36 +293,76 @@ const describeDocument = (input: PrintInput): { name: string; what: string } => 
  * printer's paper and margins over the document's `@page`. Ken saw exactly
  * that: the book on Letter with a date in the corner and `about:blank` at
  * the foot, and nothing on the screen saying what the thing was. So the
- * window now says: a banner above the pages, on the screen and never in the
- * print, names the document and says what to choose; and the tab is named
- * as the file should be, since *Save as PDF* takes its file name from it.
+ * window says: a banner above the pages, on the screen and never in the
+ * print, naming the document and what to choose; and the tab is named as
+ * the file should be, since *Save as PDF* takes its file name from it.
+ *
+ * **The markup carries no script at all** (addendum 20 §9ah). A window opened
+ * with `window.open('')` is `about:blank`, which inherits the opener's
+ * content policy — and the preview's is `script-src 'self'`, *no inline
+ * scripts*, as its own comment in `preview-gate.ts` says. An `onclick`
+ * attribute is an inline script, so the one control in this window was
+ * refused and did nothing whatever, while `style-src` carries
+ * `'unsafe-inline'` and the banner drew perfectly: **one inline thing
+ * allowed and one forbidden, so it looked right and could not act.** The
+ * handler is attached from the opener instead, which is its own script and
+ * so is allowed.
  */
-const withBanner = (html: string, description: { name: string; what: string }): string => {
-  const banner =
-    `<style>
-      .vcw-print-banner { font: 14px/1.45 system-ui, sans-serif; background: #1f2430; color: #f4f4f6; padding: 12px 18px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+const bannerHtml = (description: { name: string; what: string }, act: PrintAct): string => {
+  const how =
+    act === 'save'
+      ? `<ul class="vcw-print-how">
+        <li>A browser cannot write a PDF by itself, so its print dialog is the one road to the file.</li>
+        <li>The destination must be <b>Save as PDF</b>, the browser's own. Everything else on that list is a printer — <i>Microsoft Print to PDF</i> among them — and a printer prints on its own paper, so the book arrives on Letter with its pages shrunk to fit.</li>
+        <li>Under <b>More settings</b>, turn <b>Headers and footers</b> off, or the date, the page count and <code>about:blank</code> print on every page.</li>
+      </ul>
+      <p class="vcw-print-name">The file is named <b>${escapeHtml(description.name)}.pdf</b>.</p>`
+      : `<ul class="vcw-print-how">
+        <li>Under <b>More settings</b>, turn <b>Headers and footers</b> off, or the date, the page count and <code>about:blank</code> print on every page.</li>
+      </ul>`;
+  return `<style>
+      /* A measure, for the one paragraph in this window that has to be read:
+         at a full 1440 the destination sentence ran 200 characters to the
+         line, which is the room's own argument said about its own banner. */
+      .vcw-print-banner { font: 14px/1.5 system-ui, sans-serif; background: #1f2430; color: #f4f4f6; padding: 14px 20px 16px; }
+      .vcw-print-banner > * { max-width: 68ch; }
+      .vcw-print-banner p { margin: 0 0 6px; }
       .vcw-print-banner strong { font-weight: 600; }
-      .vcw-print-banner span { opacity: 0.85; }
-      .vcw-print-banner button { font: inherit; padding: 6px 14px; border-radius: 6px; border: 0; background: #d6b25e; color: #1f2430; cursor: pointer; }
+      .vcw-print-banner .vcw-print-how { margin: 0 0 10px; padding-left: 20px; opacity: 0.85; }
+      .vcw-print-banner .vcw-print-how li { margin: 2px 0; }
+      .vcw-print-banner .vcw-print-name { opacity: 0.85; }
+      .vcw-print-banner code { font-family: ui-monospace, monospace; }
+      .vcw-print-banner button { font: inherit; margin-top: 4px; padding: 8px 18px; border-radius: 6px; border: 0; background: #d6b25e; color: #1f2430; cursor: pointer; }
       @media print { .vcw-print-banner { display: none !important; } }
     </style>
     <div class="vcw-print-banner" role="note">
-      <strong>${escapeHtml(description.what)}.</strong>
-      <span>To keep it as a PDF: choose <b>Save as PDF</b> as the destination, and under <i>More settings</i> turn <b>Headers and footers</b> off. The file is named ${escapeHtml(description.name)}.pdf.</span>
-      <button type="button" onclick="window.print()">Save as PDF…</button>
+      <p><strong>${escapeHtml(description.what)}.</strong></p>
+      ${how}
+      <button id="${PRINT_BUTTON_ID}" type="button">${act === 'save' ? 'Save as PDF…' : 'Print…'}</button>
     </div>`;
+};
+
+const withBanner = (html: string, description: { name: string; what: string }, act: PrintAct): string => {
+  const banner = bannerHtml(description, act);
   const titled = html.replace(/<title>[^<]*<\/title>/, `<title>${escapeHtml(description.name)}</title>`);
   return titled.includes('<body>') ? titled.replace('<body>', `<body>${banner}`) : `${banner}${titled}`;
 };
 
-const printDocument = (input: PrintInput): boolean => {
+/**
+ * Open the window on the document, with its banner and a button that works.
+ *
+ * The listener is added here rather than in the markup for the reason above:
+ * a closure made in this window is this window's script, and the policy that
+ * refuses an `onclick` attribute has nothing to say about it.
+ */
+const openPrintWindow = (input: PrintInput, act: PrintAct): Window | null => {
   const popup = window.open('', '_blank');
-  if (!popup) return false;
-  popup.document.write(withBanner(documentFor(input), describeDocument(input)));
+  if (!popup) return null;
+  popup.document.write(withBanner(documentFor(input), describeDocument(input), act));
   popup.document.close();
+  popup.document.getElementById(PRINT_BUTTON_ID)?.addEventListener('click', () => popup.print());
   popup.focus();
-  popup.print();
-  return true;
+  return popup;
 };
 
 export interface BrowserBridge extends VcWriterApi {
@@ -637,8 +692,23 @@ export const createBrowserBridge = (): BrowserBridge => {
       }
     },
 
+    /**
+     * **The dialog comes after the words rather than over them.** The window
+     * used to open and print itself in the same breath, so the banner saying
+     * which destination makes a file stood *behind* the dialog the
+     * destination is chosen in — the one thing a writer had to read, arriving
+     * after the press that needed it. So this opens the window and waits; the
+     * button is the act. *Print…* keeps its dialog, a printer being what that
+     * one asks for.
+     *
+     * And nothing is on disk when this returns, so `path` is **null** rather
+     * than a sentence stuffed into a field that means a file: it answered
+     * *your browser's Save as PDF*, which the room then read out as
+     * `Exported 46 pages to your browser's Save as PDF` before a single byte
+     * had been written.
+     */
     async exportPdf(input) {
-      if (!printDocument(input)) return fail('The browser blocked the print window');
+      if (!openPrintWindow(input, 'save')) return fail('The browser blocked the print window');
       // Only the manuscript is paginated by hand; the browser decides the rest
       // as it lays them out, and it has not laid them out yet.
       const pageCount =
@@ -647,11 +717,13 @@ export const createBrowserBridge = (): BrowserBridge => {
           : input.kind && input.kind !== 'script'
             ? 0
             : printedPageCount(input.file, input.options ?? {});
-      return ok({ path: "your browser's Save as PDF", pageCount });
+      return ok({ path: null, pageCount });
     },
 
     async print(input) {
-      return ok(printDocument(input));
+      const popup = openPrintWindow(input, 'print');
+      popup?.print();
+      return ok(popup !== null);
     },
 
     // An export in the browser is a download per file: the browser decides

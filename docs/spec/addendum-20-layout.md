@@ -2952,6 +2952,116 @@ second blank is not later "fixed" as a fault.
 > copyright page takes the next page now, and the assertion was rewritten
 > rather than worked around.
 
+## 9ah. The button the policy refused
+
+From Ken, with three screenshots — the export banner over the first page,
+Chrome's print dialog, and Chrome's own PDF viewer saying *Failed to load PDF
+document* over `TEST2.pdf`: *on the export, it looks correct. But it does not
+save as a PDF, and when I did save it as a PDF, it just was an error… the
+actual save to PDF button doesn't actually do anything. So you hit export
+book. And the dialog box pops up to print to a PDF. It looked like the actual
+information showed up in the book this time. In the print preview. But I
+wasn't able to save it in a file that I could open.*
+
+**The button really did nothing, and the cause is one word in a policy.** A
+window opened with `window.open('')` is `about:blank`, and an `about:blank`
+document **inherits its opener's content policy**; the preview's is
+`script-src 'self'`, *no inline scripts*, which `preview-gate.ts`'s own
+comment says in those words. The banner's control was
+`<button onclick="window.print()">`, and an `onclick` attribute is an inline
+script. Driven against the preview served with that exact header, the popup's
+console reads *Refused to execute inline event handler because it violates
+the following Content Security Policy directive: "script-src 'self'"*, and
+`window.print` is called **nought** times.
+
+The half worth keeping is why nobody saw it. `style-src` carries
+`'unsafe-inline'` and `script-src` does not, so the banner's `<style>` was
+taken and its handler was refused: **one inline thing allowed and one
+forbidden, so it drew perfectly — the right dark bar, the gold button, the
+right words — and could not act.** A control that looks exactly as intended
+and does nothing is the hardest kind to report and the easiest to assume is
+your own fault.
+
+The handler is attached from the opener now —
+`popup.document.getElementById(…)?.addEventListener('click', …)` — because a
+closure made in this window is **this window's script**, which `'self'`
+allows, and the policy that refuses an attribute has nothing to say about it.
+The markup carries no script at all.
+
+### The dialog came over the words that say what to choose
+
+The window used to open and print itself in the same breath, so the banner —
+the one thing in this program that says which destination makes a file — stood
+**behind** the dialog that destination is chosen in. That is why the second
+half of the report follows from the first: with the button dead, the automatic
+dialog was the only way anybody reached the choice, and it arrived before the
+explanation. His own screenshot shows what he chose with nothing to go on:
+*Microsoft Print to PDF*, with `10/9/26, 10:59 AM`, `about:blank` and `1/107`
+stamped on the page — a printer destination and the headers still on, both of
+which the banner he could not read tells him about.
+
+So **the dialog comes after the words rather than over them**: *Export the
+book…* opens the window and waits, and the button is the act. *Print…* keeps
+its dialog, a printer being what that one asks for — and its window has the
+working button too, for a second go.
+
+The banner now says the *why*, because the trap is that **Microsoft Print to
+PDF reads like the right answer**: everything on that list but the browser's
+own *Save as PDF* is a printer, and a printer prints on its own paper, so the
+book arrives on Letter with its pages shrunk to fit. It opens by admitting the
+limit that puts a writer in a print dialog at all — a browser cannot write a
+PDF by itself — because that is the question the dialog raises and it is better
+answered than discovered. Looking at it caught the room's own argument said
+about its own banner: at 1440 the destination sentence ran **200 characters to
+the line**, so the banner has a measure.
+
+### And the sentence was not true
+
+`exportPdf` answered `path: "your browser's Save as PDF"` — a sentence stuffed
+into a field that means *a file on disk* — which the room read out as
+**`Exported 46 pages to your browser's Save as PDF`**, said the instant the
+window opened, before a byte had been written, and whether or not the writer
+ever saved one. **A null path is nothing written**, and `sayExport` in
+`printing.ts` is the one place that says what either answer means: there were
+two copies of those words, here and in the Layout room, which calls the bridge
+itself because it hands the book's markup over. It now reads *46 pages are open
+in a new window. Press Save as PDF… there — the window says what to choose*,
+which is a route to the words rather than a second copy of them.
+
+### What is not fixed, and why
+
+**A browser has no way to write a PDF and will not be given one here.** The
+pages are laid by the browser's own line breaker — `book-typeset.ts` sets each
+block in a hidden box and reads the line count back, because the domain has no
+font metrics — so a PDF writer of our own would have to position every glyph
+itself and could embed only the fonts it had, which on a book set in Garamond
+means printing it in Times. *What is seen is what prints* is this room's oldest
+rule, and a second typesetter is the fastest way to break it. The browser's
+print engine stays the only road, which is why the window now says so and makes
+the road work.
+
+**`TEST2.pdf` was not reproduced and is not claimed as fixed.** Nothing on this
+side can drive Microsoft Print to PDF, and a printer driver asked for 107 pages
+at a trim it has no form for is where that file came from as far as anything
+here can tell. What was measured instead is everything up to the dialog: at the
+moment the window prints, the document is `complete`, all 46 pages are laid,
+and `document.fonts.status` is `loaded` — so the content Ken saw in the preview
+is not a race, and there is nothing of ours between the book and the dialog
+that was going wrong.
+
+### Driven
+
+At 1440×900 against the preview served with the production policy, on an
+imported 46-page novel: before, the popup console carries the refusal and the
+button calls `print` **0** times; after, there is no `onclick` in the markup,
+the window does **not** print itself, the room reads *46 pages are open in a new
+window…*, and pressing the gold button calls `print` **once**. The test that
+stood here asserted the window's *words* and that it printed itself, and **not
+one assertion asked whether its one control could be pressed** — §15a a further
+time, *a route needs a test per gesture* — so the fake window now records what
+is attached to its button, presses it, and fails on an `onclick` written back
+into the markup.
+
 ## 9ag. The typing that re-laid the whole book
 
 From Ken: *when I try to enter the copyright info, the typing is slow and

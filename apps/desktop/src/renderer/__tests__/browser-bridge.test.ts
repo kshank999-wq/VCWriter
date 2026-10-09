@@ -45,41 +45,114 @@ describe('browser bridge', () => {
     expect((await bridge.accountStatus()).data).toEqual({ configured: false, signedIn: false, email: null });
   });
 
-  it('prints through a window that says what it is, named as the file should be, with the banner kept off the paper', async () => {
-    // This file runs without a DOM: the window here is only what printing touches.
+  /**
+   * **The print window, and the button in it** (addendum 20 §9ah).
+   *
+   * What stood here asserted the window's *words* and that it printed
+   * itself, and never asked whether its one control could be pressed — so
+   * the button had been refused by the preview's own content policy since
+   * the day it shipped with the suite green, which is §15a's rule a further
+   * time: **a route needs a test per gesture**. The fake window grows a
+   * button that records what is attached to it, so an `onclick` written back
+   * into the markup fails here rather than at Ken's desk.
+   */
+  const printingWindow = () => {
     const written: string[] = [];
+    const listeners: { type: string; run: () => void }[] = [];
     let printed = 0;
-    const globals = globalThis as unknown as { window?: unknown };
-    globals.window = {
-      setInterval: () => 0,
-      open: () => ({
-        document: { write: (html: string) => written.push(html), close: () => undefined },
-        focus: () => undefined,
-        print: () => {
-          printed += 1;
-        },
-      }),
+    let focused = 0;
+    const popup = {
+      document: {
+        write: (html: string) => written.push(html),
+        close: () => undefined,
+        getElementById: (id: string) =>
+          id === 'vcw-print-go'
+            ? { addEventListener: (type: string, run: () => void) => listeners.push({ type, run }) }
+            : null,
+      },
+      focus: () => {
+        focused += 1;
+      },
+      print: () => {
+        printed += 1;
+      },
     };
+    const globals = globalThis as unknown as { window?: unknown };
+    globals.window = { setInterval: () => 0, open: () => popup };
+    return {
+      written,
+      press: () => listeners.filter((one) => one.type === 'click').forEach((one) => one.run()),
+      counts: () => ({ printed, focused, listeners: listeners.length }),
+      done: () => {
+        delete globals.window;
+      },
+    };
+  };
+
+  const bookHtml =
+    '<!doctype html><html><head><title>Novel Test</title><style>@page { size: 5.5in 8.5in; margin: 0; }</style></head><body><section class="bk-page recto"></section><section class="bk-page verso"></section></body></html>';
+
+  it('opens the book in a window that says what it is, named as the file should be, with the banner kept off the paper', async () => {
+    const win = printingWindow();
     try {
       const bridge = createBrowserBridge();
       const created = await bridge.createProject({ title: 'Novel Test', format: 'novel' });
-      const html = '<!doctype html><html><head><title>Novel Test</title><style>@page { size: 5.5in 8.5in; margin: 0; }</style></head><body><section class="bk-page recto"></section><section class="bk-page verso"></section></body></html>';
-      const result = await bridge.exportPdf({ file: created.data!.file, kind: 'book', html, paper: { width: 5.5, height: 8.5 } });
+      const result = await bridge.exportPdf({ file: created.data!.file, kind: 'book', html: bookHtml, paper: { width: 5.5, height: 8.5 } });
       expect(result.ok).toBe(true);
       expect(result.data?.pageCount).toBe(2);
-      expect(printed).toBe(1);
-      const page = written[0]!;
+      // Nothing is on disk: the writer has not pressed anything yet, and the
+      // dialog no longer opens over the words that say what to choose.
+      expect(result.data?.path).toBeNull();
+      expect(win.counts().printed).toBe(0);
+      const page = win.written[0]!;
       // The tab is the file name, so Save as PDF names the file after the book.
       expect(page).toContain('<title>Novel Test (book)</title>');
       // The banner names the document and says what to choose; it never prints.
       expect(page).toContain('Novel Test as a book — 2 pages at 5.5 × 8.5 in');
-      expect(page).toContain('choose <b>Save as PDF</b> as the destination');
+      expect(page).toContain('The destination must be <b>Save as PDF</b>');
+      expect(page).toContain('Microsoft Print to PDF');
       expect(page).toContain('turn <b>Headers and footers</b> off');
       expect(page).toContain('@media print { .vcw-print-banner { display: none !important; } }');
       // The book's own page rule is untouched underneath.
       expect(page).toContain('@page { size: 5.5in 8.5in; margin: 0; }');
     } finally {
-      delete globals.window;
+      win.done();
+    }
+  });
+
+  it('gives the window a button that is pressed rather than an inline script the policy refuses', async () => {
+    const win = printingWindow();
+    try {
+      const bridge = createBrowserBridge();
+      const created = await bridge.createProject({ title: 'Novel Test', format: 'novel' });
+      await bridge.exportPdf({ file: created.data!.file, kind: 'book', html: bookHtml, paper: { width: 5.5, height: 8.5 } });
+      // The fault, pinned by its absence: `script-src 'self'` is inherited by
+      // the `about:blank` window, so an attribute handler is refused and the
+      // control does nothing at all.
+      expect(win.written[0]!).not.toContain('onclick');
+      expect(win.counts().listeners).toBe(1);
+      win.press();
+      expect(win.counts().printed).toBe(1);
+    } finally {
+      win.done();
+    }
+  });
+
+  it('prints at once when a printer is what was asked for, with the button there for a second go', async () => {
+    const win = printingWindow();
+    try {
+      const bridge = createBrowserBridge();
+      const created = await bridge.createProject({ title: 'Novel Test', format: 'novel' });
+      const result = await bridge.print({ file: created.data!.file, kind: 'book', html: bookHtml });
+      expect(result.data).toBe(true);
+      expect(win.counts().printed).toBe(1);
+      // A printer needs no destination chosen, so that half is not said here.
+      expect(win.written[0]!).toContain('>Print…</button>');
+      expect(win.written[0]!).not.toContain('The destination must be');
+      win.press();
+      expect(win.counts().printed).toBe(2);
+    } finally {
+      win.done();
     }
   });
 });

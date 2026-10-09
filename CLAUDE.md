@@ -3330,6 +3330,55 @@ push live; the build takes a minute or two.
   pagination; one block is inserted and the convention does the rest, the
   screen says *the next left-hand page*, and a test pins the pair so the
   second blank is not later "fixed" as a fault — **which §17e overturns**.
+  **§9ah is the button the policy refused**, from Ken with three screenshots
+  (*the actual save to PDF button doesn't actually do anything… I wasn't able
+  to save it in a file that I could open*), and **it really did nothing**: a
+  window opened with `window.open('')` is `about:blank`, which **inherits its
+  opener's content policy**, and the preview's is `script-src 'self'` — *no
+  inline scripts*, which `preview-gate.ts`'s own comment says in those words —
+  while the banner's one control was `<button onclick="window.print()">`.
+  Driven against the preview served with that exact header, the popup's console
+  carries *Refused to execute inline event handler* and `print` is called
+  **nought** times. The half worth keeping is why nobody saw it: **`style-src`
+  carries `'unsafe-inline'` and `script-src` does not**, so the `<style>` was
+  taken and the handler refused — **one inline thing allowed and one forbidden,
+  so it drew perfectly and could not act**, which is the hardest kind of fault
+  to report and the easiest to take for your own mistake. The handler is
+  attached from the opener now, a closure made in this window being **this
+  window's script**, and the markup carries none at all. **The second half
+  follows from the first**: the window used to open and print itself in the
+  same breath, so the banner — the one place that says which destination makes
+  a file — stood **behind the dialog the destination is chosen in**, and with
+  the button dead that was the only way anybody reached the choice. His
+  screenshot shows what he picked with nothing to go on: *Microsoft Print to
+  PDF*, headers still on, `about:blank` and `1/107` on the page. So **the
+  dialog comes after the words rather than over them** — *Export the book…*
+  opens the window and waits, the button is the act, *Print…* keeps its dialog
+  because a printer is what that one asks for — and the banner says the **why**,
+  the trap being that *Microsoft Print to PDF* reads like the right answer when
+  everything on that list but the browser's own *Save as PDF* is a printer, and
+  a printer prints on its own paper. It opens by admitting the limit that puts
+  a writer in a print dialog at all, that being the question the dialog raises.
+  **And the sentence was not true**: `path` answered *your browser's Save as
+  PDF* — a sentence in a field that means a file on disk — so the room read out
+  `Exported 46 pages to your browser's Save as PDF` before a byte was written
+  and whether or not one ever was; **a null path is nothing written** and
+  `sayExport` is the one place that says what either answer means, there having
+  been two copies of those words. **Deliberately not built**: a PDF writer of
+  our own, the pages being laid by the browser's own line breaker because the
+  domain has no font metrics, so ours would position every glyph itself and
+  embed only the fonts it had — a book set in Garamond printed in Times, which
+  is *what is seen is what prints* broken by a second typesetter. **And
+  `TEST2.pdf` is not claimed as fixed**, nothing here being able to drive a
+  Windows printer driver; what was measured instead is everything up to the
+  dialog — at the moment the window prints, the document is `complete`, all 46
+  pages are laid and `document.fonts.status` is `loaded`, so the content is not
+  a race. Looking at it caught the room's own argument said about its own
+  banner, the destination sentence running **200 characters to the line** at
+  1440. The test that stood here asserted the window's *words* and that it
+  printed itself and **never asked whether its one control could be pressed** —
+  §15a a further time — so the fake window now records what is attached to its
+  button, presses it, and fails on an `onclick` written back into the markup.
   **§9ag is the typing that re-laid the whole book**, from Ken (*when I try to
   enter the copyright info, the typing is slow and sticky and then the page
   shuts down*), and **it was measured before a line was written**: on an

@@ -177,6 +177,7 @@ import { useModal } from '../use-modal';
 import { usePreference, useSplit } from '../use-split';
 import { PICTURE_ACCEPT, pictureRefusal, readPicture } from '../read-picture';
 import { useBookLaying, type Laying } from '../book-typeset';
+import { sayExport } from '../printing';
 
 /**
  * The Layout room (addendum 20 §9): the parts down the left, the spreads in
@@ -685,13 +686,10 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
       setMessage(result.error ?? 'The book could not be exported');
       return;
     }
-    if (result.data) {
-      setMessage(
-        result.data.pageCount > 0
-          ? `Exported ${result.data.pageCount} pages to ${result.data.path}`
-          : `Exported to ${result.data.path}`,
-      );
-    }
+    // The same sentence the rest of the program's exports say: this room
+    // calls the bridge itself, because it hands the book's markup over, and
+    // a second copy of the words would be a second answer to what happened.
+    if (result.data) setMessage(sayExport(result.data));
   };
 
   const figures = bookFigures(file);
