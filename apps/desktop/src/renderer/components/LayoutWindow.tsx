@@ -4249,7 +4249,7 @@ function FigureSection({
   /** Take the picture out of the book (§9j). The library keeps the file. */
   onRemove(): void;
 }) {
-  const { place, span, standoff } = figure.placement;
+  const { place, span, standoff, side } = figure.placement;
   const backBlank = figure.backBlank;
   const cut = place === 'left' || place === 'right';
   const empty = figure.assetId === null;
@@ -4309,13 +4309,38 @@ function FigureSection({
       ) : null}
       {place === 'page' ? (
         <>
-          {/* *Which page* is gone (§9j, from Ken: *you can take the which
-              page out and just make it whatever the selected page*). It asked
-              a question the gesture had already answered — the picture goes
-              where it was put — and its one real use, holding a page for a
-              facing illustration, is what the box below does properly. An
-              older book's answer is still honoured; there is just nowhere to
-              set a new one. */}
+          {/*
+            **Which side of the leaf it falls on** (addendum 22 §9a, from Ken:
+            *when I added the picture, it only would add it on the right-hand
+            side of the page. I wanted the picture to be on page 66*).
+
+            §9j took a *Which page* control out for a good reason — it asked a
+            question the gesture had already answered, the picture going where
+            it was put — and what was not noticed is that **ticking the back
+            blank answers it instead**: that forced a right-hand page, so the
+            one control a writer could reach moved the picture without saying
+            so, and after §9j there was no way to ask for a left-hand page at
+            all. This is the question §9j removed asked properly: not *which
+            page*, which the press already said, but **which side of the
+            paper**, which only the writer can.
+
+            *Wherever it falls* is the default and is what every picture made
+            before this stores, so no book moves.
+          */}
+          <label className="field">
+            <span>Side of the leaf</span>
+            <select
+              aria-label="Which side of the leaf"
+              value={side}
+              onChange={(event) =>
+                onPlace({ ...figure.placement, side: event.target.value as BookFigurePlacement['side'] })
+              }
+            >
+              <option value="either">Wherever it falls</option>
+              <option value="verso">A left-hand page</option>
+              <option value="recto">A right-hand page</option>
+            </select>
+          </label>
           {/* The leaf behind it (§9i, from Ken: *you need to have an option
               for the back page to be blank, so the illustration doesn't bleed
               through*). It counts in the numbering and prints nothing, the
@@ -4332,8 +4357,15 @@ function FigureSection({
           <p className="muted small">
             The picture fills the page, edge to edge, where it stands in the writing — no running head over it and no page number
             on it.
+            {/* **Where the back is, is read off the side** (addendum 22
+                §9a): a leaf is a recto and the verso behind it, so the back
+                of a picture on a left-hand page is the page **in front** of
+                it. The sentence used to say *right-hand* whatever was set,
+                which is what made the override invisible. */}
             {backBlank
-              ? ' It takes a right-hand page, so the empty leaf after it really is its back; both count as pages and neither prints a number. The words start again on the page after that.'
+              ? side === 'verso'
+                ? ' On a left-hand page the other side of the sheet is the page in front of it, so that is the one left empty; both count as pages and neither prints a number.'
+                : ' It takes a right-hand page, so the empty leaf after it really is its back; both count as pages and neither prints a number. The words start again on the page after that.'
               : ''}
           </p>
         </>

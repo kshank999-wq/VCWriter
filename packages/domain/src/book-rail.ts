@@ -552,13 +552,17 @@ export const pageRemoval = (file: ProjectFile, rows: readonly BookPageRow[], she
     }
     if (page.blankBack) {
       const before = rows.find((one) => one.sheet === sheet - 1);
-      const picture = before?.figureId;
+      // **Either side** (addendum 22 §9a): a picture on a left-hand page has
+      // its back in **front** of it, that being the other side of the sheet,
+      // so the picture this leaf belongs to may be on either neighbour.
+      const after = rows.find((one) => one.sheet === sheet + 1);
+      const picture = before?.figureId ?? after?.figureId ?? null;
       if (picture) {
         return {
           id: picture,
           what: 'back',
           act: 'Take this page away',
-          comfort: 'The picture before it stops leaving its back blank. The picture stays where it is.',
+          comfort: `The picture ${before?.figureId ? 'before' : 'after'} it stops leaving its back blank. The picture stays where it is.`,
           refusal: null,
         };
       }

@@ -1298,7 +1298,12 @@ export const blankReason = (rows: readonly BookPageRow[], sheet: number): BlankR
   // it is the back **of** — the same reading `pageRemoval` makes to decide
   // whose switch the × reaches.
   if (page.blankBack) {
-    return rows.find((one) => one.sheet === sheet - 1)?.figureId ? 'back' : 'page_back';
+    // **Either side** (addendum 22 §9a): the back of a picture on a verso is
+    // the recto **in front** of it, so the picture this leaf belongs to is
+    // the page before or the page after. Looking only one way told a writer
+    // their own blank was somebody else's setting.
+    const near = [sheet - 1, sheet + 1].map((at) => rows.find((one) => one.sheet === at));
+    return near.some((one) => one?.figureId) ? 'back' : 'page_back';
   }
   return 'recto';
 };
@@ -2875,18 +2880,37 @@ export const movePictureTo = (file: ProjectFile, elementId: string, offer: Pictu
  * anyway. What was wrong was not the book but what the page then said about
  * itself: the cutter's reason, for a leaf the writer had asked for.
  */
-const backLeaf = (id: string, chapterTitle: string): BookBlock =>
+const backLeaf = (id: string, chapterTitle: string, starts: BlockStart = 'page'): BookBlock =>
   block({
     id: `${id}:back`,
     kind: 'blank',
     numbering: 'arabic',
-    starts: 'page',
+    // **A back leaf in front of its picture must be the recto immediately
+    // before it** (addendum 22 §9a): left to take any page it could land on a
+    // verso, and the picture's own `verso` would then skip to the next one,
+    // putting an unasked-for gap between the blank and the thing it is the
+    // back of.
+    starts,
     display: true,
     folio: false,
     unbreakable: true,
     chapterTitle,
     blankBack: true,
   });
+
+/**
+ * **Which side of the leaf the blank back falls on** (addendum 22 §9a).
+ *
+ * A leaf is a recto and the verso behind it, so the back of a picture on a
+ * **recto** is the page after it and the back of one on a **verso** is the
+ * page **before** — §9j's own rule (*the back of a leaf is the other side of
+ * that sheet*) read in both directions rather than only in the one it was
+ * written for. Null where no back was asked for.
+ */
+const backLeafSide = (element: ManuscriptElement): 'before' | 'after' | null => {
+  if (!backBlank(element)) return null;
+  return figurePlacement(element).side === 'verso' ? 'before' : 'after';
+};
 
 const elementBlock = (element: ManuscriptElement, chapterTitle: string, opensChapter: boolean): BookBlock | null => {
   const id = element.id as string;
@@ -2909,9 +2933,19 @@ const elementBlock = (element: ManuscriptElement, chapterTitle: string, opensCha
       // Ken: *when you insert a picture on the left-hand page, leaving a
       // blank page just makes the next page blank — it's not the back of the
       // page*). He is right, and it is why a picture asked to leave its back
-      // blank takes a **recto**: a recto's back is the verso after it, so the
-      // blank that follows really is behind the picture. On a verso the page
-      // after is the front of the *next* leaf, which shows through nothing.
+      // blank takes a **recto** where its side is not spoken for: a recto's
+      // back is the verso after it, so the blank that follows really is
+      // behind the picture.
+      //
+      // **It is the default and no longer the override** (addendum 22 §9a,
+      // from Ken: *when I added the picture, it only would add it on the
+      // right-hand side of the page. I wanted the picture to be on page 66*).
+      // It used to beat the side outright, so ticking *leave the back blank*
+      // silently moved the picture to the next right-hand page — a control
+      // about what is **behind** a page deciding **which page it is**, with
+      // nothing saying so and, since §9j took the side control away, no way
+      // left to ask for a verso at all. The side is the writer's; where they
+      // have not said, this still answers, so no book made before this moves.
       const leafToItself = page && backBlank(element);
       return block({
         id,
@@ -2923,11 +2957,11 @@ const elementBlock = (element: ManuscriptElement, chapterTitle: string, opensCha
         folio: !page,
         starts: !page
           ? 'none'
-          : leafToItself
-            ? 'recto'
-            : placed.side === 'verso'
-              ? 'verso'
-              : placed.side === 'recto'
+          : placed.side === 'verso'
+            ? 'verso'
+            : placed.side === 'recto'
+              ? 'recto'
+              : leafToItself
                 ? 'recto'
                 : 'page',
         assetId: typeof element.attributes.assetId === 'string' ? element.attributes.assetId : null,
@@ -3120,11 +3154,14 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
       for (const element of leading) {
         const made = elementBlock(element, chapterTitle, false);
         if (!made) continue;
-        out.push(made);
         // The leaf behind it goes with it (§9w): the main element loop has
         // always emitted one and this path did not, so the writer's own
         // answer was lost on exactly the pictures §9w lets them ask for.
-        if (backBlank(element)) out.push(backLeaf(element.id as string, chapterTitle));
+        // **And on whichever side the back is** (addendum 22 §9a).
+        const back = backLeafSide(element);
+        if (back === 'before') out.push(backLeaf(element.id as string, chapterTitle, 'recto'));
+        out.push(made);
+        if (back === 'after') out.push(backLeaf(element.id as string, chapterTitle));
       }
       /**
        * **A blank leaf before the chapter opens** (§9r). It is the chapter's
@@ -3315,9 +3352,14 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
           // (§9i). It follows the picture rather than preceding it, which is
           // what *back page* means, and it counts in the numbering and prints
           // nothing — the same two facts as the picture itself.
-          if (placement.place === 'page' && backBlank(element)) {
+          const back = placement.place === 'page' ? backLeafSide(element) : null;
+          if (back) {
+            // **In front of a picture on a left-hand page** (addendum 22
+            // §9a): that is where the other side of its leaf is, and the
+            // blank takes a recto so the two really are one sheet.
+            if (back === 'before') out.push(backLeaf(element.id as string, chapterTitle, 'recto'));
             out.push(made);
-            out.push(backLeaf(element.id as string, chapterTitle));
+            if (back === 'after') out.push(backLeaf(element.id as string, chapterTitle));
             continue;
           }
           // A page stands where it is; only an inset waits for a paragraph

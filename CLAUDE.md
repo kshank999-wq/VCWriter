@@ -4898,6 +4898,45 @@ push live; the build takes a minute or two.
   a working × on every blank page. One assertion — *a book nobody has asked
   anything of is laid exactly as it was* — pinned a rule this changes on
   purpose and was **rewritten rather than worked around**.
+  **§9a is which side of the leaf a picture page falls on**, from Ken inside a
+  longer report (*at the end of the story, I tried to add a picture on the
+  back of a page. But when I added the picture, it only would add it on the
+  right-hand side of the page. I wanted the picture to be on page 66*), whose
+  screenshot is the fault in one row — **Page 66 Blank · Page 67 Illustration ·
+  Page 68 Blank**. **The cause is one line**: `leafToItself` — *the writer
+  asked for a blank back* — beat the side **outright** in `elementBlock`, so
+  ticking that switch moved the picture to the next right-hand page, **a
+  control about what is behind a page deciding which page it is** with nothing
+  saying so; and §9j had taken the *Which page* control out, for the good
+  reason that it asked a question the gesture had already answered, so after it
+  there was **no way to ask for a left-hand page at all** and the tick was the
+  only thing left that could move a picture between sides. **§9j was right
+  about *which page* and wrong about *which side***, those being two questions
+  — where the picture stands in the writing is what the press already said, and
+  which side of the paper that page is is a thing only the writer can want — so
+  the control returns as *Side of the leaf* (**Wherever it falls · A left-hand
+  page · A right-hand page**) and the back-blank switch becomes the **default
+  rather than the override**: where no side is asked for a picture leaving its
+  back blank still takes a recto, which is why no book moves and why the whole
+  suite passed unedited. **And the back goes where the back is** — a leaf is a
+  recto and the verso behind it, so the other side of a picture on a left-hand
+  page is the page **in front** of it, §9j's own rule (Ken's correction, *the
+  back of a leaf is the other side of that sheet*) read in the direction it was
+  never read in; `backLeafSide` says which, the blank takes a **recto** when it
+  goes in front so the two really are one sheet rather than landing a page out,
+  and the sentence under the switch names the page in front rather than
+  claiming a right-hand page whatever is set. Two readings had to learn to look
+  **both ways**, each written when a back could only follow: `blankReason`,
+  which called a verso picture's own back *the page in front of it is set to
+  leave its back blank* — a different leaf's reason entirely — and
+  `pageRemoval`, whose × then reached nothing. Two assertions pinned §9j's
+  removal and were **rewritten rather than worked around**. **Named rather than
+  built**, from the same message: **dragging a page up and down to renumber
+  it** — a page of the story's words is where the cutter broke and cannot move,
+  what is on it being the continuation of a paragraph, while a page that
+  carries a **record** can (a picture page has dragged since §9w, and a blank
+  leaf the writer put in could), which is the honest half and its own piece of
+  work.
   **§7a is the episode rail**, from Ken, and the rail was the easy half:
   wiring it found that an episode marker's kind is `episode` and
   **`chapterSpan` read `chapter` outright**, so an episode spanned to the end

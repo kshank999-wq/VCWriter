@@ -311,18 +311,38 @@ describe('the room', () => {
     const rail = within(document.querySelector('.layout-rail') as HTMLElement);
     fireEvent.doubleClick(rail.getByRole('button', { name: /^The harbour/ }));
     expect((screen.getByLabelText('Figure place') as HTMLSelectElement).value).toBe('measure');
-    // A page of its own. **Which side is not asked** (§9j, from Ken: *you can
-    // take the which page out and just make it whatever the selected page*):
-    // the picture goes where it was put, and the one thing that side control
-    // was really for — holding a leaf for a facing illustration — is the
-    // blank-back box below, which is honest about what it does.
+    /**
+     * A page of its own. **Which page is still not asked** (§9j, from Ken:
+     * *you can take the which page out and just make it whatever the selected
+     * page*) — the picture goes where it was put.
+     *
+     * **Which side of the leaf is** (addendum 22 §9a, from Ken: *it only
+     * would add it on the right-hand side of the page. I wanted the picture
+     * to be on page 66*). §9j was right about *which page*, which the press
+     * already answers, and what it did not notice is that **the blank-back
+     * box was answering the side instead**: it forced a recto, so the one
+     * control a writer could reach moved the picture without saying so, and
+     * after §9j there was nothing left that could ask for a verso. The two
+     * assertions here were written to pin the removal and are rewritten
+     * rather than worked around, because the rule has changed.
+     */
     fireEvent.change(screen.getByLabelText('Figure place'), { target: { value: 'page' } });
     expect(screen.queryByLabelText('Which page')).toBeNull();
+    const sideBox = screen.getByLabelText('Which side of the leaf') as HTMLSelectElement;
+    // *Wherever it falls* is what every picture made before this stores.
+    expect(sideBox.value).toBe('either');
     let placed = figurePlacement((latest as ProjectFile).beats[0]!.manuscript.elements[1]!);
     expect(placed).toMatchObject({ place: 'page' });
     expect(screen.getByText(/The picture fills the page, edge to edge/)).toBeDefined();
+    fireEvent.change(sideBox, { target: { value: 'verso' } });
+    expect(figurePlacement((latest as ProjectFile).beats[0]!.manuscript.elements[1]!)).toMatchObject({ side: 'verso' });
     fireEvent.click(screen.getByLabelText('Leave the back of the page blank'));
     expect(backBlank((latest as ProjectFile).beats[0]!.manuscript.elements[1]!)).toBe(true);
+    // **And the side survives the tick**, which is the whole of the report —
+    // and the sentence under it names the page in front rather than claiming
+    // a right-hand page whatever is set.
+    expect(figurePlacement((latest as ProjectFile).beats[0]!.manuscript.elements[1]!)).toMatchObject({ side: 'verso' });
+    expect(screen.getByText(/the other side of the sheet is the page in front of it/)).toBeDefined();
     // Cut into the text instead: a width and a border, and the back leaf
     // forgotten, a picture in the text having no back to leave.
     fireEvent.change(screen.getByLabelText('Figure place'), { target: { value: 'right' } });
