@@ -1,4 +1,4 @@
-import { importChoices, type ImportKind, type ProjectFormat } from '@vcwriter/domain';
+import { importChoices, projectUntouched, type ImportKind, type ProjectFile } from '@vcwriter/domain';
 import { useModal } from '../use-modal';
 
 /**
@@ -25,14 +25,21 @@ import { useModal } from '../use-modal';
 
 interface ImportChooserProps {
   open: boolean;
-  /** The project that is open, or null on the welcome screen. */
-  format: ProjectFormat | null;
+  /**
+   * The project that is open, or null on the welcome screen. It is the file
+   * rather than the format (§10a) because the one sentence this screen owes a
+   * writer with an empty project in front of them needs its **name** and
+   * whether anything is in it, and two props that have to agree about one
+   * project would be two answers to what is open.
+   */
+  file: ProjectFile | null;
   onClose(): void;
   onChoose(kind: ImportKind): void;
 }
 
-export function ImportChooser({ open, format, onClose, onChoose }: ImportChooserProps) {
+export function ImportChooser({ open, file, onClose, onChoose }: ImportChooserProps) {
   const dialog = useModal(open);
+  const format = file?.project.format ?? null;
   const choices = importChoices(format);
   const making = choices.filter((choice) => choice.landing === 'project');
   const into = choices.filter((choice) => choice.landing === 'here');
@@ -78,6 +85,27 @@ export function ImportChooser({ open, format, onClose, onChoose }: ImportChooser
             {format !== null ? (
               <p className="muted small">
                 The project you have open is saved and stays as it is. This one opens in a file of its own.
+              </p>
+            ) : null}
+            {/*
+              **And where the one you have is empty, the row below fills it**
+              (§10a, from Ken: *I named the project Dylan's Tales, but in the
+              save it's calling it the name of the first script*).
+
+              He had just made a collection and named it, and these rows are
+              named for **what is being imported** while the row that would
+              have filled it is named for **the act** — so the obvious press
+              made a second project and left his named one behind, empty. The
+              act is right and the sentence was missing: said before the press,
+              naming the project in his own words, and pointing at the row
+              rather than being a second one. It is a **route and only where
+              the route exists**, so nothing is said where there is no row
+              under *Into this project* to point at (addendum 10 §8).
+            */}
+            {file && into.length > 0 && projectUntouched(file) ? (
+              <p className="muted small">
+                “{file.project.title}” has nothing in it yet. This makes a second project beside it — the rows under{' '}
+                <em>Into this project</em> fill the one you have.
               </p>
             ) : null}
             <ul className="import-choices">{making.map(row)}</ul>

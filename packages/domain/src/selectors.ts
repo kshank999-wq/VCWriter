@@ -429,6 +429,32 @@ export const relatedEntities = (file: ProjectFile, target: StoryEntityRef): Rela
     return { link, outgoing, other: resolveRef(file, outgoing ? link.to : link.from) };
   });
 
+/**
+ * **A project nobody has been in yet** (addendum 33 §10a, from Ken: *I named
+ * the project Dylan's Tales, but in the save it's calling it the name of the
+ * first script*).
+ *
+ * He made a collection, named it, and then imported his first story through
+ * the row named for the thing he was importing rather than the one named for
+ * the act — so the import made a **second** project and the one he had named
+ * was left behind empty. The chooser cannot say that without knowing it, and
+ * knowing it is a reading rather than a flag.
+ *
+ * It is `seedOnly`'s shape (addendum 28 §4d): identified by **what has
+ * happened to the project rather than by what it is called**, since every
+ * name here is the program's or the writer's and neither says whether work
+ * has begun. One unit, nothing written, nothing filed, no division, no plan —
+ * any one of those makes it somebody's project, so nothing anybody made can
+ * be caught by it, and it un-hides itself the moment a word is typed.
+ */
+export const projectUntouched = (file: ProjectFile): boolean =>
+  file.units.length <= 1 &&
+  file.markers.length === 0 &&
+  file.beats.every((beat) => beat.manuscript.elements.length === 0) &&
+  workingNotes(file).length === 0 &&
+  (file.outlines ?? []).every((outline) => outline.items.length === 0) &&
+  (file.boards ?? []).every((board) => board.nodes.length === 0);
+
 /** Numbers behind the project dashboard (§4). */
 export const projectStats = (file: ProjectFile): ProjectStats => ({
   trackCount: file.tracks.length,

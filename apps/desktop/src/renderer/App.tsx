@@ -964,7 +964,7 @@ export default function App() {
         {/* Importing is most useful from here: it is how a manuscript
             arrives. With nothing open the chooser offers the four kinds that
             make a project and says why the other four are not there. */}
-        <ImportChooser open={chooserOpen} format={null} onClose={() => setChooserOpen(false)} onChoose={chooseImport} />
+        <ImportChooser open={chooserOpen} file={null} onClose={() => setChooserOpen(false)} onChoose={chooseImport} />
         {importKind ? (
           <ImportDialog
             open
@@ -1655,7 +1655,7 @@ export default function App() {
 
       <ImportChooser
         open={chooserOpen}
-        format={file?.project.format ?? null}
+        file={file ?? null}
         onClose={() => setChooserOpen(false)}
         onChoose={chooseImport}
       />

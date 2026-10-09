@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { CHARACTER_TYPES, castByCategory, episodes, type ProjectFile } from '@vcwriter/domain';
+import { CHARACTER_TYPES, castByCategory, createProjectFile, episodes, type ProjectFile } from '@vcwriter/domain';
 import { ImportDialog } from '../components/ImportDialog';
 import { MENUS } from '../menus';
 import { buildDocx, wordParagraph } from './zip-fixture';
@@ -304,5 +304,60 @@ describe('importing a script', () => {
   it('is on the File menu', () => {
     const commands = MENUS.flatMap((menu) => menu.items.filter(Boolean).map((item) => item!.command));
     expect(commands).toContain('file.import');
+  });
+});
+
+/**
+ * **What the project an import makes is called** (addendum 33 §10a, from Ken:
+ * *I named the project Dylan's Tales, but in the save it's calling it the name
+ * of the first script… it's not maintaining the name that I give it when I
+ * create the project*).
+ *
+ * Every other way of making a project asks for a title — the New project panel
+ * will not create one without it — and this made one and never asked at all,
+ * taking the document's own title or the name of the file on disk. On a
+ * collection that names the whole book after its first story, and the name is
+ * what reaches the file on disk, the library row and every running head.
+ */
+describe('what the project is called', () => {
+  it('is what the writer typed', async () => {
+    const made: ProjectFile[] = [];
+    render(<ImportDialog file={null} landed={null} onAdded={() => {}} open kind="script" onClose={() => {}} onImported={(file) => made.push(file)} />);
+    choose('IN_FOR_A_POUND_STAGE_final.fdx', FDX);
+    await screen.findByText('Who is in it');
+
+    fireEvent.change(screen.getByLabelText('Project name'), { target: { value: 'Dylan’s Tales' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Import' }));
+    await waitFor(() => expect(made).toHaveLength(1));
+    expect(made[0]!.project.title).toBe('Dylan’s Tales');
+    // And nothing inside it is renamed: the story keeps the title it came in
+    // under, a collection not being its first story.
+    expect(made[0]!.units[0]!.title).toBe('INT. LIGHTHOUSE - STAIRS - NIGHT');
+  });
+
+  it('is what the document says where nothing is typed, so an import is unchanged', async () => {
+    const made: ProjectFile[] = [];
+    render(<ImportDialog file={null} landed={null} onAdded={() => {}} open kind="script" onClose={() => {}} onImported={(file) => made.push(file)} />);
+    choose('lighthouse.fdx', FDX);
+    await screen.findByText('Who is in it');
+
+    // The field says what will happen rather than demanding an answer.
+    expect((screen.getByLabelText('Project name') as HTMLInputElement).placeholder).toBe('THE LIGHTHOUSE');
+    fireEvent.click(screen.getByRole('button', { name: 'Import' }));
+    await waitFor(() => expect(made).toHaveLength(1));
+    expect(made[0]!.project.title).toBe('THE LIGHTHOUSE');
+  });
+
+  it('is not asked where no project is being made', async () => {
+    // Adding a story to a collection already open has nothing to name, and a
+    // box that renamed the open project from inside an import would be a
+    // second answer to what the project is called.
+    const open = createProjectFile({ title: 'Dylan’s Tales', format: 'short_story', author: 'K. Shank' });
+    render(<ImportDialog file={open} landed={null} onAdded={() => {}} open kind="stories" onClose={() => {}} onImported={() => {}} />);
+    choose('wreck.docx', NOVEL(), 'Story files');
+    await waitFor(() =>
+      expect((screen.getByRole('button', { name: 'Add to the end' }) as HTMLButtonElement).disabled).toBe(false),
+    );
+    expect(screen.queryByLabelText('Project name')).toBeNull();
   });
 });

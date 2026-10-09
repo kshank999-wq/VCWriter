@@ -473,6 +473,83 @@ nothing, so a browser has no copy of a project before a destructive act. The
 cause of this report is gone, and the net is not there; it is named here
 rather than half-built, and it is the next thing this file should grow.
 
+## 10a. The name a writer gives it
+
+From Ken, with his library on the screen:
+
+> So I named the project Dylan's Tales. But in the save, it's calling it the
+> name of the first script. And if there's one existing, then it makes a two
+> and a three. But it's not maintaining the name that I give it when I create
+> the project.
+
+**Driven before a line was written**, which is what told the two halves apart.
+Making a collection called *Dylan's Tales* and importing one story through
+*A new project ▸ A collection of short stories* leaves the bar reading **In For
+A Pound**; the same import through *Into this project ▸ More stories* leaves it
+reading **Dylan's Tales** with the story in it. So the act he reached for made
+a **second** project, named after his document, and the one he had named was
+left behind empty — `IN_FOR_A_POUND_STAGE_final.vcw`, then ` 2`, then ` 3`,
+which is his screenshot exactly.
+
+### An import made a project and never asked what it was called
+
+This is the fault, and it is a gap rather than a slip. **Every other way of
+making a project asks for a title** — the New project panel will not create one
+without it, that being *the first decision of the work* in its own words — and
+an import made one from the document's own title, or failing that from the name
+of the file on disk. On a collection that names the whole book after its first
+story, which is the sentence he wrote down.
+
+The name reaches further than any other field: it is the file on disk through
+`suggestedFileName`, the row in the library, and the running heads, the
+contents page and the eBook's metadata, since `bookNames` falls back to it
+where no book title is set. So **Project name** is the first field under *What
+to make of it* — addendum 02 §4a's ordering, what a thing is before what is
+done to it — and `nameProject` is one act in the domain rather than a spread
+object written out wherever somebody needs it.
+
+Two rules keep it from changing anything else. **Empty means what the document
+says**, so the field is a placeholder rather than a demand and pressing Import
+without touching it does exactly what it did before. And it names **the project
+and nothing in it**: the first story keeps the title it came in under, a
+collection not being its first story.
+
+### And the row he reached for was named for the wrong thing
+
+The rows under *A new project* are named for **what is being imported** and the
+row that would have filled the project he had just made is named for **the
+act** — so the obvious press, for a writer holding a collection of short
+stories, is the one that makes a second project. The act is right and the
+chooser's promise is right; what was missing is the sentence.
+
+`projectUntouched` is `seedOnly`'s shape (addendum 28 §4d): a project is
+identified as untouched by **what has happened to it rather than by what it is
+called**, since every name here is the program's or the writer's and neither
+says whether work has begun. One unit, nothing written, nothing filed, no
+division and no plan; any one of those makes it somebody's project, so nothing
+anybody made can be caught by it, and it un-hides itself the moment a word is
+typed.
+
+Where that holds, the chooser says so in the writer's own words and **points at
+the row rather than being a second one**:
+
+> “Dylan's Tales” has nothing in it yet. This makes a second project beside
+> it — the rows under *Into this project* fill the one you have.
+
+It is a **route and only where the route exists** (addendum 10 §8), so nothing
+is said where there is no row under *Into this project* to point at.
+
+### What it still costs, said rather than hidden
+
+A writer who reads that and presses the new-project row anyway ends up with
+`Dylan's Tales.vcw` and `Dylan's Tales 2.vcw`, the second being the real one —
+`freeName` keeping them apart on disk, since **nothing already in the folder is
+replaced** (addendum 34). The empty one is theirs to delete. Filling the open
+project from a row standing under *A new project* was weighed and refused: the
+heading's own sentence promises a file of its own, and one press that does two
+different things depending on hidden state is what this room removes rather
+than adds.
+
 ## 11. The numerals, and a name typed once
 
 From Ken in the same message:

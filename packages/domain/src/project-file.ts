@@ -339,6 +339,28 @@ export const parseProjectFile = (raw: unknown): ProjectFile => {
 export const serializeProjectFile = (file: ProjectFile): string =>
   JSON.stringify({ ...file, formatVersion: PROJECT_FORMAT_VERSION, savedAt: nowIso() }, null, 2);
 
+/**
+ * **What the project is called** (addendum 33 §10a, from Ken: *I named the
+ * project Dylan's Tales, but in the save it's calling it the name of the
+ * first script… it's not maintaining the name that I give it*).
+ *
+ * The name reaches further than any other field: it is the file on disk
+ * (`suggestedFileName`), the row in the library, the running heads, the
+ * contents page and the eBook's metadata, since `bookNames` falls back to it
+ * where the writer has not set a book title. So it is one act rather than a
+ * spread object written out wherever somebody needs it — there were two such
+ * copies already, in the browser bridge's *save a copy* and in the import.
+ *
+ * It names the **project** and nothing in it: a story keeps the title it was
+ * imported under, which is the whole distinction Ken's report rests on — a
+ * collection is not its first story.
+ */
+export const nameProject = (file: ProjectFile, title: string): ProjectFile => {
+  const named = title.trim();
+  if (named.length === 0 || named === file.project.title) return file;
+  return { ...file, project: { ...file.project, title: named, updatedAt: nowIso() } };
+};
+
 export interface CreateProjectOptions {
   title: string;
   format: ProjectFormat;

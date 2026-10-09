@@ -14,6 +14,7 @@ import {
   isCollection,
   isProseFormat,
   landsInLayout,
+  nameProject,
   nounsFor,
   readDocx,
   readFinalDraft,
@@ -284,6 +285,23 @@ export function ImportDialog({ open, kind, file, landed, onClose, onImported, on
   const [keepLocations, setKeepLocations] = useState(true);
   // One story or many (addendum 22 §2): only the short-story format asks.
   const [stories, setStories] = useState<'one' | 'many'>('one');
+  /**
+   * **What the project this makes is called** (addendum 33 §10a, from Ken:
+   * *I named the project Dylan's Tales, but in the save it's calling it the
+   * name of the first script… it's not maintaining the name that I give it*).
+   *
+   * Every other way of making a project asks: the New project panel will not
+   * create one without a title, that being *the first decision of the work*
+   * in its own words. An import made one and **never asked at all** — it took
+   * the document's own title, or failing that the name of the file on disk,
+   * which on a collection means the whole book is named after its first
+   * story. Driven before this: a collection made and named *Dylan's Tales*,
+   * then one story imported, and the bar read **In For A Pound**.
+   *
+   * Empty means *what the document says*, so a writer who does not care
+   * presses Import exactly as before and nothing about an import changes.
+   */
+  const [given, setGiven] = useState('');
 
   const parts = stage.kind === 'read' ? stage.parts : [];
   // What was read, as the format it is going into: the first file, which
@@ -293,6 +311,8 @@ export function ImportDialog({ open, kind, file, landed, onClose, onImported, on
     [parts, format, marks],
   );
   const prose = isProseFormat(format);
+  /** What the import would call the project with nothing typed (§10a). */
+  const wouldCall = script?.title || (parts[0] ? bareName(parts[0].name) : '');
   /**
    * **Only where there is a question left to ask** (addendum 22 §8).
    *
@@ -412,7 +432,14 @@ export function ImportDialog({ open, kind, file, landed, onClose, onImported, on
     // files — a sentence naming one story over a project holding four is the
     // screen disagreeing with the import that just ran.
     const arrived = takesSeveral(format) ? Math.max(names.length, countParts(built)) : 1;
-    onImported(built, landedNames(built, arrived, names));
+    /**
+     * **And it is called what the writer called it** (§10a). `nameProject`
+     * reaches the file on disk through `suggestedFileName`, the row in the
+     * library and every running head, and touches nothing inside the
+     * project — the first story keeps the title it came in under, a
+     * collection not being its first story.
+     */
+    onImported(nameProject(built, given), landedNames(built, arrived, names));
     setStage({ kind: 'waiting' });
     // **A format made of parts stays open and offers the next one**, which is
     // the whole of Ken's ask; anything else is one document and is done.
@@ -515,6 +542,37 @@ export function ImportDialog({ open, kind, file, landed, onClose, onImported, on
             {script ? (
               <>
                 <h4>What to make of it</h4>
+                {/*
+                  **What it is called, first** (§10a, from Ken: *it's not
+                  maintaining the name that I give it when I create the
+                  project*).
+
+                  It stands above the format and the marks on addendum 02
+                  §4a's ordering: **what a thing is comes before what is done
+                  to it**, and the name is the one field here that reaches
+                  outside the import — the file on disk, the library row, the
+                  running heads. The placeholder is what the import would
+                  call it, so the field says what will happen rather than
+                  demanding an answer, and pressing Import without touching
+                  it does exactly what it did before.
+
+                  **Absent where no project is being made** (`landed`,
+                  `adding`): adding a story to a collection already open has
+                  nothing to name, and a box that renamed the open project
+                  from inside an import would be a second answer to what the
+                  project is called.
+                */}
+                {landed || adding ? null : (
+                  <label className="field">
+                    Project name
+                    <input
+                      aria-label="Project name"
+                      value={given}
+                      placeholder={wouldCall}
+                      onChange={(event) => setGiven(event.target.value)}
+                    />
+                  </label>
+                )}
                 {/* **Only where there is still a question.** The kind chosen
                     at the door said a novel is a novel; what it did not say
                     is which of the four kinds of script this is, so that is

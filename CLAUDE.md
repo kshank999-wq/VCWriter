@@ -6462,6 +6462,57 @@ push live; the build takes a minute or two.
   caught *2 storys*, which is what `${noun}s` gives. **Deliberately not built
   and named**: snapshots in the preview, the cause being gone and the net still
   absent.
+  **§10a is the name a writer gives it**, from Ken with his library on the
+  screen (*I named the project Dylan's Tales. But in the save, it's calling it
+  the name of the first script. And if there's one existing, then it makes a
+  two and a three. But it's not maintaining the name that I give it when I
+  create the project*), and **driving it first is what told the two halves
+  apart**: a collection named *Dylan's Tales* with one story imported through
+  *A new project ▸ A collection of short stories* leaves the bar reading **In
+  For A Pound**, while the same import through *Into this project ▸ More
+  stories* leaves it reading **Dylan's Tales** with the story in it. So the row
+  he reached for made a **second** project named after his document and left
+  the one he had named behind, empty — his `IN_FOR_A_POUND_STAGE_final.vcw`,
+  ` 2`, ` 3` exactly. **An import made a project and never asked what it was
+  called**, which is a gap rather than a slip: *every other way of making a
+  project asks for a title* (the New project panel will not create one without
+  it, that being *the first decision of the work* in its own words) and this
+  took the document's own title or the name of the file on disk, which on a
+  collection names the whole book after its first story. The name reaches
+  further than any other field — the file on disk through `suggestedFileName`,
+  the library row, the running heads, the contents page and the eBook's
+  metadata, `bookNames` falling back to it — so **Project name** is the first
+  field under *What to make of it* (addendum 02 §4a's ordering, what a thing is
+  before what is done to it) and `nameProject` is **one act in the domain**
+  rather than a spread object written wherever somebody needs it. Two rules
+  keep it from changing anything else: **empty means what the document says**,
+  so it is a placeholder rather than a demand and an untouched import is byte
+  for byte what it was, and it names **the project and nothing in it**, the
+  first story keeping the title it came in under because a collection is not
+  its first story. **And the row he reached for was named for the wrong
+  thing**: the rows under *A new project* are named for *what is being
+  imported* while the one that fills the project he had just made is named for
+  *the act*, so the obvious press for somebody holding a collection of short
+  stories is the one that makes a second project. The act is right and the
+  sentence was missing — `projectUntouched` is **`seedOnly`'s shape** (addendum
+  28 §4d), identifying a project by **what has happened to it rather than by
+  what it is called**, every name here being the program's or the writer's and
+  neither saying whether work has begun (one unit, nothing written, nothing
+  filed, no division, no plan; any one of them makes it somebody's project, so
+  nothing anybody made is caught by it, and it un-hides itself the moment a
+  word is typed) — and where it holds the chooser says so **in the writer's own
+  words** and **points at the row rather than being a second one**: *“Dylan's
+  Tales” has nothing in it yet. This makes a second project beside it — the
+  rows under* Into this project *fill the one you have*, a **route and only
+  where the route exists** (addendum 10 §8), silent where there is no such row.
+  What it still costs is **said rather than hidden**: pressing the new-project
+  row anyway gives `Dylan's Tales.vcw` and `Dylan's Tales 2.vcw` with the
+  second the real one, `freeName` keeping them apart because **nothing already
+  in the folder is replaced** (addendum 34), and the empty one is the writer's
+  to delete. Filling the open project from a row standing under *A new project*
+  was **weighed and refused**: the heading's own sentence promises a file of its
+  own, and one press that does two different things depending on hidden state is
+  what this room removes rather than adds.
   **§11 is the numerals, and a name typed once**, from Ken in the same message
   (*I merged two sections and made it one chapter. I would like it to
   automatically update the title headings if they're Roman numerals… if you
