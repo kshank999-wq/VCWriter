@@ -194,6 +194,11 @@ describe('a picture on the page it was added to', () => {
       // ahead says so, which is what lets a caller tell what a page *is* from
       // what may be put on it (§9aa).
       standsBefore: null,
+      // And `p2` begins on this page rather than running onto it, so there is
+      // no page further back for an act here to reach (§9af) — which is also
+      // why the two positions are the same element here, as on most pages.
+      elementBegins: null,
+      topElementId: 'p2',
     });
     // And page 1, which does open it.
     expect(pagePlace(pages, blocks, 1).opensMarkerId).toBe('m1');

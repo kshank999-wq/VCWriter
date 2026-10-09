@@ -297,6 +297,7 @@ const EMPTY_PLACE: PagePlace = { elementId: null, partId: null, markerId: null }
 /** What a picture may do before any page is in hand (§9w): nothing, and it says so. */
 const NO_PICTURE: PictureOffer = {
   spot: null,
+  pageSpot: null,
   of: null,
   beforeOpening: false,
   note: null,
@@ -835,7 +836,13 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
     if (offer.of === 'story') {
       importArt({
         kind: 'story',
-        elementId: offer.spot,
+        /**
+         * **A page of its own goes in at the top of the page and a box in the
+         * text at the first paragraph that begins on it** (§9af): two
+         * positions on a page that opens with somebody's half paragraph, and
+         * the same on every other page. `topElement` says why.
+         */
+        elementId: as === 'page' ? (offer.pageSpot ?? offer.spot) : offer.spot,
         as,
         beforeOpening: as === 'page' && offer.beforeOpening,
         takesLeaf: as === 'page' ? offer.takesLeaf : null,
@@ -1930,7 +1937,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
               placing={placing}
               placingEmpty={placing !== null && bookFigures(file).find((one) => one.elementId === placing)?.assetId == null}
               placingFree={placing !== null && bookFigures(file).find((one) => one.elementId === placing)?.placement.place === 'free'}
-              onSpan={(span, ofPage) => {
+              onSpan={(span, ofPage, tall) => {
                 const what = placing;
                 if (!what) return;
                 onUpdate((current) => {
@@ -1939,7 +1946,20 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
                   // A free graphic's width is a share of the **page**, an
                   // inset's of the measure: two measurements of two things.
                   const wide = held.placement.place === 'free' ? ofPage : span;
-                  return placeBookFigure(current, what, { ...held.placement, span: wide });
+                  /**
+                   * **An empty box is the shape it is dragged to** (§9af).
+                   * With a picture in it the height is the picture's own
+                   * proportions and there is nothing to set (§9m); with none,
+                   * `boxHeight` *is* how tall the box is, and a corner that
+                   * set only the width left the writer dragging one edge of
+                   * a shape they had drawn.
+                   */
+                  const empty = held.assetId == null;
+                  return placeBookFigure(current, what, {
+                    ...held.placement,
+                    span: wide,
+                    ...(empty && tall > 0 ? { boxHeight: tall } : {}),
+                  });
                 });
               }}
               onPick={() => {
@@ -2539,8 +2559,11 @@ function Spreads({
   placingFree: boolean;
   /** Slid to a side, and before the element it was let go over. */
   onSlide(place: 'left' | 'right', anchor: FigureAnchor | null, at: { x: number; y: number }): void;
-  /** A corner dragged: the new width as a share of the measure (§9m). */
-  onSpan(span: number, ofPage: number): void;
+  /**
+   * A corner dragged: the new width as a share of the measure (§9m), of the
+   * page (§8c), and the new height as a share of the measure (§9af).
+   */
+  onSpan(span: number, ofPage: number, tall: number): void;
   /** A picture for the box being placed (§9m). */
   onPick(): void;
   onKeep(): void;
@@ -2588,7 +2611,7 @@ function Spreads({
      * made. It is the divide tools' own idiom (addendum 21 §10): the tool
      * puts itself down when the act is over, whether or not it came off.
      */
-    if (!drawing || !drawn || !from || drawn.w < 8) {
+    if (!drawing || !drawn || !from) {
       onGaveUp();
       return;
     }
@@ -2626,6 +2649,25 @@ function Spreads({
      * moved it to the next page.
      */
     const boxHeight = Math.min(4, Math.max(0, drawn.h / width));
+    /**
+     * **A drag too small to be a box is a press** (§9af, from Ken: *on the
+     * last picture, when I was trying to exit, it drew a box in the wrong
+     * place on the right page at the wrong size*).
+     *
+     * The floor was eight pixels across and nothing at all down, so a hand
+     * that twitched while dismissing the tool made a real figure: the band
+     * clamps anything under a fifth of the measure **up** to a fifth, so a
+     * ten-pixel drag came back as a 20% box, and a few pixels of height as a
+     * sliver — a picture in a place nobody chose at a size nobody drew. The
+     * floor is the band's own `min` across, which is the narrowest box there
+     * is, and two lines of the measure down; under either the tool puts
+     * itself down with nothing made, which is what it already did for a
+     * click.
+     */
+    if (share < INSET_SPAN.min || boxHeight < 0.08) {
+      onGaveUp();
+      return;
+    }
     /**
      * **And where it was drawn.** `onDrawn` used to anchor every box at the
      * element the page *opens with*, so the whole vertical half of the drag
@@ -2817,7 +2859,20 @@ function Spreads({
               y: (clientY - sheetRect.top) / (sheetRect.height || 1),
             });
           }}
-          onCorner={(width) => onSpan(spanFor(sheets.current[key] ?? null, width), width / (sheetWidthOf(sheets.current[key] ?? null) || 1))}
+          onCorner={(width, height) => {
+            const sheetEl = sheets.current[key] ?? null;
+            // The height as a share of the **measure**, which is what
+            // `boxHeight` is everywhere (§9z): the markup's aspect ratio and
+            // the cutter's measurement read the same number, so a box
+            // resized here is the same size on the page and in the hole the
+            // page keeps for it.
+            const measure = measureOn(sheetEl);
+            onSpan(
+              spanFor(sheetEl, width),
+              width / (sheetWidthOf(sheetEl) || 1),
+              measure > 0 ? Math.min(4, height / measure) : 0,
+            );
+          }}
           onPick={onPick}
           onKeep={onKeep}
           onDrop={onDrop}
@@ -3620,8 +3675,8 @@ function PlacingHandle({
   /** What it measures, said on the box itself: *3.1 × 2.0 in · 62% of the measure*. */
   size: string;
   onSlideTo(clientX: number, clientY: number): void;
-  /** A corner dragged: the new width in the sheet's own pixels (§9m). */
-  onCorner(width: number): void;
+  /** A corner dragged: the new width and height in the sheet's own pixels (§9m, §9af). */
+  onCorner(width: number, height: number): void;
   /** Put a picture in this box, from here (§9m, from Ken). */
   onPick(): void;
   onKeep(): void;
@@ -3629,75 +3684,151 @@ function PlacingHandle({
 }) {
   const [sliding, setSliding] = useState(false);
   /** Which corner is being dragged, and where the box stood when it was taken. */
-  const corner = useRef<{ x: number; left: number; right: number; from: 'left' | 'right' } | null>(null);
+  const corner = useRef<{ x: number; y: number; from: 'left' | 'right'; down: 'up' | 'down' } | null>(null);
+  /** Where a press began, and whether it has become a slide (§9af). */
+  const press = useRef<{ x: number; y: number; moved: boolean } | null>(null);
+  /** A slide just happened, so the click that ends it is not a mark's (§9af). */
+  const slid = useRef(false);
   if (!at) return null;
   /**
    * A corner resizes it (§9m, from Ken: *it needs to have draggable corners
-   * that maintain its squareness*). Only the **width** is dragged, and the
-   * height follows from the picture's own proportions — which is what keeps
-   * the box square-cornered and the picture unsquashed, and is why there is
-   * no *fill the box* to press: the box is never a shape the picture fails to
-   * fill. A corner on the near side grows it towards the pointer, the far
-   * side being pinned, so the box grows where the hand is.
+   * that maintain its squareness*). A corner on the near side grows it
+   * towards the pointer, the far side being pinned, so the box grows where
+   * the hand is.
+   *
+   * **And an empty box takes its height from the drag too** (§9af, from Ken:
+   * *it doesn't allow me to resize it… and it should be*). §9m's rule — only
+   * the width is dragged, the height follows from the picture's own
+   * proportions — is right about a box with a picture in it and has nothing
+   * to say about an empty one, which is the only kind a corner is ever
+   * dragged on: a box is drawn before it is filled (§9a). Measured before
+   * the fix: a corner took a box from 46% to 60% of the measure with its
+   * height pinned at 1.87in, so the one gesture for changing its shape
+   * changed only half of it and the shape the writer dragged was not the
+   * shape they got.
    */
-  const takeCorner = (event: React.PointerEvent, from: 'left' | 'right') => {
+  const takeCorner = (event: React.PointerEvent, from: 'left' | 'right', down: 'up' | 'down') => {
     event.preventDefault();
     event.stopPropagation();
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
-    corner.current = { x: event.clientX, left: at.left, right: at.left + at.width, from };
+    corner.current = { x: event.clientX, y: event.clientY, from, down };
   };
   const moveCorner = (event: React.PointerEvent) => {
     const held = corner.current;
     if (!held) return;
-    const by = event.clientX - held.x;
-    onCorner(Math.max(24, held.from === 'right' ? at.width + by : at.width - by));
+    const across = event.clientX - held.x;
+    const downBy = event.clientY - held.y;
+    onCorner(
+      Math.max(24, held.from === 'right' ? at.width + across : at.width - across),
+      Math.max(16, held.down === 'down' ? at.height + downBy : at.height - downBy),
+    );
   };
   const letGo = (event: React.PointerEvent) => {
     corner.current = null;
     setSliding(false);
     event.stopPropagation();
   };
-  const grip = (where: string, from: 'left' | 'right') => (
+  const grip = (where: string, from: 'left' | 'right', down: 'up' | 'down') => (
     <span
       key={where}
       className={`layout-placing-grip ${where}`}
       role="presentation"
-      onPointerDown={(event) => takeCorner(event, from)}
+      onPointerDown={(event) => takeCorner(event, from, down)}
       onPointerMove={moveCorner}
       onPointerUp={letGo}
       onPointerCancel={letGo}
     />
   );
+  /**
+   * **A mark acts on a press and the box slides on a drag** (§9af, from Ken:
+   * *it doesn't allow me to move the box anywhere*).
+   *
+   * The marks are in the middle of the box because that is where Ken asked
+   * for them (§9d) — and three 30px circles with their gaps are **106px
+   * across the middle**, which on a 137px box (1.67in of a 4.19in measure,
+   * the size in his own screenshot) leaves fifteen pixels of box to grab
+   * either side of them and nothing at all in the middle. A hand reaching for
+   * the centre of a box lands on a button, the drag never begins, and the
+   * first of those buttons is **✗** — so *it doesn't allow me to move the
+   * box* and *when I delete the box, all the text comes back* are one press
+   * reported twice.
+   *
+   * So the guard is a **threshold rather than a target**: a press anywhere on
+   * the box may become a slide, and a mark does its own work only where the
+   * pointer did not travel. The grips stay their own, a corner being a
+   * different gesture rather than a slower one.
+   */
+  const act = (run: () => void) => () => {
+    if (slid.current) {
+      slid.current = false;
+      return;
+    }
+    run();
+  };
   return (
     <div
       className={sliding ? 'layout-placing sliding' : 'layout-placing'}
       style={{ left: at.left, top: at.top, width: at.width, height: at.height }}
       onPointerDown={(event) => {
-        // The marks and the grips are their own; everything else in the box
-        // is the handle that slides it.
+        // The grips are their own gesture; the whole of the rest of the box,
+        // the marks included, is the handle that slides it (§9af).
         const on = event.target as HTMLElement;
-        if (on.closest('button') || on.classList.contains('layout-placing-grip')) return;
-        event.preventDefault();
-        (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
-        setSliding(true);
+        if (on.classList.contains('layout-placing-grip')) return;
+        // Only where the press is not a mark's: cancelling it there would
+        // take the press away from the button it is sitting on.
+        if (!on.closest('button')) event.preventDefault();
+        /**
+         * **And the pointer is captured only once it moves** (§9af). Taking
+         * capture here made the slide work and **stopped every mark working**:
+         * a captured pointer retargets its events to the capturing element,
+         * so the `click` the browser builds from the press landed on the box
+         * rather than on the button under the hand, and ✗, ✓ and ＋ did
+         * nothing at all. Driven: a fresh box could not be taken away by any
+         * route. Capture is what a drag needs and a press does not.
+         */
+        press.current = { x: event.clientX, y: event.clientY, moved: false };
       }}
       onPointerMove={(event) => {
-        if (!sliding) return;
+        const from = press.current;
+        if (!from) return;
+        if (!from.moved) {
+          // A press that has not travelled is still a press (§9af): four
+          // pixels is the slack a hand has on a button, and past it the
+          // writer is moving the box.
+          if (Math.abs(event.clientX - from.x) < 4 && Math.abs(event.clientY - from.y) < 4) return;
+          from.moved = true;
+          (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+          setSliding(true);
+        }
         onSlideTo(event.clientX, event.clientY);
       }}
-      onPointerUp={() => setSliding(false)}
-      onPointerCancel={() => setSliding(false)}
-      title="Drag to slide the box; the text runs round it as you go. Drag a corner to resize it."
+      onPointerUp={() => {
+        slid.current = press.current?.moved === true;
+        press.current = null;
+        setSliding(false);
+      }}
+      onPointerCancel={() => {
+        press.current = null;
+        setSliding(false);
+      }}
+      /* The help in the tooltip (addendum 09 §8a), which is also where the
+         one thing Ken was frightened by belongs: a box in the text pushes the
+         words it stands in front of down the book, and taking it away brings
+         them back — *when I delete the box, all the text comes back*, which
+         he worked out for himself with nothing on the screen saying it. */
+      title="Drag to slide the box; the text runs round it as you go. Drag a corner to resize it. The words it stands in front of move down the book, and ✗ brings them back."
     >
       {/* What it measures, on the box (§9m, from Ken: *it should give you the
           specifications of its dimensions, so you can match your picture to
           it*). Read off the laid page every time, so it is the size the book
           will print rather than the size of the drag. */}
       <span className="layout-placing-size">{size}</span>
+      {/* **The act that takes it away is not the one under the first finger**
+          (§9af). ✗ stood leftmost, which is where a hand reaching for the
+          middle-left of a box lands — so the one destructive mark on the
+          screen was the one most easily pressed by somebody meaning to drag.
+          The useful one comes first instead: an empty box wants a picture. */}
       <div className="layout-placing-marks">
-        <button type="button" className="layout-placing-mark drop" aria-label="Take the box away" title="Take the box away" onClick={onDrop}>
-          ✗
-        </button>
         {/* A picture, from the box itself (§9m, from Ken: *there's nothing
             that allows you to actually put a graphic in the box area — it
             just says picture goes here*). It was in the inspector and behind
@@ -3709,16 +3840,19 @@ function PlacingHandle({
             className="layout-placing-mark pick"
             aria-label="Put a picture in this box"
             title="Choose a picture from a file. It joins the graphics library and goes in this box."
-            onClick={onPick}
+            onClick={act(onPick)}
           >
             ＋
           </button>
         ) : null}
-        <button type="button" className="layout-placing-mark keep" aria-label="Keep the box here" title="Keep the box here" onClick={onKeep}>
+        <button type="button" className="layout-placing-mark keep" aria-label="Keep the box here" title="Keep the box here" onClick={act(onKeep)}>
           ✓
         </button>
+        <button type="button" className="layout-placing-mark drop" aria-label="Take the box away" title="Take the box away" onClick={act(onDrop)}>
+          ✗
+        </button>
       </div>
-      {[grip('nw', 'left'), grip('ne', 'right'), grip('sw', 'left'), grip('se', 'right')]}
+      {[grip('nw', 'left', 'up'), grip('ne', 'right', 'up'), grip('sw', 'left', 'down'), grip('se', 'right', 'down')]}
     </div>
   );
 }

@@ -2952,6 +2952,175 @@ second blank is not later "fixed" as a fault.
 > copyright page takes the next page now, and the assertion was rewritten
 > rather than worked around.
 
+## 9af. The box a writer drew, and the box they can move
+
+From Ken, on the drawn box:
+
+> I tried to draw a box to put a picture. And maybe because there's no text
+> there that it messes up and it's looking for text. But it doesn't allow me
+> to move the box anywhere. It doesn't allow me to resize it. And it pops the
+> box on the wrong page. Let me try it on a different page where there's
+> actual text. I tried to draw a box that was about halfway down. The top was
+> about a third. Bottom was about a third and half of the text. And it created
+> a box full width of the text on the opposite page. I was trying on page 85.
+> It ended up putting the box on page 84. And the box is not movable,
+> adjustable, and it should be. On the last picture, when I was trying to
+> exit, it drew a box in the wrong place on the right page at the wrong size
+> that wasn't adjustable, but then erased a big chunk of text.
+
+and then, a minute later, the sentence that is the most useful line in the
+report:
+
+> When I delete the box, all the text comes back.
+
+**Five faults, four of them measured in the real room and every one of them
+explaining a clause of that paragraph.** The gesture is a drag, and jsdom
+gives every box a zero rect, so the measurements below *are* the test for
+that half; the domain half is pinned in `drawn-box.test.ts`.
+
+### Every slide threw the drawn width away
+
+`placeBookFigure`'s inset branch read `INSET_SPAN.default` and
+`INSET_STANDOFF.default` where the line above it reads the element's own —
+and `onSlide` passes a placement carrying nothing but `place`, because the
+side a box cuts in at is the only thing a slide changes. So **every slide
+rewrote the width as 40% of the measure** and the border with it.
+
+That number is in Ken's own screenshot. A box he had drawn read
+`1.67 × 3.21 in · 40% of the measure`, and 1.67in is exactly 40% of a 6 × 9's
+4.19in measure: **40% is not a width anybody chose, it is this constant.**
+Driven before the fix, a box dropped at 46% came back at 40% the moment it was
+moved; after it, 46% survives the slide.
+
+The argument is `boxHeight`'s, two lines up in the same function, and the
+`free` branch's: **a default is the answer for a figure that has never been
+given one, never for a caller that did not mention the field.** A placement
+says what it changes.
+
+### The marks swallowed the handle
+
+The ✗, ＋ and ✓ are in the middle of the box because that is where Ken asked
+for them (§9d). Measured: three 30px circles with their gaps are **106px
+across the middle of the box**, which on a 137px box — 1.67in of a 4.19in
+measure, the size in his screenshot — leaves **fifteen pixels** of box to grab
+on either side of them and nothing at all in the middle. A hand reaching for
+the centre of a box lands on a button, the drag never begins, and the first of
+those buttons was **✗**.
+
+So *it doesn't allow me to move the box anywhere* and *when I delete the box,
+all the text comes back* are **one press reported twice**, and the second
+report is him discovering what the first one had been doing.
+
+The guard is a **threshold rather than a target** now: a press anywhere on the
+box, the marks included, may become a slide, and a mark does its own work only
+where the pointer did not travel — four pixels being the slack a hand has on a
+button. The grips stay their own, a corner being a different gesture rather
+than a slower one. And **the act that takes it away is no longer the one under
+the first finger**: the order is ＋ ✓ ✗, the useful mark first, since an empty
+box wants a picture.
+
+Driving it caught the fault the fix itself introduced, and it is worth
+keeping. **A captured pointer retargets its events**, so taking capture on
+pointer-down made the slide work and **stopped every mark working** — the
+`click` the browser builds from the press landed on the box rather than on the
+button under the hand, and ✗, ✓ and ＋ did nothing at all on any route.
+Capture is what a drag needs and a press does not, so it is taken at the
+threshold, with the pleasant consequence that the capture is itself what stops
+a drag ending in a press.
+
+### A corner set the width and never the height
+
+Measured: a corner took a box from 46% to 60% of the measure with its height
+pinned at 1.87in. §9m's rule — only the width is dragged, the height follows
+from the picture's own proportions — **is right about a box with a picture in
+it and has nothing to say about an empty one**, which is the only kind a
+corner is ever dragged on, a box being drawn before it is filled (§9a). With
+no picture, `boxHeight` *is* how tall the box is. So an empty box takes both
+from the drag (2.51 × 3.47in after, where the same drag gave 2.51 × 1.87
+before), and with a picture in it nothing changes.
+
+The cap at `INSET_SPAN.max` stays: past it there is no text to cut into, which
+is `drawnFigurePlace`'s own rule, and the panel's place control is how a box
+becomes a figure across the measure.
+
+### A drag too small to be a box
+
+The floor was **eight pixels across and nothing at all down**. The band clamps
+anything under a fifth of the measure *up* to a fifth, so a ten-pixel twitch
+came back as a 20% box and a few pixels of height as a sliver — *it drew a box
+in the wrong place on the right page at the wrong size*, from a hand that was
+dismissing the tool. The floor is the band's own `min` across and two lines of
+the measure down; under either the tool puts itself down with nothing made,
+which is what it already did for a click (§9p).
+
+### The head of a page was the tail of something that began on the page before
+
+This is *it pops the box on the wrong page*, and it is the one fault that is
+not about the drag at all.
+
+A page very often opens with the **tail of a paragraph the cutter split** —
+and `pagePlace`'s `elementId`, which every act on a page is built on, was the
+first body block on it, tail or not. Everything built on that answer puts its
+thing **in front of** the element, so a picture or a blank sheet asked for at
+the head of such a page reached back to wherever that paragraph began.
+Measured on a novel before the fix: *Put a blank sheet here…* on page 12 left
+the sheet where it was asked for and took **page 11 from 1,538 characters to
+781**, the rest of it moving two pages on. After it, page 11 is untouched.
+
+**The head of a page is the first thing that begins on it**; a tail is the
+head of nothing. Where the page is nothing but a tail there is no position on
+it to be had, and the tail is still the answer rather than silence — §9aa's
+own fault, where answering *nowhere* took every act off a page — with
+`elementBegins` naming the page it reaches so the room says so before the
+press, which is §9w's answer to this shape.
+
+It is **one reading**, because `bookPageRows` kept its own copy: *which is
+`pagePlace`'s answer for one sheet*, said in that field's own doc while
+answering differently, since it skipped neither a stand-in nor a tail. A row
+and a place disagreed about where a picture dropped on a page goes in.
+
+### And two positions rather than two answers
+
+§9q's own suite caught what the fix would otherwise have broken, which is the
+half worth writing down. **A picture that is a page of its own is *reached*
+rather than placed**: §9q makes a plate wait for the next leaf while the text
+goes on filling the page it was reached on, so anchored in front of a tail it
+is reached on the page before and takes **this** page, with that page left
+exactly as full as it was. Anchored at the first paragraph that begins here it
+would be reached mid-page and take the **next** one — every plate a page late.
+
+So `topElement` is the other position and `pictureOffer` carries both. Which
+one *here* means depends on what is going there, and **no caller chooses**:
+`movePictureTo` reads the picture's own placement, and the one screen that
+knows before there is a picture (`importPicture`) already took `as` for §9w's
+reasons. On every page that does not open with half a paragraph the two are
+the same element, which is why no existing book moves and why §9q's
+assertions are byte for byte what they were.
+
+### What a blank sheet does now, said rather than noted
+
+A sheet asked for on a page that opens with a tail lands **after that page's
+own words** rather than before the paragraph they belong to: driven, page 12
+keeps its 757 characters and the sheet is pages 13 and 14, where before the
+sheet was 12 and 13 and page 11 lost a third of itself. Of the two imperfect
+answers — a page that cannot be broken mid-paragraph on demand — that is the
+one where nothing already written moves.
+
+It is **not** said on the screen, deliberately: most pages of a novel open
+with a tail, so a sentence about it would stand on most pages of the book,
+which is §8a's own lesson about standing prose under somebody's manuscript.
+What is said is the case where there is no position on the page at all.
+
+### And the words that come back
+
+*It erased a big chunk of text* is the box doing its work — the words it
+stands in front of move down the book — and Ken worked that out himself in the
+next message. Driven: a 46% box on page 12 takes it from 3,015 characters to
+1,367, and pressing ✗ puts it back to 3,015 exactly. Nothing is lost and
+nothing ever was. The room says so in the handle's own tooltip, which is where
+the explanation of this control already lives (addendum 09 §8a) rather than as
+a line standing on every box forever.
+
 ## 9ae. Half a sheet, and the page's own route first
 
 From Ken in three messages:

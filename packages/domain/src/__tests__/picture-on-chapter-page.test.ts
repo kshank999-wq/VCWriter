@@ -77,12 +77,22 @@ const pictureOn = (file: ProjectFile, sheet: number, lines = 9): ProjectFile => 
   // here is not the page asserted on.
   const { blocks, laid } = lay(file, lines);
   const place = pagePlace(laid.pages, blocks, sheet);
-  if (!place.elementId) throw new Error('nowhere to put it');
-  const beat = file.beats.find((one) => one.manuscript.elements.some((element) => (element.id as string) === place.elementId))!;
+  /**
+   * **A page of its own goes in at the break at the top of the page** (§9af):
+   * the plate is *reached* rather than placed, so anchored in front of a tail
+   * it is reached on the page before and takes this one with that page left
+   * as full as it was, which is §9q's whole rule. `elementId` is the first
+   * thing that **begins** here, which is where a box cut into the text goes —
+   * the two positions differ on any page opening with half a paragraph, and
+   * this is the room's own `pageSpot`.
+   */
+  const spot = place.topElementId ?? place.elementId;
+  if (!spot) throw new Error('nowhere to put it');
+  const beat = file.beats.find((one) => one.manuscript.elements.some((element) => (element.id as string) === spot))!;
   return placeFigure(file, {
     beatId: beat.id,
     assetId: 'a1' as never,
-    beforeElementId: place.elementId as never,
+    beforeElementId: spot as never,
     attributes: { bookPlace: 'page' },
   }).file;
 };

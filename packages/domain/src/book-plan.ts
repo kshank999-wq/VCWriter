@@ -1638,6 +1638,15 @@ export const partBlankOffer = (
 export interface PictureOffer {
   /** The element or part a picture asked for here goes before. Null where none can be. */
   spot: string | null;
+  /**
+   * **Where a picture that is a page of its own goes before** (§9af). The
+   * same as `spot` on every page that does not open with somebody's half
+   * paragraph; `topElement` says why those are two positions — a plate is
+   * *reached* and waits for the next leaf, so the break at the top of this
+   * page is what lands it on this page, where a box cut into the text wants
+   * the first paragraph that begins here.
+   */
+  pageSpot: string | null;
   /** Which kind of thing `spot` names, so the caller builds the right target. */
   of: 'story' | 'part' | null;
   /**
@@ -1687,6 +1696,7 @@ export const pictureOffer = (place: PagePlace, rows: readonly BookPageRow[], she
   const page = rows.find((one) => one.sheet === sheet);
   const none = (refusal: string): PictureOffer => ({
     spot: null,
+    pageSpot: null,
     of: null,
     beforeOpening: false,
     note: null,
@@ -1726,6 +1736,7 @@ export const pictureOffer = (place: PagePlace, rows: readonly BookPageRow[], she
     if (page.blank && ahead) {
       return {
         spot: null,
+        pageSpot: null,
         of: null,
         beforeOpening: false,
         note: null,
@@ -1757,8 +1768,16 @@ export const pictureOffer = (place: PagePlace, rows: readonly BookPageRow[], she
   const leaf = place.elementId !== null && page.blankFor === null && blankReason(rows, sheet - 1) !== null
     ? rows.find((one) => one.sheet === sheet - 1)
     : undefined;
+  /**
+   * **The page a picture asked for here would really reach** (§9af), where
+   * this page is nothing but the middle of one paragraph. Said in the
+   * writer's own numbering, which is the whole use of saying it (§9w).
+   */
+  const began =
+    place.elementBegins != null ? rows.find((one) => one.sheet === place.elementBegins)?.counted ?? null : null;
   return {
     spot: place.elementId ?? place.partId,
+    pageSpot: place.topElementId ?? place.partId,
     of: place.elementId ? 'story' : 'part',
     takesLeaf: page.blankFor,
     ownPageOnly: page.blank,
@@ -1794,11 +1813,19 @@ export const pictureOffer = (place: PagePlace, rows: readonly BookPageRow[], she
      * this is one note with two readings rather than two notes that would one
      * day both be true.
      */
+    /**
+     * **And where this page opens in the middle of a paragraph** (§9af). A
+     * third reading of the same note, and the three cannot overlap: a blank
+     * leaf in front and a chapter opening here both break the flow, so
+     * neither page can be carrying the tail of anything.
+     */
     note: leaf
       ? `A picture of its own will stand on page ${leaf.counted}: the leaf in front of this page is empty, and it fills that rather than adding one.`
       : place.opensMarkerId !== null && place.standsBefore === null
         ? 'A picture of its own goes in front of the opening that stands here, so the opening moves on a page. Setting this page’s own art instead puts the picture on the opening, and nothing moves.'
-        : null,
+        : began
+          ? `This page is the middle of one paragraph, which begins on page ${began}. A picture cut into the text stands in front of a paragraph rather than inside one, so a box asked for here will stand on page ${began}; a picture of its own still stands on this page.`
+          : null,
     newPageBefore: null,
     refusal: null,
   };
@@ -2146,8 +2173,29 @@ export const placeBookFigure = (file: ProjectFile, elementId: string, placement:
                 attributes.bookX = Math.min(1, Math.max(0, placement.x ?? held.x));
                 attributes.bookY = Math.min(1, Math.max(0, placement.y ?? held.y));
               } else {
-                attributes.bookSpan = Math.min(INSET_SPAN.max, Math.max(INSET_SPAN.min, placement.span ?? INSET_SPAN.default));
-                const standoff = Math.min(INSET_STANDOFF.max, Math.max(INSET_STANDOFF.min, placement.standoff ?? INSET_STANDOFF.default));
+                /**
+                 * **A placement says what it changes** (§9af, from Ken: *it
+                 * doesn't allow me to move the box anywhere… and it pops the
+                 * box on the wrong page at the wrong size*).
+                 *
+                 * These two read `INSET_SPAN.default` and
+                 * `INSET_STANDOFF.default` where the line above reads the
+                 * element's own — and the slide passes a placement carrying
+                 * nothing but `place`, so **every slide rewrote the drawn
+                 * width as 40% of the measure** and the border with it. A box
+                 * dragged down the page came back narrower than it was
+                 * dropped, which is the `1.67 × 3.21 in · 40% of the measure`
+                 * in Ken's own screenshot: 40% is not a width anybody chose,
+                 * it is this constant.
+                 *
+                 * The argument is `boxHeight`'s, two lines up, and the `free`
+                 * branch's: a default is the answer for a figure that has
+                 * never been given one, never for a caller that did not
+                 * mention the field.
+                 */
+                const held = figurePlacement(element);
+                attributes.bookSpan = Math.min(INSET_SPAN.max, Math.max(INSET_SPAN.min, placement.span ?? held.span));
+                const standoff = Math.min(INSET_STANDOFF.max, Math.max(INSET_STANDOFF.min, placement.standoff ?? held.standoff));
                 // Only what differs from the default is written down, so a
                 // document says what the writer chose and nothing else.
                 if (standoff !== INSET_STANDOFF.default) attributes.bookStandoff = standoff;
@@ -2221,6 +2269,40 @@ export interface PagePlace {
    * page **is** (rather than what may go on it) can tell them apart.
    */
   standsBefore?: number | null;
+  /**
+   * **The page the element at the head of this one begins on**, where that is
+   * not this page (§9af, from Ken: *it pops the box on the wrong page… I was
+   * trying on page 85. It ended up putting the box on page 84*).
+   *
+   * A page very often opens with the **tail of a paragraph that began on the
+   * page before** — the cutter splits one wherever the page runs out — and
+   * `elementId` is that paragraph. Everything built on this answer puts its
+   * thing **in front of** the element: so a picture, or a blank sheet, asked
+   * for at the head of such a page reaches back to where the paragraph
+   * begins, which is a page the writer did not point at. Measured on a novel:
+   * pressing *Put a blank sheet here…* on page 12 left the sheet where it was
+   * asked for and took page 11 from 1,538 characters to 781, the rest of it
+   * moving two pages on.
+   *
+   * It is **said rather than refused**, which is §9w's own answer to this
+   * shape: a picture stands in front of a paragraph and never inside one, so
+   * where this page opens in the middle of one there is no position on it to
+   * be had and the honest thing is to name the page the act will really
+   * reach. A box **drawn** over a paragraph that begins here is unaffected —
+   * the drag names its own anchor — so the way to a picture on this page is
+   * already on the screen.
+   *
+   * Null where the element begins on this page, which is every other page.
+   */
+  elementBegins?: number | null;
+  /**
+   * **The element whose own start is the top of this page** (§9af), which is
+   * where a picture that is **a page of its own** goes in — `topElement` says
+   * why the two are two positions rather than two answers. The same as
+   * `elementId` on every page that does not open with somebody's half
+   * paragraph, which is most of them.
+   */
+  topElementId?: string | null;
 }
 
 /**
@@ -2229,23 +2311,91 @@ export interface PagePlace {
  * leaf (§9aa) can ask the same question of the page ahead rather than keeping
  * a second, coarser copy of it.
  */
+/**
+ * **The element at the head of a page** (§9af, from Ken: *it pops the box on
+ * the wrong page… I was trying on page 85. It ended up putting the box on
+ * page 84*).
+ *
+ * Three rules, and the middle one is the fix. **Never a block that stands in
+ * for a missing heading** (§9s): its id names the unit, so every act built on
+ * this answer would look it up in the manuscript, find nothing and change
+ * nothing — the first *real* element is the answer, and what is anchored to
+ * it is emitted in front of the stand-in, so the whole opening moves on
+ * together.
+ *
+ * **Never the tail of something that began on an earlier page.** `piece.from`
+ * is the line of the block a piece starts at, so a piece with lines above it
+ * is the **continuation** of a paragraph the cutter split — and everything
+ * built on this answer puts its thing *in front of* the element, which for a
+ * continuation is wherever that paragraph begins, a page or more back.
+ * Measured on a novel before the fix: *Put a blank sheet here…* on page 12
+ * took page 11 from 1,538 characters to 781, the rest of it moving two pages
+ * on, and a picture asked for at the head of such a page landed on the page
+ * before. **The head of a page is the first thing that begins on it**; a tail
+ * is the head of nothing.
+ *
+ * **And where the page is nothing but a tail, that tail**, rather than
+ * silence: a page carrying the middle of one long paragraph has no position
+ * on it to be had, and answering *nowhere* would take every act off it, which
+ * is §9aa's own fault. `elementBegins` names the page it reaches so the room
+ * says so before the press.
+ *
+ * It is **one reading** because `bookPageRows` kept its own copy — *which is
+ * `pagePlace`'s answer for one sheet*, said in that field's own doc while
+ * answering differently (it skipped neither a stand-in nor a tail) — so a
+ * row and a place disagreed about where a picture dropped on a page goes in.
+ */
+export const headElement = (page: BookPage, index: ReadonlyMap<string, BookBlock>): string | null => {
+  let tail: string | null = null;
+  for (const piece of page.pieces) {
+    const block = index.get(piece.blockId);
+    if (!block || !BODY_KINDS.has(block.kind) || block.standsIn) continue;
+    if (piece.from === 0) return block.id;
+    if (!tail) tail = block.id;
+  }
+  return tail;
+};
+
+/**
+ * **The element whose own start is the top of this page** (§9af) — the first
+ * body block on it, tail or not, which is what `headElement` answered before.
+ *
+ * It is kept because the two are **two positions and not two answers**, and
+ * which one *here* means depends on what is going there:
+ *
+ * A picture cut into the text, and the writer's own blank sheet, **appear
+ * where they are anchored**, so for them the head of the page is the first
+ * thing that begins on it — anchored in front of a tail they reach back to
+ * wherever that paragraph began.
+ *
+ * A picture that is **a page of its own** is *reached* rather than placed:
+ * §9q made a plate wait for the next leaf while the text goes on filling the
+ * page it was reached on, so it lands on the leaf **after** the break it
+ * stands at. Anchored in front of a tail it is reached on the page before and
+ * takes this one, with that page left exactly as full as it was — which is
+ * why that is the right position for it and why the fix above would have put
+ * every plate a page late. §9q's own suite is what caught it.
+ */
+export const topElement = (page: BookPage, index: ReadonlyMap<string, BookBlock>): string | null => {
+  for (const piece of page.pieces) {
+    const block = index.get(piece.blockId);
+    if (block && BODY_KINDS.has(block.kind) && !block.standsIn) return block.id;
+  }
+  return null;
+};
+
 const onPage = (
   page: BookPage,
   index: Map<string, BookBlock>,
   blocks: readonly BookBlock[],
-): Required<Pick<PagePlace, 'elementId' | 'partId' | 'opensMarkerId' | 'opensAlone' | 'opensUnitId'>> => {
-  let elementId: string | null = null;
+): Required<Pick<PagePlace, 'elementId' | 'topElementId' | 'partId' | 'opensMarkerId' | 'opensAlone' | 'opensUnitId'>> => {
+  let elementId: string | null = headElement(page, index);
+  let topElementId: string | null = topElement(page, index);
   let partId: string | null = null;
   for (const piece of page.pieces) {
     const block = index.get(piece.blockId);
     if (!block) continue;
     if (block.partId && !partId) partId = block.partId;
-    // **Never a block that stands in for a missing heading** (§9s): its id
-    // names the unit, so every act built on this answer would look it up in
-    // the manuscript, find nothing and change nothing. The first *real*
-    // element is the answer, and what is anchored to it is emitted in front
-    // of the stand-in, so the whole opening moves on together.
-    if (BODY_KINDS.has(block.kind) && !block.standsIn && !elementId) elementId = block.id;
   }
   /**
    * **Which chapter opens *on* this page** (§9r), as against the chapter in
@@ -2287,12 +2437,16 @@ const onPage = (
     // element that is not there.
     const next = blocks.slice(from + 1).find((block) => BODY_KINDS.has(block.kind) && !block.standsIn);
     if (next && !elementId && !partId) elementId = next.id;
+    // The chapter's first element is the top of this page too: a page that
+    // opens a chapter cannot be carrying the tail of anything (§9af).
+    if (next && !topElementId && !partId) topElementId = next.id;
     if (!opensUnitId) {
       opensUnitId = blocks.slice(from + 1).find((block) => block.unitId !== undefined)?.unitId ?? null;
     }
   }
   return {
     elementId,
+    topElementId,
     partId,
     opensMarkerId: opening ? opening.id : null,
     opensAlone: opening !== undefined && page.pieces.length === 1,
@@ -2311,6 +2465,8 @@ export const pagePlace = (pages: readonly BookPage[], blocks: readonly BookBlock
     opensUnitId: null,
     opensAlone: false,
     standsBefore: null,
+    elementBegins: null,
+    topElementId: null,
   };
   if (!page) return place;
   // The chapter in force is read from the last opening at or before the page,
@@ -2348,6 +2504,7 @@ export const pagePlace = (pages: readonly BookPage[], blocks: readonly BookBlock
         continue;
       }
       place.elementId = ahead.elementId;
+      place.topElementId = ahead.topElementId;
       place.opensMarkerId = ahead.opensMarkerId;
       // **And the section that opens there** (§9ac): what makes a leaf into a
       // chapter page is a break started on the section it stands in front of,
@@ -2356,6 +2513,17 @@ export const pagePlace = (pages: readonly BookPage[], blocks: readonly BookBlock
       place.standsBefore = after.sheet;
       break;
     }
+  }
+  /**
+   * **Where that element begins** (§9af). A block's first page is the first
+   * that carries a piece of it, so this is a reading of the pages already in
+   * hand and nothing is stored; it is asked of the page the answer came off,
+   * which on a leaf is the page ahead (§9aa).
+   */
+  if (place.elementId) {
+    const on = place.standsBefore ?? sheet;
+    const first = pages.find((one) => one.pieces.some((piece) => piece.blockId === place.elementId));
+    place.elementBegins = first && first.sheet < on ? first.sheet : null;
   }
   return place;
 };
@@ -2486,7 +2654,11 @@ export const bookPageRows = (
       opensUnitId: part ? null : (opened?.unitId ?? null),
       partId: part?.partId ?? null,
       figureId: art?.id ?? null,
-      elementId: on.find((block) => BODY_KINDS.has(block.kind))?.id ?? null,
+      // **`pagePlace`'s own answer, which this field's doc already claimed to
+      // be** (§9af): it was the first body block on the page, stand-in or
+      // tail, so a row and a place disagreed about where a picture dropped on
+      // a page goes in.
+      elementId: headElement(page, index),
       blankFor: leaf?.blankFor ?? null,
       blankBack: leaf?.blankBack === true,
       blank: empty,
@@ -2601,8 +2773,18 @@ export const drawnFigurePlace = (share: number, side: 'left' | 'right'): FigureP
  * way, and cleared where they pointed at an ordinary page.
  */
 export const movePictureTo = (file: ProjectFile, elementId: string, offer: PictureOffer): ProjectFile => {
-  if (!offer.spot || offer.of !== 'story') return file;
-  return setBeforeOpening(moveFigureBefore(file, elementId, offer.spot), elementId, offer.beforeOpening);
+  /**
+   * **The act reads what the picture is** (§9af), so no caller has to choose
+   * between the two positions: a page of its own takes the break at the top
+   * of the page and anything cut into the text the first paragraph that
+   * begins on it. `topElement` says why.
+   */
+  const element = file.beats
+    .flatMap((beat) => beat.manuscript.elements)
+    .find((one) => (one.id as string) === elementId);
+  const spot = element && figurePlacement(element).place === 'page' ? offer.pageSpot : offer.spot;
+  if (!spot || offer.of !== 'story') return file;
+  return setBeforeOpening(moveFigureBefore(file, elementId, spot), elementId, offer.beforeOpening);
 };
 
 /**

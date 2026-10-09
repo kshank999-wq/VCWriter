@@ -381,6 +381,9 @@ describe('moving a picture to another page', () => {
     const opens = rows.find((row) => row.says === 'Chapter opens')!;
     const moved = movePictureTo(made.file, made.elementId, {
       spot: pagePlace(laid.pages, blocks, opens.sheet).elementId as string,
+      // A page of its own goes in at the break at the top of the page (§9af),
+      // which the act reads off the picture rather than the caller choosing.
+      pageSpot: pagePlace(laid.pages, blocks, opens.sheet).topElementId as string,
       of: 'story',
       beforeOpening: true,
       note: null,
@@ -400,6 +403,7 @@ describe('moving a picture to another page', () => {
     const text = rows.filter((row) => row.says === 'Text').at(-1)!;
     const moved = movePictureTo(made.file, made.elementId, {
       spot: pagePlace(laid.pages, blocks, text.sheet).elementId as string,
+      pageSpot: pagePlace(laid.pages, blocks, text.sheet).topElementId as string,
       of: 'story',
       beforeOpening: false,
       note: null,
