@@ -3330,6 +3330,41 @@ push live; the build takes a minute or two.
   pagination; one block is inserted and the convention does the rest, the
   screen says *the next left-hand page*, and a test pins the pair so the
   second blank is not later "fixed" as a fault — **which §17e overturns**.
+  **§9ai is the measure box carrying the pictures**, from Ken the day after
+  §9ag (*it keeps crashing when I try to enter the ISBN in the copyright
+  dialogue box*). §9ag made a burst of typing settle into **one** laying and
+  **never asked what a laying costs** — which turns out to depend on the one
+  thing no fixture in the room has: pictures. Laying the book is
+  `box.innerHTML = every block of it`, and the comment over that line has said
+  since §4 that **a picture's lines come from its own shape rather than from
+  the box**; it is true and it was half a sentence, because a `display` block
+  measures as a whole page and a `figure` block measures through
+  `pictureLines` — **neither of them looks at the box at all** — and the
+  picture went in anyway, to be parsed, decoded and thrown away unread, every
+  time. Measured on a hundred-page novel with three 4 MB illustrations:
+  **16.10 MB of markup against 0.07, and 159 ms a laying against 7**, with
+  every measurement identical to the pixel, which is what makes it a fault
+  rather than a trade; driven in the real room on the same book the biggest
+  write falls **16.1 MB → 0.07** and a laying **228 ms → 10**. Three pictures
+  is a modest book; at six or eight the laying writes thirty or forty
+  megabytes of base64 per burst with Chrome decoding every one, and that is
+  the tab going down. **It is the block that is left out, not the picture
+  inside it**, and driving the first fix in the real room is what taught that:
+  blanking `context.pictures` missed most of them, a picture reaching the
+  markup by **three** roads — a figure's from the context, a chapter leaf's
+  baked into `block.chapter.image` by `chapterLeafContent`, the title page's
+  and the imprint's from their own records — so where a block's height is
+  settled without the box being read, its item is written **empty**, which
+  cannot miss a road and is honest about the reason: the box is never read for
+  these, so there is nothing to put in it. The item stays, the blocks and the
+  items being read side by side. Everything else is drawn exactly as before,
+  which is the half that matters — **where the box is read, the box gets the
+  picture**: a cut-in picture's reach really is read off its own box, and a
+  barcode really is inside a page whose words are measured. The test pins what
+  is **written** rather than what comes back (a test's document has no
+  layout), and its last assertion is the whole of it — **what is written does
+  not grow with the picture**, so a book of plates costs the measurement no
+  more than a book of none.
   **§9ah is the button the policy refused**, from Ken with three screenshots
   (*the actual save to PDF button doesn't actually do anything… I wasn't able
   to save it in a file that I could open*), and **it really did nothing**: a

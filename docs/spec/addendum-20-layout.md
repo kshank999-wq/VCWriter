@@ -2952,6 +2952,69 @@ second blank is not later "fixed" as a fault.
 > copyright page takes the next page now, and the assertion was rewritten
 > rather than worked around.
 
+## 9ai. The measure box carried the pictures
+
+From Ken, the day after §9ag: *it keeps crashing when I try to enter the ISBN
+in the copyright dialogue box.*
+
+§9ag found that every keystroke on the copyright page re-lays the whole book —
+every screen that writes `settings.book` saves as you type, because a look is
+tuned against the sheet beside it — and made the laying settle so a burst
+becomes one. **What it did not ask is what a laying costs**, and the answer
+turns out to depend on something no fixture in the room has: pictures.
+
+**Laying the book is `box.innerHTML = every block of it`**, and the comment
+over that line has said since §4 that *a picture's lines come from its own
+shape rather than from the box, so a data URL that has not decoded yet cannot
+measure as nothing*. It is true, and it was half a sentence: a `display` block
+measures as a whole page (`linesPerPage`, first line of the walk) and a
+`figure` block measures through `pictureLines`. **Neither of them looks at the
+box at all** — and the picture went in anyway, to be parsed, decoded and
+thrown away unread, on every laying.
+
+Measured on a hundred-page novel with three 4 MB illustrations, through the
+room's own functions:
+
+| | markup written | one laying |
+| --- | --- | --- |
+| with the pictures | **16.10 MB** | **159 ms** |
+| without them | **0.07 MB** | **7 ms** |
+
+— with every measurement identical to the pixel, which is the half that makes
+it a fault rather than a trade. Driven in the real room on an imported novel
+with three full-page illustrations put in through each chapter's own page, the
+same figures come back: the biggest write falls from **16.1 MB to 0.07**, a
+laying from **228 ms to 10**. Three pictures is a modest book; at six or eight
+the laying is writing thirty or forty megabytes of base64 per burst, with
+Chrome decoding every one, and that is the tab going down.
+
+### It is the block that is left out, not the picture inside it
+
+The first fix blanked the pictures in the render context, and **driving it in
+the real room showed it missing most of them**: a figure's picture comes from
+`context.pictures`, a chapter leaf's is baked into `block.chapter.image` by
+`chapterLeafContent`, and the title page's and the imprint's come from their
+own records. Three roads to the markup and the fix knew one.
+
+So the rule is said about the **block**: where a block's height is settled
+without the box being read, its item is written **empty**. It cannot miss a
+road, and it is honest about the reason — the box is never read for these, so
+there is nothing to put in it. The item itself stays, because the blocks and
+the items are read side by side.
+
+Everything else is drawn exactly as it was, which is the half that matters: a
+cut-in picture's reach really **is** read off its own box, and a barcode really
+is inside a page whose words are measured. **Where the box is read, the box
+gets the picture.**
+
+### Driven
+
+The test pins what is **written** rather than what comes back, a test's
+document having no layout: a page of art leaves an item with nothing in it and
+none of its bytes, a cut-in picture keeps both, and — the whole of it — **what
+is written does not grow with the picture**, so a book of plates costs the
+measurement no more than a book of none. Nothing in the room's own suite moved.
+
 ## 9ah. The button the policy refused
 
 From Ken, with three screenshots — the export banner over the first page,

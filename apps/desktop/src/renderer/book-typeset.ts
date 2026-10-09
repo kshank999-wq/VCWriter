@@ -78,6 +78,37 @@ const contextFor = (file: ProjectFile, settings: BookSettings, geometry: BookGeo
 });
 
 /**
+ * **The measure box is given only what it is asked about** (§9ai).
+ *
+ * The comment below has always said a picture's lines come from its own shape
+ * rather than from the box — and the measurement drew the picture in anyway.
+ * A `display` block measures as a whole page and a `figure` block measures
+ * through `pictureLines`; **neither of them looks at the box at all**, so
+ * every page of art, plate and illustration put several megabytes of base64
+ * into `innerHTML` on **every** laying, to be parsed, decoded and thrown away
+ * unread. Measured on a hundred-page novel with three 4 MB illustrations:
+ * **16.10 MB of markup against 0.07, and 159 ms a laying against 7**, for
+ * measurements identical to the pixel. On a book with more art than that it is
+ * the laying that takes the tab down, which is what typing an ISBN into the
+ * copyright page did — every keystroke there changes `settings.book`, so the
+ * whole book is laid again.
+ *
+ * It is the **block** that is left out rather than the picture inside it,
+ * because a picture reaches the markup by more than one road: a figure's comes
+ * from `context.pictures`, a chapter leaf's is baked into `block.chapter.image`
+ * by `chapterLeafContent`, and the title page's and the imprint's come from
+ * their own records. Blanking the context's pictures would have missed three of
+ * those — it did, measured, which is how this rule was arrived at — where
+ * leaving the item empty cannot miss any, and is honest about the reason: the
+ * box is never read for these, so there is nothing to put in it. The item
+ * itself stays, because the blocks and the items are read side by side.
+ *
+ * Everything else is drawn exactly as before, which is the half that matters:
+ * a cut-in picture's reach **is** read off its own box below.
+ */
+const measuredWithoutTheBox = (block: BookBlock): boolean => block.display || block.kind === 'figure';
+
+/**
  * Measure every block at once: one `innerHTML`, one layout, one read per
  * block. A picture's lines come from its own shape rather than from the
  * box, so a data URL that has not decoded yet cannot measure as nothing.
@@ -93,7 +124,10 @@ export const measureBlocks = (
   for (const [name, value] of Object.entries(vars)) box.style.setProperty(name, value);
   box.className = `bk-measure ${textClass(context)}`;
   box.innerHTML = blocks
-    .map((block) => `<div class="bk-item" data-block="${block.id}">${renderBookBlock(block, context)}</div>`)
+    .map(
+      (block) =>
+        `<div class="bk-item" data-block="${block.id}">${measuredWithoutTheBox(block) ? '' : renderBookBlock(block, context)}</div>`,
+    )
     .join('');
   const measured = new Map<string, number>();
   /**
