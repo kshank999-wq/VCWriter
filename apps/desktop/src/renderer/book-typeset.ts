@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   bookBlocks,
   bookContentsOf,
@@ -214,43 +214,158 @@ const countedAt = (laying: Laying, pages: number): Laying => {
 };
 
 /**
+ * **What the laying reads, by identity rather than by content** (addendum 20
+ * §9ag, from Ken: *when I try to enter the copyright info, the typing is slow
+ * and sticky and then the page shuts down*).
+ *
+ * The key used to be `JSON.stringify` over the units, **every beat's whole
+ * manuscript**, the markers, the assets and the index — rebuilt on every
+ * change to the document, which on a book of any size is hundreds of
+ * kilobytes of string allocated between two keystrokes.
+ *
+ * It never needed to read a word of it. **A mutation rebuilds one collection
+ * and shares the rest** (addendum 02 §6c, which is what undo's whole-document
+ * stack rests on), so a collection that is the same object is a collection
+ * nothing has touched — `isWritersAct`'s own argument, which compares
+ * top-level references for exactly this reason. Reading references is both
+ * cheaper and stricter: it catches a field no list here happened to name.
+ */
+const layingReads = (file: ProjectFile): readonly unknown[] => [
+  file.settings.book,
+  file.settings.paragraphStyle,
+  file.settings.chapterPageStyle,
+  file.settings.titlePage,
+  file.settings.markerNumbering,
+  file.project.title,
+  file.project.author,
+  // **Where a unit falls, as well as what it says** (§9v, from Ken: *when you
+  // reorder anything… you have to erase and reload the page*). The rail reads
+  // the file and re-draws at once; the contents, the running heads and every
+  // page number come off the laying, and a chapter dragged rekeys the units it
+  // moved without touching a word — so the room went on drawing the book in the
+  // order it used to be in. The collection's own identity says it now.
+  file.units,
+  file.beats,
+  file.markers,
+  file.assets,
+  file.indexMarks,
+  file.indexRefs,
+];
+
+/** A number that changes when any of them does, so an effect can depend on it. */
+const useIdentityKey = (values: readonly unknown[]): number => {
+  const held = useRef<readonly unknown[] | null>(null);
+  const version = useRef(0);
+  const last = held.current;
+  if (!last || last.length !== values.length || values.some((one, at) => !Object.is(one, last[at]))) {
+    held.current = values;
+    version.current += 1;
+  }
+  return version.current;
+};
+
+/**
+ * **How long a burst of changes is allowed to collapse into one laying**
+ * (§9ag). Short enough that a single act — a drag, a trim, a tick — settles
+ * before anybody looks for it, and long enough that typing at speed lays the
+ * book once rather than once a character.
+ */
+const SETTLE_MS = 180;
+
+/**
+ * **How big a book has to be before its laying is worth waiting for** (§9ag).
+ *
+ * The settle is **self-measuring rather than a blanket rule**, because the
+ * fault it fixes is a cost and not a gesture: a book the browser lays in a
+ * fraction of a frame is one nobody can see happen, so it goes on happening
+ * the moment the document changes and a short book behaves exactly as it did
+ * — which is why the whole room's suite passed this unedited.
+ *
+ * **It is counted in blocks rather than in milliseconds**, and that is the
+ * half worth keeping. The first draft timed the last laying and let anything
+ * under a frame through, which is the same idea measured the wrong way: it
+ * made the room's behaviour a fact about **how fast the machine is**, so the
+ * threshold flapped on a 46-page novel (86 layings for 67 keystrokes) and one
+ * test in the suite passed or failed depending on the run. A block is what
+ * actually gets written into the measure box and laid out, so the number of
+ * them is the size of the job — a property of the document, the same on every
+ * machine and the same on every run.
+ *
+ * **The number is measured rather than reasoned about**, which took three
+ * goes: a 46-page novel is **106** blocks and lays in about 19 ms, and every
+ * fixture in the whole room's suite is **13 or fewer**. The first guess at
+ * this was 160 — above the novel — so the settle never engaged at all and the
+ * measurement is the only reason that was noticed. Forty sits three times
+ * above anything a test builds and well under any book somebody is laying
+ * out.
+ */
+const BLOCKS_BEFORE_SETTLING = 40;
+
+/**
  * Lay the book whenever the file changes, measuring in a box the caller
  * renders. The box is a plain element the hook writes into; React never
  * reconciles its children, which is the whole reason it is a ref.
+ *
+ * **A laying is a reading, and a reading may settle a moment behind the
+ * typing** (§9ag). Laying the book is `box.innerHTML = every block of it`
+ * followed by a forced layout and the cutter's own walk, and the copyright
+ * page, the title page, the chapter openings and Book settings all live in
+ * `settings.book` — so every one of those screens, all of which save as you
+ * type because a look is tuned against the sheet beside it, was re-laying the
+ * whole book between two keystrokes. Measured on a 46-page novel at **117 ms
+ * a character**, and the book Ken reported it on is twice that.
+ *
+ * Nothing about what is written changes: the document still takes every
+ * keystroke the moment it is typed. Only the **picture** waits, and only on a
+ * book big enough that laying it is something you can see happen — the first
+ * laying never waits, and neither does a short one.
  */
 export const useBookLaying = (file: ProjectFile, open: boolean): { laying: Laying | null; box: React.RefObject<HTMLDivElement> } => {
   const box = useRef<HTMLDivElement>(null);
   const [laying, setLaying] = useState<Laying | null>(null);
-  // What the laying depends on, so typing a note elsewhere does not re-set the book.
-  const key = useMemo(
-    () =>
-      JSON.stringify([
-        file.settings.book,
-        file.settings.paragraphStyle,
-        file.settings.chapterPageStyle,
-        file.settings.titlePage,
-        file.settings.markerNumbering,
-        file.project.title,
-        file.project.author,
-        // **Where a unit falls, as well as what it says** (§9v, from Ken:
-        // *when you reorder anything… you have to erase and reload the
-        // page*). The rail reads the file and re-drew at once; the contents,
-        // the running heads and every page number come off the laying, and a
-        // chapter dragged rekeys the units it moved without touching a word —
-        // so the room went on drawing the book in the order it used to be in.
-        file.units.map((unit) => [unit.id, unit.inScript, unit.title, unit.orderKey, unit.trackId, unit.kind]),
-        file.beats.map((beat) => [beat.id, beat.unitId, beat.inScript, beat.orderKey, beat.manuscript]),
-        file.markers,
-        (file.assets ?? []).map((asset) => [asset.id, asset.width, asset.height, asset.caption]),
-        file.indexMarks,
-        file.indexRefs,
-      ]),
-    [file],
-  );
+  const key = useIdentityKey(layingReads(file));
+  /**
+   * The fonts the book has, which is what the pass below is really about —
+   * it was keyed on the **laying** key, so every keystroke in every one of
+   * those screens registered a second full laying a microtask later, and the
+   * cost above was being paid twice over.
+   *
+   * **Named rather than held by identity**, which is the one place in this
+   * hook where that would be wrong: `setBookSettings` runs the whole record
+   * through `bookSettingsSchema.parse`, so every nested array in it — this
+   * list among them — is a **new object after every write**. Measured, that
+   * made this key change on every keystroke and the second laying came back.
+   * The ids are a handful of short strings and never the files, which are
+   * data URLs of up to four megabytes each.
+   */
+  const fontKey = bookSettingsOf(file)
+    .fonts.map((one) => one.id)
+    .join(' ');
+  // What to lay from, read at the moment the timer fires rather than captured.
+  const latest = useRef(file);
+  latest.current = file;
+  /**
+   * How big the book turned out to be, from the last laying. Nought until one
+   * has happened, so the **first** is never made to wait — a room that opened
+   * on a blank spread for a fifth of a second would be the fix costing more
+   * than the fault.
+   */
+  const size = useRef(0);
 
   useLayoutEffect(() => {
-    if (!open || !box.current) return;
-    setLaying(layBook(file, box.current));
+    if (!open || !box.current) return undefined;
+    const lay = () => {
+      if (!box.current) return;
+      const next = layBook(latest.current, box.current);
+      size.current = next.blocks.length;
+      setLaying(next);
+    };
+    if (size.current <= BLOCKS_BEFORE_SETTLING) {
+      lay();
+      return undefined;
+    }
+    const timer = window.setTimeout(lay, SETTLE_MS);
+    return () => window.clearTimeout(timer);
     // The key is what the laying reads; the file is what it reads it from.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, open]);
@@ -264,6 +379,10 @@ export const useBookLaying = (file: ProjectFile, open: boolean): { laying: Layin
    * `document.fonts.ready` and laying once more is the honest fix; where
    * there are no fonts to wait for it settles at once and lays the same book
    * twice, which costs one pass and nothing else.
+   *
+   * **Once per set of fonts, not once per change to the book** (§9ag): what
+   * it is waiting for is a font arriving, which happens when one is imported
+   * and never because somebody typed a letter into the copyright page.
    */
   useEffect(() => {
     if (!open) return undefined;
@@ -271,13 +390,13 @@ export const useBookLaying = (file: ProjectFile, open: boolean): { laying: Layin
     if (!fonts?.ready) return undefined;
     let dropped = false;
     void fonts.ready.then(() => {
-      if (!dropped && box.current) setLaying(layBook(file, box.current));
+      if (!dropped && box.current) setLaying(layBook(latest.current, box.current));
     });
     return () => {
       dropped = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, open]);
+  }, [fontKey, open]);
 
   return { laying, box };
 };

@@ -2952,6 +2952,85 @@ second blank is not later "fixed" as a fault.
 > copyright page takes the next page now, and the assertion was rewritten
 > rather than worked around.
 
+## 9ag. The typing that re-laid the whole book
+
+From Ken: *when I try to enter the copyright info, the typing is slow and
+sticky and then the page shuts down.*
+
+**Measured before a line was written**, on an imported 46-page novel in this
+container: **115 ms a character**, median, with a long task on the main thread
+for every single keystroke — 67 of them, **4,879 ms of blocked main thread**
+for 67 characters. His own book was 97 pages, so roughly double that. The
+"shuts down" is what a browser does to a tab whose main thread never comes
+back.
+
+**Nothing about the copyright page is at fault.** Laying the book is
+`box.innerHTML = every block of it`, a forced layout, and the cutter's walk —
+and the copyright page, the title page, the chapter openings, the part
+dialogs and Book settings **all live in `settings.book`**, every one of them
+saving as you type because a look is tuned against the sheet beside it. So
+each of those screens was laying the entire book between two keystrokes. A
+fix on one screen would have been the wrong shape; the laying is the thing
+that was wrong.
+
+### Three faults, in the order they cost
+
+**The key read the manuscript.** `useBookLaying` decided whether to re-lay by
+`JSON.stringify` over the units, **every beat's whole manuscript**, the
+markers, the assets and the index — rebuilt on every change to the document,
+which on a book of any size is hundreds of kilobytes of string allocated
+between two keystrokes. It never needed to read a word of it: **a mutation
+rebuilds one collection and shares the rest** (addendum 02 §6c, which is what
+undo's whole-document stack rests on), so a collection that is the same object
+is a collection nothing has touched. `layingReads` is those references and
+`useIdentityKey` compares them — `isWritersAct`'s own argument, and stricter
+as well as cheaper, since it catches a field no list here happened to name.
+
+**The fonts pass ran on every keystroke.** §6b lays the book once more when
+`document.fonts.ready` settles, because an imported font decodes after the
+first layout. It was keyed on the **laying** key, so every keystroke in every
+one of those screens registered a second full laying a microtask later and the
+cost was paid **twice over**. It is keyed on the fonts now. That key is
+**named rather than held by identity**, which is the one place in the hook
+where identity would be wrong: `setBookSettings` runs the record through
+`bookSettingsSchema.parse`, so every nested array in it is a new object after
+every write — measured, that brought the second laying straight back.
+
+**And the laying itself.** `SETTLE_MS` is 180: a burst of changes collapses
+into one laying. **Nothing about what is written changes** — the document
+still takes every keystroke the moment it is typed — only the *picture* waits.
+
+### The settle is self-measuring, and counted in blocks
+
+A book the browser lays in a fraction of a frame is one nobody can see happen,
+so it goes on being laid the moment the document changes and a short book
+behaves exactly as it did — which is why the whole room's suite passed this
+**unedited**.
+
+**It is counted in blocks rather than in milliseconds**, and that is the half
+worth keeping. The first draft timed the last laying and let anything under a
+frame through, which is the same idea measured the wrong way: it made the
+room's behaviour **a fact about how fast the machine is**, so the threshold
+flapped on the novel and one test in the suite passed or failed depending on
+the run. A flaky suite is not a fix. A block is what actually gets written
+into the measure box and laid out, so **how many of them there are is the size
+of the job** — a property of the document, the same on every machine and the
+same on every run.
+
+**The number is measured rather than reasoned about**, which took three goes:
+the 46-page novel is **106 blocks**, and every fixture in the whole room's
+suite is **13 or fewer**. The first guess was 160 — *above the novel* — so the
+settle never engaged at all, and only re-measuring caught it. Forty sits three
+times above anything a test builds and well under any book somebody is laying
+out.
+
+### What it comes to
+
+Driven on the same 46-page novel, the same 67 characters: **67 long tasks and
+4,879 ms of blocked main thread became 3 and 215 ms** — twenty-three times
+less. The words land in full, the spread catches up when the typing stops, and
+a single act on a big book still shows its result.
+
 ## 9af. The box a writer drew, and the box they can move
 
 From Ken, on the drawn box:

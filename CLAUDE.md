@@ -3330,6 +3330,51 @@ push live; the build takes a minute or two.
   pagination; one block is inserted and the convention does the rest, the
   screen says *the next left-hand page*, and a test pins the pair so the
   second blank is not later "fixed" as a fault — **which §17e overturns**.
+  **§9ag is the typing that re-laid the whole book**, from Ken (*when I try to
+  enter the copyright info, the typing is slow and sticky and then the page
+  shuts down*), and **it was measured before a line was written**: on an
+  imported 46-page novel, **115 ms a character** with a long task on the main
+  thread for every keystroke — 67 of them, **4,879 ms of blocked main thread
+  for 67 characters**, and his own book is 97 pages. *Shuts down* is what a
+  browser does to a tab whose main thread never comes back. **Nothing about
+  the copyright page is at fault**: laying the book is `box.innerHTML = every
+  block of it` plus a forced layout and the cutter's walk, and the copyright
+  page, the title page, the chapter openings, the part dialogs and Book
+  settings **all live in `settings.book`**, every one of them saving as you
+  type because a look is tuned against the sheet beside it — so a fix on one
+  screen would have been the wrong shape and the laying is the thing that was
+  wrong. **Three faults.** The key **read the manuscript** —
+  `JSON.stringify` over the units, every beat's whole manuscript, the markers,
+  the assets and the index, rebuilt on every change to the document and never
+  needing a word of it, since **a mutation rebuilds one collection and shares
+  the rest** (addendum 02 §6c, which undo's whole-document stack rests on), so
+  a collection that is the same object is one nothing has touched;
+  `useIdentityKey` compares references, which is `isWritersAct`'s own argument
+  and **stricter as well as cheaper**, catching a field no list happened to
+  name. The **fonts pass ran on every keystroke** — §6b's second laying is for
+  a font decoding after the first layout and was keyed on the **laying** key,
+  so the whole cost was paid **twice over**; it is keyed on the fonts now, and
+  that key is **named rather than held by identity**, the one place here where
+  identity is wrong because `setBookSettings` runs the record through
+  `bookSettingsSchema.parse` and every nested array in it is new after every
+  write — measured, that brought the second laying straight back. And **the
+  laying itself** settles: a burst collapses into one, `SETTLE_MS` 180,
+  **nothing about what is written changes** and only the picture waits. **The
+  settle is self-measuring and counted in blocks**, which is the half worth
+  keeping: the first draft timed the last laying and let anything under a
+  frame through, making the room's behaviour **a fact about how fast the
+  machine is** — the threshold flapped and one test passed or failed depending
+  on the run, and **a flaky suite is not a fix**. A block is what gets written
+  into the measure box, so **how many there are is the size of the job**, the
+  same on every machine and every run. **The number is measured rather than
+  reasoned about, which took three goes**: the novel is **106 blocks** and
+  every fixture in the whole room's suite is **13 or fewer**, and the first
+  guess was **160 — above the novel**, so the settle never engaged at all and
+  only re-measuring caught it. Driven on the same 67 characters: **67 long
+  tasks and 4,879 ms blocked became 3 and 215 ms**, twenty-three times less,
+  with the words landing in full, the spread catching up when the typing stops
+  and a single act on a big book still showing its result. The whole room's
+  suite passed **unedited**, which is the proof a short book is untouched.
   **§9af is the box a writer drew, and the box they can move**, from Ken on
   the drawn box (*it doesn't allow me to move the box anywhere. It doesn't
   allow me to resize it. And it pops the box on the wrong page… I was trying
