@@ -152,8 +152,13 @@ export const measureBlocks = (
       const picture = block.assetId ? context.pictures.get(block.assetId) : undefined;
       const caption = (block.caption ?? '').trim().length > 0 ? 2 : 1;
       // An empty box is the size it was drawn (§9z), so the hole the page
-      // keeps for it is the box the writer put there.
-      measured.set(block.id, pictureLines(picture, measurePx, leadPx, linesPerPage, block.boxHeight ?? 0) + caption);
+      // keeps for it is the box the writer put there — and a picture narrowed
+      // across the measure is as tall as the width it now takes (§9ak), or
+      // the page would keep a full-measure hole for a half-measure picture.
+      measured.set(
+        block.id,
+        pictureLines(picture, measurePx, leadPx, linesPerPage, block.boxHeight ?? 0, block.span ?? 1) + caption,
+      );
       return;
     }
     const element = items[index];

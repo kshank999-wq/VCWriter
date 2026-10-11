@@ -104,7 +104,12 @@ import {
   BOOK_PRESET_NAMES,
   BOOK_PRESETS,
   INSET_SPAN,
+  INSET_RULE,
+  cutsIntoText,
+  droppedFigurePlace,
+  MEASURE_SPAN,
   FREE_SPAN,
+  sizeBookFigure,
   INSET_STANDOFF,
   PRESET_INFO,
   bookFigures,
@@ -278,8 +283,6 @@ type ArtTarget =
   /** The barcode box on the copyright page (§9k). */
   | { kind: 'barcode'; partId: string };
 
-/** The box drawn before anything has been chosen to go in it (§9a). */
-const NEW_BOX = 'new';
 /** The layout dialog opened on no chapter in particular (§14). */
 const OPEN_LAYOUT = 'book';
 
@@ -467,10 +470,20 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
    * Drawing a picture's box on the page (§8a, §9a, from Ken: *you should be
    * able to draw a box in a page and it will create a graphics box… and then
    * add a graphic to it*). The drag says how wide the box is and which side
-   * it cuts in at; `'new'` makes the box first and leaves the picture for
-   * afterwards, which is the order he asked for.
+   * it cuts in at, and the picture is chosen afterwards.
+   *
+   * **It makes a box and never redraws one** (§9ak, from Ken: *instead of
+   * trying to create a box first, which it seems to cause errors*). It used
+   * to hold a figure's own id as well, which is how a picture already in the
+   * book was moved — by drawing its box again somewhere else — and that was
+   * the only way to move one at all: `placing`, the handle that drags and
+   * resizes, was armed for a free graphic and for nothing else. So the one
+   * thing a writer could do to a picture in the text was redraw it, which is
+   * the gesture his message is about. A picture is **moved and resized where
+   * it stands** now, and this tool is what it says it is: the box drawn
+   * before there is a picture to put in it.
    */
-  const [drawing, setDrawing] = useState<string | null>(null);
+  const [drawing, setDrawing] = useState(false);
   /**
    * The box just drawn, still being placed (addendum 20 §9d, from Ken: *you
    * can slide it around and watch the text move around it so you can get it
@@ -915,6 +928,18 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
           if (made.elementId) {
             setSelectedRowId(made.elementId as string);
             turnTo.current = made.elementId as string;
+            /**
+             * **It arrives in hand** (§9ak, from Ken: *insert a picture on
+             * the page and then resize that picture to where you want it to
+             * be*). A picture put in landed at the top of the page with the
+             * row selected and nothing to take hold of, so the next thing a
+             * writer did was look for a way to move it — and the only one
+             * there was drew its box again. A page of its own is left alone:
+             * it *is* the page, so there is no box on it to drag, and moving
+             * it means moving it through the writing, which is the rail's
+             * grip.
+             */
+            if (target.as !== 'page') setPlacing(made.elementId as string);
           }
           /**
            * **The picture takes the sheet's front** (§9aa, from Ken: *I put a
@@ -1034,7 +1059,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
           {
             label: 'Draw a box for a picture…',
             disabled: laying ? null : 'The book is still being set',
-            onPick: () => setDrawing(NEW_BOX),
+            onPick: () => setDrawing(true),
           },
         ] as MenuEntry[])),
     /**
@@ -1266,12 +1291,12 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
       // picture would do are all answered from one place (§9w). The component
       // held its own copy of the first.
       rows={pageRows}
-      drawing={drawing === NEW_BOX}
+      drawing={drawing}
       onPut={() => importPicture('page', on)}
       onDraw={() => {
         // The box is drawn on the spread, so the dialog covering it goes.
         setPageDialogSheet(null);
-        setDrawing(NEW_BOX);
+        setDrawing(true);
       }}
       onVector={() => {
         setPageDialogSheet(null);
@@ -1362,19 +1387,34 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
       // The text block, so a drawn box can be said in inches the way the
       // handle on the spread says it.
       measureInches={laying?.geometry.text.width ?? 0}
-      drawing={figure.placement.place === 'free' ? placing === figure.elementId : drawing === figure.elementId}
+      holding={placing === figure.elementId}
+      // Whether the words have anything to run round it (§9ak), read off the
+      // blocks the room has already laid rather than worked out again here.
+      cutsInto={laying ? cutsIntoText(laying.blocks, figure.elementId) : true}
       onPlace={(placement) => onUpdate((current) => placeBookFigure(current, figure.elementId, placement))}
-      onDraw={() => {
-        setPageDialogSheet(null);
-        // A free graphic is **already on the page**, so there is nothing to
-        // draw: the handle goes straight over it and it is dragged and
-        // resized where it stands (§8c). A figure in the text has no place
-        // until a box is drawn, which is why the two gestures differ.
-        if (figure.placement.place === 'free') {
-          setPlacing((current) => (current === figure.elementId ? null : figure.elementId));
-          return;
-        }
-        setDrawing((current) => (current === figure.elementId ? null : figure.elementId));
+      /**
+       * **The handle goes over every picture** (§9ak, from Ken: *insert a
+       * picture on the page and then resize that picture to where you want it
+       * to be. You can move it around. You can resize it with the corner
+       * pins*).
+       *
+       * §8c's note here said a free graphic is *already on the page, so there
+       * is nothing to draw*, and that **a figure in the text has no place
+       * until a box is drawn, which is why the two gestures differ**. That is
+       * the sentence he is overruling, and he is right: a picture that has
+       * been put in has a place too — it stands where the writing puts it —
+       * so there is nothing to draw there either. One gesture now, for every
+       * kind of picture, and the box tool is left to the one thing only it
+       * can do: hold space before there is a picture.
+       */
+      onHandle={() => {
+        // **Only taking it up clears the screen.** The dialog goes because the
+        // picture is dragged on the spread it covers; a press that puts the
+        // handle *down* has no reason to dismiss the panel the writer is
+        // standing in, and closing it either way made the control vanish
+        // under its own second press.
+        if (placing !== figure.elementId) setPageDialogSheet(null);
+        setPlacing((current) => (current === figure.elementId ? null : figure.elementId));
       }}
       onFill={() => importArt({ kind: 'fill', elementId: figure.elementId })}
       onBackBlank={(blank) => onUpdate((current) => setBackBlank(current, figure.elementId, blank))}
@@ -1524,7 +1564,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
           // goes, because a box is drawn on the page it is covering.
           onDrawBox={() => {
             setOwnChapterPage(null);
-            setDrawing(NEW_BOX);
+            setDrawing(true);
           }}
         />
       )}
@@ -1950,19 +1990,14 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
                   // inset's of the measure: two measurements of two things.
                   const wide = held.placement.place === 'free' ? ofPage : span;
                   /**
-                   * **An empty box is the shape it is dragged to** (§9af).
-                   * With a picture in it the height is the picture's own
-                   * proportions and there is nothing to set (§9m); with none,
-                   * `boxHeight` *is* how tall the box is, and a corner that
-                   * set only the width left the writer dragging one edge of
-                   * a shape they had drawn.
+                   * **One act, and the rule is the domain's** (§9ak): a
+                   * corner drag keeps the picture's proportions and gives an
+                   * empty box the height it was dragged to, which is the one
+                   * thing that tells this gesture from drawing a box.
+                   * `sizeBookFigure` holds it, so the handle and anything
+                   * built on it afterwards cannot disagree.
                    */
-                  const empty = held.assetId == null;
-                  return placeBookFigure(current, what, {
-                    ...held.placement,
-                    span: wide,
-                    ...(empty && tall > 0 ? { boxHeight: tall } : {}),
-                  });
+                  return sizeBookFigure(current, what, wide, tall);
                 });
               }}
               onPick={() => {
@@ -1985,12 +2020,28 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
                   // line the anchor says *after*, which is the foot of the
                   // page and the one position the slide could not reach.
                   const moved = anchor && anchor.elementId !== what ? moveFigureTo(current, what, anchor) : current;
+                  /**
+                   * **Below the words it is not a picture the text runs
+                   * round** (§9ak, from Ken: *if there is a blank lower half
+                   * of the page, that you can drag and drop it in there and
+                   * resize it and it won't touch the text*).
+                   *
+                   * `blockUnder` says `after` only where the pointer is past
+                   * every block on the page, which is exactly that white — so
+                   * there is nothing to cut into, and calling it an inset was
+                   * the room naming the picture after a side of the page
+                   * rather than after what it does. §8's rule then drew it
+                   * across the measure anyway, so the words on the screen and
+                   * the picture on the page disagreed and a corner dragged on
+                   * it had nowhere to be written down.
+                   */
+                  const as = droppedFigurePlace(place, anchor);
                   // The side it cuts in at is the writer's; what the book does
                   // with an inset that has no paragraph left to cut into is
                   // §8's own rule — it stands across the measure — and is not
                   // written back onto the record, which would be storing what
                   // `bookBlocks` already answers.
-                  return placeBookFigure(moved, what, { place });
+                  return placeBookFigure(moved, what, { place: as });
                 });
               }}
               onKeep={() => {
@@ -2009,11 +2060,10 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
                 onUpdate((current) => removeBookFigure(current, what));
               }}
               drawing={drawing}
-              onGaveUp={() => setDrawing(null)}
+              onGaveUp={() => setDrawing(false)}
               onDrawn={(placement, sheet, anchor) => {
-                const what = drawing;
-                if (!what || !laying) return;
-                setDrawing(null);
+                if (!drawing || !laying) return;
+                setDrawing(false);
                 setSelectedSheet(sheet);
                 const at = pagePlace(laying.laid.pages, laying.blocks, sheet);
                 /**
@@ -2045,50 +2095,44 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
                   setMessage('Draw the box on a page of the story: the front and back pages carry their own pictures.');
                   return;
                 }
-                if (what === NEW_BOX) {
-                  // The box first, the picture afterwards (§9a, from Ken) —
-                  // and it is **placed** before it is filled (§9d): the box
-                  // stays in hand with a ✗ and a ✓ on it until the writer
-                  // says it is where they want it.
-                  onUpdate((current) => {
-                    const spot = anchorOf(current);
-                    const beat = current.beats.find((one) => one.manuscript.elements.some((element) => (element.id as string) === at.elementId));
-                    if (!beat) return current;
-                    const made = placeFigure(current, {
-                      beatId: beat.id,
-                      beforeElementId: at.elementId as never,
-                      attributes: {
-                        bookPlace: placement.place,
-                        bookSpan: placement.span ?? INSET_SPAN.default,
-                        // The box's drawn height (§9z), so it fits where it
-                        // was drawn rather than taking a height nobody chose.
-                        ...(placement.boxHeight ? { bookBoxHeight: placement.boxHeight } : {}),
-                        ...(placement.standoff !== undefined && placement.standoff !== INSET_STANDOFF.default ? { bookStandoff: placement.standoff } : {}),
-                      },
-                    });
-                    if (made.elementId) {
-                      setSelectedRowId(made.elementId as string);
-                      setPlacing(made.elementId as string);
-                    }
-                    // Made at the head of the page, then taken to where the
-                    // box was drawn — the one act that can say *after*.
-                    return spot && made.elementId && spot.elementId !== made.elementId
-                      ? moveFigureTo(made.file, made.elementId as string, spot)
-                      : made.file;
-                  });
-                  return;
-                }
-                setSelectedRowId(what);
-                // Drawing the box on another page moves the picture there,
-                // rather than leaving it where it was and lying about it.
-                const alreadyHere = pageOf(laying, what)?.sheet === sheet;
+                /**
+                 * The box first, the picture afterwards (§9a, from Ken) — and
+                 * it is **placed** before it is filled (§9d): the box stays
+                 * in hand with a ✗ and a ✓ on it until the writer says it is
+                 * where they want it.
+                 *
+                 * **And that is all this tool does now** (§9ak). A second
+                 * branch here redrew an existing picture's box, which was the
+                 * only way to move one; the handle moves it instead, so what
+                 * that branch alone could do is carried rather than left — and
+                 * a route only one surface could reach is not kept beside the
+                 * surface that replaced it (§9u).
+                 */
                 onUpdate((current) => {
-                  // Re-drawn on this page it goes where the box was drawn;
-                  // re-drawn on another it goes to that page's own spot.
                   const spot = anchorOf(current);
-                  const to = spot ?? (alreadyHere || at.elementId === what ? null : { elementId: at.elementId as string, after: false });
-                  const moved = to && to.elementId !== what ? moveFigureTo(current, what, to) : current;
-                  return placeBookFigure(moved, what, placement);
+                  const beat = current.beats.find((one) => one.manuscript.elements.some((element) => (element.id as string) === at.elementId));
+                  if (!beat) return current;
+                  const made = placeFigure(current, {
+                    beatId: beat.id,
+                    beforeElementId: at.elementId as never,
+                    attributes: {
+                      bookPlace: placement.place,
+                      bookSpan: placement.span ?? INSET_SPAN.default,
+                      // The box's drawn height (§9z), so it fits where it
+                      // was drawn rather than taking a height nobody chose.
+                      ...(placement.boxHeight ? { bookBoxHeight: placement.boxHeight } : {}),
+                      ...(placement.standoff !== undefined && placement.standoff !== INSET_STANDOFF.default ? { bookStandoff: placement.standoff } : {}),
+                    },
+                  });
+                  if (made.elementId) {
+                    setSelectedRowId(made.elementId as string);
+                    setPlacing(made.elementId as string);
+                  }
+                  // Made at the head of the page, then taken to where the
+                  // box was drawn — the one act that can say *after*.
+                  return spot && made.elementId && spot.elementId !== made.elementId
+                    ? moveFigureTo(made.file, made.elementId as string, spot)
+                    : made.file;
                 });
               }}
             />
@@ -2550,7 +2594,8 @@ function Spreads({
   /** A double-click on a page (§9): whatever the page belongs to opens. */
   onOpenPage(page: BookPage): void;
   /** The figure whose box is being drawn (§8a), `'new'` for one not yet made (§9a), or null. */
-  drawing: string | null;
+  /** Whether the box tool is armed (§9ak): it makes a box and never redraws one. */
+  drawing: boolean;
   onDrawn(placement: BookFigurePlacement, sheet: number, anchor: FigureAnchor | null): void;
   /** A press that drew nothing: the tool goes down rather than staying armed (§9p). */
   onGaveUp(): void;
@@ -2704,10 +2749,17 @@ function Spreads({
   const sheetWidthOf = (sheetEl: HTMLElement | null): number =>
     sheetEl ? sheetEl.getBoundingClientRect().width / zoom : 0;
 
+  /**
+   * **The share the corner was dragged to, and no band** (§9ak). It clamped
+   * into `INSET_SPAN` here as well as in the act, which is a second answer
+   * the moment the two kinds of picture stopped sharing one band: a picture
+   * across the measure may be anything up to the whole of it, and this would
+   * have held every corner drag to half.
+   */
   const spanFor = (sheetEl: HTMLElement | null, width: number): number => {
     const measure = measureOn(sheetEl);
     if (measure <= 0) return INSET_SPAN.default;
-    return Math.min(INSET_SPAN.max, Math.max(INSET_SPAN.min, width / measure));
+    return Math.min(1, Math.max(0, width / measure));
   };
 
   /**
@@ -3697,7 +3749,15 @@ function PlacingHandle({
 }) {
   const [sliding, setSliding] = useState(false);
   /** Which corner is being dragged, and where the box stood when it was taken. */
-  const corner = useRef<{ x: number; y: number; from: 'left' | 'right'; down: 'up' | 'down' } | null>(null);
+  const corner = useRef<{
+    x: number;
+    y: number;
+    from: 'left' | 'right';
+    down: 'up' | 'down';
+    /** The box's size when the corner was taken (§9ak). */
+    width: number;
+    height: number;
+  } | null>(null);
   /** Where a press began, and whether it has become a slide (§9af). */
   const press = useRef<{ x: number; y: number; moved: boolean } | null>(null);
   /** A slide just happened, so the click that ends it is not a mark's (§9af). */
@@ -3724,7 +3784,21 @@ function PlacingHandle({
     event.preventDefault();
     event.stopPropagation();
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
-    corner.current = { x: event.clientX, y: event.clientY, from, down };
+    /**
+     * **The size at the press, not the size now** (§9ak, measured). `across`
+     * is the distance from where the corner was taken, and this read the
+     * box's **live** width to add it to — a width the previous move had
+     * already changed, the book being set again between them. So each move
+     * applied the whole journey to an answer that had already travelled, and
+     * the box ran away from the hand: measured on the real spread, a 100-pixel
+     * drag inward on a 342-pixel picture came back at **68 pixels**, the
+     * band's own floor, rather than 242. The further a writer drags, the
+     * worse it is, which is exactly the hand that is being careful.
+     *
+     * Held here, the box simply follows the pointer, which is the one thing a
+     * corner has to do.
+     */
+    corner.current = { x: event.clientX, y: event.clientY, from, down, width: at.width, height: at.height };
   };
   const moveCorner = (event: React.PointerEvent) => {
     const held = corner.current;
@@ -3732,8 +3806,8 @@ function PlacingHandle({
     const across = event.clientX - held.x;
     const downBy = event.clientY - held.y;
     onCorner(
-      Math.max(24, held.from === 'right' ? at.width + across : at.width - across),
-      Math.max(16, held.down === 'down' ? at.height + downBy : at.height - downBy),
+      Math.max(24, held.from === 'right' ? held.width + across : held.width - across),
+      Math.max(16, held.down === 'down' ? held.height + downBy : held.height - downBy),
     );
   };
   const letGo = (event: React.PointerEvent) => {
@@ -4233,9 +4307,10 @@ function StoryPageSection({
 function FigureSection({
   figure,
   measureInches,
-  drawing,
+  holding,
+  cutsInto,
   onPlace,
-  onDraw,
+  onHandle,
   onFill,
   onBackBlank,
   onRemove,
@@ -4243,9 +4318,13 @@ function FigureSection({
   figure: BookFigure;
   /** The text block's width, for saying a drawn box in inches. */
   measureInches: number;
-  drawing: boolean;
+  /** Whether the handle is on this picture — it is being moved and resized (§9ak). */
+  holding: boolean;
+  /** Whether there are words after it for the text to run round it (§9ak). */
+  cutsInto: boolean;
   onPlace(placement: BookFigurePlacement): void;
-  onDraw(): void;
+  /** Put the handle on it, or take it off (§9ak). */
+  onHandle(): void;
   /** Put a picture in a box that has none yet (§9a). */
   onFill(): void;
   /** Ask for the leaf behind a picture page, or stop asking (§9i). */
@@ -4268,7 +4347,7 @@ function FigureSection({
         <Help label="About this picture">
           <span>
             {empty
-              ? 'The box holds its space on the page. Choose what goes in it below, or draw it again to move it or resize it.'
+              ? 'The box holds its space on the page. Choose what goes in it below, or take hold of it to move it and resize it.'
               : `The manuscript prints it across the measure; the book puts it where you say.${figure.chapterTitle ? ` It is in ${figure.chapterTitle}.` : ''}`}
           </span>
         </Help>
@@ -4439,7 +4518,52 @@ function FigureSection({
               onChange={(event) => onPlace({ ...figure.placement, standoff: Number(event.target.value) / 10 })}
             />
           </label>
-          <p className="muted small">The text after it runs round the picture; a paragraph carrying one is never split across a page.</p>
+          {/* **The rule, from the domain** (§9ak, from Ken: *it has to be one
+              of its borders aligned with the margin… and can only be as wide
+              as half of the text area*). `INSET_RULE` is the one copy, so the
+              sentence and the band cannot part company. */}
+          <p className="field-note">{INSET_RULE}</p>
+          {/* **And whether there is anything to run round it** (§9ak, measured
+              on an imported collection). §8's rule is that an inset with no
+              paragraph after it stands across the measure, which is right and
+              was said nowhere — so a picture at the end of a chapter drew full
+              width and the writer was left to conclude the side had not
+              taken. */}
+          {cutsInto ? (
+            <p className="muted small">The text after it runs round the picture; a paragraph carrying one is never split across a page.</p>
+          ) : (
+            <p className="muted small">
+              Nothing follows it for the words to run round, so it stands across the measure where it is. Move it up into the
+              writing and the text will cut round it.
+            </p>
+          )}
+        </>
+      ) : null}
+      {/* **How wide one across the measure is** (§9ak, from Ken: *if there is
+          a blank lower half of the page, that you can drag and drop it in
+          there and resize it and it won't touch the text*). It had no width
+          at all, so a corner dragged on a picture standing in that white had
+          nowhere to be written down. Narrowed, it is centred: flush to a
+          margin is the rule for a picture the words run beside, and one
+          standing alone is a plate in miniature. */}
+      {place === 'measure' ? (
+        <>
+          <label className="field">
+            <span>Width, {Math.round(span * 100)}% of the measure</span>
+            <input
+              type="range"
+              aria-label="Picture width"
+              min={Math.round(MEASURE_SPAN.min * 100)}
+              max={Math.round(MEASURE_SPAN.max * 100)}
+              step={5}
+              value={Math.round(span * 100)}
+              onChange={(event) => onPlace({ ...figure.placement, span: Number(event.target.value) / 100 })}
+            />
+          </label>
+          <p className="muted small">
+            The words stand above it and below it, never beside it, so nothing runs round it whatever its width. Narrower than
+            the measure it is centred.
+          </p>
         </>
       ) : null}
       <div className="layout-plate-pick">
@@ -4451,24 +4575,20 @@ function FigureSection({
         >
           {empty ? 'Choose a picture…' : 'Another picture…'}
         </button>
+        {/* **One gesture for every picture** (§9ak, from Ken). Where this
+            read *Draw the box…* on a picture in the text, it reads what a
+            free graphic's has read since §8c — the handle goes over the
+            picture wherever the laying put it, and it is dragged and resized
+            there. The corners keep its proportions; what the text does about
+            it is read off where it lands. */}
         <button
           type="button"
-          className={drawing ? 'raised small selected' : 'raised small'}
-          aria-pressed={drawing}
-          title={
-            place === 'free'
-              ? 'Drag it where it goes and take a corner to resize it.'
-              : 'Drag a box on the page where the picture goes; its width and the side it lands on are taken from the box. Drawn on another page, it moves the picture there.'
-          }
-          onClick={onDraw}
+          className={holding ? 'raised small selected' : 'raised small'}
+          aria-pressed={holding}
+          title="Drag it where it goes and take a corner to resize it; the picture keeps its proportions. Dropped in the white under the words it stands there and the text is left alone."
+          onClick={onHandle}
         >
-          {place === 'free'
-            ? drawing
-              ? 'Moving it — drag on the page'
-              : 'Move and resize it…'
-            : drawing
-              ? 'Drawing — drag on the page'
-              : 'Draw the box…'}
+          {holding ? 'Moving it — drag on the page' : 'Move and resize it…'}
         </button>
       </div>
       <div className="layout-part-actions">

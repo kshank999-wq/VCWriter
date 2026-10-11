@@ -97,7 +97,7 @@ describe('where a picture is anchored', () => {
 describe('what a drawn box is', () => {
   it('is cut into the text at the side it was drawn, while it is narrow enough for words beside it', () => {
     expect(drawnFigurePlace(0.3, 'left')).toBe('left');
-    expect(drawnFigurePlace(0.6, 'right')).toBe('right');
+    expect(drawnFigurePlace(0.5, 'right')).toBe('right');
   });
 
   it('is across the measure once it is wider than an inset may be', () => {
@@ -107,8 +107,14 @@ describe('what a drawn box is', () => {
      * past it there is nothing to cut into. It used to be clamped to 60% and
      * called *cut in at the left*, which is a picture that cannot be what it
      * was drawn as.
+     *
+     * **The line is half the measure** since §9ak, which is Ken's number and
+     * the first one with a rule behind it: past half, the column left beside
+     * the picture is too narrow to set a line of prose in. These asserted
+     * 0.6 and 0.61 — the old ceiling — so they pinned where the line was
+     * rather than that there is one, and they move with it.
      */
-    expect(drawnFigurePlace(0.61, 'left')).toBe('measure');
+    expect(drawnFigurePlace(0.51, 'left')).toBe('measure');
     expect(drawnFigurePlace(1, 'right')).toBe('measure');
   });
 });

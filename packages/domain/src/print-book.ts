@@ -187,6 +187,13 @@ export const pictureLines = (
   leadPx: number,
   linesPerPage: number,
   boxHeight = 0,
+  /**
+   * **How much of the measure it takes** (§9ak), where it has been narrowed.
+   * It scales the picture's own proportional height and nothing else, a drawn
+   * height already being a share of the measure rather than of the picture —
+   * so the default of 1 leaves every call made before this one untouched.
+   */
+  span = 1,
 ): number => {
   // **A box that was drawn keeps its height** (§9aj). §9z made the drawn
   // height the measurement while the box was empty and handed it back to the
@@ -199,7 +206,7 @@ export const pictureLines = (
   if (!picture || picture.width <= 0 || picture.height <= 0) {
     return Math.max(1, Math.round(linesPerPage / 3));
   }
-  return wholeLines((widthPx * picture.height) / picture.width, leadPx);
+  return wholeLines((widthPx * span * picture.height) / picture.width, leadPx);
 };
 
 /** The half title, the title page, the copyright, a dedication: pages of a few words. */
@@ -702,17 +709,26 @@ const blockInner = (block: BookBlock, context: BookRenderContext): string => {
         if (picture) return `<div class="bk-display bk-plate bk-plate-art" data-figure="${escapeHtml(block.id)}"><img class="bk-plate-image" alt="${escapeHtml(picture.altText || block.caption || '')}" src="${escapeHtml(picture.data)}" /></div>`;
         return `<div class="bk-display bk-plate" data-figure="${escapeHtml(block.id)}"><div class="bk-plate-missing">Picture goes here</div></div>`;
       }
-      // Across the measure, so the box is the measure wide and its drawn
-      // height is read against that (§9z).
+      // Across the measure, so the box is the measure wide unless the writer
+      // has narrowed it (§9ak), and its drawn height is read against the
+      // measure either way (§9z) — the box's own proportions are therefore
+      // the width it takes against that height.
+      const wide = block.span ?? 1;
       const image = picture
-        ? `<img class="bk-figure-image" alt="${escapeHtml(picture.altText || block.caption || '')}"${drawnBox(1, block.boxHeight ?? 0)} src="${escapeHtml(picture.data)}" />`
-        : `<div class="bk-figure-missing"${drawnBox(1, block.boxHeight ?? 0)}>Picture goes here</div>`;
+        ? `<img class="bk-figure-image" alt="${escapeHtml(picture.altText || block.caption || '')}"${drawnBox(wide, block.boxHeight ?? 0)} src="${escapeHtml(picture.data)}" />`
+        : `<div class="bk-figure-missing"${drawnBox(wide, block.boxHeight ?? 0)}>Picture goes here</div>`;
       const caption = (block.caption ?? '').trim() ? `<p class="bk-caption">${escapeHtml(block.caption ?? '')}</p>` : '';
       // The author's photograph above the biography (§17): the same figure
       // every other picture across the measure is, shaped and held to a
       // third of the measure by its class alone.
       const shape = block.photoShape ? ` bk-author-photo bk-photo-${block.photoShape}` : '';
-      return `<div class="bk-figure${shape}" data-figure="${escapeHtml(block.id)}">${image}${caption}</div>`;
+      // **Narrowed, it is centred** (§9ak). Flush to a margin is the rule for
+      // a picture the text runs round, where the words beside it have to
+      // start somewhere; one standing alone between paragraphs is a plate in
+      // miniature, and a book centres those. Absent where it is the whole
+      // measure, so the markup of every book already set is unchanged.
+      const narrow = wide < 1 ? ` style="width:${(wide * 100).toFixed(3)}%;margin-left:auto;margin-right:auto"` : '';
+      return `<div class="bk-figure${shape}" data-figure="${escapeHtml(block.id)}"${narrow}>${image}${caption}</div>`;
     }
     case 'chapter_opening':
     case 'part_opening':

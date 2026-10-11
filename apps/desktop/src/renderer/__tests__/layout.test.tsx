@@ -353,7 +353,25 @@ describe('the room', () => {
     expect(placed).toMatchObject({ place: 'right', standoff: 2 });
   });
 
-  it('draws the picture’s box on the page, taking its width and its side from the drag', () => {
+  /**
+   * **A picture already in the book is moved where it stands** (§9ak, from
+   * Ken: *maybe the best way is to insert a picture on the page and then
+   * resize that picture to where you want it to be… instead of trying to
+   * create a box first, which it seems to cause errors*).
+   *
+   * This test drove the gesture he is overruling: the one thing a writer
+   * could do to a picture in the text was **draw its box again**, because
+   * `placing` — the handle that drags and resizes — was armed for a free
+   * graphic and for nothing else. It pinned that as a requirement, so it is
+   * rewritten rather than worked around: what it now asserts is that the
+   * handle goes over the picture, and that the redraw is gone rather than
+   * standing beside it.
+   *
+   * The box tool itself is untouched and has its own test, through the one
+   * route it keeps: *Draw a box for a picture…*, which is for holding space
+   * before there is a picture to put in it.
+   */
+  it('takes hold of a picture already in the book, rather than offering to draw it again', () => {
     let start = novel();
     const beat = start.beats[0]!;
     start = updateBeat(start, beat.id, {
@@ -369,33 +387,93 @@ describe('the room', () => {
     openFold('The Lamp');
     const rail = within(document.querySelector('.layout-rail') as HTMLElement);
     fireEvent.doubleClick(rail.getByRole('button', { name: /^The harbour/ }));
-    const draw = screen.getByRole('button', { name: 'Draw the box…' });
-    expect(draw.getAttribute('aria-pressed')).toBe('false');
+    // **One gesture, and it is not drawing.** A picture that has been put in
+    // has a place already, so there is nothing to draw — which is what §8c
+    // said of a free graphic and what is now true of every picture.
+    expect(screen.queryByRole('button', { name: 'Draw the box…' })).toBeNull();
+    const hold = screen.getByRole('button', { name: 'Move and resize it…' });
+    expect(hold.getAttribute('aria-pressed')).toBe('false');
+    // Taking hold closes the page's dialog (§9d, §9u): the picture is dragged
+    // on the spread the dialog was covering, so it gets out of the way.
+    fireEvent.click(hold);
+    expect((document.querySelector('.layout-page-dialog') as HTMLElement).hasAttribute('open')).toBe(false);
+    // Opened again it says it is in hand, and it is a toggle, so putting it
+    // down is the same press.
+    fireEvent.doubleClick(rail.getByRole('button', { name: /^The harbour/ }));
+    const holding = screen.getByRole('button', { name: 'Moving it — drag on the page' });
+    expect(holding.getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(holding);
+    expect(screen.getByRole('button', { name: 'Move and resize it…' }).getAttribute('aria-pressed')).toBe('false');
+  });
+
+  /** How wide a picture across the measure is (§9ak): it had no width at all. */
+  it('narrows a picture across the measure, which is the white under the words filled', () => {
+    let start = novel();
+    const beat = start.beats[0]!;
+    start = updateBeat(start, beat.id, {
+      manuscript: {
+        elements: [
+          { id: 'p-0' as never, type: 'paragraph', text: 'Chapter 1 begins.', characterId: null, attributes: {} },
+          { id: 'f-1' as never, type: 'figure', text: 'The harbour', characterId: null, attributes: { assetId: 'a1' } },
+        ],
+      },
+    });
+    render(<Harness initial={start} />);
+    openFold('The Lamp');
+    const rail = within(document.querySelector('.layout-rail') as HTMLElement);
+    fireEvent.doubleClick(rail.getByRole('button', { name: /^The harbour/ }));
+    expect(figurePlacement((latest as ProjectFile).beats[0]!.manuscript.elements[1]!).span).toBe(1);
+    fireEvent.change(screen.getByLabelText('Picture width'), { target: { value: '45' } });
+    const placed = figurePlacement((latest as ProjectFile).beats[0]!.manuscript.elements[1]!);
+    expect(placed.place).toBe('measure');
+    expect(placed.span).toBeCloseTo(0.45);
+  });
+
+  it('draws a new picture’s box on the page, taking its width and its side from the drag', () => {
+    let start = novel();
+    const beat = start.beats[0]!;
+    start = updateBeat(start, beat.id, {
+      manuscript: {
+        elements: [
+          { id: 'p-0' as never, type: 'paragraph', text: 'Chapter 1 begins.', characterId: null, attributes: {} },
+          { id: 'f-1' as never, type: 'figure', text: 'The harbour', characterId: null, attributes: { assetId: 'a1' } },
+          { id: 'p-x' as never, type: 'paragraph', text: 'And carries on.', characterId: null, attributes: {} },
+        ],
+      },
+    });
+    render(<Harness initial={start} />);
+    const ids = (file: ProjectFile): string[] => file.beats.flatMap((beat) => beat.manuscript.elements.map((one) => one.id as string));
+    // **Through the route the tool keeps** (§9ak): the page's own dialog, and
+    // the Add menu. It no longer stands on a picture's panel, a picture that
+    // has been put in having a place already.
+    const chosen = chooseStoryPage();
+    fireEvent.doubleClick(chosen);
+    const panel = document.querySelector('.layout-page-dialog') as HTMLElement;
+    const draw = within(panel).getByRole('button', { name: 'Draw a box for a picture…' });
     // **Taking the tool up closes the page's dialog** (§9d, §9u): the box is
     // drawn on the spread the dialog was covering, so it gets out of the way.
     fireEvent.click(draw);
-    expect((document.querySelector('.layout-page-dialog') as HTMLElement).hasAttribute('open')).toBe(false);
-    // The box is drawn on a page of the story, which is where a figure can go.
-    const sheet = turnToStoryPage();
-    expect(sheet.classList.contains('layout-sheet-drawing')).toBe(true);
+    expect(panel.hasAttribute('open')).toBe(false);
+    expect(chosen.classList.contains('layout-sheet-drawing')).toBe(true);
     // jsdom measures nothing, so the sheet is given a rectangle to be read against.
     const rect = { left: 0, top: 0, width: 400, height: 600, right: 400, bottom: 600, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
-    sheet.getBoundingClientRect = () => rect;
-    sheet.setPointerCapture = () => undefined;
+    chosen.getBoundingClientRect = () => rect;
+    chosen.setPointerCapture = () => undefined;
     // A box on the right-hand half, a third of the page across.
-    fireEvent.pointerDown(sheet, { clientX: 240, clientY: 100, pointerId: 1 });
-    fireEvent.pointerMove(sheet, { clientX: 360, clientY: 300, pointerId: 1 });
+    fireEvent.pointerDown(chosen, { clientX: 240, clientY: 100, pointerId: 1 });
+    fireEvent.pointerMove(chosen, { clientX: 360, clientY: 300, pointerId: 1 });
     expect(document.querySelector('.layout-draw-box')).not.toBeNull();
-    fireEvent.pointerUp(sheet, { clientX: 360, clientY: 300, pointerId: 1 });
-    const placed = figurePlacement((latest as ProjectFile).beats[0]!.manuscript.elements[1]!);
+    fireEvent.pointerUp(chosen, { clientX: 360, clientY: 300, pointerId: 1 });
+    const made = ids(latest as ProjectFile).find((id) => !ids(start).includes(id));
+    expect(made).toBeTruthy();
+    const element = (latest as ProjectFile).beats
+      .flatMap((one) => one.manuscript.elements)
+      .find((one) => (one.id as string) === made)!;
+    const placed = figurePlacement(element);
     expect(placed.place).toBe('right');
     expect(placed.span).toBeGreaterThan(0.2);
     // The drawing is over, and the box is gone.
     expect(document.querySelector('.layout-draw-box')).toBeNull();
-    // The tool is down, and the picture's own screen is a double-click away
-    // again — which is the one way to it now (§9u).
-    fireEvent.doubleClick(rail.getByRole('button', { name: /^The harbour/ }));
-    expect(screen.getByRole('button', { name: 'Draw the box…' }).getAttribute('aria-pressed')).toBe('false');
   });
 
   /**

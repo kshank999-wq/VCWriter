@@ -2952,6 +2952,147 @@ second blank is not later "fixed" as a fault.
 > copyright page takes the next page now, and the assertion was rewritten
 > rather than worked around.
 
+## 9ak. The picture placed, rather than the box drawn
+
+From Ken, the morning after §9aj: *before we move on, maybe the best way is to
+insert a picture on the page and then resize that picture to where you want it
+to be. You can move it around. You can resize it with the corner pins, but it
+stays proportional to its original dimensions. Then you place it on the page
+and the text will be cut around that picture. Instead of trying to create a
+box first, which it seems to cause errors. But we can make a rule that when
+you place a picture where the text is going to cut around it, it has to be one
+of its borders aligned with the margin. So if it's going to be aligned to the
+left somewhere, it needs to be aligned to the left-hand margin. And if it's
+going to be on the right, it has to be aligned to the right-hand margin and
+can only be as wide as half of the text area. But if there is a blank lower
+half of the page, that you can drag and drop it in there and resize it and it
+won't touch the text.*
+
+**He is overruling a sentence this room wrote down and then stopped reading.**
+§8c's note beside the figure panel's one button says a free graphic is
+*already on the page, so there is nothing to draw* — and that **a figure in
+the text has no place until a box is drawn, which is why the two gestures
+differ**. It is not true. A picture that has been put in stands where the
+writing puts it, which is a place; what the room did with that fact was arm
+the handle — `placing`, the thing that drags and resizes — for a free graphic
+and **for nothing else**. Read off the source rather than guessed at:
+`setPlacing` had three callers, and the only one for a picture that already
+existed was gated on `place === 'free'`. So the single thing a writer could do
+to a picture in the text was **draw its box again**, which is the gesture his
+message is about, and which §9af and §9aj between them found six faults in.
+
+**One gesture, for every picture.** The figure panel's button reads *Move and
+resize it…* whatever the picture is, the handle goes over it wherever the
+laying put it, and the box tool is left to the one thing only it can do —
+hold space on the page before there is a picture to put in it, which is §9a's
+own reason for having it. The redraw branch in `onDrawn` is **deleted rather
+than kept beside the handle** (§9u: what one surface alone could do is carried
+or deleted, never left), and `drawing` is a boolean now, there being nothing
+left for its sentinel to name.
+
+**And a picture arrives in hand.** *Put a picture here…* put one at the top of
+the page, selected its row, and left nothing to take hold of — so the next
+thing a writer did was look for a way to move it, and the only one there was
+drew its box. A picture that is a **page of its own** is left alone: it *is*
+the page, so there is no box on it to drag, and moving it means moving it
+through the writing, which is the rail's grip.
+
+### Three rules, each a sentence of his
+
+**A corner drag keeps the picture's proportions**, which §9m settled and §9aj
+then quietly undid: once the cutter kept a drawn box's height even with a
+picture in it, a box drawn, filled and then resized moved one edge of a shape
+the picture sat letterboxed inside. That is the *errors* he names. A corner
+drag is **a new statement about the size**, so the drawn height goes —
+`boxHeight`'s own argument, that a stored answer is for a figure nobody has
+given one and never for a caller who has just mentioned the field. An **empty**
+box has no proportions to keep, so there the dragged height is still the
+answer (§9af, unchanged). `sizeBookFigure` is the one act that carries it, so
+the handle and whatever is built on it next cannot disagree.
+
+**Flush to a margin, and half the measure at most.** `INSET_SPAN.max` was 0.6,
+which was my number with no rule behind it; his is **half**, and it has one —
+past half the measure the column left beside the picture is too narrow to set
+a line of prose in, so a picture wider than that is not a picture the text
+runs round. `drawnFigurePlace` already answers *across the measure* past that
+number, so moving the band moves every route at once. The cost is named rather
+than hidden: an inset stored wider than half narrows to half, which is the
+band clamping as it always has; turning it into a measure figure instead would
+move the text round it, and of two imperfect answers the one where nothing
+already set moves is the smaller. `INSET_RULE` is the sentence, in one place,
+on the screen.
+
+**Below the words it is not a picture the text runs round.** `blockUnder` says
+`after` only where the pointer is past every block on the page, which is
+exactly the white he is filling — so `droppedFigurePlace` is
+`drawnFigurePlace`'s sibling, reading a picture let go where that one reads a
+box drawn, and it answers *across the measure*. Calling it an inset named the
+picture after **which half of the page it was dropped on** rather than after
+what it does, and §8's rule then drew it across the measure anyway, so the
+words on the screen and the picture on the page disagreed.
+
+### The width a picture across the measure never had
+
+That last rule needed something that did not exist: `placeBookFigure`
+**stripped `bookSpan`** on the way to a measure figure, so a corner dragged on
+a picture standing in the white was thrown away before it reached the record.
+`MEASURE_SPAN` is its band and **its default is the whole measure**, so a
+figure carrying no width reads exactly as it did before there was anything to
+read and no book already set moves — the markup of an untouched figure is byte
+for byte what it was. Narrowed, it is **centred**: flush to a margin is the
+rule for a picture the words run beside, where they have to start somewhere,
+and one standing alone between paragraphs is a plate in miniature, which books
+centre. The block carries the width and `pictureLines` takes it, because the
+hole the cutter keeps and the box the page draws have to be **one number read
+twice** — a half-measure picture is half as tall, and a full-measure hole kept
+for it would leave the white he is filling exactly where it was.
+
+A width is carried onto a measure figure **only from one that was already
+across the measure**: an inset's span is measured against a different rule —
+half of it at most — so reading one here would make a picture lifted out of
+the text 40% wide, a size nobody chose.
+
+### What driving it found, and what it corrected
+
+**The corner drag compounded.** `moveCorner` measured `across` from where the
+corner was taken and added it to the box's **live** width — a width the
+previous move had already changed, the book being set again between them — so
+each move applied the whole journey to an answer that had already travelled.
+Measured on the real spread: a 100-pixel drag inward on a 342-pixel picture
+came back at **68 pixels**, the band's own floor, rather than 242. The further
+a writer drags the worse it is, which is exactly the hand that is being
+careful. Held at the press, the box follows the pointer, which is the one
+thing a corner has to do. Measured again after: **259 pixels, 76% of the
+measure, and the image's own ratio of 1.778 to the third decimal.**
+
+**And a side chosen with nothing to cut into said nothing.** §8's rule has
+always been that an inset with no paragraph after it stands across the
+measure — right, there being no words to run beside it, and said **nowhere**.
+Driving an imported collection landed exactly there: the picture was asked to
+cut in at the left, the slider showed 50%, and the page drew it full width,
+from which the only fair conclusion is that the margin rule does not work.
+`cutsIntoText` is a reading over the **blocks**, which is the one place that
+decides, and the panel says it: *Nothing follows it for the words to run
+round, so it stands across the measure where it is.*
+
+**Measured in the real room at 1440 × 900**, on an imported collection: a
+picture put in on page 10 arrives in hand at *4.19 × 2.56 in · 100% of the
+measure* with the book still twelve pages and no box drawn; a corner takes it
+to 76% with the picture's own proportions kept; narrowed it is centred (41
+pixels of margin either side) with words above and below it and the book no
+longer; the cut-in slider runs 20 to **50**; and a picture dragged into the
+white under a short page's last line lands after the words with the text left
+where it was.
+
+### What is deliberately not changed
+
+The box tool keeps its two routes — the Add menu and the page's own dialog —
+because reserving space before there is a picture is a real act and the only
+one it was ever needed for. §9aj's drawn height is untouched for a box nobody
+has resized: it is kept picture or no picture, and only the corner takes it
+off. And a picture that is a page of its own is not given a handle: moving it
+is moving it through the writing, which is what the rail's grip is for.
+
 ## 9aj. The box a writer drew is the box the picture goes in
 
 From Ken, with five screenshots of his own book: *I want to put a picture at

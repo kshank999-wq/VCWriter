@@ -474,6 +474,14 @@ export interface BookBlock {
    * proportions decide, which is §9m unchanged.
    */
   boxHeight?: number;
+  /**
+   * **How wide a figure across the measure is**, as a share of it (§9ak).
+   * Absent is the whole measure, which is every figure made before there was
+   * anything to narrow — and it is written only for one across the measure,
+   * an inset's width being the paragraph's business and a trailing inset's
+   * standing across the measure being §8's own rule, unchanged.
+   */
+  span?: number;
   /** A logotype in place of the title, on a designed page (§9n). */
   logo?: { assetId: string | null; data: string | null };
   /**
@@ -1150,8 +1158,73 @@ export interface FigureFree {
 
 export const FREE_SPAN = { min: 0.05, max: 1, default: 0.25 } as const;
 
-export const INSET_SPAN = { min: 0.2, max: 0.6, default: 0.4 } as const;
+/**
+ * **How wide a picture the text runs round may be** (§9ak, from Ken: *it has
+ * to be one of its borders aligned with the margin… and can only be as wide
+ * as half of the text area*).
+ *
+ * The ceiling was 0.6, which was my number rather than a rule anybody could
+ * state. His is **half**, and it has a reason the old one did not: past half
+ * the measure what is left beside the picture is a column too narrow to set
+ * a line of prose in, so a picture wider than that is not a picture the text
+ * runs round — it is a picture **across the measure** with the words above
+ * and below it, which is what `drawnFigurePlace` already answers past this
+ * number and what the band now makes true of every route.
+ *
+ * The cost is named rather than hidden: an inset stored wider than half
+ * narrows to half, which is the band clamping as it always has. Turning it
+ * into a measure figure instead would move the text round it, and of two
+ * imperfect answers the one where nothing already set moves is the smaller.
+ */
+export const INSET_SPAN = { min: 0.2, max: 0.5, default: 0.4 } as const;
 export const INSET_STANDOFF = { min: 0, max: 3, default: 1 } as const;
+
+/**
+ * **The rule in one sentence** (§9ak), for the screens that must say it.
+ *
+ * A writer dragging a picture's corner has to know where the limit is before
+ * they meet it, and two screens saying it in their own words would be two
+ * answers the first time the band moved.
+ */
+export const INSET_RULE =
+  'A picture the text runs round is flush to one margin — the left-hand one at the left, the right-hand one at the right — and at most half the measure wide. Wider than that it stands across the measure, with the words above and below it.';
+
+/**
+ * **How wide a picture across the measure may be** (§9ak, from Ken: *if there
+ * is a blank lower half of the page, that you can drag and drop it in there
+ * and resize it and it won't touch the text*).
+ *
+ * A picture across the measure was the measure wide and nothing else, which
+ * is right about the name and wrong about the one place a writer most wants
+ * one: the white under a section's closing words, where there is no text to
+ * cut into and so no inset to be — and where a corner dragged in did nothing
+ * at all, the width being thrown away on the way to the record.
+ *
+ * **Absent means the whole measure**, which is what every picture made before
+ * this stores, so no book moves; and it is a band rather than anything goes
+ * because a picture narrower than a fifth of the measure standing alone in
+ * the middle of a page is a thumbnail nobody asked for.
+ */
+export const MEASURE_SPAN = { min: 0.2, max: 1, default: 1 } as const;
+
+/**
+ * **Whether a picture asked to cut into the text has anything to cut into**
+ * (§9ak).
+ *
+ * §8's rule has always been that an inset with no paragraph after it stands
+ * **across the measure** — which is right, there being no words to run beside
+ * it, and which the room said nowhere: a writer who asks for the text to run
+ * round a picture standing at the end of a chapter, or in front of the next
+ * chapter's heading, gets a full-measure picture, no reason, and the fair
+ * conclusion that the margin rule does not work. Measured on an imported
+ * collection, which is exactly where it happens.
+ *
+ * It reads the **blocks**, which is the one place that decides. A second walk
+ * over the manuscript here would be a second answer, free to disagree with
+ * the page a writer is looking at.
+ */
+export const cutsIntoText = (blocks: readonly BookBlock[], elementId: string): boolean =>
+  blocks.some((block) => block.inset?.figureId === elementId);
 
 /**
  * A figure's placement, read off its element (§8). The manuscript prints
@@ -2082,7 +2155,11 @@ export const figurePlacement = (element: ManuscriptElement): BookFigurePlacement
   // A free graphic's width is a share of the **page** and may be anything
   // from an ornament to the whole sheet, so it is not held to an inset's
   // band — the two are different measurements of different things.
-  const band = chosen === 'free' ? FREE_SPAN : INSET_SPAN;
+  //
+  // **And one across the measure is the measure wide until it is narrowed**
+  // (§9ak): its own band, whose default is 1, so a figure carrying no width
+  // reads exactly as it did before there was anything to read.
+  const band = chosen === 'free' ? FREE_SPAN : chosen === 'measure' ? MEASURE_SPAN : INSET_SPAN;
   const fraction = typeof span === 'number' && Number.isFinite(span) ? Math.min(band.max, Math.max(band.min, span)) : band.default;
   const place01 = (value: unknown, fallback: number): number =>
     typeof value === 'number' && Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : fallback;
@@ -2228,7 +2305,26 @@ export const placeBookFigure = (file: ProjectFile, elementId: string, placement:
               const tall = placement.boxHeight ?? figurePlacement(element).boxHeight;
               if (tall > 0) rest.bookBoxHeight = tall;
               else delete rest.bookBoxHeight;
-              if (placement.place === 'measure') return { ...element, attributes: rest };
+              if (placement.place === 'measure') {
+                /**
+                 * **A picture across the measure keeps its width** (§9ak).
+                 * It carried none, so a corner dragged on one in the white
+                 * under a page's last line had nowhere to be written down —
+                 * and `MEASURE_SPAN`'s default being the whole measure,
+                 * **only a narrowed one is written**, which is what leaves
+                 * every figure made before this byte for byte as it was.
+                 */
+                const held = figurePlacement(element);
+                // **A width is carried only from a figure that was already
+                // across the measure.** An inset's span is a share of the
+                // measure measured against a different rule — half of it at
+                // most — so reading one here would make a picture lifted out
+                // of the text 40% wide, which is a size nobody chose.
+                const was = held.place === 'measure' ? held.span : MEASURE_SPAN.default;
+                const wide = Math.min(MEASURE_SPAN.max, Math.max(MEASURE_SPAN.min, placement.span ?? was));
+                if (wide < MEASURE_SPAN.max) rest.bookSpan = wide;
+                return { ...element, attributes: rest };
+              }
               const attributes: Record<string, string | number | boolean> = { ...rest, bookPlace: placement.place };
               if (placement.place === 'page') {
                 // A page needs no width and no standoff: it is the page.
@@ -2282,6 +2378,46 @@ export const placeBookFigure = (file: ProjectFile, elementId: string, placement:
       : beat,
   ),
 });
+
+/**
+ * **A corner dragged on a picture** (§9ak, from Ken: *you can resize it with
+ * the corner pins, but it stays proportional to its original dimensions*).
+ *
+ * The one act the handle's corners run, because it carries the one rule that
+ * tells this gesture from drawing a box: **the width is the writer's and the
+ * height is the picture's**. Which made the drawn height a problem the moment
+ * §9aj taught the cutter to keep it — a box drawn in the white under a
+ * paragraph and then filled still measured as that box, so the corner moved
+ * one edge of a shape the picture then sat letterboxed inside, which is the
+ * *errors* his message names. A corner drag **mentions the size**, so the
+ * drawn height goes: `boxHeight`'s own argument, that a stored answer is for
+ * a figure nobody has given one and never for a caller who has just said
+ * otherwise.
+ *
+ * An **empty** box has no proportions to keep, so there the dragged height is
+ * the answer and is written down — which is §9af's finding unchanged, and the
+ * only kind of figure a corner ever gave a height to.
+ */
+export const sizeBookFigure = (
+  file: ProjectFile,
+  elementId: string,
+  /** The new width, as a share of whatever this kind of figure measures against. */
+  span: number,
+  /** The dragged height as a share of the measure, for a box with no picture in it. */
+  boxHeight = 0,
+): ProjectFile => {
+  const element = file.beats
+    .flatMap((beat) => beat.manuscript.elements)
+    .find((one) => (one.id as string) === elementId);
+  if (!element) return file;
+  const held = figurePlacement(element);
+  const empty = typeof element.attributes.assetId !== 'string';
+  return placeBookFigure(file, elementId, {
+    ...held,
+    span,
+    boxHeight: empty && boxHeight > 0 ? boxHeight : 0,
+  });
+};
 
 /**
  * What a page on the spread stands on (§9a, from Ken: *you select a page in
@@ -2848,6 +2984,27 @@ export const drawnFigurePlace = (share: number, side: 'left' | 'right'): FigureP
   share > INSET_SPAN.max ? 'measure' : side;
 
 /**
+ * **What a picture dropped on the page means** (§9ak, from Ken: *but if there
+ * is a blank lower half of the page, that you can drag and drop it in there
+ * and resize it and it won't touch the text*).
+ *
+ * `drawnFigurePlace`'s sibling: that one reads a box drawn and this one reads
+ * a picture let go, and both answer the same question — what the picture *is*
+ * where it has landed, which is the room's business and never the writer's.
+ *
+ * **Below the words it is not a picture the text runs round.** An anchor says
+ * `after` only where the pointer was past every block on the page, which is
+ * exactly the white under a section's closing line; there is nothing there to
+ * cut into, so calling it an inset named the picture after which half of the
+ * page it was dropped on rather than after what it does — and §8's rule then
+ * drew it across the measure anyway, so the words on the screen and the
+ * picture on the page disagreed and a corner dragged on it had nowhere to be
+ * written down.
+ */
+export const droppedFigurePlace = (side: 'left' | 'right', anchor: FigureAnchor | null): FigurePlace =>
+  anchor?.after ? 'measure' : side;
+
+/**
  * **Move a picture onto the page an offer describes** (§9w): the act both of
  * the rail's drops run, so dragging a picture onto a page row and dragging it
  * onto a chapter's row cannot put it in two different places.
@@ -2968,6 +3125,12 @@ const elementBlock = (element: ManuscriptElement, chapterTitle: string, opensCha
         caption: element.text,
         decorative: element.attributes.decorative === true,
         ...(placed.boxHeight > 0 ? { boxHeight: placed.boxHeight } : {}),
+        // **Narrowed across the measure** (§9ak). Only where the placement is
+        // `measure`: an inset's span rides in the paragraph it cuts into, and
+        // an inset with nothing left to cut into is pushed as a block of its
+        // own and draws full width, which is §8's rule since the inset was
+        // built and is left exactly as it was.
+        ...(placed.place === 'measure' && placed.span < MEASURE_SPAN.max ? { span: placed.span } : {}),
       });
     }
     default:

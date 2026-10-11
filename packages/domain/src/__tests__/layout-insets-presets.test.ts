@@ -89,7 +89,11 @@ describe('a figure cut into the text (stage 6)', () => {
     // `x`/`y` are read for every figure and mean something to a **free** one
 // alone (§8c): the reading is one shape, and which fields matter is the
 // place's business.
-expect(figurePlacement(figure)).toEqual({ place: 'measure', span: 0.4, side: 'either', standoff: 1, boxHeight: 0, x: 0.1, y: 0.1 });
+// **A figure across the measure is the measure wide** (§9ak). This read
+// `0.4` — the *inset* band's default, reported for a picture that is not an
+// inset and that nothing measured against it — and the day a width across the
+// measure became a real number was the day the figure had to be the truth.
+expect(figurePlacement(figure)).toEqual({ place: 'measure', span: 1, side: 'either', standoff: 1, boxHeight: 0, x: 0.1, y: 0.1 });
     const kinds = bookBlocks(file).map((block) => `${block.kind}${block.inset ? '+inset' : ''}`);
     expect(kinds.filter((kind) => kind.startsWith('paragraph') || kind === 'figure')).toEqual(['paragraph', 'figure', 'paragraph', 'paragraph']);
   });
@@ -110,11 +114,29 @@ expect(figurePlacement(figure)).toEqual({ place: 'measure', span: 0.4, side: 'ei
     expect(wrapped.text).toBe('Two, beside the picture.');
   });
 
-  it('clamps the span, and across the measure clears what was written', () => {
+  it('clamps the span to half the measure, and across the measure clears what the inset wrote', () => {
     let file = placeBookFigure(novel(), 'f1', { place: 'right', span: 0.9 });
-    expect(figurePlacement(file.beats[0]!.manuscript.elements[1]!)).toEqual({ place: 'right', span: 0.6, side: 'either', standoff: 1, boxHeight: 0, x: 0.1, y: 0.1 });
+    /**
+     * **Half, which is Ken's number** (§9ak): past half the measure the
+     * column left beside the picture is too narrow to set a line of prose in,
+     * so it is not a picture the text runs round. The band said 0.6, which
+     * was a number with no rule behind it.
+     */
+    expect(figurePlacement(file.beats[0]!.manuscript.elements[1]!)).toEqual({ place: 'right', span: 0.5, side: 'either', standoff: 1, boxHeight: 0, x: 0.1, y: 0.1 });
+    /**
+     * **A width asked for across the measure is kept** (§9ak). The inset's
+     * own fields still go — the side it cut in at and the border it kept mean
+     * nothing to a picture the words stand above and below — but a width does
+     * mean something now, so a caller that named one is answered.
+     */
     file = placeBookFigure(file, 'f1', { place: 'measure', span: 0.4 });
-    expect(file.beats[0]!.manuscript.elements[1]!.attributes).toEqual({ assetId: '22222222-2222-4222-8222-222222222222' });
+    expect(file.beats[0]!.manuscript.elements[1]!.attributes).toEqual({ assetId: '22222222-2222-4222-8222-222222222222', bookSpan: 0.4 });
+    // And a caller that named none takes the whole measure, which is what the
+    // handle passes when a picture is dragged below the last line: nothing is
+    // written down, so the record of an untouched figure is what it always was.
+    const lifted = placeBookFigure(placeBookFigure(novel(), 'f1', { place: 'right', span: 0.35 }), 'f1', { place: 'measure' });
+    expect(lifted.beats[0]!.manuscript.elements[1]!.attributes).toEqual({ assetId: '22222222-2222-4222-8222-222222222222' });
+    expect(figurePlacement(lifted.beats[0]!.manuscript.elements[1]!).span).toBe(1);
   });
 
   it('stands across the measure where nothing follows to cut into', () => {
@@ -169,11 +191,12 @@ expect(figurePlacement(figure)).toEqual({ place: 'measure', span: 0.4, side: 'ei
     const blocks = bookBlocks(file).filter((block) => block.partId === foreword.id);
     expect(blocks.map((block) => (block.inset ? 'paragraph+inset' : block.kind))).toEqual(['part_opening', 'paragraph', 'paragraph+inset', 'paragraph']);
     const cut = blocks[2]!;
-    expect(cut.inset).toMatchObject({ place: 'right', span: 0.6, figureId: made.insetId, caption: 'At the harbour' });
+    // Half the measure, the inset band's new ceiling (§9ak).
+    expect(cut.inset).toMatchObject({ place: 'right', span: 0.5, figureId: made.insetId, caption: 'At the harbour' });
     expect(cut.unbreakable).toBe(true);
     const html = renderBookBlock(cut, contextFor(file));
     expect(html).toContain('<p class="bk-p bk-has-inset">');
-    expect(html).toContain(`<span class="bk-inset bk-inset-right" data-figure="${made.insetId}" style="width:60%;--bk-standoff:1.00em">`);
+    expect(html).toContain(`<span class="bk-inset bk-inset-right" data-figure="${made.insetId}" style="width:50%;--bk-standoff:1.00em">`);
     expect(partOfInset(file, made.insetId!)?.id).toBe(foreword.id);
     // The text shortened under it: the picture rides in the last paragraph rather than vanishing.
     const shorter = updatePart(file, foreword.id, { text: 'Only one paragraph now.' });
@@ -230,8 +253,10 @@ expect(figurePlacement(figure)).toEqual({ place: 'measure', span: 0.4, side: 'ei
     // It is clamped to what a page can take, and a figure across the measure keeps none.
     const huge = placeBookFigure(novel(), 'f1', { place: 'left', span: 0.4, side: 'either', standoff: 99 });
     expect(figurePlacement(huge.beats[0]!.manuscript.elements[1]!).standoff).toBe(3);
+    // Across the measure it keeps no border and no side; the width it was
+    // given is its own now (§9ak).
     const plain = placeBookFigure(huge, 'f1', { place: 'measure', span: 0.4, side: 'either', standoff: 2 });
-    expect(plain.beats[0]!.manuscript.elements[1]!.attributes).toEqual({ assetId: '22222222-2222-4222-8222-222222222222' });
+    expect(plain.beats[0]!.manuscript.elements[1]!.attributes).toEqual({ assetId: '22222222-2222-4222-8222-222222222222', bookSpan: 0.4 });
   });
 
   it('lists the figures for the rail with where each sits', () => {

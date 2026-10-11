@@ -3330,6 +3330,70 @@ push live; the build takes a minute or two.
   pagination; one block is inserted and the convention does the rest, the
   screen says *the next left-hand page*, and a test pins the pair so the
   second blank is not later "fixed" as a fault — **which §17e overturns**.
+  **§9ak is the picture placed rather than the box drawn**, from Ken the
+  morning after §9aj (*maybe the best way is to insert a picture on the page
+  and then resize that picture to where you want it to be. You can move it
+  around. You can resize it with the corner pins, but it stays proportional to
+  its original dimensions. Then you place it on the page and the text will be
+  cut around that picture. Instead of trying to create a box first, which it
+  seems to cause errors*), and **he is overruling a sentence this room wrote
+  down and then stopped reading**: §8c's note says a free graphic is *already
+  on the page, so there is nothing to draw* and that **a figure in the text has
+  no place until a box is drawn, which is why the two gestures differ**. It is
+  not true — a picture that has been put in stands where the writing puts it —
+  and what the room did with that fact, read off the source rather than guessed
+  at, is that `setPlacing` had **three callers and the only one for an existing
+  picture was gated on `place === 'free'`**: so the one thing a writer could do
+  to a picture in the text was **draw its box again**, the gesture §9af and
+  §9aj between them found six faults in. **One gesture now**, *Move and resize
+  it…* over every picture wherever the laying put it, with the redraw branch
+  **deleted rather than kept beside it** (§9u) and `drawing` a boolean, the box
+  tool left to the one thing only it can do — hold space before there is a
+  picture. **And a picture arrives in hand**, which is the half that made the
+  old gesture necessary: it used to land at the top of the page with its row
+  selected and nothing to take hold of. Three rules, each a sentence of his.
+  **A corner keeps the proportions**, which §9m settled and §9aj quietly undid
+  — once the cutter kept a drawn box's height with a picture in it, resizing
+  moved one edge of a shape the picture sat letterboxed inside, which is the
+  *errors* he names; a corner drag **mentions the size**, so the drawn height
+  goes (`boxHeight`'s own argument), while an **empty** box still takes its
+  height from the drag (§9af), all in one `sizeBookFigure`. **Flush to a margin
+  and half the measure at most**: `INSET_SPAN.max` was 0.6, my number with no
+  rule behind it, and his half has one — past it the column beside the picture
+  is too narrow to set a line of prose in — with the cost named rather than
+  hidden (an inset stored wider narrows, the band clamping as it always has)
+  and `INSET_RULE` the one copy of the sentence. **And below the words it is
+  not a picture the text runs round**, `droppedFigurePlace` being
+  `drawnFigurePlace`'s sibling — one reads a box drawn, the other a picture let
+  go — because `blockUnder` says `after` only where the pointer is past every
+  block, which is exactly the white he is filling; calling it an inset named
+  the picture after **which half of the page it was dropped on** rather than
+  after what it does. That last rule needed a width a measure figure never had:
+  `placeBookFigure` **stripped `bookSpan`**, so a corner dragged on a picture
+  in that white was thrown away before it reached the record. `MEASURE_SPAN`'s
+  default is **the whole measure**, so an untouched figure's markup is byte for
+  byte what it was; narrowed it is **centred** (flush is the rule for a picture
+  words run beside, and one standing alone is a plate in miniature); the block
+  carries the width and `pictureLines` takes it, the hole the cutter keeps and
+  the box the page draws being **one number read twice**; and a width is
+  carried onto a measure figure **only from one already across the measure**,
+  an inset's span being measured against a different rule. **Driving it found
+  two things tests could not.** The corner drag **compounded** — `moveCorner`
+  measured from the press and added it to the box's *live* width, which the
+  previous move had already changed, so each move applied the whole journey to
+  an answer that had already travelled: measured, a 100-pixel drag inward on a
+  342-pixel picture came back at **68 pixels**, the band's floor, rather than
+  242, and the further you drag the worse it is, which is the careful hand
+  exactly. And **a side chosen with nothing to cut into said nothing**: §8's
+  rule draws such an inset across the measure, rightly and silently, so on an
+  imported collection the picture was asked to cut in at the left, the slider
+  read 50%, the page drew it full width, and the only fair conclusion is that
+  the margin rule does not work — `cutsIntoText` reads the **blocks**, the one
+  place that decides, and the panel says it. Measured at 1440×900: in hand at
+  *4.19 × 2.56 in · 100% of the measure* with the book still twelve pages, a
+  corner to 76% with the image's ratio 1.778 to the third decimal, centred at
+  41 pixels either side, the slider 20 to **50**, and a drop in the white
+  landing after the words with the text where it was.
   **§9aj is the box a writer drew being the box the picture goes in**, from
   Ken with five screenshots (*I want to put a picture at the bottom of the
   last page where there's a blank space. So I draw the box… what this does is
