@@ -188,8 +188,16 @@ export const pictureLines = (
   linesPerPage: number,
   boxHeight = 0,
 ): number => {
+  // **A box that was drawn keeps its height** (§9aj). §9z made the drawn
+  // height the measurement while the box was empty and handed it back to the
+  // picture's own proportions the moment one arrived — so a box drawn 4.08in
+  // tall in the white under a short page's last paragraph came back 6.70in,
+  // which is 33 lines of a 35-line page: the text was cut across two pages
+  // and the picture moved to a page of its own. The box is the writer's; the
+  // picture fits inside it.
+  if (boxHeight > 0) return wholeLines(widthPx * boxHeight, leadPx);
   if (!picture || picture.width <= 0 || picture.height <= 0) {
-    return boxHeight > 0 ? wholeLines(widthPx * boxHeight, leadPx) : Math.max(1, Math.round(linesPerPage / 3));
+    return Math.max(1, Math.round(linesPerPage / 3));
   }
   return wholeLines((widthPx * picture.height) / picture.width, leadPx);
 };
@@ -697,7 +705,7 @@ const blockInner = (block: BookBlock, context: BookRenderContext): string => {
       // Across the measure, so the box is the measure wide and its drawn
       // height is read against that (§9z).
       const image = picture
-        ? `<img class="bk-figure-image" alt="${escapeHtml(picture.altText || block.caption || '')}" src="${escapeHtml(picture.data)}" />`
+        ? `<img class="bk-figure-image" alt="${escapeHtml(picture.altText || block.caption || '')}"${drawnBox(1, block.boxHeight ?? 0)} src="${escapeHtml(picture.data)}" />`
         : `<div class="bk-figure-missing"${drawnBox(1, block.boxHeight ?? 0)}>Picture goes here</div>`;
       const caption = (block.caption ?? '').trim() ? `<p class="bk-caption">${escapeHtml(block.caption ?? '')}</p>` : '';
       // The author's photograph above the biography (§17): the same figure
@@ -775,7 +783,15 @@ const drawnBox = (wide: number, tall: number): string =>
 
 const insetMarkup = (inset: FigureInset, context: BookRenderContext, photoShape?: AuthorPhotoShape): string => {
   const picture = inset.assetId ? context.pictures.get(inset.assetId) : undefined;
-  const ratio = picture && picture.width > 0 && picture.height > 0 ? `aspect-ratio:${picture.width} / ${picture.height};` : '';
+  // A drawn box is the writer's and the picture fits inside it (§9aj); with
+  // none the picture's own proportions decide, which is what declares the
+  // height before the data URL has decoded (§8b).
+  const ratio =
+    inset.boxHeight > 0
+      ? `aspect-ratio:${inset.span.toFixed(4)} / ${inset.boxHeight.toFixed(4)};`
+      : picture && picture.width > 0 && picture.height > 0
+        ? `aspect-ratio:${picture.width} / ${picture.height};`
+        : '';
   const image = picture
     ? `<img class="bk-inset-image" alt="${escapeHtml(picture.altText || inset.caption || '')}" style="${ratio}" src="${escapeHtml(picture.data)}" />`
     : `<span class="bk-figure-missing"${drawnBox(inset.span, inset.boxHeight)}>Picture goes here</span>`;
@@ -929,7 +945,13 @@ export const BOOK_STYLES = `
   .bk-inset { float: left; margin: 0.15em var(--bk-standoff, 1em) var(--bk-standoff, 1em) 0; }
   .bk-heading, .bk-break, .bk-figure, .bk-display, .bk-chapter-opening { clear: both; }
   .bk-inset.bk-inset-right { float: right; margin: 0.15em 0 var(--bk-standoff, 1em) var(--bk-standoff, 1em); }
-  .bk-inset-image { display: block; width: 100%; height: auto; }
+  /* **A picture never changes shape** (§9aj). Where a box was drawn the
+     markup carries that box's own aspect ratio, so without this the picture
+     would be stretched to fill it; contain fits it inside and leaves the rest
+     of the box clear, which is what fitting a picture to a box means. With
+     nothing drawn the ratio is the picture's own and contain changes nothing
+     at all. */
+  .bk-inset-image { display: block; width: 100%; height: auto; object-fit: contain; }
   .bk-inset-caption { display: block; font-size: 0.8em; line-height: 1.25; text-align: center; margin-top: 0.3em; }
   /* A free graphic (§8c): against the page, over the text, no background of
      its own — whatever the file carries is what shows. */
@@ -937,7 +959,7 @@ export const BOOK_STYLES = `
   .bk-free-image { display: block; width: 100%; height: auto; }
   .bk-free-missing { display: flex; align-items: center; justify-content: center; height: calc(var(--bk-lead) * 4); border: 1px dashed #999; color: #777; font-size: 0.8em; }
   .bk-inset .bk-figure-missing { display: flex; height: calc(var(--bk-lead) * 5); }
-  .bk-figure-image { display: block; width: 100%; height: auto; }
+  .bk-figure-image { display: block; width: 100%; height: auto; object-fit: contain; }
   .bk-plate-art { position: absolute; inset: 0; padding: 0; height: auto; overflow: hidden; }
   .bk-plate-image { display: block; width: 100%; height: 100%; object-fit: cover; }
   .bk-figure-missing, .bk-plate-missing { height: calc(var(--bk-lead) * 8); border: 1px dashed #999; color: #777; display: flex; align-items: center; justify-content: center; font-size: 0.85em; }

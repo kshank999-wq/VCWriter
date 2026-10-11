@@ -3330,6 +3330,53 @@ push live; the build takes a minute or two.
   pagination; one block is inserted and the convention does the rest, the
   screen says *the next left-hand page*, and a test pins the pair so the
   second blank is not later "fixed" as a fault — **which §17e overturns**.
+  **§9aj is the box a writer drew being the box the picture goes in**, from
+  Ken with five screenshots (*I want to put a picture at the bottom of the
+  last page where there's a blank space. So I draw the box… what this does is
+  it cuts the text on the two pages in half, shifts text to the following
+  page, and wants to put it always on the right-hand page*), and **his
+  screenshots carry the whole measurement**: the handle on the box he drew
+  reads `4.19 × 4.08 in` and the handle after the picture went in reads
+  `4.19 × 6.68 in`. Measured here on the same geometry (4.19 in of text block,
+  20 pt leading, 35 lines a page), the box he drew is **20 lines** and what
+  the picture made of it is **33** — so a hole that fitted in the white under
+  four paragraphs fitted nowhere but a page of its own, which is why the text
+  broke across two pages, the book grew by two and the picture landed two
+  leaves on. **Every clause of his paragraph is that one number.** The cause
+  is **§9z's own sentence**: `pictureLines` consulted `boxHeight` only in the
+  branch where there is no picture, which is that section saying *it is read
+  only while the box is empty — the moment a picture arrives its proportions
+  decide*. That is right about a figure never drawn as a box, where the only
+  height there is, is the picture's, and **wrong about the one gesture that
+  exists to say how tall**: drawing a box is a writer choosing a height, and
+  throwing it away at the moment it is about to matter leaves the gesture with
+  nothing to do. So a drawn height is read picture or no picture, and the
+  markup carries the box's own aspect ratio on the **image** rather than only
+  on the *Picture goes here* placeholder where it already went, with
+  `object-fit: contain` so the picture **fits and is never stretched** — driven
+  in a browser, a 1000 × 1600 picture in a 4.19 × 4.08 in box draws its circle
+  as a circle. **Nothing already in a book moves**: a figure with no drawn box
+  stores `boxHeight: 0` and measures exactly as it did (4.19 × 6.70 in,
+  measured), which is every figure made before §9z. **His two answers are two
+  states of one field** — *the picture's resized to fit the box* and *scale box
+  to fit picture at that size* are `boxHeight` set and cleared, which the
+  record has carried all along — so the panel says which in his words (*The box
+  you drew — the picture fits inside it* / *The picture's own shape — the box
+  grows to it*) with the height in inches under it, **absent where no box was
+  drawn**. The inset took the same treatment, `insetMarkup` having put the
+  *picture's* ratio on the image and ignored the drawn box, with §8b's rule
+  (the float declares its proportions or it measures as nothing before
+  decoding) kept either way — what is declared is simply the box where there is
+  one. One assertion held §9z's rule as a requirement and was **rewritten
+  rather than worked around**. **Not done and named**: the blank leaves still
+  refuse a picture, which is the other half of his message (*these blank pages
+  are treated as special somehow, where they're not… every page should be
+  formattable*) — three refuse today, each naming the switch that would free
+  it, and the answer is §9ae's own rule that **where a rule holds the page the
+  act frees the rule**; it is not bolted on here because it moves pages, which
+  is the one thing this report is about, and because doing it without a second
+  copy of `pageRemoval`'s reading of *what holds this page blank* wants that
+  reading pulled into one place first.
   **§9ai is the measure box carrying the pictures**, from Ken the day after
   §9ag (*it keeps crashing when I try to enter the ISBN in the copyright
   dialogue box*). §9ag made a burst of typing settle into **one** laying and

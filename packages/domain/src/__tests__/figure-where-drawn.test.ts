@@ -127,12 +127,21 @@ describe('how tall an empty box is', () => {
     expect(pictureLines(undefined, 300, 20, 30, 0.2)).toBe(3);
   });
 
-  it('is the picture’s own shape the moment there is one', () => {
-    // §9m unchanged: only the width is dragged and the height follows from
-    // the proportions, so the drawn height is read while the box is empty
-    // and never after.
+  /**
+   * **Overturned by §9aj**, from Ken drawing a box in the white under a short
+   * page's last paragraph and watching the text break across two pages. This
+   * asserted §9z's own sentence — *the drawn height is read while the box is
+   * empty and never after* — and that is what threw his box away: a 20-line
+   * hole came back as the picture's 33 lines on a 35-line page. The drawn
+   * height is the writer's; the picture fits inside it.
+   */
+  it('is the box the writer drew even once a picture is in it', () => {
     const picture = { data: '', altText: '', width: 300, height: 150 };
-    expect(pictureLines(picture, 300, 20, 30, 0.9)).toBe(pictureLines(picture, 300, 20, 30));
+    expect(pictureLines(picture, 300, 20, 30, 0.9)).toBe(pictureLines(undefined, 300, 20, 30, 0.9));
+    expect(pictureLines(picture, 300, 20, 30, 0.9)).not.toBe(pictureLines(picture, 300, 20, 30));
+    // And with nothing drawn the picture decides, which is every figure made
+    // before this and why no book moves.
+    expect(pictureLines(picture, 300, 20, 30)).toBe(8);
   });
 
   it('is kept on the record through every place a picture can take', () => {

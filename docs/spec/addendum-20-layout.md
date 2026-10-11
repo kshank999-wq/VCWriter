@@ -2952,6 +2952,92 @@ second blank is not later "fixed" as a fault.
 > copyright page takes the next page now, and the assertion was rewritten
 > rather than worked around.
 
+## 9aj. The box a writer drew is the box the picture goes in
+
+From Ken, with five screenshots of his own book: *I want to put a picture at
+the bottom of the last page where there's a blank space. So I draw the box.
+And what should happen is the picture and box are resized to fit that area. Or
+the picture's resized to fit the box, and then I can move the box around. Or
+there needs to be an option that is scale box to fit picture at that size. But
+what this does is it cuts the text on the two pages in half, shifts text to the
+following page, and wants to put it always on the right-hand page for some
+reason.*
+
+**His screenshots carry the whole measurement.** The handle on the box he drew
+reads `4.19 × 4.08 in · 100% of the measure`; the handle after the picture went
+in reads `4.19 × 6.68 in`. Measured here on the same geometry — a 5½ × 8½ trim,
+a 4.19 in text block, 20 pt leading, 35 lines to the page:
+
+| | height | lines |
+| --- | --- | --- |
+| the box he drew | 4.08 in | **20** |
+| what the picture made of it | 6.70 in | **33** |
+
+A 20-line hole fits in the white under four paragraphs. A 33-line one does not
+fit anywhere but a page with almost nothing else on it — so the cutter broke
+the text across two pages, the book grew by two, and the picture went to a page
+of its own two leaves on. Every clause of his paragraph is that one number.
+
+### §9z's own sentence was the fault
+
+`pictureLines` consulted `boxHeight` **only in the branch where there is no
+picture**, which is §9z saying it out loud: *it is read only while the box is
+empty — the moment a picture arrives its proportions decide, §9m unchanged.*
+That rule is right about a figure that was never drawn as a box, where the only
+height there is, is the picture's. It is wrong about the one gesture that
+exists to say how tall: **drawing a box is a writer choosing a height**, and
+throwing it away at the moment it is about to matter leaves the gesture with
+nothing to do.
+
+So a drawn height is read whether or not there is a picture, and the markup
+carries the drawn box's own aspect ratio on the **image** rather than only on
+the *Picture goes here* placeholder, which is where it already went. The
+picture is `object-fit: contain` inside it: it fits, the rest of the box is
+left clear, and **nothing is cut off and nothing is stretched** — driven in a
+browser, a 1000 × 1600 picture in a 4.19 × 4.08 in box draws its circle as a
+circle.
+
+**Nothing already in a book moves**, which is what makes it safe: a figure with
+no drawn box stores `boxHeight: 0` and reads exactly as it always did
+(4.19 × 6.70 in, measured), and that is every figure made before §9z.
+
+### His two answers are two states of one field
+
+He offered them himself — *the picture's resized to fit the box*, or *scale box
+to fit picture at that size* — and they are `boxHeight` set and `boxHeight`
+cleared, which the record has carried since §9z. So the figure's panel says
+which, in his words: **The box you drew — the picture fits inside it**, or
+**The picture's own shape — the box grows to it**, with the box's height in
+inches said under it the way the handle on the spread says it. It is **absent
+where no box was drawn**, there being nothing to choose between.
+
+The inset takes the same treatment: `insetMarkup` put the *picture's* ratio on
+the image and ignored the drawn box, so a cut-in picture drawn short came back
+tall for the same reason, and §8b's rule (the float declares its proportions or
+it measures as nothing before decoding) is kept either way — what is declared
+is simply the box where there is one.
+
+### What one assertion said, and now says
+
+`figure-where-drawn.test.ts` held *is the picture's own shape the moment there
+is one*, which is §9z's rule written down as a requirement. It is **rewritten
+rather than worked around**: the drawn box survives the picture, a figure with
+no box still reads the picture, and the two are asserted to differ.
+
+### Not done, and named
+
+**The blank pages still refuse a picture**, which is the other half of his
+message (*these blank pages are treated as special somehow, where they're not…
+every page should be formattable*). Three leaves refuse today — the back of a
+picture, the back of a page whose own screen asked for one, and the sheet the
+book leaves between two works — each naming the switch that would free it. The
+answer is §9ae's own rule (*where a rule holds the page, the act frees the
+rule*): a picture asked for on such a leaf should take the rule off and stand
+there, with the offer saying so before the press. It is not bolted on here
+because it moves pages, which is the one thing this report is about, and
+because doing it without a second copy of `pageRemoval`'s reading of *what
+holds this page blank* wants that reading pulled into one place first.
+
 ## 9ai. The measure box carried the pictures
 
 From Ken, the day after §9ag: *it keeps crashing when I try to enter the ISBN

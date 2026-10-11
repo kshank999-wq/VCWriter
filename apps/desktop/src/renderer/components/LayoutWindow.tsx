@@ -1359,6 +1359,9 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
   const figureControls = (figure: BookFigure) => (
     <FigureSection
       figure={figure}
+      // The text block, so a drawn box can be said in inches the way the
+      // handle on the spread says it.
+      measureInches={laying?.geometry.text.width ?? 0}
       drawing={figure.placement.place === 'free' ? placing === figure.elementId : drawing === figure.elementId}
       onPlace={(placement) => onUpdate((current) => placeBookFigure(current, figure.elementId, placement))}
       onDraw={() => {
@@ -4229,6 +4232,7 @@ function StoryPageSection({
 
 function FigureSection({
   figure,
+  measureInches,
   drawing,
   onPlace,
   onDraw,
@@ -4237,6 +4241,8 @@ function FigureSection({
   onRemove,
 }: {
   figure: BookFigure;
+  /** The text block's width, for saying a drawn box in inches. */
+  measureInches: number;
   drawing: boolean;
   onPlace(placement: BookFigurePlacement): void;
   onDraw(): void;
@@ -4247,7 +4253,7 @@ function FigureSection({
   /** Take the picture out of the book (§9j). The library keeps the file. */
   onRemove(): void;
 }) {
-  const { place, span, standoff, side } = figure.placement;
+  const { place, span, standoff, side, boxHeight } = figure.placement;
   const backBlank = figure.backBlank;
   const cut = place === 'left' || place === 'right';
   const empty = figure.assetId === null;
@@ -4281,6 +4287,44 @@ function FigureSection({
           <option value="free">Set over the page, anywhere</option>
         </select>
       </label>
+      {/*
+        **How tall it is** (§9aj, from Ken: *what should happen is the picture
+        and box are resized to fit that area… or the picture's resized to fit
+        the box… or there needs to be an option that is scale box to fit
+        picture at that size*).
+
+        Those are his own two answers and they are two states of one field.
+        A box drawn in the white under a short page's last paragraph is a
+        height the writer chose, and §9z kept it only while the box was empty
+        — the moment a picture arrived its own proportions took over, which on
+        his book turned a 20-line hole into a 33-line one on a 35-line page.
+        The box is kept now, so this says which of the two is wanted.
+
+        **Absent where no box was drawn**, there being nothing to choose
+        between: the picture's shape is the only answer a figure that was
+        never drawn as a box has.
+      */}
+      {(place === 'measure' || cut) && boxHeight > 0 ? (
+        <>
+          <label className="field">
+            <span>Height</span>
+            <select
+              aria-label="Figure height"
+              value="box"
+              onChange={(event) => {
+                if (event.target.value === 'picture') onPlace({ ...figure.placement, boxHeight: 0 });
+              }}
+            >
+              <option value="box">The box you drew — the picture fits inside it</option>
+              <option value="picture">The picture’s own shape — the box grows to it</option>
+            </select>
+          </label>
+          <p className="field-note">
+            The box is {(boxHeight * measureInches).toFixed(2)} in tall. A picture that is not that shape sits inside it
+            with the rest left clear; nothing of it is cut off.
+          </p>
+        </>
+      ) : null}
       {/* A free graphic (§8c): a width that is a share of the **page** and
           nothing about the text, because it is not in the text's way. It is
           moved and resized on the spread, which is the gesture that shows
