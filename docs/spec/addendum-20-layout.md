@@ -2952,6 +2952,114 @@ second blank is not later "fixed" as a fault.
 > copyright page takes the next page now, and the assertion was rewritten
 > rather than worked around.
 
+## 9an. A blank page, and which side it goes on
+
+From Ken, in one message with three asks and one cause under the first two:
+
+> I'm trying to add a blank page after the story is over. There always needs
+> to be an extra page at the end of all the stories between the stories and
+> the back matter. But when I add a blank page, I need to be able to decide
+> whether it goes after or before. So it'll have to ask you, enter a blank
+> page before this page or after this page… whenever I either add a page or
+> shift a page, and we need to remove shift a page, that doesn't really make
+> any sense… In the right menu outliner, I should be able to grab that blank
+> page and just move it down below page 174. That would solve a lot of
+> problems. Just be able to shift pages and then it'll renumber.
+
+**Measured first, on his shape** — a collection of stories with back matter
+after the last one. Standing on the last page of a story, *both* acts put the
+blank **in front of** those words: the story's own ending moved over the page
+and the leaf fell inside the story. What he wants was reachable only by
+standing on the **next** page, which is a different page from the one he is
+looking at. That is the report exactly, and it is in his screenshots: page 172
+kept two lines and the rest went to 174.
+
+### Two vocabularies over one field, and neither could say *after*
+
+| | put in | named for |
+| --- | --- | --- |
+| §9ad's sheet | two pages | what it puts in |
+| §9ae's shift | one page | what it does to the page in hand |
+
+Both wrote `blankBefore`, both went in front, and a writer choosing between
+them was choosing a number rather than a place. *Shift it on a page* is the
+name Ken says makes no sense, and he is right about why: it is named for a
+consequence, over a field that is really about where paper goes.
+
+**The unit is a page and the choice is a side.** Two buttons — *A blank page
+before this one* and *A blank page after this one* — and the note says the
+rest: one page flips which side of the paper everything after it falls on,
+and two in a row make a sheet and move nothing.
+
+The wording is **his own first sentence** rather than his second. He offered
+*to the left or to the right* as well, and that is wrong half the time: before
+a right-hand page is the facing verso, and before a left-hand page is the
+previous spread entirely. *Before* and *after* are true on every page, and the
+note says which side of the spread it lands on, which is what left and right
+was reaching for.
+
+### *After this page* is *in front of the next page*
+
+That is the whole mechanism, and it is why there is **no new field and no
+migration**: a leaf hangs in front of a record, so the other side is the next
+page's own record. `blankOffer` takes the page after it and is **required to**
+— a caller that forgot would quietly offer no *after* at all, which reads
+exactly like this never having been built (§15a), so the compiler asks.
+
+The end of the book is the one place there is no answer, and it is **refused
+with the reason** rather than invented. A leaf after the last page of the book
+would need an anchor the manuscript has no way to say; named rather than
+half-built.
+
+### The shift is gone, and nothing goes with it
+
+Ken asked for it by name. Where a division's rule holds the page on a
+right-hand side, §9ae had the press write `opensRecto` instead — a control
+named for what it did to the page in hand, over a mechanism a writer has no
+reason to know about. **The ability is not lost**: a leaf the cutter left is
+removed by removing its reason, which is the page's own × (§9x), and that is
+where it belongs.
+
+What stands there instead is **§9ac's own settled answer**, which the first
+draft of this section forgot and the tests caught: the first blank page asked
+for in that gap **takes the gap's place and becomes the writer's** — the book
+does not grow, and the leaf now has a × of its own and can take a picture.
+Measured in the room: 26 pages before the press and 26 after, with the leaf
+drawn as the writer's.
+
+### Dragging a blank page in the rail
+
+His third ask, and his own rule with it: *we can only do that with blank pages
+and illustrated pages. You don't want to drag the story around on accident.*
+A picture page has dragged since §9w; the writer's own blank page does now.
+
+`moveBlankPage` is **one page off one record and onto another**, which is the
+whole act — a page is not a record, so there is nothing about page 174 to
+change, and the numbering follows as it always has. Only the **writer's own**
+leaves move: the cutter's are a consequence of a rule a drag could only
+disagree with, and a page of words stands where the words stand.
+
+Driven in the real room on an imported collection: a leaf at page 14 dragged
+onto page 11 lands there, the book renumbers, and the length is unchanged.
+
+### What looking at it caught
+
+**Two sentences under two buttons, neither saying which it was about.** The
+ordinary note and the gap's note stood one under the other beneath a pair of
+buttons in a row — and *which control a note belongs to is said by the gap*
+(addendum 09 §14a), which side by side there is no gap to say. The note names
+its own side where the two differ, and is printed once where they agree.
+
+### Named rather than built
+
+**An extra page after the last story, automatically.** His first sentence is a
+requirement — *there always needs to be* — and addendum 22 §9 defaults the
+sheet between works on for that reason. This is the same rule stopping one
+work short, and it is a separate piece: the back matter is not a division, the
+field that carries the sheet lives on a *work's* chapter page, and switching it
+on would change the length of every collection already laid out. The act is
+built and reachable; the default is its own decision.
+
 ## 9am. The room was spending the page's memory
 
 From Ken: *it crashed again — I think we need to expand the memory of the

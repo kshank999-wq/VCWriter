@@ -333,12 +333,18 @@ describe('a blank page asked for on a blank page', () => {
     const file = novel();
     const { blocks, laid, rows } = lay(file);
     const leaf = leafInStory(file);
-    const offer = blankOffer(pagePlace(laid.pages, blocks, leaf.sheet), rows, leaf.sheet);
+    const offer = blankOffer(
+      pagePlace(laid.pages, blocks, leaf.sheet),
+      rows,
+      leaf.sheet,
+      pagePlace(laid.pages, blocks, leaf.sheet + 1),
+    );
     expect(offer.refusal).toBeNull();
-    expect(offer.spot).not.toBeNull();
+    expect(offer.before.spot).not.toBeNull();
     expect(offer.pages).toBe(0);
-    // What a press puts in is a sheet, said before it is pressed (§9ad).
-    expect(offer.note).toMatch(/two pages/);
+    // **What a press puts in is one page, and two of them are a sheet**
+    // (§9an), said before it is pressed.
+    expect(offer.note).toMatch(/Put two in and nothing moves/);
     /**
      * **Each sheet is exactly two pages, and the side nothing is on changes**
      * (§9ad). §9ac asserted one page per leaf and had to measure the opening's
@@ -347,12 +353,13 @@ describe('a blank page asked for on a blank page', () => {
      * so the book's length, the opening's page **and the side it opens on**
      * are all answerable here.
      */
-    const opens = (one: ProjectFile) => lay(one).rows.find((row) => row.markerId === offer.spot && row.says === 'Chapter opens')!.sheet;
+    const spot = offer.before.spot as string;
+    const opens = (one: ProjectFile) => lay(one).rows.find((row) => row.markerId === spot && row.says === 'Chapter opens')!.sheet;
     const at = opens(file);
     const pages = lay(file).rows.length;
     for (const want of [1, 2, 3]) {
-      const asked = setBlankPages(file, offer.spot as string, want * SHEET);
-      expect(lay(asked).rows.filter((row) => row.blankFor === offer.spot)).toHaveLength(want * 2);
+      const asked = setBlankPages(file, spot, want * SHEET);
+      expect(lay(asked).rows.filter((row) => row.blankFor === spot)).toHaveLength(want * 2);
       expect(opens(asked)).toBe(at + want * 2);
       expect(lay(asked).rows.length).toBe(pages + want * 2);
       // The opening keeps the side of the paper it was on.
@@ -366,8 +373,13 @@ describe('a blank page asked for on a blank page', () => {
     const asked = setBlankPages(file, placeOn(file, text.sheet).opensMarkerId as string, 2 * SHEET);
     const { blocks, laid, rows } = lay(asked);
     const leaf = rows.find((row) => row.blankFor !== null)!;
-    const offer = blankOffer(pagePlace(laid.pages, blocks, leaf.sheet), rows, leaf.sheet);
-    expect(offer.act).toBe('Put another blank sheet here…');
+    const offer = blankOffer(
+      pagePlace(laid.pages, blocks, leaf.sheet),
+      rows,
+      leaf.sheet,
+      pagePlace(laid.pages, blocks, leaf.sheet + 1),
+    );
+    expect(offer.before.act).toBe('A blank page before this one');
     expect(offer.pages).toBe(2 * SHEET);
     expect(offer.fewer).toBe('Take one away');
   });

@@ -1043,20 +1043,20 @@ function Body({
                 second — and a switch over a count can only lie about what is
                 there. It reads the **offer**, which says how many stand there
                 now and what one more really costs. */}
-            {blankLeaf.act ? (
+            {blankLeaf.before.act ? (
               <button
                 type="button"
                 className="small"
-                onClick={() => onUpdate((current) => updatePart(current, part.id, { blankBefore: blankLeaf.pages + SHEET }))}
+                onClick={() => onUpdate((current) => updatePart(current, part.id, { blankBefore: blankLeaf.pages + 1 }))}
               >
-                {blankLeaf.act}
+                {blankLeaf.before.act}
               </button>
             ) : null}
             {blankLeaf.fewer ? (
               <button
                 type="button"
                 className="small"
-                onClick={() => onUpdate((current) => updatePart(current, part.id, { blankBefore: blankLeaf.pages - SHEET }))}
+                onClick={() => onUpdate((current) => updatePart(current, part.id, { blankBefore: blankLeaf.pages - 1 }))}
               >
                 {blankLeaf.fewer}
               </button>
@@ -1069,28 +1069,13 @@ function Body({
                   : `${blankLeaf.pages} blank pages stand in front of this one.`}
             </p>
             {blankLeaf.note ? <p className="muted small">{blankLeaf.note}</p> : null}
-            {blankLeaf.refusal ? <p className="muted small">{blankLeaf.refusal}</p> : null}
-            {/* **And half a sheet** (§9ae): the three surfaces that reach this
-                field say the same words, so this one offers the shift too. */}
-            {blankLeaf.shiftBack ? (
-              <button
-                type="button"
-                className="small"
-                onClick={() => onUpdate((current) => updatePart(current, part.id, { blankBefore: blankLeaf.pages - 1 }))}
-              >
-                {blankLeaf.shiftBack}
-              </button>
+            {/* **A part has a front and no back** (§9an): the three surfaces
+                that reach this field say the same words, and *after this
+                page* is the page's own screen's to answer. */}
+            {!blankLeaf.before.act && blankLeaf.before.refusal ? (
+              <p className="muted small">{blankLeaf.before.refusal}</p>
             ) : null}
-            {blankLeaf.shiftOn ? (
-              <button
-                type="button"
-                className="small"
-                onClick={() => onUpdate((current) => updatePart(current, part.id, { blankBefore: blankLeaf.pages + 1 }))}
-              >
-                {blankLeaf.shiftOn}
-              </button>
-            ) : null}
-            {blankLeaf.shiftNote ? <p className="muted small">{blankLeaf.shiftNote}</p> : null}
+            {blankLeaf.after.refusal ? <p className="muted small">{blankLeaf.after.refusal}</p> : null}
             {partTakesBlankBack(part.kind) ? (
               <>
                 <button

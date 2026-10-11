@@ -5,6 +5,8 @@ import {
   addPart,
   addUnit,
   blankOffer,
+  blankPagesAt,
+  moveBlankPage,
   bookBlocks,
   bookNames,
   bookPageRows,
@@ -124,6 +126,17 @@ const thirdOpens = (file: ProjectFile) => {
   return { blocks, laid, rows, row, place: pagePlace(laid.pages, blocks, row.sheet), marker: third.placed.marker.id as string };
 };
 
+/**
+ * **The offer on a page, with the page after it** (§9an). *After this page*
+ * is *in front of the next one*, so the reading takes both places — and the
+ * helper exists so no assertion here can forget the second and quietly
+ * prove that side is absent.
+ */
+const offerOn = (file: ProjectFile, sheet: number) => {
+  const { blocks, laid, rows } = lay(file);
+  return blankOffer(pagePlace(laid.pages, blocks, sheet), rows, sheet, pagePlace(laid.pages, blocks, sheet + 1));
+};
+
 describe('a blank page is a sheet', () => {
   /**
    * **Both parities, one answer** (addendum 20 §9ad, from Ken: *I think the
@@ -159,29 +172,39 @@ describe('a blank page is a sheet', () => {
     });
   }
 
-  it('says before the press that a sheet is two pages', () => {
+  /**
+   * **The unit is a page and the choice is a side** (§9an). The sheet is
+   * still what two of them make, and the note is where that is said — which
+   * is what lets one press be one page without the parity being a surprise.
+   */
+  it('offers a page on either side, and says what two of them make', () => {
     const file = collection(5);
-    const { place, rows, row } = thirdOpens(file);
-    const offer = blankOffer(place, rows, row.sheet);
+    // A page the book does not hold on a side, so the note is the ordinary
+    // one rather than the recto rule's (which the §9ae test below pins).
+    const { rows } = lay(file);
+    const row = rows.find(
+      (one) => one.says === 'Chapter opens' && one.sheet > 1 && !rows.some((before) => before.sheet === one.sheet - 1 && before.blank),
+    )!;
+    const offer = offerOn(file, row.sheet);
     expect(offer.refusal).toBeNull();
-    expect(offer.act).toBe('Put a blank sheet here…');
-    expect(offer.note).toMatch(/two pages/);
-    expect(offer.note).toMatch(/changes which side/);
+    expect(offer.before.act).toBe('A blank page before this one');
+    expect(offer.after.act).toBe('A blank page after this one');
+    expect(offer.note).toMatch(/swap sides with it/);
+    expect(offer.note).toMatch(/Put two in and nothing moves/);
   });
 
-  it('asks for another from the sheet itself, which is where a writer stands', () => {
+  it('asks for another from the leaf itself, which is where a writer stands', () => {
     const file = collection(5);
     const { marker } = thirdOpens(file);
     const asked = setBlankPages(file, marker, SHEET);
-    const { blocks, laid, rows } = lay(asked);
-    const leaf = rows.find((one) => one.blankFor === marker)!;
-    const offer = blankOffer(pagePlace(laid.pages, blocks, leaf.sheet), rows, leaf.sheet);
-    expect(offer.act).toBe('Put another blank sheet here…');
-    expect(offer.spot).toBe(marker);
-    // **Pages rather than sheets** (§9ae): the count is what the shift needs
-    // it to be, and one sheet is two of them.
+    const leaf = lay(asked).rows.find((one) => one.blankFor === marker)!;
+    const offer = offerOn(asked, leaf.sheet);
+    expect(offer.before.act).toBe('A blank page before this one');
+    expect(offer.before.spot).toBe(marker);
+    // **Pages rather than sheets** (§9an): one number, said in the unit the
+    // two presses add to and the × takes from.
     expect(offer.pages).toBe(SHEET);
-    expect(offer.fewer).toBe('Take the blank sheet away');
+    expect(offer.fewer).toBe('Take one away');
   });
 
   it('leaves the chapter’s own recto rule exactly as it found it', () => {
@@ -203,12 +226,11 @@ describe('a blank page is a sheet', () => {
     const file = collection(5);
     const { marker } = thirdOpens(file);
     const full = setBlankPages(file, marker, 99);
-    const { blocks, laid, rows } = lay(full);
-    const leaf = rows.find((one) => one.blankFor === marker)!;
-    const offer = blankOffer(pagePlace(laid.pages, blocks, leaf.sheet), rows, leaf.sheet);
-    expect(offer.act).toBeNull();
+    const leaf = lay(full).rows.find((one) => one.blankFor === marker)!;
+    const offer = offerOn(full, leaf.sheet);
+    expect(offer.before.act).toBeNull();
     expect(offer.refusal).toMatch(/as many as one place takes/);
-    expect(offer.refusal).toMatch(/sheets/);
+    expect(offer.refusal).toMatch(/blank pages/);
     expect(offer.fewer).not.toBeNull();
   });
 
@@ -327,7 +349,7 @@ describe('a picture on a blank sheet', () => {
  * side and a shift always does, which is what makes two controls honest where
  * one would have to guess.
  */
-describe('shifting a page half a sheet', () => {
+describe('a blank page on either side of the page in hand', () => {
   /**
    * A page the book does not hold on one side: a chapter **inside** a story
    * starts a new page and never a forced recto (addendum 22 §6), so it is a
@@ -342,132 +364,195 @@ describe('shifting a page half a sheet', () => {
     return { row, rows, place: pagePlace(laid.pages, blocks, row.sheet), blocks, laid };
   };
 
-  it('moves one page and swaps the side, where a sheet moved none', () => {
+  it('moves one page and swaps the side, where two of them move none', () => {
     const file = collection(5);
-    const { row, place } = freeOpening(file);
-    const spot = blankOffer(place, lay(file).rows, row.sheet).spot as string;
+    const { row } = freeOpening(file);
+    const spot = offerOn(file, row.sheet).before.spot as string;
     const pages = lay(file).rows.length;
     const opensAt = (one: ProjectFile) =>
       lay(one).rows.find((item) => item.blankFor === null && item.says === 'Chapter opens' && item.sheet >= row.sheet)!.sheet;
     const at = opensAt(file);
 
-    const shifted = setBlankPages(file, spot, 1);
-    expect(lay(shifted).rows.filter((one) => one.blankFor === spot)).toHaveLength(1);
-    expect(opensAt(shifted)).toBe(at + 1);
+    const one = setBlankPages(file, spot, 1);
+    expect(lay(one).rows.filter((item) => item.blankFor === spot)).toHaveLength(1);
+    expect(opensAt(one)).toBe(at + 1);
     // The whole of the ask: it is on the other side of the paper now.
-    expect(opensAt(shifted) % 2).not.toBe(at % 2);
+    expect(opensAt(one) % 2).not.toBe(at % 2);
 
     /**
      * **And the book need not grow by it**, which measuring caught and the
-     * sentence now says: the page moves and everything after it moves with
-     * it, until the next division the book holds on a right-hand page takes
-     * the odd page up into the gap that rule already leaves. The total is
+     * note now says: the page moves and everything after it moves with it,
+     * until the next division the book holds on a right-hand page takes the
+     * odd page up into the gap that rule already leaves. The total is
      * therefore the wrong thing to assert — the **side** is the ask.
      */
-    expect(lay(shifted).rows.length).toBeGreaterThanOrEqual(pages);
+    expect(lay(one).rows.length).toBeGreaterThanOrEqual(pages);
 
-    // And the sheet beside it still moves nothing, which is the pair.
+    // And two of them still move nothing, which is the pair §9ad settled.
     const sheet = setBlankPages(file, spot, SHEET);
     expect(opensAt(sheet) % 2).toBe(at % 2);
     expect(lay(sheet).rows.length).toBe(pages + SHEET);
   });
 
-  it('names the side it would land on, and says what it costs', () => {
+  /**
+   * **The side it goes on is the choice** (§9an, from Ken: *when I add a
+   * blank page, I need to be able to decide whether it goes after or before.
+   * So it'll have to ask you, enter a blank page before this page or after
+   * this page*).
+   *
+   * This is the one that could not be said at all. A writer standing on the
+   * last page of a story and asking for a leaf got one **in front of those
+   * words**, with the story's own ending pushed over the page — which is the
+   * report, and the reason there were two vocabularies for one field and
+   * neither of them had an *after*.
+   */
+  it('puts a leaf behind this page by putting it in front of the next', () => {
     const file = collection(5);
-    const { row, place, rows } = freeOpening(file);
-    const offer = blankOffer(place, rows, row.sheet);
-    expect(offer.shiftOn).toBe('Shift it on a page');
-    expect(offer.shiftNote).toMatch(sideOf(row.sheet) === 'right' ? /left-hand side/ : /right-hand side/);
-    // It says what it costs the pages after it — the sheet's own opposite —
-    // and where that stops, which measuring is what found (see above).
-    expect(offer.shiftNote).toMatch(/the pages after it swap sides with it/);
-    expect(offer.shiftNote).toMatch(/as far as the next opening the book holds/);
-    expect(offer.shiftNote).toMatch(/A blank sheet is the one that moves nothing/);
+    const { rows } = lay(file);
+    const story = rows.filter((one) => one.partId === null);
+    const last = story[story.length - 1]!;
+    const offer = offerOn(file, last.sheet);
+    expect(offer.after.act).toBe('A blank page after this one');
+    // The next page's own record, which is what makes *after* need no field.
+    expect(offer.after.spot).not.toBe(offer.before.spot);
+
+    const put = setBlankPages(file, offer.after.spot as string, 1);
+    const now = lay(put).rows;
+    // The story's last words stay where they were, and the leaf is after them.
+    expect(now.find((one) => one.sheet === last.sheet)?.blank).toBe(false);
+    expect(now.find((one) => one.sheet === last.sheet + 1)?.blank).toBe(true);
+    expect(now.length).toBe(rows.length + 1);
   });
 
-  it('cannot shift back where nothing of the writer’s own stands in front', () => {
+  it('has no page after the last one, and says so', () => {
     const file = collection(5);
-    const { row, place, rows } = freeOpening(file);
-    const offer = blankOffer(place, rows, row.sheet);
-    // Absent rather than a button that can only refuse, with the reason said.
-    expect(offer.shiftBack).toBeNull();
-    expect(offer.shiftRefusal).toMatch(/it can only shift on/);
+    const { rows } = lay(file);
+    const end = rows[rows.length - 1]!;
+    const offer = offerOn(file, end.sheet);
+    expect(offer.after.act).toBeNull();
+    expect(offer.after.spot).toBeNull();
+    expect(offer.after.refusal).toMatch(/last page of the book/);
+  });
 
-    // One shift on, and back is there — the same field, one page fewer. The
-    // **spot** is what is followed rather than the row, the laying having
-    // moved every page after it by one.
-    const spot = offer.spot as string;
-    const shifted = setBlankPages(file, spot, 1);
-    const moved = lay(shifted);
-    const leaf = moved.rows.find((one) => one.blankFor === spot)!;
-    const after = blankOffer(pagePlace(moved.laid.pages, moved.blocks, leaf.sheet), moved.rows, leaf.sheet);
-    expect(after.spot).toBe(spot);
+  it('takes one away again, and is absent where none of the writer’s own stand', () => {
+    const file = collection(5);
+    const { row } = freeOpening(file);
+    const offer = offerOn(file, row.sheet);
+    // Absent rather than a button that can only refuse.
+    expect(offer.fewer).toBeNull();
+
+    const spot = offer.before.spot as string;
+    const put = setBlankPages(file, spot, 1);
+    const leaf = lay(put).rows.find((one) => one.blankFor === spot)!;
+    const after = offerOn(put, leaf.sheet);
+    expect(after.before.spot).toBe(spot);
     expect(after.pages).toBe(1);
-    expect(after.shiftBack).toBe('Shift it back a page');
-    expect(after.shiftRefusal).toBeNull();
+    expect(after.fewer).toBe('Take the blank page away');
     // And taking it back leaves the book exactly the length it was.
-    expect(lay(setBlankPages(shifted, spot, 0)).rows.length).toBe(lay(file).rows.length);
+    expect(lay(setBlankPages(put, spot, 0)).rows.length).toBe(lay(file).rows.length);
   });
 
   /**
-   * **A page the book itself holds on one side says so** (§9ae), which is
-   * §9r's measurement arriving at a control that cannot survive it: a
-   * division forced onto a right-hand page already has the verso in front of
-   * it left empty, so one page asked for there fills that gap and the page
-   * does not move at all — a press that changes nothing a writer can see,
-   * which is exactly the report §9ac began with.
+   * **A page the book itself holds on one side says what the press costs**
+   * (§9ac, §9an).
+   *
+   * A division forced onto a right-hand page already has the verso in front
+   * of it left empty, so the first blank page asked for there **takes that
+   * gap's place and becomes the writer's** — the book does not grow, and the
+   * leaf now has a × of its own and can take a picture.
+   *
+   * **And the shift is gone** (§9an, from Ken: *we need to remove shift a
+   * page, that doesn't really make any sense*). §9ae had given that gap a
+   * second act which wrote the division's `opensRecto` instead, under words
+   * named for what it did to the page in hand; the ability is not lost, a
+   * leaf the cutter left being removed by removing its reason, which is the
+   * page's own × (§9x). These assertions pinned that act and are **rewritten
+   * rather than worked around**.
    */
-  it('frees the rule that holds the page, where that is what holds it', () => {
-    /**
-     * **The first answer here was a refusal and it was the wrong one.** A
-     * division forced onto a right-hand page has the verso in front of it
-     * left empty already, so one blank page there is taken up by that gap and
-     * nothing moves — true, and on a book whose chapters all open recto it
-     * made the control refuse on every page a writer would reach for.
-     *
-     * *Move this page to the other side* is one thing a writer wants, and
-     * what really moves such a page is the **rule**, which §9x already made a
-     * per-chapter field. So the shift writes that instead, and the mechanism
-     * stays the room's business: one control, one sentence, two mechanisms
-     * underneath.
-     */
+  it('takes the gap’s place where the book already leaves one, and says so', () => {
     const file = collection(5);
-    const { place, rows, row } = thirdOpens(file);
-    const offer = blankOffer(place, rows, row.sheet);
-    expect(offer.shiftOn).toBe('Shift it on a page');
-    expect(offer.shiftFrees).toBe(place.opensMarkerId);
-    expect(offer.shiftNote).toMatch(/opens on a right-hand page, which is what holds it there/);
-    expect(offer.shiftNote).toMatch(/a page shorter/);
-    // One direction only: the page is on a right-hand side **because** of the
-    // rule, so freeing it can put it nowhere but the left.
-    expect(offer.shiftBack).toBeNull();
-    expect(offer.shiftRefusal).toBeNull();
-    // The sheet is still offered beside it: two pages are not absorbed.
-    expect(offer.act).toBe('Put a blank sheet here…');
+    const { row } = thirdOpens(file);
+    const offer = offerOn(file, row.sheet);
+    expect(offer.before.act).toBe('A blank page before this one');
+    expect(offer.before.note).toMatch(/takes its place and becomes yours/);
+    // There is no second act beside it: one button, one thing it does.
+    expect(Object.keys(offer.before).sort()).toEqual(['act', 'note', 'refusal', 'spot']);
 
-    // And the act really moves it, by the field it names.
-    const freed = setChapterRecto(file, offer.shiftFrees as string, false);
-    const was = row.sheet;
-    const now = thirdOpens(freed).row.sheet;
-    expect(now).toBe(was - 1);
-    expect(now % 2).not.toBe(was % 2);
-    expect(lay(freed).rows.length).toBe(lay(file).rows.length - 1);
+    // And the press really does cost nothing, which is what the note claims.
+    const spot = offer.before.spot as string;
+    const put = setBlankPages(file, spot, 1);
+    expect(lay(put).rows.length).toBe(lay(file).rows.length);
+    expect(lay(put).rows.filter((one) => one.blankFor === spot)).toHaveLength(1);
+    // The leaf is the writer's now, so the page's own × reaches it.
+    expect(thirdOpens(put).row.sheet).toBe(row.sheet);
   });
 
-  it('is a half of the sheet the same screen offers, from one count', () => {
+  /**
+   * **One number, and the two presses add to it** (§9an). The sheet and the
+   * shift were two acts over one field counted in two units, which is what
+   * let them disagree about how many stood there; there is one unit now.
+   */
+  it('counts in pages, so three presses are three pages', () => {
     const file = collection(5);
-    const { row, place, rows } = freeOpening(file);
-    const spot = blankOffer(place, rows, row.sheet).spot as string;
-    // One shift and then a sheet is three pages, which is what one field
-    // counting pages buys: the two acts cannot disagree about how many stand
-    // there, because there is one number and they add one and two to it.
-    const once = setBlankPages(file, spot, 1);
-    const moved = lay(once);
-    const leaf = moved.rows.find((one) => one.blankFor === spot)!;
-    const offer = blankOffer(pagePlace(moved.laid.pages, moved.blocks, leaf.sheet), moved.rows, leaf.sheet);
-    expect(offer.pages).toBe(1);
-    const both = setBlankPages(once, spot, offer.pages + SHEET);
-    expect(lay(both).rows.filter((one) => one.blankFor === spot)).toHaveLength(3);
+    const { row } = freeOpening(file);
+    const spot = offerOn(file, row.sheet).before.spot as string;
+    let put = file;
+    for (let n = 0; n < 3; n += 1) {
+      const leaf = lay(put).rows.find((one) => one.blankFor === spot);
+      const at = leaf ? leaf.sheet : row.sheet;
+      const offer = offerOn(put, at);
+      expect(offer.pages).toBe(n);
+      put = setBlankPages(put, spot, offer.pages + 1);
+    }
+    expect(lay(put).rows.filter((one) => one.blankFor === spot)).toHaveLength(3);
+  });
+
+  /**
+   * **And the writer's own leaf moves** (§9an, from Ken: *in the right menu
+   * outliner, I should be able to grab that blank page and just move it down
+   * below page 174*). One page off one record and onto another — a page is
+   * not a record, so there is nothing about a page number to change.
+   */
+  it('moves a blank page from one record to another, and the numbering follows', () => {
+    const file = collection(5);
+    const { rows } = lay(file);
+    const story = rows.filter((one) => one.partId === null);
+    const last = story[story.length - 1]!;
+    const offer = offerOn(file, last.sheet);
+    const from = offer.after.spot as string;
+    const to = offer.before.spot as string;
+
+    const put = setBlankPages(file, from, 1);
+    expect(lay(put).rows.find((one) => one.sheet === last.sheet + 1)?.blank).toBe(true);
+
+    const moved = moveBlankPage(put, from, to);
+    expect(blankPagesAt(moved, from)).toBe(0);
+    expect(blankPagesAt(moved, to)).toBe(1);
+    /**
+     * **The record is what moves, and the leaf follows it** — which page it
+     * lands on is the cutter's, so that is what is asserted rather than a
+     * sheet number.
+     *
+     * **And the length is deliberately not asserted**, which measuring is
+     * what taught: a leaf dropped in front of an element that begins
+     * mid-page breaks that page too (§9af), so the words it was sharing with
+     * need a page of their own and the book is one longer. That is the
+     * cutter doing its work rather than the move doing something extra, and
+     * a test that pinned the total here would be pinning the laying.
+     */
+    const now = lay(moved).rows;
+    expect(now.filter((one) => one.blankFor === from)).toHaveLength(0);
+    expect(now.filter((one) => one.blankFor === to)).toHaveLength(1);
+  });
+
+  it('refuses a move that would change nothing, or that has nothing to move', () => {
+    const file = collection(5);
+    const { row } = freeOpening(file);
+    const spot = offerOn(file, row.sheet).before.spot as string;
+    const put = setBlankPages(file, spot, 1);
+    // The act refuses the same things the drop target does.
+    expect(moveBlankPage(put, spot, spot)).toBe(put);
+    expect(moveBlankPage(file, spot, 'nothing-here')).toBe(file);
   });
 
   it('says the opening will move, before a picture is put on its page', () => {

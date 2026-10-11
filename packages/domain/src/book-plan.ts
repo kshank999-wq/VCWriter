@@ -1487,110 +1487,117 @@ export const sayBlankReason = (
   return here ? 'the page after it opens on a right-hand page' : 'this page opens on a right-hand page';
 };
 
-/** What a press would do, or why it may not be asked for (§9r, §9ac). */
-export interface BlankOffer {
-  /** Where the leaf would go. Null where the act may not be asked for here. */
+/**
+ * **A blank page on one side of the page in hand** (§9an).
+ *
+ * Both sides are the same act said of two records: a leaf hangs **in front
+ * of** something, so *after this page* is *in front of the next one*. That is
+ * why there is no second field and no migration — the only new thing is which
+ * record the press writes on.
+ */
+export interface BlankSide {
+  /** The record the leaf hangs on. Null where it may not be asked for. */
   spot: string | null;
-  /** The button's words for putting one in, where there is a button. */
+  /** The button's words, or null where there is no press. */
   act: string | null;
-  /**
-   * The button's words for taking one away, where any of the writer's own
-   * stand there (§9ac). Null where none do — the leaves the **cutter** left
-   * are not removed here but by removing their reason, which is the page's
-   * own × (§9x).
-   */
-  fewer: string | null;
-  /** How many of the writer's own blank **pages** stand in front of that spot now. */
-  pages: number;
-  /** What a press would really cost, where that is not one more page. */
-  note: string | null;
-  /** Why there is none, in a sentence a writer can act on. */
+  /** Why it may not be asked for on this side, in a sentence. */
   refusal: string | null;
   /**
-   * **Half a sheet** (§9ae, from Ken: *we also need the ability to shift a
-   * page to the left or right. So when you select a page, it will shift half
-   * a page… if it's on the left-hand side, it'll swap it to the right-facing
-   * page. If it's on the right, it'll swap it to the back of that page*).
-   *
-   * A sheet is the act that **moves nothing across the spine** — that is the
-   * whole of §9ad, and an even number of pages cannot change which side
-   * anything is on. This is its complement and the only other thing a writer
-   * can want here: **one** page, which flips this page and every page after
-   * it to the other side of the paper. Both acts write the same field, and
-   * what differs is whether they write one or two.
-   *
-   * On and back are **not** two directions on the page: both land it on the
-   * other side, because parity flips either way. What differs is whether the
-   * book grows or shrinks, so they are named for that and the note says which
-   * side it would land on.
+   * What this press really costs, said before it. The two sides can be in
+   * different states — one ordinary, one filling a gap the cutter left — so
+   * the sentence belongs to the press rather than to the page.
    */
-  shiftOn: string | null;
-  shiftBack: string | null;
-  /** Which side it would land on, and what it costs every page after it. */
-  shiftNote: string | null;
-  /** Why it cannot move back, where it cannot. */
-  shiftRefusal: string | null;
+  note: string | null;
+}
+
+/** What a press would do, or why it may not be asked for (§9r, §9ac, §9an). */
+export interface BlankOffer {
+  /** A blank page in front of this page. */
+  before: BlankSide;
+  /** A blank page behind it, which is in front of the next page. */
+  after: BlankSide;
   /**
-   * **The division whose own recto rule the shift would turn off** (§9ae).
-   *
-   * Where the book holds a page on a right-hand side, a blank page in front
-   * of it is taken up by the gap that rule already leaves, so adding one is a
-   * press that changes nothing a writer can see. The thing that really moves
-   * such a page is **the rule**, which §9x already made a per-chapter field —
-   * so the shift there writes `opensRecto` rather than a blank, and this is
-   * the id it writes it on. Null wherever the shift is an ordinary page.
-   *
-   * It is the same control and the same words: *what moves this page half a
-   * sheet* is one question, and two buttons for its two mechanisms would be
-   * the writer learning the cutter's rules to use a control about sides.
+   * The button's words for taking one of the writer's own away, where any
+   * stand in front of this page. Null where none do — the leaves the
+   * **cutter** left are not removed here but by removing their reason, which
+   * is the page's own × (§9x).
    */
-  shiftFrees: string | null;
+  fewer: string | null;
+  /** How many of the writer's own blank **pages** stand in front of this page. */
+  pages: number;
+  /**
+   * What a press on the near side really costs, said before it. Kept beside
+   * the sides for the screens that show one sentence under both buttons.
+   */
+  note: string | null;
+  /** Why no blank page may be asked for on this page at all. */
+  refusal: string | null;
 }
 
 /**
  * **The side of the paper a sheet index falls on.** Sheet 1 is the first
  * recto and stands alone, so an odd sheet is a right-hand page and an even
- * one is a left-hand page — the one place that knows it, because the shift's
+ * one is a left-hand page — the one place that knows it, because the note's
  * sentence and anything built on it must not disagree about which side a
  * writer is looking at.
  */
 export const sideOf = (sheet: number): 'right' | 'left' => (sheet % 2 === 1 ? 'right' : 'left');
 
 /**
- * **Whether a blank leaf may be asked for on this page** (§9r), and what a
- * press would do — the domain answering before the act can be asked for,
- * which is `trackRemoval`'s shape.
- *
- * It exists because of the one thing measuring the act caught. A blank block
- * takes the **next page**, and a chapter that opens on a right-hand page has
- * already left the verso in front of it empty — so asking for a leaf there
- * fills the gap the cutter left and **the book does not grow by a page**.
- * Nothing is wrong with that; what is wrong is a press that looks exactly
- * like the fault Ken reported, which is a screen doing something invisible
- * rather than saying what is already true.
- *
- * So where a leaf already stands in front of this page, the act is refused in
- * a sentence rather than offered and absorbed. It holds for every kind of
- * page, because the absorption is a fact about the cutter rather than about
- * chapters — chapters are merely where it happens on every one.
+ * **Whether the cutter has already left a page empty in front of the page at
+ * `at`.** One reading asked twice, because *before this page* and *after this
+ * page* are the same question one sheet apart (§9an): a rule that held for one
+ * side and not the other would be the two buttons meaning different things,
+ * which is what the pair exists to stop.
  */
-export const blankOffer = (place: PagePlace, rows: readonly BookPageRow[], sheet: number): BlankOffer => {
+const inFrontOf = (rows: readonly BookPageRow[], at: number): boolean => blankReason(rows, at - 1) === 'recto';
+
+/**
+ * **Whether a blank page may be asked for on this page, which side it goes
+ * on, and what a press would do** (§9r, §9ac, §9an) — the domain answering
+ * before the act can be asked for, which is `trackRemoval`'s shape.
+ *
+ * **The unit is a page and the choice is a side** (§9an, from Ken: *when I
+ * add a blank page, I need to be able to decide whether it goes after or
+ * before. So it'll have to ask you, enter a blank page before this page or
+ * after this page*). Until this there were two vocabularies over one field —
+ * a **sheet** named for what it put in and a **shift** named for what it did
+ * to the page in hand — and neither could say *after*, so a writer standing
+ * on the last page of a story and asking for a leaf got one in front of those
+ * words, with the story's own ending pushed over the page.
+ *
+ * The other thing measuring the act caught, which still holds: a blank block
+ * takes the **next page**, and a chapter that opens on a right-hand page has
+ * already left the verso in front of it empty — so a page asked for there is
+ * taken up by the gap the cutter left and the book does not grow. Nothing is
+ * wrong with that; what is wrong is a press that looks exactly like nothing
+ * happening. Where a division's rule is what holds it, the press frees the
+ * rule (`frees`); where nothing can be freed, that side is refused with the
+ * reason.
+ */
+export const blankOffer = (
+  place: PagePlace,
+  rows: readonly BookPageRow[],
+  sheet: number,
+  /**
+   * The page after this one, where there is one. **Required rather than
+   * optional**: a caller that forgot would quietly offer no *after* at all,
+   * which reads exactly like this never having been built (addendum 20 §15a),
+   * so the compiler asks for it.
+   */
+  nextPlace: PagePlace | null,
+): BlankOffer => {
   const page = rows.find((one) => one.sheet === sheet);
+  const nowhere = (refusal: string): BlankSide => ({ spot: null, act: null, note: null, refusal });
   const none = (refusal: string, pages = 0): BlankOffer => ({
-    spot: null,
-    act: null,
+    before: nowhere(refusal),
+    after: nowhere(refusal),
     fewer: null,
     pages,
     note: null,
     refusal,
-    shiftOn: null,
-    shiftBack: null,
-    shiftNote: null,
-    shiftRefusal: null,
-    shiftFrees: null,
   });
   if (!page) return none('The book is still being set.');
-  const spot = blankSpot(place, page);
   /**
    * **Why there is no leaf to be had here** (§9y). This answered with silence,
    * which was enough while the only caller was a panel that simply drew no
@@ -1599,7 +1606,16 @@ export const blankOffer = (place: PagePlace, rows: readonly BookPageRow[], sheet
    * leaf hangs on a record, so a page with nothing of the book on it has
    * nothing for one to stand before.
    */
-  if (spot === null) {
+  const spot = blankSpot(place, page);
+  /**
+   * **Where a leaf behind this page goes** (§9an). *After this page* is *in
+   * front of the next page*, which is the same act on the next page's own
+   * record — so the one thing the two sides do not share is which record they
+   * write, and the end of the book is the one place there is no answer.
+   */
+  const nextRow = rows.find((one) => one.sheet === sheet + 1);
+  const afterSpot = nextRow && nextPlace ? blankSpot(nextPlace, nextRow) : null;
+  if (spot === null && afterSpot === null) {
     return none('Nothing of the book stands on this page for a leaf to go in front of.');
   }
   /**
@@ -1607,91 +1623,87 @@ export const blankOffer = (place: PagePlace, rows: readonly BookPageRow[], sheet
    * laid pages rather than off the record — the rows are what is in front of
    * the writer, and asking the document would need the document, which two of
    * the three screens that take this offer do not have in hand.
-   */
-  /**
-   * **A leaf is two rows** (§9ad): every sheet the writer asks for lays a
-   * front and a back, both carrying the same `blankFor`, so what is counted
-   * here is sheets rather than sides. The back of a *page* (§17d) carries no
-   * `blankFor` and so is not counted.
-   */
-  const pages = rows.filter((one) => one.blankFor === spot).length;
-  const sheets = Math.floor(pages / SHEET);
-  /**
-   * **The shift, written once** (§9ae). It is the same field as the sheet and
-   * one page rather than two, so it is built here beside it: two readings of
-   * one count could differ about how many pages stand there, which is the one
-   * thing a writer cannot check by looking.
-   */
-  const other = sideOf(sheet) === 'right' ? 'left' : 'right';
-  /**
-   * **A page the book itself holds on one side cannot shift** (§9ae), and
-   * saying so is the whole of why this is a reading rather than two buttons.
    *
-   * §9r measured it for the sheet: a division that opens on a right-hand page
-   * has already left the verso in front of it empty, so **one** page asked
-   * for there fills the cutter's own gap and the book does not grow — which
-   * means the page does not move and does not change sides, a press that
-   * changes nothing a writer can see. §9ad's sheet escapes it by being two.
-   * The shift cannot, so it is refused here with the rule named and the one
-   * place that rule is set, which is the page's own screen (§9x's
-   * `opensRecto`).
+   * Counted in **pages** (§9an): the sheet was two of these and the shift one,
+   * and with the unit settled there is one number rather than a count that
+   * had to be divided before it could be said.
    */
-  const held = blankReason(rows, sheet - 1) === 'recto';
-  /**
-   * **And where the rule is what holds it, the shift writes the rule** — one
-   * press, because *move this page to the other side* is one thing a writer
-   * wants and the mechanism is the room's business. There is exactly one
-   * direction to offer: the page is on a right-hand side **because** of the
-   * rule, so freeing it can only put it on the left.
-   */
-  const frees = (held ? place.opensMarkerId : null) ?? null;
-  const shift = (room: boolean) => ({
-    shiftOn: frees ? 'Shift it on a page' : room && !held ? 'Shift it on a page' : null,
-    shiftBack: pages > 0 && !held ? 'Shift it back a page' : null,
-    shiftNote: frees
-      ? `This page opens on a right-hand page, which is what holds it there. Shifting it stops that for this page alone, so it falls on the ${other}-hand side and the book is a page shorter.`
-      : (room || pages > 0) && !held
-        ? `Either shift puts this page on the ${other}-hand side of the spread, and the pages after it swap sides with it as far as the next opening the book holds on a right-hand page. A blank sheet is the one that moves nothing.`
-        : null,
-    shiftRefusal:
-      held && !frees
-        ? 'This page opens on a right-hand page, so the book already leaves the page in front of it empty and a single page would be taken up by that gap.'
-        : pages > 0 || held
-          ? null
-          : 'Nothing blank stands in front of this page to take away, so it can only shift on.',
-    shiftFrees: frees,
-  });
-  if (pages + SHEET > MAX_BLANK_PAGES) {
+  const pages = spot === null ? 0 : rows.filter((one) => one.blankFor === spot).length;
+  const room = pages < MAX_BLANK_PAGES;
+
+  const side = (
+    where: 'before' | 'after',
+    at: string | null,
+    standing: number,
+    atSheet: number,
+    atPlace: PagePlace | null,
+  ): BlankSide => {
+    if (at === null) {
+      return {
+        spot: null,
+        act: null,
+        note: null,
+        refusal:
+          where === 'after'
+            ? 'This is the last page of the book, so there is nothing after it for a leaf to stand in front of.'
+            : 'Nothing of the book stands on this page for a leaf to go in front of.',
+      };
+    }
+    if (standing >= MAX_BLANK_PAGES) {
+      return {
+        spot: at,
+        act: null,
+        note: null,
+        refusal: `${standing} blank pages already stand there, which is as many as one place takes.`,
+      };
+    }
+    const held = inFrontOf(rows, atSheet);
+    /**
+     * **Offered rather than refused where the gap would absorb it** (§9ac,
+     * from Ken: *there's no pages in between and no way to put pages in
+     * between*). A division the book holds on a right-hand page already has
+     * the verso in front of it left empty, so the first page asked for there
+     * **takes that gap's place and becomes the writer's** — the book does not
+     * grow, and the leaf now has a × of its own and can take a picture.
+     * Refusing was right about the arithmetic and wrong about the answer: it
+     * left the one gap a writer most wants a page in with no act at all.
+     *
+     * **And the shift is gone** (§9an, from Ken: *we need to remove shift a
+     * page, that doesn't really make any sense*). §9ae gave that gap a second
+     * act, which wrote the division's `opensRecto` rather than a blank — a
+     * control named for what it did to the page in hand, over a mechanism a
+     * writer has no reason to know about. The ability is not lost: a leaf the
+     * cutter left is removed by removing its reason, which is the page's own
+     * × (§9x), and that is where it belongs.
+     */
+    /**
+     * **The sentence names its own side** where the two differ, which looking
+     * at the real screen is what caught: the ordinary note and the gap's note
+     * stood one under the other beneath two buttons in a row, with nothing
+     * saying which went with which — *which control a note belongs to is said
+     * by the gap* (addendum 09 §14a), and side by side there is no gap to say
+     * it with. Where both sides say the same thing it is printed once.
+     */
+    const note = held
+      ? `A blank page already stands ${where === 'before' ? 'in front of this one' : 'after this one'} because of how the book opens. The first one you put in takes its place and becomes yours, so the book does not grow by it.`
+      : 'A blank page is one side of one leaf: the pages after it swap sides with it, as far as the next opening the book holds on a right-hand page. Put two in and nothing moves — that is a whole sheet, blank front and back.';
     return {
-      spot,
-      act: null,
-      fewer: 'Take one away',
-      pages,
-      note: null,
-      refusal: `${sheets} blank sheets already stand here, which is as many as one place takes.`,
-      ...shift(pages < MAX_BLANK_PAGES),
+      spot: at,
+      act: where === 'before' ? 'A blank page before this one' : 'A blank page after this one',
+      note,
+      refusal: null,
     };
-  }
-  /**
-   * **What a press really costs** (§9ad, from Ken: *when you enter a blank
-   * page, it's entering a blank half page… if you insert a blank page, it's
-   * blank on front and back, like a separating page*).
-   *
-   * It is two pages and it is always two pages, which is what makes it safe to
-   * say in one sentence: an even number cannot change which side anything
-   * after it is on, so a chapter that opened on a right-hand page still does.
-   */
+  };
+
+  const before = side('before', spot, pages, sheet, place);
+  const after = side('after', afterSpot, afterSpot === null ? 0 : rows.filter((one) => one.blankFor === afterSpot).length, sheet + 1, nextPlace);
   return {
-    spot,
-    act: sheets === 0 ? 'Put a blank sheet here…' : 'Put another blank sheet here…',
-    fewer: pages >= SHEET ? (sheets === 1 ? 'Take the blank sheet away' : 'Take one away') : null,
+    before,
+    after,
+    fewer: pages > 0 ? (pages === 1 ? 'Take the blank page away' : 'Take one away') : null,
     pages,
-    note:
-      sheets === 0
-        ? 'A blank sheet goes in: two pages, so there is nothing on either side of the paper here. Nothing after it changes which side it is on, and a picture put on it later takes the first of the two.'
-        : null,
-    refusal: null,
-    ...shift(true),
+    note: before.note ?? after.note,
+    refusal: room ? null : `${pages} blank pages already stand here, which is as many as one place takes.`,
   };
 };
 
@@ -1705,70 +1717,62 @@ export const blankOffer = (place: PagePlace, rows: readonly BookPageRow[], sheet
  * toggling the field, because a screen that toggles it blind absorbs the
  * cutter's leaf silently, which is the very thing `blankOffer` was written to
  * stop. Three surfaces, one answer.
+ *
+ * **It has a front and no back** (§9an): a part knows what it is and not
+ * which page of it the writer is looking at, so *after this page* has no page
+ * to be after. The refusal names the screen that does know, which is the
+ * page's own.
  */
 export const partBlankOffer = (
   rows: readonly BookPageRow[],
   part: Pick<BookPart, 'id' | 'blankBefore'>,
 ): BlankOffer => {
   const pages = pagesBefore(part.blankBefore);
-  const sheets = Math.floor(pages / SHEET);
   /**
    * **Which side this part's page falls on** (§9ae), read off the laid rows
    * rather than guessed: a part knows what it is and not where the cutter put
-   * it, and the shift's sentence is about the side a writer is looking at.
+   * it, and the note's sentence is about the side a writer is looking at.
    */
   const at = rows.find((one) => one.partId === part.id)?.sheet ?? null;
   const other = at === null ? null : sideOf(at) === 'right' ? 'left' : 'right';
-  /** The same rule as the page's own screen, asked of a part (§9ae). */
-  const held = at !== null && blankReason(rows, at - 1) === 'recto';
-  // A part carries no division rule of its own, so there is nothing here for
-  // a shift to free — the refusal names the fact and stops.
-  const frees = null;
-  const shift = (room: boolean) => ({
-    shiftOn: room && !held ? 'Shift it on a page' : null,
-    shiftBack: pages > 0 && !held ? 'Shift it back a page' : null,
-    shiftNote:
-      (room || pages > 0) && other && !held
-        ? `Either shift puts this page on the ${other}-hand side of the spread, and the pages after it swap sides with it as far as the next opening the book holds on a right-hand page. A blank sheet is the one that moves nothing.`
-        : null,
-    shiftRefusal: held
-      ? 'This page opens on a right-hand page, so the book already leaves the page in front of it empty and a single page would be taken up by that gap.'
-      : pages > 0
-        ? null
-        : 'Nothing blank stands in front of this page to take away, so it can only shift on.',
-    shiftFrees: frees,
-  });
-  if (pages + SHEET > MAX_BLANK_PAGES) {
-    return {
-      spot: part.id,
-      act: null,
-      fewer: 'Take one away',
-      pages,
-      note: null,
-      refusal: `${sheets} blank sheets already stand here, which is as many as one place takes.`,
-      ...shift(pages < MAX_BLANK_PAGES),
-    };
-  }
   /**
-   * **Offered rather than refused, with the fact said before the press**
-   * (§9ac) — `blankOffer`'s own correction, because this was the same
-   * sentence: §9r refused wherever a leaf already stood in front, which left
-   * the writer holding no act at all in the one place a page is most often
-   * wanted. **And what it offers is a sheet** (§9ad), said in the same words
-   * the page's own screen says, three surfaces having to agree about what a
-   * press puts in.
+   * The same rule as the page's own screen, asked of a part (§9ae): whether
+   * the cutter has already left a page empty in front of it, which changes
+   * what the first press costs and nothing else.
    */
+  const held = at !== null && blankReason(rows, at - 1) === 'recto';
+  const after: BlankSide = {
+    spot: null,
+    act: null,
+    note: null,
+    refusal: 'A page after this one is set on that page’s own screen, which is what knows where it falls.',
+  };
+  const room = pages < MAX_BLANK_PAGES;
+  /**
+   * **Offered rather than refused where the gap would absorb it** (§9ac): a
+   * part has no division rule to free, so the first page asked for takes the
+   * cutter's gap and becomes the writer's — which is `blankOffer`'s own
+   * answer, three surfaces having to say the same thing.
+   */
+  const note = !room
+    ? null
+    : held
+      ? 'A blank page already stands in front of this one because of how the book opens. The first one you put in takes its place and becomes yours, so the book does not grow by it.'
+      : other
+        ? 'A blank page is one side of one leaf: the pages after it swap sides with it, as far as the next opening the book holds on a right-hand page. Put two in and nothing moves — that is a whole sheet, blank front and back.'
+        : null;
   return {
-    spot: part.id,
-    act: sheets === 0 ? 'Put a blank sheet before this one' : 'Put another blank sheet before this one',
-    fewer: pages >= SHEET ? (sheets === 1 ? 'Take the blank sheet away' : 'Take one away') : null,
+    before: {
+      spot: part.id,
+      act: room ? 'A blank page before this one' : null,
+      note,
+      refusal: room ? null : `${pages} blank pages already stand there, which is as many as one place takes.`,
+    },
+    after,
+    fewer: pages > 0 ? (pages === 1 ? 'Take the blank page away' : 'Take one away') : null,
     pages,
-    note:
-      sheets === 0
-        ? 'A blank sheet goes in: two pages, so there is nothing on either side of the paper here. Nothing after it changes which side it is on.'
-        : null,
-    refusal: null,
-    ...shift(true),
+    note,
+    refusal: room ? null : `${pages} blank pages already stand there, which is as many as one place takes.`,
   };
 };
 
@@ -2107,6 +2111,30 @@ export const setBlankPages = (file: ProjectFile, id: string, count: number): Pro
   if (partsOf(file).some((part) => part.id === id)) return setPartBlank(file, id, 'before', want);
   if (file.markers.some((marker) => (marker.id as string) === id)) return setChapterBlank(file, id, 'before', want);
   return file;
+};
+
+/**
+ * **Move one of the writer's own blank pages to another page** (§9an, from
+ * Ken: *in the right menu outliner, I should be able to grab that blank page
+ * and just move it down below page 174. That would solve a lot of problems.
+ * Just be able to shift pages and then it'll renumber*).
+ *
+ * It is **one page off one record and onto another**, which is the whole act:
+ * a page is not a record, so there is nothing about page 174 to change — what
+ * moves is which piece of the writing the leaf stands in front of, and the
+ * numbering follows as it always has. That is also why only the writer's own
+ * leaves move: the cutter's are a consequence of a rule and a drag could only
+ * disagree with it.
+ *
+ * It refuses the same things the drop target does, so a caller cannot get past
+ * the reading by not reading it (`trackRemoval`'s shape).
+ */
+export const moveBlankPage = (file: ProjectFile, from: string, to: string): ProjectFile => {
+  if (from === to) return file;
+  const standing = blankPagesAt(file, from);
+  const landing = blankPagesAt(file, to);
+  if (standing < 1 || landing >= MAX_BLANK_PAGES) return file;
+  return setBlankPages(setBlankPages(file, from, standing - 1), to, landing + 1);
 };
 
 /** How many leaves stand before whatever this id names (§9ac). */

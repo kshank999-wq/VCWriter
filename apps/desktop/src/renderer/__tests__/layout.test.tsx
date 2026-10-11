@@ -755,20 +755,20 @@ describe('the room', () => {
   });
 
   /**
-   * **Half a sheet** (§9ae, from Ken: *we also need the ability to shift a
-   * page to the left or right… it will shift half a page*). The domain can
-   * answer all day; what makes it a feature is a writer being able to reach
-   * it from the page they are standing on, which is §15a.
+   * **A blank page, and which side it goes on** (§9an, from Ken: *when I add
+   * a blank page, I need to be able to decide whether it goes after or
+   * before. So it'll have to ask you, enter a blank page before this page or
+   * after this page*).
+   *
+   * The domain can answer all day; what makes it a feature is a writer being
+   * able to reach **both sides** from the page they are standing on, which is
+   * §15a — and it is the half that could not be reached at all, a writer on
+   * the last page of a story getting a leaf in front of those words.
+   *
+   * These two assertions pinned the shift that stood here instead, and are
+   * **rewritten rather than worked around**: Ken asked for it to go.
    */
-  it('offers the shift beside the sheet, and says which side it lands on', () => {
-    /**
-     * A book whose chapters do **not** open on a right-hand page, which is
-     * the half of the setting that makes a page movable at all: with the rule
-     * on, the cutter has already left the verso in front of every opening
-     * empty and one page is taken up by that gap. Measured on the default
-     * book, every opening is held — which is why this says so rather than
-     * reaching for a page that happens not to be.
-     */
+  it('offers a blank page on either side of the page in hand', () => {
     render(<Harness initial={setBookSettings(novel(), { chaptersOpenRecto: false })} />);
     for (const fold of Array.from(document.querySelectorAll('button[aria-label^="Show what is under"]'))) {
       fireEvent.click(fold as HTMLElement);
@@ -778,57 +778,93 @@ describe('the room', () => {
     expect(first).toBeTruthy();
     fireEvent.doubleClick(first.querySelector('.layout-rail-name') as HTMLElement);
     const panel = document.querySelector('.layout-page-dialog') as HTMLElement;
-    const on = within(panel).getByRole('button', { name: 'Shift it on a page' });
-    expect(on).toBeDefined();
-    // Absent rather than a button that can only refuse, with the reason said.
-    expect(within(panel).queryByRole('button', { name: 'Shift it back a page' })).toBeNull();
-    expect(panel.textContent).toMatch(/it can only shift on/);
-    // And the note names the side, which is what the writer is choosing.
-    expect(panel.textContent).toMatch(/-hand side of the spread/);
-    // Pressing it writes **one** page where the sheet writes two (§9ae), so
-    // the way back appears and the sheet is still offered beside it.
-    fireEvent.click(on);
+    expect(within(panel).getByRole('button', { name: 'A blank page before this one' })).toBeDefined();
+    expect(within(panel).getByRole('button', { name: 'A blank page after this one' })).toBeDefined();
+    // **And the shift is gone**, which is the other half of the ask.
+    expect(within(panel).queryByRole('button', { name: /Shift it/ })).toBeNull();
+    // Nothing of the writer's own stands there yet, so there is nothing to
+    // take away — absent rather than a button that can only refuse.
+    expect(within(panel).queryByRole('button', { name: /^Take (the blank page|one) away$/ })).toBeNull();
+    // And the note says what one press costs and what two of them make.
+    expect(panel.textContent).toMatch(/swap sides with it/);
+    expect(panel.textContent).toMatch(/Put two in and nothing moves/);
+
+    // One press writes one page, and the way back appears.
+    fireEvent.click(within(panel).getByRole('button', { name: 'A blank page before this one' }));
     const after = document.querySelector('.layout-page-dialog') as HTMLElement;
-    expect(within(after).getByRole('button', { name: 'Shift it back a page' })).toBeDefined();
-    expect(within(after).getByRole('button', { name: /blank sheet here/ })).toBeDefined();
+    expect(within(after).getByRole('button', { name: 'Take the blank page away' })).toBeDefined();
   });
 
   /**
-   * **And where a rule is what holds the page, the shift frees it** (§9ae).
-   *
-   * The first answer here was a refusal, and on a book whose chapters all
-   * open on a right-hand page — which is the default and Ken's own book —
-   * that is a control refusing on every page a writer would reach for. The
-   * thing that really moves such a page is the rule, so the press writes
-   * that instead and says so.
+   * **The side he could not ask for** (§9an). A writer on the last page of a
+   * story wants the leaf **after** those words — *there always needs to be an
+   * extra page at the end of all the stories between the stories and the back
+   * matter* — and every act there put one in front of them.
    */
-  it('shifts a page the recto rule holds by freeing that rule', () => {
+  it('puts the leaf after this page, leaving the words where they are', () => {
     render(<Harness initial={novel()} />);
     for (const fold of Array.from(document.querySelectorAll('button[aria-label^="Show what is under"]'))) {
       fireEvent.click(fold as HTMLElement);
     }
     const rows = Array.from(document.querySelectorAll('.layout-rail-page')) as HTMLElement[];
-    const held = rows.find((page) => /^Page 3/.test((page.textContent ?? '').trim()))!;
-    expect(held).toBeTruthy();
-    fireEvent.doubleClick(held.querySelector('.layout-rail-name') as HTMLElement);
+    const page = rows.find((one) => /^Page 2/.test((one.textContent ?? '').trim()))!;
+    fireEvent.doubleClick(page.querySelector('.layout-rail-name') as HTMLElement);
     const panel = document.querySelector('.layout-page-dialog') as HTMLElement;
-    const on = within(panel).getByRole('button', { name: 'Shift it on a page' });
-    expect(panel.textContent).toMatch(/which is what holds it there/);
-    expect(panel.textContent).toMatch(/a page shorter/);
-    // One direction only: the rule puts it on a right-hand page, so freeing
-    // it can put it nowhere but the left.
-    expect(within(panel).queryByRole('button', { name: 'Shift it back a page' })).toBeNull();
-    // The sheet is still there: two pages are not absorbed by that gap.
-    expect(within(panel).getByRole('button', { name: /blank sheet here/ })).toBeDefined();
+    const was = (latest as ProjectFile).beats.flatMap((beat) => beat.manuscript.elements).length;
+    fireEvent.click(within(panel).getByRole('button', { name: 'A blank page after this one' }));
+    // Not a word of the manuscript moves; what changed is one record's count.
+    expect((latest as ProjectFile).beats.flatMap((beat) => beat.manuscript.elements).length).toBe(was);
+    expect(document.querySelectorAll('.layout-rail-page').length).toBeGreaterThan(rows.length - 1);
+  });
 
-    const freed = (file: ProjectFile) =>
-      file.markers.filter((one) => ((one.page ?? {}) as { opensRecto?: boolean | null }).opensRecto === false).length;
-    // Nothing is set on any chapter until the press, which is `partStyleOf`'s
-    // rule: only what differs from the book is stored.
-    expect(freed(latest as ProjectFile)).toBe(0);
-    fireEvent.click(on);
-    // Exactly one — this page's own chapter, and not the book's setting.
-    expect(freed(latest as ProjectFile)).toBe(1);
+  /**
+   * **And the writer's own blank page drags** (§9an, from Ken: *in the right
+   * menu outliner, I should be able to grab that blank page and just move it
+   * down below page 174. That would solve a lot of problems. Just be able to
+   * shift pages and then it'll renumber*).
+   *
+   * What this pins is the **gesture** (§15a): the domain's `moveBlankPage`
+   * can answer all day, and a row that cannot be picked up reads exactly like
+   * the feature not being there. His own rule is the other half — *we can
+   * only do that with blank pages and illustrated pages; you don't want to
+   * drag the story around on accident* — so a page of words is asserted
+   * un-draggable in the same breath.
+   */
+  it('drags a blank page the writer put in onto another page, and leaves the story alone', () => {
+    render(<Harness initial={novel()} />);
+    for (const fold of Array.from(document.querySelectorAll('button[aria-label^="Show what is under"]'))) {
+      fireEvent.click(fold as HTMLElement);
+    }
+    const pageRows = () => Array.from(document.querySelectorAll('.layout-rail-page')) as HTMLElement[];
+    const words = pageRows().find((one) => /^Page 2/.test((one.textContent ?? '').trim()))!;
+    // A page of the story's words is not draggable, which is his own rule.
+    expect(words.getAttribute('draggable')).toBe('false');
+
+    // Put one in, from the page's own screen.
+    fireEvent.doubleClick(words.querySelector('.layout-rail-name') as HTMLElement);
+    const panel = document.querySelector('.layout-page-dialog') as HTMLElement;
+    fireEvent.click(within(panel).getByRole('button', { name: 'A blank page after this one' }));
+
+    const leaf = pageRows().find((one) => /Blank/.test(one.textContent ?? '') && one.getAttribute('draggable') === 'true')!;
+    expect(leaf).toBeTruthy();
+    const was = latest as ProjectFile;
+    const words_ = was.beats.flatMap((beat) => beat.manuscript.elements).length;
+
+    // Drag it onto another page, which is where it lands.
+    const target = pageRows().find((one) => one !== leaf && !/Blank/.test(one.textContent ?? ''))!;
+    expect(target).toBeTruthy();
+    let carried = '';
+    fireEvent.dragStart(leaf, {
+      dataTransfer: { setData: (_k: string, value: string) => { carried = value; }, effectAllowed: '' },
+    });
+    expect(carried).toBeTruthy();
+    fireEvent.dragOver(target);
+    fireEvent.drop(target);
+    fireEvent.dragEnd(leaf);
+
+    // The record it hangs on changed, and not a word of the manuscript.
+    expect(latest).not.toBe(was);
+    expect((latest as ProjectFile).beats.flatMap((beat) => beat.manuscript.elements).length).toBe(words_);
   });
 
   it('offers a picture on a blank leaf, where the screen used to offer nothing', () => {
@@ -976,31 +1012,33 @@ describe('the room', () => {
    * page a writer most wants a leaf. So it presses twice and asserts the words
    * change and a second leaf lands.
    */
-  it('offers another blank sheet from the Add menu, and says what one costs', () => {
+  it('offers a blank page on either side from the Add menu, and counts in pages', () => {
+    /**
+     * **Two items, because the choice is a side** (§9an). This read *Put a
+     * blank sheet here* and then *Put another blank sheet here*, one item over
+     * a field counted in sheets; the unit is a page now and the menu says
+     * which side, so both assertions are **rewritten rather than worked
+     * around** — the ask was that the words make sense.
+     */
     render(<Harness initial={novel()} />);
-    const chapter = document.querySelector('.layout-rail-chapter') as HTMLElement;
-    fireEvent.click(within(chapter).getByLabelText(/^Show what is under /));
-    const page = (Array.from(document.querySelectorAll('.layout-rail-page')) as HTMLElement[]).find((one) =>
-      /Chapter opens/.test(one.textContent ?? ''),
-    )!;
-    fireEvent.click(page.querySelector('.layout-rail-name') as HTMLElement);
+    chooseStoryPage();
     fireEvent.click(screen.getByRole('button', { name: 'Add to the book' }));
-    const first = screen.getAllByRole('menuitem').find((one) => /blank sheet/.test(one.textContent ?? ''))!;
-    expect((first as HTMLButtonElement).disabled).toBe(false);
-    expect(first.textContent).toMatch(/^Put a blank sheet here/);
-    fireEvent.click(first);
+    const items = () => screen.getAllByRole('menuitem');
+    const before = items().find((one) => /^A blank page before this one/.test(one.textContent ?? ''))!;
+    const after = items().find((one) => /^A blank page after this one/.test(one.textContent ?? ''))!;
+    expect((before as HTMLButtonElement).disabled).toBe(false);
+    expect((after as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(before);
     fireEvent.click(screen.getByRole('button', { name: 'Add to the book' }));
-    const again = screen.getAllByRole('menuitem').find((one) => /blank sheet/.test(one.textContent ?? ''))!;
-    expect(again.textContent).toMatch(/^Put another blank sheet here/);
+    const again = items().find((one) => /^A blank page before this one/.test(one.textContent ?? ''))!;
     fireEvent.click(again);
     const marker = (latest as ProjectFile).markers[0]!.id as string;
     /**
-     * **Two sheets, which is four pages** (§9ae). The count is in pages since
-     * the shift — a sheet is two of them and a shift is one — so this read 2
-     * when the field counted leaves and is **rewritten rather than worked
-     * around**: what it pins is still two presses of the sheet.
+     * **Two presses, which is two pages** (§9an) — one number in one unit,
+     * where the sheet and the shift were two acts adding one and two to it.
+     * Two of them make a sheet, which is what the note says.
      */
-    expect(blankPagesAt(latest as ProjectFile, marker)).toBe(2 * SHEET);
+    expect(blankPagesAt(latest as ProjectFile, marker)).toBe(SHEET);
   });
 
   /**
@@ -1376,7 +1414,7 @@ describe('the room', () => {
     // The menu stays up while a page is chosen, and its item is read again
     // for whatever is in hand — so the walk is a writer turning the pages.
     fireEvent.click(screen.getByRole('button', { name: 'Add to the book' }));
-    const blankItem = () => screen.getByRole('menuitem', { name: /blank sheet/i }) as HTMLButtonElement;
+    const blankItem = () => screen.getByRole('menuitem', { name: /^A blank page before this one/ }) as HTMLButtonElement;
     const next = screen.getByRole('button', { name: 'Next spread' });
     for (let turn = 0; turn < 14; turn += 1) {
       for (const sheet of Array.from(document.querySelectorAll('.layout-sheet:not(.layout-no-sheet)')) as HTMLElement[]) {
@@ -1405,9 +1443,11 @@ describe('the room', () => {
     // item is greyed with the reason in its title — `pictureOffer`'s shape.
     render(<Harness initial={novel()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Add to the book' }));
-    const item = screen.getByRole('menuitem', { name: /blank sheet/i }) as HTMLButtonElement;
-    expect(item.disabled).toBe(true);
-    expect(item.title).toMatch(/Choose a page first/i);
+    for (const name of [/^A blank page before this one/, /^A blank page after this one/]) {
+      const item = screen.getByRole('menuitem', { name }) as HTMLButtonElement;
+      expect(item.disabled).toBe(true);
+      expect(item.title).toMatch(/Choose a page first/i);
+    }
   });
 
   it('draws a box with nothing in it, and fills it afterwards', async () => {

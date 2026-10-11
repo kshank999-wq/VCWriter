@@ -137,6 +137,8 @@ import {
   rowHasUnder,
   visibleRows,
   blankOffer,
+  blankSpot,
+  moveBlankPage,
   blankReason,
   sayBlankReason,
   pictureOffer,
@@ -152,7 +154,6 @@ import {
   setPartBlank,
   setBlankPages,
   setChapterBlank,
-  setChapterRecto,
   plateIntoStory,
   type BookPageRow,
   type PictureOffer,
@@ -171,6 +172,7 @@ import {
   type SaveKind,
   updateMarker,
   type BlankOffer,
+  type BlankSide,
 } from '@vcwriter/domain';
 import { readFont } from '../read-font';
 import { PopOutButton } from './PopOutButton';
@@ -322,18 +324,14 @@ const NO_PICTURE: PictureOffer = {
  * Where a blank leaf may go, with no page in hand (§9y) — `NO_PICTURE`'s
  * shape, for the Add menu's own item.
  */
+const NOWHERE = 'Choose a page first: a blank page goes beside the one in hand.';
 const NO_BLANK: BlankOffer = {
-  spot: null,
-  act: null,
+  before: { spot: null, act: null, note: null, refusal: NOWHERE },
+  after: { spot: null, act: null, note: null, refusal: NOWHERE },
   fewer: null,
   pages: 0,
   note: null,
-  refusal: 'Choose a page first: the blank sheet goes in front of it.',
-  shiftOn: null,
-  shiftBack: null,
-  shiftNote: null,
-  shiftRefusal: null,
-  shiftFrees: null,
+  refusal: NOWHERE,
 };
 
 /** i, ii, iii — the front matter's numbers, for the rail. */
@@ -522,7 +520,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
    * What the rail is dragging: a part within its half, a chapter as a block,
    * or a picture onto another page (§9w).
    */
-  const [dragging, setDragging] = useState<{ kind: 'part' | 'chapter' | 'picture'; id: string } | null>(null);
+  const [dragging, setDragging] = useState<{ kind: 'part' | 'chapter' | 'picture' | 'blank'; id: string } | null>(null);
   const [over, setOver] = useState<string | null>(null);
   /**
    * The one picker for every picture the room takes in (§9, §9a). What the
@@ -756,6 +754,15 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
    */
   const offerFor = (sheet: number): PictureOffer => pictureOffer(pagePlaceFor(sheet), pageRows, sheet, nounPlural.toLowerCase());
   /**
+   * **Which record a blank page dropped on this page would hang on** (§9an).
+   * It is `blankSpot`, the one reading the panel and the Add menu already
+   * ask, so the rail cannot land a leaf somewhere neither of them would.
+   */
+  const blankSpotFor = (sheet: number): string | null => {
+    const row = pageRows.find((one) => one.sheet === sheet);
+    return row ? blankSpot(pagePlaceFor(sheet), row) : null;
+  };
+  /**
    * **Whether a picture may be asked for on the page in hand, and where it
    * will land** (§9w). The one reading the rail's button, the Add menu and the
    * page's own dialog all take, where each used to decide for itself — which
@@ -778,7 +785,20 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
    * what the panel refuses.
    */
   const chosenRow = selectedSheet === null ? undefined : pageRows.find((row) => row.sheet === selectedSheet);
-  const pageBlank = selectedSheet === null ? NO_BLANK : blankOffer(place, pageRows, selectedSheet);
+  const pageBlank =
+    selectedSheet === null ? NO_BLANK : blankOffer(place, pageRows, selectedSheet, pagePlaceFor(selectedSheet + 1));
+  /**
+   * **One press for either side** (§9an). A blank page goes in front of the
+   * record the offer names, and that is the whole act — the shift that used
+   * to sit beside it, writing a division's `opensRecto` under the words *shift
+   * it on a page*, is gone at Ken's own ask. Both screens that offer it call
+   * this, so neither holds a second answer about what a press does.
+   */
+  const addBlank = (side: BlankSide) => {
+    const { act, spot } = side;
+    if (!act || !spot) return;
+    onUpdate((current) => setBlankPages(current, spot, blankPagesAt(current, spot) + 1));
+  };
   /**
    * **Whether a division may be started on the page in hand** (§9ab), which is
    * `divisionRemoval`'s inverse and so the thing that makes the × on a
@@ -1135,16 +1155,23 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
      * is taken away (§9x), and the note says what the press really costs where
      * that is not one more page.
      */
+    /**
+     * **Two items, because the choice is a side** (§9an, from Ken: *when I
+     * add a blank page, I need to be able to decide whether it goes after or
+     * before*). The menu reads the same one offer the panel reads, so the
+     * two screens cannot disagree about which record a press writes — and
+     * each item says in its own disabled title why that side has no press.
+     */
     {
-      label: pageBlank.act ?? 'Put a blank sheet in',
-      disabled: pageBlank.refusal,
+      label: pageBlank.before.act ?? 'A blank page before this one',
+      disabled: pageBlank.before.act ? null : (pageBlank.before.refusal ?? pageBlank.refusal),
       note: pageBlank.note,
-      onPick: () => {
-        if (!pageBlank.spot) return;
-        const spot = pageBlank.spot;
-        const want = pageBlank.pages + SHEET;
-        onUpdate((current) => setBlankPages(current, spot, want));
-      },
+      onPick: () => addBlank(pageBlank.before),
+    },
+    {
+      label: pageBlank.after.act ?? 'A blank page after this one',
+      disabled: pageBlank.after.act ? null : (pageBlank.after.refusal ?? pageBlank.refusal),
+      onPick: () => addBlank(pageBlank.after),
     },
     /**
      * **The break a writer can make** (§9ab, from Ken after a × took one
@@ -1331,6 +1358,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
     <StoryPageSection
       page={page}
       place={place}
+      nextPlace={pagePlaceFor(page.sheet + 1)}
       divisions={nounPlural.toLowerCase()}
       offer={on}
       remove={pageRemoval(file, pageRows, page.sheet)}
@@ -1360,7 +1388,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
       /* **The shift, where a rule is what holds the page** (§9ae): one press
          and one field, the room owning which mechanism moves a page half a
          sheet rather than the writer. */
-      onShiftFree={(markerId) => onUpdate((current) => setChapterRecto(current, markerId, false))}
+      onAddBlank={addBlank}
       format={pageFormat(page).markerId ? pageFormat(page).label : null}
       onFormat={() => {
         const to = pageFormat(page);
@@ -1496,6 +1524,18 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
     const moving = dragging;
     setDragging(null);
     setOver(null);
+    /**
+     * **A blank page the writer put in moves too** (§9an, from Ken: *in the
+     * right menu outliner, I should be able to grab that blank page and just
+     * move it down below page 174*). It is one page off one record and onto
+     * another — nothing about page 174 changes, because a page is not a
+     * record, and the numbering follows as it always has.
+     */
+    if (moving?.kind === 'blank') {
+      const to = blankSpotFor(page.sheet);
+      if (to) onUpdate((current) => moveBlankPage(current, moving.id, to));
+      return;
+    }
     const landing = offerFor(page.sheet);
     if (!moving || !landing.spot || landing.of !== 'story' || moving.id === page.figureId) return;
     onUpdate((current) => {
@@ -1957,7 +1997,11 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
                       if (selectedSheet === one.sheet) setSelectedSheet(null);
                       onUpdate((current) => removeBookPage(current, one, pageRemoval(current, pageRows, one.sheet)));
                     }}
-                    onDragStart={() => one.figureId && setDragging({ kind: 'picture', id: one.figureId })}
+                    onDragStart={() =>
+                      one.figureId
+                        ? setDragging({ kind: 'picture', id: one.figureId })
+                        : one.blankFor && setDragging({ kind: 'blank', id: one.blankFor })
+                    }
                     onDragEnd={() => {
                       setDragging(null);
                       setOver(null);
@@ -1966,7 +2010,15 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
                       // The offer rather than the row's own element (§9w): a
                       // division's opening page carries none, and that is
                       // exactly the page a picture is dragged onto.
-                      if (!dragging || !offerFor(one.sheet).spot || dragging.id === one.figureId) return;
+                      if (!dragging) return;
+                      // A blank page lands wherever a blank page may go, which
+                      // is a different question from where a picture may; a
+                      // drop on the leaf it already stands in front of is the
+                      // act refusing, so the target does not light.
+                      if (dragging.kind === 'blank') {
+                        const to = blankSpotFor(one.sheet);
+                        if (!to || to === dragging.id) return;
+                      } else if (!offerFor(one.sheet).spot || dragging.id === one.figureId) return;
                       event.preventDefault();
                       setOver(`page-${one.sheet}`);
                     }}
@@ -2523,8 +2575,19 @@ function PageRow({
   onDrop(event: React.DragEvent): void;
 }) {
   const [asking, setAsking] = useState(false);
-  /** Only a picture moves: a page of words stands where the words stand. */
-  const draggable = page.figureId !== null;
+  /**
+   * **A picture and the writer's own blank page move; a page of words does
+   * not** (§9an, Ken's own rule: *we can only do that with blank pages and
+   * illustrated pages. You don't want to drag the story around on accident*).
+   *
+   * It is the same distinction the × makes: what a writer **put** on a page
+   * is theirs to move, and what the cutter did is a consequence of a rule that
+   * a drag could only disagree with. So the leaves the recto rule left and the
+   * sheet between two works are not draggable — they go by removing their
+   * reason, which is the row's own ×.
+   */
+  const carries = page.figureId ?? page.blankFor;
+  const draggable = carries !== null;
   return (
     <li
       className={`layout-rail-row layout-rail-page${over ? ' drop-before' : ''}${asking ? ' layout-rail-asking' : ''}`}
@@ -2532,7 +2595,7 @@ function PageRow({
       onDragStart={(event) => {
         if (!draggable) return;
         event.dataTransfer.effectAllowed = 'move';
-        event.dataTransfer.setData('text/plain', page.figureId as string);
+        event.dataTransfer.setData('text/plain', carries as string);
         onDragStart();
       }}
       onDragEnd={onDragEnd}
@@ -2545,9 +2608,11 @@ function PageRow({
         className={`layout-rail-name${chosen ? ' on' : ''}`}
         aria-current={chosen}
         title={
-          draggable
+          page.figureId
             ? 'A picture on a page of its own. Drag it onto another page to move it; double-click to set it.'
-            : 'Double-click to open the page.'
+            : draggable
+              ? 'A blank page you put in. Drag it onto another page to move it there; double-click to open the page.'
+              : 'Double-click to open the page.'
         }
         onClick={onSelect}
         // The rail and the spread are one gesture (§9j): a double-click opens
@@ -4029,9 +4094,10 @@ function StoryPageSection({
   onVector,
   onBlank,
   onChapterBack,
-  onShiftFree,
+  onAddBlank,
   onRemovePage,
   place,
+  nextPlace,
   chapterBack,
   rows,
   offer,
@@ -4063,6 +4129,8 @@ function StoryPageSection({
   offer: PictureOffer;
   /** What a × on this page would take away, or why there is none (§9w, §9x). */
   remove: PageRemoval;
+  /** The page after this one, so *after this page* has a record (§9an). */
+  nextPlace: PagePlace | null;
   /** Take the page away — the same act the row's × runs (§9x). */
   onRemovePage(): void;
   drawing: boolean;
@@ -4074,7 +4142,8 @@ function StoryPageSection({
   onBlank(id: string, pages: number): void;
   /** A blank on the back of a chapter's own leaf (§9r). */
   onChapterBack(markerId: string, blank: boolean): void;
-  onShiftFree(markerId: string): void;
+  /** One press for either side, the window's own act (§9an). */
+  onAddBlank(side: BlankSide): void;
   /**
    * How the page is set (§9l, from Ken: *it should have all the graphic
    * buttons that let you format a page instantly and have all the options for
@@ -4101,7 +4170,7 @@ function StoryPageSection({
    * over the one case where a leaf already stands in front, so no screen holds
    * a second answer about either.
    */
-  const blank = blankOffer(place, rows, page.sheet);
+  const blank = blankOffer(place, rows, page.sheet, nextPlace);
   /** The × asks once, inline, exactly as the row's does (§9x). */
   const [asking, setAsking] = useState(false);
   /** Which of the three reasons this page is blank (§9w), where it is. */
@@ -4204,66 +4273,56 @@ function StoryPageSection({
               is nothing on it for a picture to stand before, and pressing
               put an art page at the back of the book. */}
           {offer.refusal ? <p className="muted small">{offer.refusal}</p> : null}
-          {/* A blank page (§9i, from Ken: *insert a blank page… and it will
-              slide what was on that page to the next page*). Offered where
-              there is writing to stand before; on a leaf the writer put in,
-              the same button takes it away, which is the only place it can
-              be found again. */}
-          {/* **And as many as the writer wants** (§9ac): the button only ever
-              adds, so *put another one in* and *take one away* are two
-              controls doing two things rather than one whose words flip — and
-              the note says what the press really costs where the cutter has
-              already left a leaf there, which §9r answered by refusing. */}
-          {blank.spot && blank.act ? (
-            <button type="button" className="small" onClick={() => onBlank(blank.spot as string, blank.pages + SHEET)}>
-              {blank.act}
-            </button>
+          {/* **A blank page, and which side it goes on** (§9an, from Ken:
+              *when I add a blank page, I need to be able to decide whether it
+              goes after or before. So it'll have to ask you, enter a blank
+              page before this page or after this page*).
+
+              Until this there were two vocabularies over one field — a
+              **sheet** named for what it put in and a **shift** named for
+              what it did to the page in hand — and neither could say *after*.
+              A writer standing on the last page of a story and asking for a
+              leaf got one in front of those words, with the story's own
+              ending pushed over the page, which is the report. The unit is a
+              page now and the choice is the side; two of them make a sheet,
+              which the note says.
+
+              Each side is **absent with its own reason in its place** where
+              it cannot be had, because the two reasons differ: the end of the
+              book has no page after it, and a page the recto rule holds has a
+              gap in front of it already. */}
+          <span className="layout-shift">
+            {blank.before.act ? (
+              <button type="button" className="small" onClick={() => onAddBlank(blank.before)}>
+                {blank.before.act}
+              </button>
+            ) : null}
+            {blank.after.act ? (
+              <button type="button" className="small" onClick={() => onAddBlank(blank.after)}>
+                {blank.after.act}
+              </button>
+            ) : null}
+            {blank.fewer && blank.before.spot ? (
+              <button type="button" className="small" onClick={() => onBlank(blank.before.spot as string, blank.pages - 1)}>
+                {blank.fewer}
+              </button>
+            ) : null}
+          </span>
+          {blank.before.note ? <p className="muted small">{blank.before.note}</p> : null}
+          {blank.after.note && blank.after.note !== blank.before.note ? (
+            <p className="muted small">{blank.after.note}</p>
           ) : null}
-          {blank.spot && blank.fewer ? (
-            <button type="button" className="small" onClick={() => onBlank(blank.spot as string, blank.pages - SHEET)}>
-              {blank.fewer}
-            </button>
+          {/* **The reason stands where the control would** (§9ae). Gating the
+              sentence on the button took the refusal away with it, so a page
+              the book holds on a side said nothing at all — *absent rather
+              than greyed* is a rule about the control and never about the
+              sentence that explains it, which is `pictureOffer`'s own finding
+              (§9w). */}
+          {!blank.before.act && blank.before.refusal && blank.before.refusal !== blank.refusal ? (
+            <p className="muted small">{blank.before.refusal}</p>
           ) : null}
-          {blank.note ? <p className="muted small">{blank.note}</p> : null}
-          {/* **Half a sheet** (§9ae, from Ken: *we also need the ability to
-              shift a page to the left or right… it will shift half a page*).
-              The sheet above is the act that moves nothing across the spine;
-              this is its complement, and the two sit together because they
-              write the same field and a writer choosing between them is
-              choosing one or two pages. `shiftBack` is absent where there is
-              nothing of the writer's own to take, with the reason in its
-              place rather than a button that can only refuse. */}
-          {/* **The reason stands where the controls would** (§9ae). Gating
-              the whole section on the two buttons took the refusal away with
-              them, so a page the book holds on a side said nothing at all —
-              *absent rather than greyed* is a rule about the control and
-              never about the sentence that explains it, which is
-              `pictureOffer`'s own finding (§9w). */}
-          {blank.spot && (blank.shiftOn || blank.shiftBack || blank.shiftRefusal) ? (
-            <>
-              <span className="layout-shift">
-                {blank.shiftBack ? (
-                  <button type="button" className="small" onClick={() => onBlank(blank.spot as string, blank.pages - 1)}>
-                    {blank.shiftBack}
-                  </button>
-                ) : null}
-                {blank.shiftOn ? (
-                  <button
-                    type="button"
-                    className="small"
-                    onClick={() =>
-                      blank.shiftFrees
-                        ? onShiftFree(blank.shiftFrees)
-                        : onBlank(blank.spot as string, blank.pages + 1)
-                    }
-                  >
-                    {blank.shiftOn}
-                  </button>
-                ) : null}
-              </span>
-              {blank.shiftNote ? <p className="muted small">{blank.shiftNote}</p> : null}
-              {blank.shiftRefusal ? <p className="muted small">{blank.shiftRefusal}</p> : null}
-            </>
+          {!blank.after.act && blank.after.refusal && blank.after.refusal !== blank.refusal ? (
+            <p className="muted small">{blank.after.refusal}</p>
           ) : null}
           {/* **Not the fact said twice** (§9y). The refusal now carries a
               sentence where there is no leaf to be had, so the Add menu can
@@ -5250,13 +5309,13 @@ function PartFields({
           **offer** rather than toggling the field: a leaf asked for where the
           cutter has already left one is absorbed, and a control that did that
           silently is the fault this was written to stop. */}
-      {blank.act ? (
+      {blank.before.act ? (
         <button
           type="button"
           className="ghost small layout-part-blank"
-          onClick={() => patch({ blankBefore: blank.pages + SHEET })}
+          onClick={() => patch({ blankBefore: blank.pages + 1 })}
         >
-          {blank.act}
+          {blank.before.act}
         </button>
       ) : null}
       {/* **And one fewer** (§9ac): it is a count rather than a switch, so the
@@ -5266,37 +5325,17 @@ function PartFields({
         <button
           type="button"
           className="ghost small layout-part-blank"
-          onClick={() => patch({ blankBefore: blank.pages - SHEET })}
+          onClick={() => patch({ blankBefore: blank.pages - 1 })}
         >
           {blank.fewer}
         </button>
       ) : null}
       {blank.note ? <p className="muted small">{blank.note}</p> : null}
-      {blank.refusal ? <p className="muted small">{blank.refusal}</p> : null}
-      {/* **And half a sheet** (§9ae). Three surfaces reach this field and
-          they say the same words, which is what `partBlankOffer` exists for;
-          a part's panel offering the sheet and not the shift would be the
-          same screen doing less than the page's, which is §8's own rule one
-          room in. */}
-      {blank.shiftBack ? (
-        <button
-          type="button"
-          className="ghost small layout-part-blank"
-          onClick={() => patch({ blankBefore: blank.pages - 1 })}
-        >
-          {blank.shiftBack}
-        </button>
-      ) : null}
-      {blank.shiftOn ? (
-        <button
-          type="button"
-          className="ghost small layout-part-blank"
-          onClick={() => patch({ blankBefore: blank.pages + 1 })}
-        >
-          {blank.shiftOn}
-        </button>
-      ) : null}
-      {blank.shiftNote ? <p className="muted small">{blank.shiftNote}</p> : null}
+      {/* **A part has a front and no back** (§9an): *after this page* needs to
+          know which page of the part a writer is looking at, which a part does
+          not, so the refusal names the screen that does. */}
+      {!blank.before.act && blank.before.refusal ? <p className="muted small">{blank.before.refusal}</p> : null}
+      {blank.after.refusal ? <p className="muted small">{blank.after.refusal}</p> : null}
       {/* **The half title and the title page never arrive here either**
           (§9u). `partPlacement` calls both a block, so both have gone to the
           designed-page screen since §9n — and this panel went on holding a

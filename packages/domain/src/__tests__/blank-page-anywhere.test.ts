@@ -104,7 +104,9 @@ const offerOn = (file: ProjectFile, sheet: number) => {
   const { blocks, laid, rows } = lay(file);
   // Every reading is over the rows now (§9w), so a refusal can say *why* the
   // page in front is blank rather than sending the writer to look.
-  return blankOffer(pagePlace(laid.pages, blocks, sheet), rows, sheet);
+  // **With the page after it** (§9an): *after this page* is *in front of the
+  // next one*, so the reading takes both places.
+  return blankOffer(pagePlace(laid.pages, blocks, sheet), rows, sheet, pagePlace(laid.pages, blocks, sheet + 1));
 };
 
 describe('where a blank page may be entered', () => {
@@ -147,9 +149,16 @@ describe('where a blank page may be entered', () => {
     const { rows } = lay(file);
     const left = rows.find((row) => row.says === 'Blank' && !row.blankFor)!;
     const offer = offerOn(file, left.sheet);
-    expect(offer.spot).toBeNull();
-    expect(offer.act).toBeNull();
-    expect(offer.refusal).toMatch(/Nothing of the book stands on this page/i);
+    expect(offer.before.spot).toBeNull();
+    expect(offer.before.act).toBeNull();
+    expect(offer.before.refusal).toMatch(/Nothing of the book stands on this page/i);
+    /**
+     * **And the other side is still offered** (§9an), which is the half the
+     * two vocabularies could not say: a leaf the cutter left has nothing on
+     * it for a page to stand in front of, and the page **after** it is an
+     * ordinary page of the book with a record of its own.
+     */
+    expect(offer.after.act).toBe('A blank page after this one');
     // And a sheet the book does not have is the book still being set.
     expect(offerOn(file, 9999).refusal).toMatch(/still being set/i);
   });
@@ -281,10 +290,10 @@ describe('a page that already has a leaf in front of it', () => {
     const before = lay(file).rows.find((one) => one.sheet === sheet - 1);
     expect(before?.blank).toBe(true);
     const offer = offerOn(file, sheet);
-    expect(offer.spot).not.toBeNull();
-    expect(offer.act).toBe('Put a blank sheet here…');
+    expect(offer.before.spot).not.toBeNull();
+    expect(offer.before.act).toBe('A blank page before this one');
     expect(offer.refusal).toBeNull();
-    expect(offer.note).toMatch(/two pages/);
+    expect(offer.before.note).toMatch(/takes its place and becomes yours/);
   });
 
   /**
@@ -326,7 +335,7 @@ describe('a page that already has a leaf in front of it', () => {
       (row) => row.partId !== null && rows.find((one) => one.sheet === row.sheet - 1)?.blank === false,
     )!;
     const offer = offerOn(file, plain.sheet);
-    expect(offer.act).toBe('Put a blank sheet here…');
+    expect(offer.before.act).toBe('A blank page before this one');
     expect(offer.refusal).toBeNull();
   });
 
@@ -341,9 +350,15 @@ describe('a page that already has a leaf in front of it', () => {
     const opens = rows.find((row) => row.partId === title.id)!;
     expect(rows.find((row) => row.sheet === opens.sheet - 1)?.blank).toBe(true);
     const offer = partBlankOffer(rows, title);
-    expect(offer.act).toBe('Put a blank sheet before this one');
+    expect(offer.before.act).toBe('A blank page before this one');
     expect(offer.refusal).toBeNull();
-    expect(offer.note).toMatch(/two pages/);
+    // The title page has the cutter's own gap in front of it, so the first
+    // press takes that gap's place — §9ac's answer, said before the press.
+    expect(offer.note).toMatch(/takes its place and becomes yours/);
+    // **And a part has a front and no back** (§9an): which page of it a writer
+    // is looking at is the page's own screen's to know.
+    expect(offer.after.act).toBeNull();
+    expect(offer.after.refusal).toMatch(/that page’s own screen/);
   });
 
   it('offers a part its leaf where nothing stands in front of it', () => {
@@ -353,15 +368,15 @@ describe('a page that already has a leaf in front of it', () => {
       const opens = rows.find((row) => row.partId === part.id);
       return opens !== undefined && rows.find((row) => row.sheet === opens.sheet - 1)?.blank === false;
     })!;
-    expect(partBlankOffer(rows, free).act).toBe('Put a blank sheet before this one');
+    expect(partBlankOffer(rows, free).before.act).toBe('A blank page before this one');
   });
 
   it('offers a part another, and taking one away, once one stands there', () => {
     const file = collection();
     const part = partsOf(file)[0]!;
     const offer = partBlankOffer(lay(file).rows, { ...part, blankBefore: true });
-    expect(offer.act).toBe('Put another blank sheet before this one');
-    expect(offer.fewer).toBe('Take the blank sheet away');
+    expect(offer.before.act).toBe('A blank page before this one');
+    expect(offer.fewer).toBe('Take one away');
     expect(offer.pages).toBe(SHEET);
   });
 
@@ -375,9 +390,9 @@ describe('a page that already has a leaf in front of it', () => {
     const with_ = setBlankPage(file, spotOn(file, part.sheet)!, true);
     const made = lay(with_).rows.find((row) => row.blankFor !== null)!;
     const offer = offerOn(with_, made.sheet);
-    expect(offer.act).toBe('Put another blank sheet here…');
+    expect(offer.before.act).toBe('A blank page before this one');
     expect(offer.pages).toBe(SHEET);
-    expect(offer.fewer).toBe('Take the blank sheet away');
+    expect(offer.fewer).toBe('Take one away');
   });
 });
 

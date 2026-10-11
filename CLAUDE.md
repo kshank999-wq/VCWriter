@@ -3330,6 +3330,67 @@ push live; the build takes a minute or two.
   pagination; one block is inserted and the convention does the rest, the
   screen says *the next left-hand page*, and a test pins the pair so the
   second blank is not later "fixed" as a fault — **which §17e overturns**.
+  **§9an is a blank page, and which side it goes on**, from Ken in one
+  message with three asks and one cause under the first two (*I'm trying to
+  add a blank page after the story is over… when I add a blank page, I need to
+  be able to decide whether it goes after or before… we need to remove shift a
+  page, that doesn't really make any sense… in the right menu outliner, I
+  should be able to grab that blank page and just move it down below page
+  174*). **Measured first on his shape**: standing on the last page of a
+  story, *both* acts put the blank **in front of** those words, so the story's
+  own ending moved over the page and the leaf fell inside the story — his
+  screenshots exactly, page 172 keeping two lines with the rest on 174 — and
+  what he wanted was reachable only from the **next** page, which is a
+  different page from the one he is looking at. The cause is that there were
+  **two vocabularies over one field and neither could say *after***: §9ad's
+  **sheet** (two pages, named for what it put in) and §9ae's **shift** (one
+  page, named for what it did to the page in hand), both writing `blankBefore`
+  and both going in front, so a writer choosing between them was choosing a
+  number rather than a place. **The unit is a page now and the choice is a
+  side** — *A blank page before this one* and *A blank page after this one* —
+  with the note saying the rest: one page flips which side of the paper
+  everything after it falls on, two in a row make a sheet and move nothing.
+  **The wording is his own first sentence rather than his second**: he offered
+  *to the left or to the right* as well and that is wrong half the time (before
+  a right-hand page is the facing verso, before a left-hand page is the
+  previous spread entirely), where *before* and *after* are true on every page
+  and the note says which side of the spread it lands on, which is what left
+  and right was reaching for. ***After this page* is *in front of the next
+  page*** — the whole mechanism, and why there is **no new field and no
+  migration**: a leaf hangs in front of a record, so the other side is the next
+  page's own record; `blankOffer` takes the page after it and is **required
+  to**, a caller that forgot having quietly offered no *after* at all, which
+  reads exactly like this never having been built (§15a). The **end of the
+  book** is the one place there is no answer and is **refused with the reason**
+  rather than invented. **The shift is gone at his own ask and nothing goes
+  with it**: §9ae had the press write a division's `opensRecto` where the recto
+  rule held the page, a control named for what it did over a mechanism a writer
+  has no reason to know about, and the ability is not lost — a leaf the cutter
+  left is removed by removing its reason, which is the page's own × (§9x). What
+  stands there instead is **§9ac's own settled answer**, which this section's
+  first draft forgot and the tests caught: the first blank page asked for in
+  that gap **takes the gap's place and becomes the writer's**, so the book does
+  not grow and the leaf has a × of its own — measured in the room, 26 pages
+  before the press and 26 after. **And the writer's own blank page drags**, his
+  third ask with his own rule attached (*we can only do that with blank pages
+  and illustrated pages. You don't want to drag the story around on
+  accident*): `moveBlankPage` is **one page off one record and onto another**,
+  which is the whole act — a page is not a record, so there is nothing about
+  page 174 to change and the numbering follows as it always has — with only the
+  **writer's own** leaves moving, the cutter's being a consequence of a rule a
+  drag could only disagree with; driven on an imported collection, a leaf at
+  page 14 dragged onto page 11 lands there with the book renumbered and the
+  same length. **Looking at it caught two sentences under two buttons with
+  neither saying which it was about**, so the note names its own side where the
+  two differ and is printed once where they agree (*which control a note
+  belongs to is said by the gap*, addendum 09 §14a, which side by side there is
+  no gap to say). **Named rather than built**: an extra page after the last
+  story **automatically**, which is his first sentence read as a requirement
+  and is addendum 22 §9's rule stopping one work short — the back matter is not
+  a division, the field that carries that sheet lives on a *work's* chapter
+  page, and switching it on would change the length of every collection already
+  laid out, so the act is built and reachable while the default is its own
+  decision.
   **§9am is the room spending the page's memory**, from Ken (*it crashed
   again — I think we need to expand the memory of the page. Everything was
   working well*), with the diagnosis in his next two messages: *I was setting
