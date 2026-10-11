@@ -3511,6 +3511,44 @@ push live; the build takes a minute or two.
   page, and switching it on would change the length of every collection already
   laid out, so the act is built and reachable while the default is its own
   decision.
+  **§19a is which leaf you are standing on**, from Ken on the last page of his
+  own book (*I'm trying to put a logo on the last page… if I add a page after
+  and go on that, it's adding the page on the page before for some reason… on
+  the reader's extra page there needs to be the ability to add a picture*), and
+  **it reproduces exactly**: a book ending in two blank pages, standing on the
+  **last** of them and asking for a picture, put the picture on the page
+  **before** it and left the last blank. `blankFor` names the **record** and a
+  record may carry several leaves, so every one of them answered the same act —
+  and at the end of a book it was worse, an art page being appended to the plan
+  and the plan emitted **above** the end blanks, so it could not land among them
+  at all. So `blankAt` says which of that record's leaves a page is, the offer
+  carries `takesLeafAt`, `afterLeaves` on the part says how many stand in front
+  of it (**nought is the first**, so nothing already anchored moves), and
+  `leafRun` is the **one place** that puts the run back together — read by all
+  four places a writer's leaf is emitted, with a page whose leaves have gone
+  **kept at the end of the run** rather than dropped, the number it was made
+  from being a position rather than a reason to exist. Driven on both leaves of
+  two: standing on the first the page lands first with a blank after, standing
+  on the second it lands second with a blank before. **A page of your own takes
+  the page**: §19 gave it the dedication's branch whole, which opens on a
+  **recto** because that is the front matter's convention, so the cutter left a
+  verso in front of it and the page arrived one late — which is §19's own *14
+  pages became 16*, measured again and found to be this. **Where it reads as
+  being is not where it is drawn**: `halfOf` answers *which loop draws this* and
+  says body for anything anchored, so the screen read *the story* about a page
+  past the back matter — and **making `halfOf` say back instead was measured and
+  is worse**, putting the page in `backParts` as well as in the run so the book
+  grew by a page and the rail listed it twice; `partArea` is the second reading,
+  for the dialog and the rail. **A picture on a reader-extras page** was built
+  and unreachable — `partTakesInsets` has said yes to every prose part since §8
+  and `PartPictures` is rendered only in the part dialog, which a back-matter
+  page has not opened since §17 gave it a screen of its own (§15c's own rule
+  failing in the direction it warns about) — so it is a **slot** now, one
+  implementation rendered where the page is set; and the panel's gate counted
+  `part.text`, which on a glossary, a bibliography and a reader extra is
+  **empty whatever is on the page**, those three printing their own records
+  under a comment that already said *the page and the panel cannot then
+  disagree about what it says*. `partParagraphs` is that count, said once.
   **§19 is a page of your own**, from Ken with a screenshot of the chapter
   page's own controls (*on blank pages, I want this level of styling to where
   you can add a graphic at the top, you can add text in it, you can add a

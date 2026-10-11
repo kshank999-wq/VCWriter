@@ -8,6 +8,7 @@ import {
   bookFigures,
   halfOf,
   anchorOf,
+  partArea,
   partTitle,
   partsOf,
   removeBookFigure,
@@ -105,7 +106,13 @@ const partRow = (file: ProjectFile, part: BookPart, depth: number): BookRow => (
   id: part.id,
   kind: 'part',
   part,
-  half: halfOf(part),
+  /**
+   * **Where it reads as being** rather than which loop draws it (§19a).
+   * `halfOf` answers the emission and says *body* for anything anchored, so a
+   * page of the writer's own at the very end of the book was listed under a
+   * second **THE STORY** heading after the back matter.
+   */
+  half: ((area) => (area === 'story' ? 'body' : area))(partArea(part)) as BookRow['half'],
   title: part.kind === 'plate' ? plateName(file, part) : partTitle(part),
   label: '',
   depth,
@@ -265,6 +272,13 @@ export const bookRows = (file: ProjectFile): BookRow[] => {
     rows.push(...anchored(part, 0));
     rows.push(partRow(file, part, 0));
   }
+  /**
+   * **And a page of the writer's own at the very end** (§19a). It is anchored
+   * on the book rather than on a part, so neither loop above reaches it — and
+   * a page in the book, reachable from the spread and on no row, is §9w's
+   * stray page exactly.
+   */
+  for (const part of parts) if (part.beforeId === BOOK_END) rows.push(partRow(file, part, 0));
   return rows;
 };
 

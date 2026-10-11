@@ -57,6 +57,7 @@ import {
   partTemplateOf,
   partTemplatePatch,
   partTakesInsets,
+  partParagraphs,
   partToHalf,
   addBookNumber,
   beginCopyright,
@@ -271,6 +272,8 @@ type ArtTarget =
        * as the picture arrives rather than standing in front of it.
        */
       takesLeaf?: string | null;
+      /** Which of that record's leaves (§19a). */
+      takesLeafAt?: number | null;
       /** The rule holding this page blank, freed as the picture goes on (§9al). */
       frees?: PictureOffer['frees'];
     }
@@ -286,6 +289,8 @@ type ArtTarget =
       before?: string | null;
       /** The writer's own leaf it takes, as a story page-figure does (§9aa). */
       takesLeaf?: string | null;
+      /** Which of that record's leaves (§19a). */
+      takesLeafAt?: number | null;
       /** The rule holding this page blank, freed as the picture goes on (§9al). */
       frees?: PictureOffer['frees'];
     }
@@ -327,6 +332,7 @@ const NO_PICTURE: PictureOffer = {
   beforeOpening: false,
   note: null,
   takesLeaf: null,
+  takesLeafAt: null,
   ownPageOnly: false,
   newPageBefore: null,
   frees: null,
@@ -899,6 +905,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
         as: 'page',
         before: offer.newPageBefore,
         takesLeaf: offer.takesLeaf,
+        takesLeafAt: offer.takesLeafAt,
         frees: offer.frees,
       });
       return;
@@ -921,6 +928,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
         as,
         beforeOpening: as === 'page' && offer.beforeOpening,
         takesLeaf: as === 'page' ? offer.takesLeaf : null,
+        takesLeafAt: as === 'page' ? offer.takesLeafAt : null,
         // **The rule goes with the page it holds** (§9al), so it is carried
         // only where the picture really is the page: a box cut into the text
         // is never asked for on a blank leaf (`ownPageOnly`), and freeing a
@@ -1110,7 +1118,22 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
           const made = addPart(
             added.file,
             'plate',
-            { assetId, inFront: part ? halfOf(part) === 'front' : false },
+            {
+              assetId,
+              inFront: part ? halfOf(part) === 'front' : false,
+              /**
+               * **Where the leaf stood** (§19a, from Ken: *if I add a page
+               * after and go on that, it's adding the page on the page before
+               * for some reason*). A record may carry several leaves, and an
+               * art page appended to the plan could not land among them at
+               * all — at the end of a book it was emitted above them, so a
+               * picture asked for on the last of two blank pages arrived on
+               * the one before it.
+               */
+              ...(target.takesLeaf
+                ? { beforeId: target.takesLeaf, afterLeaves: target.takesLeafAt ?? 0 }
+                : {}),
+            },
             // Where the leaf was, where a leaf asked for it (§9ab); appended
             // to its half where the Add menu asked with no page in hand.
             target.before ?? null,
@@ -1783,6 +1806,18 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
         onClose={() => setPartDialogId(null)}
         onPickPhoto={(id) => importArt({ kind: 'author-photo', partId: id })}
         onTurn={(id) => setPartDialogId(id)}
+        /**
+         * **A picture on this page** (§19a, from Ken: *on the reader's extra
+         * page there needs to be the ability to add a picture*). The same
+         * panel the part dialog renders, which a back-matter page has not
+         * opened since §17 gave it a screen of its own — one implementation,
+         * rendered where the page is set.
+         */
+        pictures={
+          backMatterPart && partTakesInsets(backMatterPart.kind) ? (
+            <PartPictures file={file} part={backMatterPart} onUpdate={onUpdate} onTouched={() => undefined} />
+          ) : null
+        }
       />
       <PartDialog
         file={file}
@@ -3673,7 +3708,15 @@ function PartPictures({
 }) {
   const library = graphicsInOrder(file);
   const pictures = new Map(file.assets.map((asset) => [asset.id as string, asset]));
-  const paragraphs = paragraphsOf(part.text);
+  /**
+   * **What the page really prints** (§19a). It counted `part.text`, which on
+   * a glossary, a bibliography and a reader extra is empty whatever is on the
+   * page — so the one control that cuts a picture into the words could only
+   * ever say *write a paragraph first*. `partParagraphs` is the page's own
+   * count, which is the reading `partOwnBlocks`' comment already said the
+   * panel must share.
+   */
+  const paragraphs = partParagraphs(part);
   const picker = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const partId = part.id;

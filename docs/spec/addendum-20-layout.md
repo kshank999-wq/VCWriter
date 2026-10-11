@@ -2952,6 +2952,106 @@ second blank is not later "fixed" as a fault.
 > copyright page takes the next page now, and the assertion was rewritten
 > rather than worked around.
 
+## 19a. Which leaf you are standing on
+
+From Ken, on the last page of his own book:
+
+> I'm trying to put a logo on the last page. But even when I add a page after
+> this one, it still doesn't work. But if I add a page after and go on that,
+> it's adding the page on the page before for some reason. And when I remove
+> the one on the sheet I don't want, which is the left hand, the right hand
+> pops over to the left… on the reader's extra page there needs to be the
+> ability to add a picture.
+
+### 19a.1 Measured first, and it is one fault
+
+His build is `31aba47` — §18's, before §19 shipped — so *Design this page…*
+was not there to find. But the report under it is real and reproduces exactly.
+
+A book shaped like his (a story, back matter, an art page last) with **two**
+blank pages at the end:
+
+| Page | What it says | What it offers |
+| --- | --- | --- |
+| 6 | blank, for `book:end` | takes leaf `book:end` |
+| 7 | blank, for `book:end` | takes leaf `book:end` |
+
+**The same act, from both.** Standing on **page 7** and asking for a picture
+put the picture on **page 6** and left page 7 blank — *it's adding the page on
+the page before for some reason*, word for word.
+
+`blankFor` names the **record** and a record may carry several leaves, so
+every one of them answered the same act. And at the end of a book it was
+worse: an art page is appended to the plan, the plan is emitted **above** the
+end blanks, so it could not land among them at all.
+
+### 19a.2 The leaf says which one it is
+
+`blankAt` on the block and on the row — which of that record's leaves this is,
+counted from nought — and `takesLeafAt` on the offer, so the act knows.
+
+`afterLeaves` on the part says how many of the record's leaves stand in front
+of it. **Nought is the first**, which is where every page anchored before this
+existed stands, so nothing moves.
+
+`leafRun` is the one place that puts the run back together: for each position,
+the pages anchored there, then the leaf. Every one of the four places a
+writer's leaf is emitted reads it — a part's, a chapter page's, a paragraph's,
+and the end of the book.
+
+A page whose leaves have since gone is **kept at the end of the run** rather
+than dropped: it is a page of the book, and the number it was made from is a
+position rather than a reason to exist.
+
+Driven after, on both leaves of two:
+
+| Standing on | Picture lands on | Designed page lands on |
+| --- | --- | --- |
+| page 6 | **page 6**, blank after | **page 6**, blank after |
+| page 7 | **page 7**, blank before | **page 7**, blank before |
+
+### 19a.3 A page of your own takes the page
+
+A dedication and an epigraph open on a **recto**, which is the front matter's
+convention, and §19 gave a page of the writer's own that branch whole. It is
+wrong here: the page must take **the page it was made from**, or the cutter
+leaves a verso in front of it and the page arrives one late.
+
+That is also what §19's own *14 pages became 16* was, measured again and found
+to be this.
+
+### 19a.4 Where it reads as being is not where it is drawn
+
+`halfOf` answers *which loop draws this*, and an anchored page is drawn by
+neither — in the run beside its leaf — so it answers **body**. Right about the
+emission, and wrong as a sentence about a page anchored at the **end of the
+book**: the designed page's screen read *the story* about a page past the back
+matter, which is §19's own fault in the other direction.
+
+**Making `halfOf` say `back` instead was measured and is worse**: the page
+then falls into `backParts` as well as into the run, so the book grew by a
+page and the rail listed it twice. Two questions, two readings — `partArea` is
+the second, and the dialog and the rail read it.
+
+### 19a.5 A picture on a reader-extras page
+
+Built, and unreachable. `partTakesInsets` has said yes to every prose part
+since §8, `addPartInset` cuts the picture into the words, and `PartPictures`
+is the panel that does it — rendered only in the part dialog, which a
+back-matter page has not opened since §17 gave it a screen of its own. **§15c's
+own rule failing in the direction it warns about**: *routing past a screen
+without carrying its controls is how a fix loses a feature.*
+
+It is a **slot**, for `writer-tools`' reason: one implementation, rendered
+where the page is set.
+
+And the panel's gate was wrong in a way that would have made it useless there.
+It counted `part.text`, which on a glossary, a bibliography and a reader extra
+is **empty whatever is on the page** — those three print their own **records**,
+which `partOwnBlocks` has read since §17a under a comment saying *the page and
+the panel cannot then disagree about what it says*. The panel never asked.
+`partParagraphs` is that count, said once.
+
 ## 19. A page of your own
 
 From Ken, with a screenshot of the chapter page's own **THIS PAGE** section:

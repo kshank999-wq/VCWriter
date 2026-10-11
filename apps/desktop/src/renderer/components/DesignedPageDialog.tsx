@@ -21,7 +21,7 @@ import {
   bookSettingsOf,
   bookVars,
   chapterPageStyleSchema,
-  halfOf,
+  partArea,
   partChanges,
   partLogo,
   partModeOf,
@@ -502,8 +502,8 @@ function Body({
    * standing between chapter one and chapter two was headed *back matter*,
    * which is a fact about the book and it was wrong (§19).
    */
-  const where = halfOf(part);
-  const half = where === 'front' ? 'front matter' : where === 'body' ? 'the story' : 'back matter';
+  const where = partArea(part);
+  const half = where === 'front' ? 'front matter' : where === 'story' ? 'the story' : 'back matter';
 
   /**
    * What goes on the page. A tile is **the act**, not a flag: choosing art
@@ -1284,10 +1284,10 @@ function Body({
               ? 'All required elements present'
               : changes > 0
                 ? ''
-                : `Matches the ${where === 'front' ? 'front-matter' : where === 'body' ? 'book’s own' : 'back-matter'} style`}
+                : `Matches the ${where === 'front' ? 'front-matter' : where === 'story' ? 'book’s own' : 'back-matter'} style`}
             {changes > 0
               ? `${isTitle ? ' · ' : ''}${changes} change${changes === 1 ? '' : 's'} from the ${
-                  where === 'front' ? 'front-matter' : where === 'body' ? 'book’s own' : 'back-matter'
+                  where === 'front' ? 'front-matter' : where === 'story' ? 'book’s own' : 'back-matter'
                 } style`
               : ''}
           </span>

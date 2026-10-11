@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { SheetInk } from './SheetInk';
 import {
   bookFontsOf,
@@ -110,6 +110,7 @@ export function BackMatterDialog({
   onUpdate,
   onClose,
   onPickPhoto,
+  pictures,
   onTurn,
 }: {
   file: ProjectFile;
@@ -121,6 +122,13 @@ export function BackMatterDialog({
   onPickPhoto(partId: string): void;
   /** Step to another back-matter page, by its part id. */
   onTurn(partId: string): void;
+  /**
+   * The room's own picture panel for this page (§19a, from Ken: *on the
+   * reader's extra page there needs to be the ability to add a picture*) — a
+   * slot, so there is one implementation of *cut a picture into these words*
+   * rather than a second one written here.
+   */
+  pictures?: ReactNode;
 }) {
   const dialog = useModal(part !== null);
   const [guides, setGuides] = useState(false);
@@ -144,6 +152,7 @@ export function BackMatterDialog({
           onGuides={setGuides}
           onUpdate={onUpdate}
           onPickPhoto={onPickPhoto}
+          pictures={pictures}
           onTurn={onTurn}
           onCancel={() => {
             const was = held.current;
@@ -165,6 +174,7 @@ function Body({
   onGuides,
   onUpdate,
   onPickPhoto,
+  pictures,
   onTurn,
   onCancel,
   onClose,
@@ -179,6 +189,7 @@ function Body({
   onTurn(partId: string): void;
   onCancel(): void;
   onClose(): void;
+  pictures?: ReactNode;
 }) {
   const settings = bookSettingsOf(file);
   const fonts = bookFontsOf(file);
@@ -263,6 +274,22 @@ function Body({
             onWriteAbout={writeAbout}
             onPickPhoto={() => onPickPhoto(partId)}
           />
+
+          {/* **A picture on this page** (addendum 20 §19a, from Ken: *on the
+              reader's extra page there needs to be the ability to add a
+              picture*).
+
+              It was built and unreachable: `partTakesInsets` has said yes to
+              every prose part since §8, `addPartInset` cuts the picture into
+              the words, and `PartPictures` is the panel that does it — rendered
+              only in the part dialog, which a back-matter page has not opened
+              since §17 gave it a screen of its own. §15c's own rule failing in
+              the direction it warns about: *routing past a screen without
+              carrying its controls is how a fix loses a feature*.
+
+              It is a **slot** rather than a second panel, for `writer-tools`'
+              reason — one implementation, rendered where the page is set. */}
+          {pictures}
 
           <section className="dp-card">
             <h3>

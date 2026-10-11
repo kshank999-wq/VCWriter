@@ -339,6 +339,17 @@ export const bookPartSchema = z.object({
    */
   pictureBelow: z.boolean().default(false),
   /**
+   * **How many of the record's own blank leaves stand in front of this page**
+   * (addendum 20 §19a, from Ken: *if I add a page after and go on that, it's
+   * adding the page on the page before for some reason*).
+   *
+   * A record may carry several leaves and `beforeId` names only the record,
+   * so a page taken from the second of two had no way to say so and was drawn
+   * in front of the first. Nought is the first, which is where every page
+   * anchored before this existed stands — so nothing moves.
+   */
+  afterLeaves: z.number().int().min(0).default(0),
+  /**
    * A plate with no chapter to face stands in the front matter when this is
    * set, at the back otherwise (§9, from Ken: a title page or an index that
    * is a piece of art has to be able to go where those go).
