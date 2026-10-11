@@ -482,6 +482,140 @@ standing in the scene's screen has not pointed at a line, so the note they
 type is the description. A scene with nothing written has no beat to
 anchor to, so the button is absent there too.
 
+## 4d. The zoom that fits, and the zoom that stops
+
+From Ken:
+
+> In the timeline viewer and in the tracks view, the zoom needs to be able to
+> compress it even more. So it should be able to compress it all the way down
+> to where you can see everything on the screen. And then you can zoom it all
+> the way out to where it's really big, to where you can see all the beats.
+> Right now, you can make the beats stretch way out, which is not needed. You
+> just need to be able to read them. And then when you zoom in, it only zooms
+> in very, very little. I like to be able to see the entire timeline when you
+> zoom. So you can select things quickly, find them. And when you hover over,
+> it'll give you the chapter. So if it's too compressed to see it, if you
+> hover over it, it will give you that chapter heading. Same in the timeline
+> and viewer.
+
+### 4d.1 What was measured
+
+Driven on an 88-page novel at 1440 × 900, with the board 773 pixels wide:
+
+| Zoom | Track drawn | In a window of |
+| --- | --- | --- |
+| 160 (the default) | **14,269px** | 773px |
+| 40 (the old floor) | 5,166px | 773px |
+
+**Nothing is a new mechanism here. The range was wrong at both ends, and two
+floors did not belong at the compressed one.**
+
+- `spanWidth` put a **fixed 40-pixel floor** under every scene, so forty
+  chapters could not be drawn in less than 1,600 pixels however far the slider
+  went: *everything on the screen* was arithmetically impossible.
+- the tracks widened a scene to hold its **beat columns at 132 pixels each**,
+  a floor that did not scale with the zoom at all — six beats, 408 pixels, at
+  any zoom.
+- and 600 a page is a scene two screens wide, which is the stretch he says is
+  not needed. Measured at the top of the old slider, **one beat ran 2,089
+  pixels across**.
+
+### 4d.2 Both ends
+
+**The compressed end is a map rather than a reading.** `ZOOM_FLOOR` is four
+pixels a page, which draws a four-hundred-page novel in sixteen hundred —
+nothing on it is legible and nothing is meant to be, which is what the hover
+is for.
+
+**The expanded end stops where the beats are read.** `ZOOM_CEILING` is 240.
+
+And the 40-pixel floor becomes **three**, which is what it was for: a scene
+still a mark you can see, hover and drop on, never one that vanishes. Forty
+was right for a slider that stopped at forty a page, where it bound on
+nothing — `MIN_SPAN_PAGES` is half a page, so above a zoom of eighty it never
+fires, and **nothing at an ordinary zoom moves**. A test pins that.
+
+### 4d.3 Fit is a reading
+
+`fitZoom` is the pixels a page at which the whole story fits the measured
+stage — addendum 20 §9e's rule in a **fourth** room, and addendum 15 §15's
+*whole story means the whole story fits*. Nothing is stored: widen the pane,
+or write another chapter, and *Fit* means something else with nothing run.
+
+It is **a statement while it holds and a press once it does not**, which is
+§9e's own rule — the same word drawn the same way in both states would be two
+states that look alike.
+
+**The parent measures the room and hands it over.** The grid, its sticky head
+and what it reserves at the tail are the parent's own layout, so a control in
+the toolbar guessing at them would be a second answer to how wide the board
+is. The first draft did guess, and Fit landed **16 pixels over**; told the
+real number it lands exactly.
+
+`TimelineZoom` is **one control for both screens**, which each had written out
+its own `min={40} max={600}` by hand — two answers to how far a story may be
+compressed.
+
+### 4d.4 A beat is a chip or a tick
+
+Below a width there is no room for a chip, and the block takes its page width
+alone: the beats are drawn as **marks** — still every beat, still in order,
+still carrying its colour and its status, and still answering §4c's hover.
+
+**It is read off the block's own width rather than off the zoom**, which the
+first draft got wrong and driving the real board caught: a global threshold is
+a claim that every scene is the same length, and on a novel imported a chapter
+to a section an eight-page block drew ticks at a zoom where it had three
+hundred pixels to spare. A long chapter showing its beats beside a two-line
+scene showing ticks is not two vocabularies — it is the truth about the two of
+them.
+
+And **a chip is a chip**: a block scales with its pages because that is the
+axis, and past a couple of hundred pixels there is nothing more of a chip to
+read. `BEAT_CHIP_MAX` caps the list and the rest of the block is the block.
+
+### 4d.5 Chrome that cannot be read is chrome that is not drawn
+
+The same rule, found by looking at the compressed board three times:
+
+- a **block** thirty pixels wide was still drawing its grip, its ×, its fold
+  and a *+ passage* button, every one clipped to three letters;
+- a **band of the acts row** drew one clipped letter each — *T, L, L, T, S* —
+  for ten chapters running;
+- a **ruler cell** drew *9 8:3*: a page, a space and two thirds of a timecode,
+  which says less than the page alone.
+
+All three read as a fault rather than as a map. Each keeps what a map needs —
+the colour, the position, the hover — and drops what it cannot say.
+
+### 4d.6 The hover gives the chapter
+
+A block's `title` said **how to click it** and nothing about what it was,
+which is of no use at all on a compressed board, where the name is two pixels
+wide and the hover is the only way to read it.
+
+`describeSpanAt` says where in the book it falls and then what it is called,
+in the format's own noun, with the keys after it — §4c's **one hover, one
+answer**, so there is no second tooltip over the same block. It is on the
+tracks and in the viewer alike, Ken's *same in the timeline and viewer*.
+
+Driving it caught the fault it would otherwise have shipped with: on a novel a
+chapter marker sits on the unit the chapter opens with, and that unit is
+called what the chapter is called, so it read **Chapter 3 — Lantern · Chapter:
+Lantern** — one answer said twice on one line, which is addendum 28 §4a's
+fault in a tooltip. Where the division already names it, the division line is
+the whole of it.
+
+### 4d.7 Driven
+
+An 88-page novel at 1440 × 900, after:
+
+| Zoom | Track | Beat chip |
+| --- | --- | --- |
+| 240 | 2,128px a chapter | **143 × 26** |
+| 40 | 352px | 143 × 26 |
+| 4 (Fit) | **773px — the whole story, exactly the window** | a 2px tick |
+
 ## 5. Timeline & Viewer
 
 Where an editing bay shows the picture, this shows the story — and it shows

@@ -293,6 +293,57 @@ push live; the build takes a minute or two.
   not one of them asked how a writer gets there; the new one presses the
   row and then double-clicks it and asserts the same dialog opens both
   times.
+  **§4d is the zoom that fits and the zoom that stops**, from Ken (*the zoom
+  needs to be able to compress it even more… all the way down to where you can
+  see everything on the screen. And then you can zoom it all the way out to
+  where it's really big, to where you can see all the beats. Right now, you
+  can make the beats stretch way out, which is not needed… And when you hover
+  over, it'll give you the chapter*), and **nothing in it is a new
+  mechanism** — the range was wrong at both ends and two floors did not belong
+  at the compressed one. Measured first on an 88-page novel in a 773px board:
+  **14,269 pixels of track at the default and 5,166 at the old floor**,
+  because `spanWidth` put a **fixed 40-pixel floor under every scene** (forty
+  chapters could not be drawn in less than 1,600 pixels however far the slider
+  went, so *everything on the screen* was arithmetically impossible) and the
+  tracks widened a scene to hold its **beat columns at 132 pixels each**, a
+  floor that did not scale with the zoom at all; at the far end one beat ran
+  **2,089 pixels** across. So the floor is **4** a page (a four-hundred-page
+  novel in sixteen hundred — a map, where nothing is legible and nothing is
+  meant to be, which is what the hover is for) and the ceiling **240**, while
+  the 40-pixel floor becomes **three**, which is what it was for; `MIN_SPAN_PAGES`
+  being half a page it never fired above a zoom of eighty, so **nothing at an
+  ordinary zoom moves** and a test pins that. **Fit is a reading** —
+  `fitZoom` over the measured stage, addendum 20 §9e in a **fourth** room and
+  addendum 15 §15's *whole story means the whole story fits* — stored nowhere,
+  so widening the pane or writing another chapter makes it mean something else
+  with nothing run, and it is **a statement while it holds and a press once it
+  does not**; the **parent measures the room and hands it over**, the grid, its
+  sticky head and its tail reserve being the parent's own layout, and the first
+  draft guessed and landed **16 pixels over**. `TimelineZoom` is **one control
+  for both screens**, each having written out its own `min={40} max={600}` by
+  hand. **A beat is a chip or a tick**, and the choice is **read off the
+  block's own width rather than off the zoom** — the first draft asked the
+  zoom and driving the board caught it, an eight-page block drawing ticks at a
+  zoom where it had three hundred pixels to spare, a global threshold being a
+  claim that every scene is the same length; a long chapter showing its beats
+  beside a two-line scene showing ticks is the truth about the two of them.
+  And **a chip is a chip**: a block scales with its pages because that is the
+  axis, and `BEAT_CHIP_MAX` caps the list so the rest of the block is the
+  block. **Chrome that cannot be read is chrome that is not drawn**, found by
+  looking three times — a 30px block still drawing its grip, its ×, its fold
+  and a clipped *+ passage*; an acts band drawing one clipped letter for ten
+  chapters running; a ruler cell drawing *9 8:3*, which says less than the
+  page alone — each keeping the colour, the position and the hover and
+  dropping what it cannot say. **The hover gives the chapter**: a block's
+  title said *how to click it* and nothing about what it was, which is of no
+  use where the name is two pixels wide, so `describeSpanAt` says where in the
+  book it falls and then what it is called with the keys after it (§4c's *one
+  hover, one answer*), on the tracks and in the viewer alike — and driving it
+  caught that on a novel the chapter marker sits on the unit the chapter opens
+  with, so it read *Chapter 3 — Lantern · Chapter: Lantern*, **one answer said
+  twice**. Driven after: 2,128px a chapter at 240 with a **143 × 26** chip,
+  352px at 40 with the same chip, and at Fit **773px — the whole story,
+  exactly the window**.
   **§19a is the toolbar on the writing screen**, from Ken (*I imported some
   text that was italicized and I realized that there's no way to adjust the
   style of the text in the beats. So you need to be able to bold, italicize,

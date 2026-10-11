@@ -1,10 +1,12 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { usePreference } from '../use-split';
+import { TimelineZoom } from './TimelineZoom';
 import {
   beatsForUnit,
   hasChapterPages,
   placedMarkers,
   spanWidth,
+  describeSpanAt,
   threadLayout,
   timecode,
   unlink,
@@ -98,6 +100,22 @@ export function TimelineViewer({
   const leaves = hasChapterPages(file.project.format);
 
   const widths = spans.map((span) => spanWidth(span, zoom));
+  /**
+   * How much room the blocks have: the scroller, less the sticky head and
+   * whatever the grid reserves at the tail. Measured rather than assumed,
+   * for `LinksTimeline`'s own stated reason — *whole story* is a promise
+   * about the window and nothing else can keep it (addendum 02 §4d).
+   */
+  const [across, setAcross] = useState(900);
+  const scroller = useCallback((node: HTMLDivElement | null) => {
+    if (!node) return;
+    const read = () => setAcross(node.clientWidth - HEAD - 40);
+    read();
+    if (typeof ResizeObserver === 'undefined') return;
+    const watch = new ResizeObserver(read);
+    watch.observe(node);
+  }, []);
+
   const columns = `${HEAD}px ${widths.map((width) => `${width}px`).join(' ')} minmax(40px, 1fr)`;
   const runtime = timecode(spans.reduce((total, span) => total + span.pages, 0));
 
@@ -156,21 +174,10 @@ export function TimelineViewer({
             {runtime}
           </span>
         )}
-        <label className="zoom">
-          <span className="muted">Zoom</span>
-          <input
-            type="range"
-            min={40}
-            max={600}
-            step={10}
-            value={zoom}
-            aria-label="Timeline zoom, pixels per page"
-            onChange={(event) => onZoom(Number(event.target.value))}
-          />
-        </label>
+        <TimelineZoom zoom={zoom} spans={spans} across={across} onZoom={onZoom} />
       </header>
 
-      <div className="viewer-scroll">
+      <div className="viewer-scroll" ref={scroller}>
         <div className="viewer-grid" style={{ gridTemplateColumns: columns }}>
           {/* Time, and the scenes: these stay while the threads scroll. */}
           <div className="row-head viewer-sticky time">Time</div>
@@ -227,7 +234,14 @@ export function TimelineViewer({
                 type="button"
                 key={span.unit.id}
                 className={`viewer-scene viewer-sticky${dim}${here}${off}`}
-                title={`${span.unit.title || 'Untitled'} · ${timecode(span.pages)}`}
+                /**
+                 * **The chapter first** (addendum 02 §4d, Ken's *same in the
+                 * timeline and viewer*). On a compressed board the label is
+                 * a few pixels wide and the hover is the only way to read
+                 * what a block is, so it says where in the book this falls
+                 * before it says how long it is.
+                 */
+                title={describeSpanAt(file, span.unit.id as string, timecode(span.pages))}
                 onClick={() => pick(span)}
               >
                 <span className="viewer-scene-label muted">{span.unit.sequenceLabel || span.index + 1}</span>

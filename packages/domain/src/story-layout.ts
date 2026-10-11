@@ -169,7 +169,22 @@ export const MIN_SPAN_PAGES = 0.5;
  * grows and shrinks with the zoom; the pixel floor under it only keeps a
  * scene from vanishing at the far end of the slider.
  */
-export const spanWidth = (span: StorySpan, pixelsPerPage: number, minimum = 40): number =>
+/**
+ * **The pixel floor is three rather than forty** (addendum 02 §4d, from Ken:
+ * *it should be able to compress it all the way down to where you can see
+ * everything on the screen*).
+ *
+ * Forty was the right number for a slider that stopped at forty a page, where
+ * it bound on nothing: `MIN_SPAN_PAGES` is half a page, so above a zoom of
+ * eighty this floor never fires and **nothing at an ordinary zoom moves**.
+ * What it did was make the compressed end impossible — forty chapters could
+ * not be drawn in less than sixteen hundred pixels however far the slider
+ * went, in a stage seven hundred wide.
+ *
+ * Three is what it was for: a scene still a mark you can see, hover and drop
+ * on, and never one that vanishes.
+ */
+export const spanWidth = (span: StorySpan, pixelsPerPage: number, minimum = 3): number =>
   Math.max(minimum, Math.round(Math.max(span.pages, MIN_SPAN_PAGES) * pixelsPerPage));
 
 // ---------------------------------------------------------------------------

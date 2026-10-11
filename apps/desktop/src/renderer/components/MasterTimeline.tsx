@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useCallback, useMemo, useState } from 'react';
 import {
   defaultMarkerKind,
   markerNoun,
@@ -21,6 +21,8 @@ import {
   removeUnit,
   avSheet,
   spanWidth,
+  describeSpanAt,
+  beatsAreChips,
   storyLayout,
   threadLayout,
   timecode,
@@ -53,6 +55,7 @@ import {
   isCollection,
 } from '@vcwriter/domain';
 import { InlineText } from './InlineText';
+import { TimelineZoom } from './TimelineZoom';
 import { ContextMenu, type MenuEntry } from './ContextMenu';
 import { STATUS_GLYPH } from './status';
 import { adjustForSameList, dropClass, edgeFor, indexForDrop, useDragDrop, type DropEdge } from '../drag';
@@ -202,7 +205,33 @@ export function MasterTimeline({
   // What was clicked wins; otherwise the scene being written in.
   const selectedUnitId = givenSelectedUnitId ?? selectedBeat?.unitId ?? null;
 
+  /**
+   * How much room the blocks have: the scroller, less the sticky head and
+   * whatever the grid reserves at the tail. Measured rather than assumed,
+   * for `LinksTimeline`'s own stated reason — *whole story* is a promise
+   * about the window and nothing else can keep it (addendum 02 §4d).
+   */
+  const [across, setAcross] = useState(900);
+  const scroller = useCallback((node: HTMLDivElement | null) => {
+    if (!node) return;
+    const read = () => setAcross(node.clientWidth - HEAD_WIDTH - 96);
+    read();
+    if (typeof ResizeObserver === 'undefined') return;
+    const watch = new ResizeObserver(read);
+    watch.observe(node);
+  }, []);
+
   const rows = Math.max(1, Math.round(beatsPerColumn));
+  /**
+   * **A beat is a chip while there is room for one and a tick when there is
+   * not** (addendum 02 §4d) — read off the block's own page width, so a long
+   * chapter shows its beats while a two-line scene beside it shows ticks.
+   * Below it the block takes its page width alone, which is the floor that
+   * made *everything on the screen* impossible: a scene with six beats could
+   * not be drawn narrower than 408 pixels at any zoom, a number that did not
+   * scale with the slider at all.
+   */
+  const chipsFor = (span: StorySpan): boolean => shortForm || beatsAreChips(spanWidth(span, pixelsPerPage));
   // A scene is as wide as its pages, or as wide as its beats need — whichever
   // is more. Past `rows` beats a second column starts and the block stretches
   // rather than growing a scrollbar; every track shares these columns, so the
@@ -233,7 +262,7 @@ export function MasterTimeline({
       const perSecond = pixelsPerPage / 6;
       return Math.round(Math.max(pixelsPerPage * 0.5, secondsOf(span.unit.id) * perSecond));
     }
-    return Math.max(spanWidth(span, pixelsPerPage), beatsWidth(beats.length, rows));
+    return chipsFor(span) ? Math.max(spanWidth(span, pixelsPerPage), beatsWidth(beats.length, rows)) : spanWidth(span, pixelsPerPage);
   });
   const columns = `${HEAD_WIDTH}px ${widths.map((width) => `${width}px`).join(' ')} minmax(96px, 1fr)`;
 
@@ -368,14 +397,22 @@ export function MasterTimeline({
 
   return (
     <section className="timeline" aria-label="Master timeline">
-      <div className="timeline-scroll">
+      <div className="timeline-scroll" ref={scroller}>
         <div className="timeline-grid" style={{ gridTemplateColumns: columns }}>
           {/* Pages, and the time they play for: a page is a minute (§5).
               A commercial has no pages, so short form says Time and means it
               (addendum 05 §3a). */}
           <div className="row-head ruler-head">{shortForm ? 'Time' : 'Pages · time'}</div>
           {spans.map((span, index) => (
-            <div key={span.unit.id} className={`ruler-cell${playhead(span.unit.id)}`}>
+            <div
+              // **The page number is the useful one** (addendum 02 §4d). A
+              // narrow cell drew *9 8:3* — a page, a space and two thirds of
+              // a timecode, which says less than the page alone; the time is
+              // dropped rather than clipped, and the cell says both on hover.
+              key={span.unit.id}
+              className={`ruler-cell${beatsAreChips(widths[index] ?? 0) ? '' : ' compressed'}${playhead(span.unit.id)}`}
+              title={shortForm ? undefined : `Page ${Math.floor(span.startPage) + 1} · ${timecode(span.startPage)}`}
+            >
               {shortForm ? (
                 <span className="ruler-time">
                   {formatRt(
@@ -425,7 +462,7 @@ export function MasterTimeline({
               <div className="row-head">
                 {isCollection(file.project.format) ? 'Stories' : `${markerNoun(defaultMarkerKind(file.project.format))}s`}
               </div>
-              <ActsRow layout={layout} playheadUnitId={selectedUnitId} onUpdate={onUpdate} />
+              <ActsRow layout={layout} widths={widths} playheadUnitId={selectedUnitId} onUpdate={onUpdate} />
               <div className="acts-cell tail" />
 
               <div className="row-head">Links</div>
@@ -520,6 +557,7 @@ export function MasterTimeline({
               selectedBeatId={selectedBeatId}
               selectedUnitId={selectedUnitId}
               beatRows={rows}
+              chipsFor={chipsFor}
               onSelectUnit={onSelectUnit}
               onSelectTrack={onSelectTrack}
               drag={drag}
@@ -592,18 +630,7 @@ export function MasterTimeline({
             )}
           </>
         )}
-        <label className="zoom">
-          <span className="muted">Zoom</span>
-          <input
-            type="range"
-            min={40}
-            max={600}
-            step={10}
-            value={pixelsPerPage}
-            aria-label={shortForm ? 'Timeline zoom, pixels per second' : 'Timeline zoom, pixels per page'}
-            onChange={(event) => onZoom(Number(event.target.value))}
-          />
-        </label>
+        <TimelineZoom zoom={pixelsPerPage} spans={spans} across={across} perSecond={shortForm} onZoom={onZoom} />
         <span className="toolbar-spacer" />
         {inspectorOpen === null ? null : (
           <button
@@ -625,10 +652,13 @@ export function MasterTimeline({
 
 function ActsRow({
   layout,
+  widths,
   playheadUnitId,
   onUpdate,
 }: {
   layout: ReturnType<typeof storyLayout>;
+  /** What each scene column is drawn at, so a band knows how wide it is. */
+  widths: readonly number[];
   playheadUnitId: string | null;
   onUpdate: MasterTimelineProps['onUpdate'];
 }) {
@@ -640,11 +670,20 @@ function ActsRow({
     const span = spans[index]!;
     if (band) {
       const count = band.toIndex - band.fromIndex + 1;
+      /**
+       * **A band too narrow for its name shows its colour and nothing else**
+       * (addendum 02 §4d). At the compressed end these drew one clipped
+       * letter each — *T, L, L, T, S* — which reads as a fault rather than
+       * as a map; the name is in the hover, where it is of use.
+       */
+      const across = widths.slice(band.fromIndex, band.toIndex + 1).reduce((total, one) => total + one, 0);
+      const narrow = !beatsAreChips(across);
       cells.push(
         <div
           key={band.marker.id}
-          className={`acts-cell band${span.unit.id === playheadUnitId ? ' playhead' : ''}`}
+          className={`acts-cell band${narrow ? ' compressed' : ''}${span.unit.id === playheadUnitId ? ' playhead' : ''}`}
           style={{ gridColumn: `span ${count}` }}
+          title={narrow ? band.marker.title || band.marker.kind : undefined}
         >
           <InlineText
             value={band.marker.title}
@@ -751,6 +790,12 @@ interface TrackRowProps {
   selectedBeatId: BeatId | null;
   selectedUnitId: string | null;
   beatRows: number;
+  /**
+   * Whether a beat is drawn as a chip or as a tick (addendum 02 §4d). It is
+   * the board's answer rather than each block's: a row where some scenes drew
+   * chips and others drew ticks would be a row with two vocabularies on it.
+   */
+  chipsFor(span: StorySpan): boolean;
   onSelectUnit: MasterTimelineProps['onSelectUnit'];
   onSelectTrack: MasterTimelineProps['onSelectTrack'];
   drag: ReturnType<typeof useDragDrop>;
@@ -782,6 +827,7 @@ function TrackRow({
   selectedBeatId,
   selectedUnitId,
   beatRows,
+  chipsFor,
   onSelectUnit,
   onSelectTrack,
   drag,
@@ -1118,7 +1164,7 @@ function TrackRow({
         return (
           <article
             key={unit.id}
-            className={`block${collapsed ? ' collapsed' : ''}${atPlayhead}${chosen}${off}${
+            className={`block${chipsFor(span) ? '' : ' compressed'}${collapsed ? ' collapsed' : ''}${atPlayhead}${chosen}${off}${
               markedUnits().includes(unit.id) ? ' marked' : ''
             }${dropClass(drag.dropTarget, unit.id)}`}
             style={{ borderTopColor: track.color }}
@@ -1132,7 +1178,22 @@ function TrackRow({
             <header
               className="block-head"
               draggable
-              title={onOpenUnit ? `Click to select this ${noun}, double-click to open it` : undefined}
+              /**
+               * **What this is, and then how to click it** (addendum 02 §4d,
+               * from Ken: *if it's too compressed to see it, if you hover
+               * over it, it will give you that chapter heading*).
+               *
+               * It said how to click and nothing about what it was, which is
+               * of no use at all on a compressed board — where the name is
+               * two pixels wide and the hover is the only way to read it.
+               * One tooltip, the chapter first (§4c's *one hover, one
+               * answer*).
+               */
+              title={describeSpanAt(
+                file,
+                unit.id as string,
+                onOpenUnit ? `Click to select, double-click to open` : undefined,
+              )}
               onClick={(event) => {
                 if (event.shiftKey && selectedUnitId && selectedUnitId !== unit.id) {
                   setMarkedUnitTo(unit.id);
@@ -1227,8 +1288,17 @@ function TrackRow({
               )
             ) : collapsed ? null : (
               <ul
-                className="block-beats"
-                style={{ '--beat-rows': beatRows } as React.CSSProperties}
+                className={chipsFor(span) ? 'block-beats' : 'block-beats ticks'}
+                /* `--beat-cols` caps how wide the chips may run (§4d): a block
+                   scales with its pages because that is the axis, and a chip
+                   is a chip — measured at the top of the slider a single beat
+                   was 2,089 pixels across. */
+                style={
+                  {
+                    '--beat-rows': beatRows,
+                    '--beat-cols': Math.max(1, Math.ceil(beats.length / Math.max(1, beatRows))),
+                  } as React.CSSProperties
+                }
                 onDragOver={(event) => {
                   if (drag.payload?.kind !== 'beat') return;
                   event.preventDefault();

@@ -1605,6 +1605,13 @@ dialog.scene-dialog > header.off {
   grid-auto-flow: column;
   grid-auto-columns: minmax(0, 1fr);
   align-content: start;
+  /* **A block scales with its pages and a chip is a chip** (addendum 02 §4d,
+     from Ken: *right now, you can make the beats stretch way out, which is not
+     needed. You just need to be able to read them*). Measured at the top of
+     the slider, one beat ran 2,089 pixels across a chapter. Past a couple of
+     hundred there is nothing more of a chip to read, so the list stops and the
+     rest of the block is the block. */
+  max-width: calc(var(--beat-cols, 1) * 180px);
 }
 
 .block-beats li {
@@ -20832,3 +20839,92 @@ dialog.note-dialog > header {
    making that one rule the only one that says `color`. The class is kept
    because the row still has to say, to anything else reading it, that this
    paragraph carries an ink of its own. */
+
+/* ---------------------------------------------------------------------------
+   The compressed end of the timeline (addendum 02 §4d, from Ken: *it should
+   be able to compress it all the way down to where you can see everything on
+   the screen*).
+
+   **A beat is a chip while there is room for one and a tick when there is
+   not.** Everything else about it is unchanged — it is still every beat, in
+   order, carrying its colour and its status, still draggable, still the thing
+   §4c's card answers about on a hover — so what goes is the words, which at
+   this size could not be read anyway.
+   --------------------------------------------------------------------------- */
+
+.block-beats.ticks {
+  gap: 2px;
+  padding: 3px 2px 4px;
+}
+
+.block-beats.ticks .beat-row {
+  gap: 0;
+  padding: 0;
+  min-height: 7px;
+  border-radius: 1px;
+  background: var(--beat-colour, var(--border));
+  overflow: hidden;
+}
+
+.block-beats.ticks .beat-row.off {
+  opacity: 0.35;
+}
+
+.block-beats.ticks .beat-row.selected,
+.block-beats.ticks .beat-row.marked {
+  background: var(--gold-bright);
+}
+
+/* The words, the glyph and the dots go: at seven pixels tall there is nothing
+   any of them could say, and a clipped letter reads as a fault rather than as
+   a compression. */
+.block-beats.ticks .beat-row > * {
+  display: none;
+}
+
+/* **Fit is a statement while it holds and a press once it does not**
+   (addendum 20 §9e's rule in a fourth room): the same word drawn the same way
+   in both states would be two states that look alike. */
+.zoom-fits {
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.zoom .zoom-fit {
+  padding: 2px 8px;
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+
+/* **Chrome that cannot be read is chrome that is not drawn** (addendum 02
+   §4d). At the compressed end a block is thirty pixels wide, and it was still
+   drawing its grip, its ×, its fold and a *+ passage* button — all clipped to
+   three letters, which reads as a fault rather than as a map. What is left is
+   what a map needs: the track's colour on top, the ticks, and the hover. */
+
+.block.compressed .block-head {
+  min-height: 0;
+  padding: 2px 3px;
+  overflow: hidden;
+}
+
+.block.compressed .block-head > *,
+.block.compressed .block-add {
+  display: none;
+}
+
+.block.compressed .block-beats {
+  max-width: none;
+}
+
+/* A band of the acts row too narrow for its name (addendum 02 §4d): its
+   colour and its hover, which is all a map needs of it. */
+.acts-cell.band.compressed > * {
+  display: none;
+}
+
+/* A ruler cell too narrow for both numbers keeps the page (addendum 02 §4d). */
+.ruler-cell.compressed .ruler-time {
+  display: none;
+}
