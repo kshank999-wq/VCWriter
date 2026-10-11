@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { SheetInk } from './SheetInk';
 import {
+  bookFontsOf,
   SHEET,
   FACE_NAMES,
   FACE_NOTES,
@@ -50,6 +51,7 @@ import {
   type ProjectFile,
   type TitlePageElement,
 } from '@vcwriter/domain';
+import { LineFields } from './LineFields';
 import { useModal } from '../use-modal';
 
 import type { Laying } from '../book-typeset';
@@ -252,6 +254,7 @@ function Body({
    * copy of them would be a second answer to all five.
    */
   const isTitle = part.kind === 'title_page';
+  const fonts = bookFontsOf(file);
   /** Whether this page prints words of the writer's own (§17e): a dedication, an epigraph. */
   const ownWords = partCarriesOwnWords(part.kind);
   /**
@@ -828,6 +831,9 @@ function Body({
               <h3>
                 <span className="dp-num">3</span> Typography
               </h3>
+              {/* Which line everything under this sets — *the words* on a page
+                  that carries its own, *the title* elsewhere (§18). */}
+              <p className="dp-line-head">{ownWords ? 'The words' : 'The title'}</p>
               <div className="dp-pair">
                 <label className="field">
                   <span>Typeface</span>
@@ -839,6 +845,14 @@ function Body({
                     ))}
                   </select>
                 </label>
+                {/* **The first group is named too** (§18). Looking at the real
+                    card caught this room's own finding one room over
+                    (addendum 28 §4c): with *the lines under them* labelled
+                    below and the title's controls above carrying no heading at
+                    all, the first group read as the section's preamble rather
+                    than as a line of type anybody could set. Every group of
+                    line controls now says which line it is, which is what the
+                    chapter page's three have always done. */}
                 {/* **It says what it sizes** (from Ken: *there needs to be a
                     font size for the title text*). The control was here and
                     read *Size*, on a panel listing seven elements, beside an
@@ -1017,6 +1031,24 @@ function Body({
                 </span>
                 Rule under the title
               </button>
+              {/* **The lines under the words, which had no type at all**
+                  (§18, from Ken: *only the headings can be stylized, but the
+                  body text needs to be able to be stylized, centered,
+                  justified right, left, change the font, change the size*).
+                  Measured: on a dedication or an epigraph everything above
+                  writes `title` — the first line — and every line after it
+                  took the schema's defaults with nothing on this screen able
+                  to reach them. It is the same `LineFields` the chapter page
+                  sets its lines with, so the two cannot drift. */}
+              {ownWords ? (
+                <LineFields
+                  label="The lines under them"
+                  style={style.line}
+                  align
+                  fonts={fonts}
+                  onPatch={(patch) => write({ line: { ...style.line, ...patch } })}
+                />
+              ) : null}
             </section>
           ) : null}
 

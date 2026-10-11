@@ -3391,6 +3391,60 @@ push live; the build takes a minute or two.
   page, and switching it on would change the length of every collection already
   laid out, so the act is built and reachable while the default is its own
   decision.
+  **§18 is the body text being settable, on every screen a writer types it
+  into**, from Ken (*in any of the dialog boxes that you can add text, right
+  now only the headings can be stylized, but the body text needs to be able to
+  be stylized, centered, justified right, left, change the font, change the
+  size, also*), and **the measurement says how exactly right he is**: the
+  copyright page had the whole of it (§15c), a dedication's lines under the
+  words had **nothing at all**, a back-matter page's words had **a size and
+  nothing else**, the chapter page's epigraph and summary had everything but
+  alignment and a face — and **across all four no body text could be ranged
+  and nothing in the book could be justified**. The chips a writer sees above
+  the words are the **page's**, which range a block placed on the page, so
+  pressing one and watching the heading move is how somebody concludes the
+  body is not settable. The audit paid a **thirty-first** time and paid nearly
+  all of it: `PartStyle.line` has been the body's line of type since §7a and
+  `ChapterPageStyle` has carried `epigraph` and `summary` since §12a — **the
+  record held the answer and the controls were on the heading and nowhere
+  else**, which from the writer's chair is indistinguishable from the feature
+  never having been built. So a `LineStyle` grows exactly **two nullable
+  fields**, `align` and `face`, and **null is what makes it safe**:
+  `lineStyleVars` emits neither until it is set, so a line nobody has ranged
+  carries no `text-align` of its own and a book made yesterday prints byte for
+  byte what it printed — the whole domain suite passed with **two whole-object
+  assertions edited and no print assertion touched**, which is `partStyleOf`'s
+  *only what differs is drawn* pointed at a line of type. `face` is a
+  **string** rather than a list of named faces because `faceStackOf` is the one
+  resolver and reads `font:<id>` (§6b), so an imported font is offered the day
+  it is imported. **Justified is the body's and never the page's** — a page
+  ranges a block that has been *placed* on it and nothing in a book justifies a
+  title or a dedication — so the line has four options, the chips still have
+  three, and a test asserts there is no fourth chip up there. **One control in
+  one place**: the `Line` control already existed, **exported from a dialog**,
+  which is why three others had hand-rolled their own, so it is
+  `LineFields.tsx` now and the two new selects are behind an `align` flag (a
+  running head and a chapter number are lines a book does not range page by
+  page); each is named for **the line it sets** (*The words alignment*, *The
+  lines under them face*), and the first option reads **The page's**, which is
+  what `null` means — a list whose default sits last reads as though something
+  had been picked. The lone *Text size* stepper on a back-matter page is **gone
+  rather than kept beside it**, the designed page's group appears only where
+  the page carries the writer's own words (`partCarriesOwnWords`), and **the
+  chapter number and name get none**, a chapter opening's own layout placing
+  those so a second answer could only disagree. **Two faults only looking
+  caught.** Mine: the group's label borrowed `.chapter-line-label`, which is
+  `flex: 1 0 100%` — *the full width* in a flex **row** and *grow to fill the
+  height* in a flex **column** — so it stretched five hundred pixels and
+  emptied the Typography card; one idiom, two meanings, depending on a
+  container the class never names. And pre-existing: the Typeface `<select>`
+  burst its `1fr` cell and covered the size stepper beside it, because
+  `.field` is `display: grid` and **a form control's automatic min-content
+  minimum beats `max-width`**, so the `min-width: 0` has to be on the control
+  itself. What the renderer's tests pin is the **gesture** (§15a), walking
+  **every** dialog that takes body text rather than the one the report came
+  off: a fifth screen that grows a text box and forgets the type fails there
+  rather than shipping.
   **§9ap is a picture on the last page of the book**, from Ken with a
   screenshot of the page dialog reading *PAGE 173 · BLANK* and *nothing of the
   book follows it, so there is nowhere for a picture to stand* (*still the same

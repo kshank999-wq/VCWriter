@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { SheetInk } from './SheetInk';
 import {
+  bookFontsOf,
   APPENDIX_LABELS,
   APPENDIX_LABEL_WORDS,
   AUTHOR_LINKS,
@@ -63,6 +64,7 @@ import {
   type ProjectFile,
 } from '@vcwriter/domain';
 import { readPdfPages } from '../read-vector';
+import { LineFields } from './LineFields';
 import { useModal } from '../use-modal';
 
 import type { Laying } from '../book-typeset';
@@ -179,6 +181,7 @@ function Body({
   onClose(): void;
 }) {
   const settings = bookSettingsOf(file);
+  const fonts = bookFontsOf(file);
   const base = proseStyleBase(chapterPageStyleSchema.parse(file.settings.chapterPageStyle ?? {}), settings.size);
   const style = partStyleOf(part, base);
   const sink = backSinkOf(style);
@@ -354,27 +357,28 @@ function Body({
                   ))}
                 </select>
               </label>
-              <div className="field">
-                <span>Text size</span>
-                <div className="dp-step">
-                  <button type="button" className="raised small" aria-label="Smaller text" onClick={() => write({ line: { ...style.line, size: Math.max(8, style.line.size - 0.5) } })}>
-                    −
-                  </button>
-                  <input
-                    type="number"
-                    aria-label="Text size in points"
-                    min={8}
-                    max={14}
-                    step={0.5}
-                    value={style.line.size}
-                    onChange={(event) => write({ line: { ...style.line, size: Math.min(14, Math.max(8, Number(event.target.value) || style.line.size)) } })}
-                  />
-                  <button type="button" className="raised small" aria-label="Larger text" onClick={() => write({ line: { ...style.line, size: Math.min(14, style.line.size + 0.5) } })}>
-                    +
-                  </button>
-                </div>
-              </div>
             </div>
+            {/* **The words of the page, set like the heading above them**
+                (§18, from Ken: *only the headings can be stylized, but the
+                body text needs to be able to be stylized, centered, justified
+                right, left, change the font, change the size*).
+                Measured before it was written: the body of a back-matter page
+                had a size and nothing else — no case, no weight, no slope, no
+                tracking, and nowhere at all to say how it was ranged, the
+                Left/Centred/Right above belonging to the heading. It is the
+                one `LineFields` the heading uses, so the two rows cannot
+                drift. */}
+            <LineFields
+              label="The words"
+              style={style.line}
+              align
+              fonts={fonts}
+              onPatch={(patch) => write({ line: { ...style.line, ...patch } })}
+            />
+            <p className="field-note">
+              Left alone, the words take the page’s own face and the way the book ranges its text.
+            </p>
+
             <button type="button" className="dp-switch" role="switch" aria-checked={style.folio} aria-label="Page numbers" onClick={() => write({ folio: !style.folio })}>
               <span className={style.folio ? 'dp-switch-track on' : 'dp-switch-track'} aria-hidden="true">
                 <span />

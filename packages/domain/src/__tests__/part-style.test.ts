@@ -373,7 +373,10 @@ describe('the contents page and the index', () => {
 
   it('starts the dividers as the stylesheet drew them, bold at the reading size', () => {
     const style = partStyleOf(partsOf(addPart(novel(), 'index').file).find((one) => one.kind === 'index')!);
-    expect(style.divider).toEqual({ size: 11, case: 'as_typed', bold: true, italic: false, tracking: 0 });
+    // `align` and `face` are **null**, which is a line saying nothing about
+    // where it is ranged or what it is set in (§18) — so the page's answers
+    // stand and an index nobody has touched draws exactly as it did.
+    expect(style.divider).toEqual({ size: 11, case: 'as_typed', bold: true, italic: false, tracking: 0, align: null, face: null });
   });
 
   it('sets the dividers apart from the entries, which is the point of separating them', () => {

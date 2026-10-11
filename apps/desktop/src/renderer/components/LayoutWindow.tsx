@@ -177,7 +177,8 @@ import {
 } from '@vcwriter/domain';
 import { readFont } from '../read-font';
 import { PopOutButton } from './PopOutButton';
-import { ChapterPageDialog, ChapterStyleFields, Line } from './ChapterPageDialog';
+import { ChapterPageDialog, ChapterStyleFields } from './ChapterPageDialog';
+import { LineFields as Line } from './LineFields';
 import { ChapterLayoutDialog } from './ChapterLayoutDialog';
 import { CopyrightPageDialog } from './CopyrightPageDialog';
 import { DesignedPageDialog } from './DesignedPageDialog';

@@ -603,7 +603,17 @@ export const blockStyle = (block: BookBlock, context: BookRenderContext): string
   // left exactly as it is, so a page of the story cannot be reached from here.
   if (block.partStyle && block.kind === 'paragraph') {
     const one = block.partStyle.line;
-    const face = faceStackOf(block.partStyle.face === 'book' ? context.settings.face : block.partStyle.face, context.settings.fonts);
+    /**
+     * **The line's own face where it has one, the page's otherwise** (§18,
+     * from Ken: *change the font*). A sans biography under a serif heading is
+     * ordinary typography, and `partOwnBlocks` has asked the heading and the
+     * words separately since §7a; null here is what keeps a page nobody has
+     * re-faced set in exactly what it was.
+     */
+    const face = faceStackOf(
+      one.face ?? (block.partStyle.face === 'book' ? context.settings.face : block.partStyle.face),
+      context.settings.fonts,
+    );
     if (face) rules.push(`font-family:${face}`);
     rules.push(
       `font-size:${(one.size * PX_PER_PT).toFixed(3)}px`,
@@ -613,6 +623,17 @@ export const blockStyle = (block: BookBlock, context: BookRenderContext): string
       `font-style:${one.italic ? 'italic' : 'normal'}`,
       `letter-spacing:${one.tracking / 100}em`,
     );
+    /**
+     * **Where the words are ranged** (§18, Ken's *centered, justified right,
+     * left*), which a prose part could not say at all: `align` on the page
+     * reaches the **heading** and the paragraphs took `--bk-align`, the
+     * book's own.
+     *
+     * Drawn only where it was asked for, which is the rule this whole section
+     * rests on: a page nobody has ranged emits no `text-align` and goes on
+     * taking the book's, so the markup of an existing book is unchanged.
+     */
+    if (one.align) rules.push(`text-align:${one.align}`);
   }
   if (block.align) rules.push(`text-align:${block.align}`, 'text-indent:0');
   return rules.length > 0 ? ` style="${rules.join(';')}"` : '';
@@ -901,8 +922,8 @@ export const CHAPTER_STYLES = `
   .bk-chapter-device { display: block; margin: 1.5em auto 0; max-width: 100%; }
   .bk-leaf-art { position: absolute; inset: 0; padding: 0; height: auto; overflow: hidden; }
   .bk-chapter-art { display: block; width: 100%; height: 100%; object-fit: cover; }
-  .bk-chapter-epigraph { margin: 2em 0 0; white-space: pre-wrap; font-size: var(--chapter-epigraph-size); font-style: var(--chapter-epigraph-style); }
-  .bk-chapter-summary { margin: 2em auto 0; max-width: 34em; white-space: pre-wrap; text-align: left; font-family: var(--bk-face); font-size: var(--chapter-summary-size); line-height: 1.5; }
+  .bk-chapter-epigraph { margin: 2em 0 0; white-space: pre-wrap; font-size: var(--chapter-epigraph-size); font-style: var(--chapter-epigraph-style); text-transform: var(--chapter-epigraph-case, none); font-variant-caps: var(--chapter-epigraph-variant, normal); font-weight: var(--chapter-epigraph-weight, 400); letter-spacing: var(--chapter-epigraph-tracking, 0); font-family: var(--chapter-epigraph-face, inherit); text-align: var(--chapter-epigraph-align, inherit); }
+  .bk-chapter-summary { margin: 2em auto 0; max-width: 34em; white-space: pre-wrap; text-align: var(--chapter-summary-align, left); font-family: var(--chapter-summary-face, var(--bk-face)); font-size: var(--chapter-summary-size); text-transform: var(--chapter-summary-case, none); font-variant-caps: var(--chapter-summary-variant, normal); font-weight: var(--chapter-summary-weight, 400); font-style: var(--chapter-summary-style, normal); letter-spacing: var(--chapter-summary-tracking, 0); line-height: 1.5; }
   /* The layouts (addendum 20 §14). Each is the slot list drawn; nothing here
      knows what a layout means, only how the pieces sit. */
   .bk-layout-left { align-items: flex-start; }
@@ -1049,7 +1070,7 @@ ${CHAPTER_STYLES}
   .bk-display.bk-words p { font-size: var(--pt-title-size, 1em); text-transform: var(--pt-title-case, none); font-variant-caps: var(--pt-title-variant, normal); font-weight: var(--pt-title-weight, 400); font-style: var(--pt-title-style, italic); letter-spacing: var(--pt-title-tracking, 0); }
   /* The lines under the words: an epigraph's attribution, a dedication's
      second line. They start as the words and are set apart from here. */
-  .bk-display.bk-words p.bk-words-under { font-size: var(--pt-line-size, 1em); text-transform: var(--pt-line-case, none); font-variant-caps: var(--pt-line-variant, normal); font-weight: var(--pt-line-weight, 400); font-style: var(--pt-line-style, italic); letter-spacing: var(--pt-line-tracking, 0); }
+  .bk-display.bk-words p.bk-words-under { font-size: var(--pt-line-size, 1em); text-transform: var(--pt-line-case, none); font-variant-caps: var(--pt-line-variant, normal); font-weight: var(--pt-line-weight, 400); font-style: var(--pt-line-style, italic); letter-spacing: var(--pt-line-tracking, 0); font-family: var(--pt-line-face, var(--pt-face, var(--bk-face))); text-align: var(--pt-line-align, var(--pt-align, center)); }
   /* It hangs at the foot, which is what a copyright page is (§7a); everything
      else about it is the writer's, the same as the other designed pages. */
   .bk-display.bk-copy-top { justify-content: flex-start; }
@@ -1063,7 +1084,7 @@ ${CHAPTER_STYLES}
   .bk-imprint { margin: 0; font-size: 0.85em; letter-spacing: 0.15em; text-transform: uppercase; }
   .bk-title-art { max-width: 80%; max-height: 40%; }
   .bk-small { font-size: 0.8em; line-height: 1.4; margin: 0; }
-  .bk-display.bk-copyright .bk-small { font-size: var(--pt-title-size, 0.8em); text-transform: var(--pt-title-case, none); font-variant-caps: var(--pt-title-variant, normal); font-weight: var(--pt-title-weight, 400); font-style: var(--pt-title-style, normal); letter-spacing: var(--pt-title-tracking, 0); border-bottom: var(--pt-rule, none); padding-bottom: 0.15em; }
+  .bk-display.bk-copyright .bk-small { font-size: var(--pt-title-size, 0.8em); text-transform: var(--pt-title-case, none); font-variant-caps: var(--pt-title-variant, normal); font-weight: var(--pt-title-weight, 400); font-style: var(--pt-title-style, normal); letter-spacing: var(--pt-title-tracking, 0); font-family: var(--pt-title-face, inherit); text-align: var(--pt-title-align, inherit); border-bottom: var(--pt-rule, none); padding-bottom: 0.15em; }
   /* A copyright page's lines (§9k): a paragraph each, with a little air
      between them, and a run-on line tucked under the one it belongs to. */
   .bk-display.bk-copyright .bk-small + .bk-small { margin-top: 0.5em; }
@@ -1077,7 +1098,7 @@ ${CHAPTER_STYLES}
      style sits on the wrapper, so the entries take the line style by
      inheritance and a sub-entry's 0.92em stays a share of the entry rather
      than of the body. The heading takes the title style over the top. */
-  .bk-contents, .bk-index { font-family: var(--pt-face, var(--bk-face)); font-size: var(--pt-line-size, 1em); text-transform: var(--pt-line-case, none); font-variant-caps: var(--pt-line-variant, normal); font-weight: var(--pt-line-weight, 400); font-style: var(--pt-line-style, normal); letter-spacing: var(--pt-line-tracking, 0); }
+  .bk-contents, .bk-index { font-family: var(--pt-line-face, var(--pt-face, var(--bk-face))); font-size: var(--pt-line-size, 1em); text-transform: var(--pt-line-case, none); font-variant-caps: var(--pt-line-variant, normal); font-weight: var(--pt-line-weight, 400); font-style: var(--pt-line-style, normal); letter-spacing: var(--pt-line-tracking, 0); }
   .bk-part-title { margin: 0; padding: calc(var(--bk-lead) * 4) 0 calc(var(--bk-lead) * 2); text-align: var(--pt-align, center); font-size: var(--pt-title-size, 1.3em); letter-spacing: var(--pt-title-tracking, 0.12em); text-transform: var(--pt-title-case, uppercase); font-variant-caps: var(--pt-title-variant, normal); font-weight: var(--pt-title-weight, 400); font-style: var(--pt-title-style, normal); border-bottom: var(--pt-rule, none); line-height: var(--bk-lead); }
   .bk-contents-row { display: flex; gap: 1em; align-items: baseline; }
   .bk-contents-under { padding-left: 2em; font-size: 0.92em; }

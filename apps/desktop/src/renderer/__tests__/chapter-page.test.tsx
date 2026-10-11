@@ -118,7 +118,12 @@ describe('what belongs to the chapter and what belongs to the book', () => {
     // The list is the running heads' now (§7a): the book's own face by name
     // and the five it offers. `serif` is the name old-style had before it
     // widened and is no longer offered, though it still parses.
-    fireEvent.change(screen.getByLabelText('Face'), { target: { value: 'old_style' } });
+    // **Named rather than matched loosely** (§18): a line of type may now say
+    // what it is set in, so *Face* is a sub-label on each prose line as well
+    // as the page's own control. The accessible names tell them apart — this
+    // one is the page's — and a query that matched three things was only ever
+    // right by there being one.
+    fireEvent.change(screen.getByLabelText('Chapter page face'), { target: { value: 'old_style' } });
     fireEvent.change(screen.getByLabelText('The name size'), { target: { value: '24' } });
     fireEvent.click(screen.getByLabelText('The name italic'));
 

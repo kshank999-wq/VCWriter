@@ -2952,6 +2952,138 @@ second blank is not later "fixed" as a fault.
 > copyright page takes the next page now, and the assertion was rewritten
 > rather than worked around.
 
+## 18. The body text can be set, on every screen a writer types it into
+
+From Ken, in one sentence:
+
+> in any of the dialog boxes that you can add text, right now only the
+> headings can be stylized, but the body text needs to be able to be
+> stylized, centered, justified right, left, change the font, change the
+> size, also.
+
+### 18.1 What was measured
+
+He is exactly right and the fault is precisely located. Driven through
+the real room on a novel, before a line was written:
+
+| Screen | Its heading | Its body |
+| --- | --- | --- |
+| Copyright page (§15c) | face, size, case, weight, slope, tracking, alignment | **all of it** — *The small print* is a `LineStyle` |
+| Dedication, epigraph (§9n) | all of it | **nothing at all** — the lines under the words took the schema's defaults and no control could reach them |
+| About the author, foreword, appendix (§17) | all of it | **a size, and nothing else** |
+| Chapter page's epigraph and summary (§12a) | all of it | size, case, weight, slope — **no alignment, no face** |
+
+And across all four, **no body text anywhere could be ranged, and nothing
+in the book could be justified at all**. The Left / Centred / Right chips a
+writer sees above the words are the **page's** — they range the block that
+has been placed on the page — so somebody who pressed them and watched the
+heading move correctly concluded the body was simply not settable.
+
+### 18.2 The audit paid a thirty-first time
+
+Almost none of this is a new record. `PartStyle.line` has been *the body's
+line of type* since §7a — a prose page's paragraphs have been emitted from
+it since §17 — and `ChapterPageStyle` has carried `epigraph` and `summary`
+as `LineStyle`s since §12a. **The record held the answer and the controls
+were on the heading and nowhere else**, which is why the whole report reads
+from the writer's chair as a feature that was never built.
+
+So a `LineStyle` grows exactly two fields:
+
+```ts
+align: z.enum(LINE_ALIGNS).nullable().default(null),
+face:  z.string().nullable().default(null),
+```
+
+**Null is what makes it safe.** `lineStyleVars` emits `--…-align` and
+`--…-face` **only when they are set**, so a line nobody has ranged carries
+no `text-align` of its own and a book made yesterday prints byte for byte
+what it printed — which is the proof: the whole domain suite passed with
+**two whole-object assertions edited and no print assertion touched at
+all**. It is `partStyleOf`'s and `bookPresetOf`'s rule (*only what differs
+is drawn*) pointed at a line of type.
+
+`face` is a **string** rather than a list of named faces because
+`faceStackOf` is the one resolver and it reads `font:<id>` (§6b), so a font
+the writer imported is offered here the day it is imported, with nothing
+told.
+
+### 18.3 Justified is the body's and never the page's
+
+`LINE_ALIGNS` is `left · center · right · justify` and the page's own
+alignment stays three. **A page ranges a block that has been placed on
+it** — a title, a dedication, a heading — and nothing in a book justifies
+one of those; justification is a property of running text, which is what a
+line of type is and a placed block is not. So the control under *The
+words* has four options and the chips above it still have three, and a
+test asserts there is no fourth chip up there.
+
+### 18.4 One control, in one place
+
+The `Line` control already existed — **exported from
+`ChapterPageDialog`**, which is why three other dialogs had hand-rolled
+their own. A fourth copy would have been a fourth answer to *what a line
+of type is*, so it is `LineFields.tsx` now and all four read it; the two
+new selects are behind an `align` flag, because a running head and a
+chapter number are lines of type that a book does not range or re-face
+page by page.
+
+Each control is named for **the line it sets** rather than for itself —
+*The words alignment*, *The lines under them face* — so a screen holding
+two lines of type says which is which to a screen reader as well as to the
+eye, and a test can name one without ambiguity.
+
+The first option reads **The page's** and is the value `null` carries:
+nothing is chosen until somebody chooses, and a list whose default sits
+last reads as though something had already been picked.
+
+### 18.5 What each screen gained
+
+- **A back-matter page** (`BackMatterDialog`) — the lone *Text size*
+  stepper is **gone rather than kept beside it**, two controls onto one
+  field being two answers; the whole line stands in its place, under a
+  note saying what *left alone* means.
+- **A designed page** (`DesignedPageDialog`) — *The lines under them*,
+  offered only where the page carries the writer's own words
+  (`partCarriesOwnWords`, §17e), so a half title and a title page do not
+  get it: their words are `bookNames`' and not a body.
+- **The chapter page** (`ChapterStyleFields`) — the epigraph and the
+  summary take alignment and a face. **The number and the name get
+  none**, which is the other half of the rule: a chapter opening's own
+  layout (§14) places those, so a second answer here could only disagree
+  with it — *absent rather than greyed*.
+- **The copyright page** needed nothing; §15c had already given its small
+  print the whole line.
+
+### 18.6 Two faults only looking caught
+
+**Mine.** The new group's label was written
+`className="chapter-line-label dp-line-head"`, borrowing a class from the
+chapter dialog — and `.chapter-line-label` is `flex: 1 0 100%`, which in a
+flex **row** means *the full width* and in a flex **column** (`.dp-card`)
+means *grow to fill the height*. The label stretched some five hundred
+pixels and emptied the Typography card. One idiom, two meanings, depending
+on a container the class never names: `.dp-line-head` has a complete rule
+of its own now.
+
+**Pre-existing, and found by standing in the room.** The Typeface
+`<select>` burst its `1fr` cell and covered the title's size stepper
+beside it. `min-width: 0` on `.dp-pair > *` fixed three controls of four
+and not the select, because `.field` is `display: grid` and **a form
+control's automatic min-content minimum beats `max-width`** — the
+`min-width: 0` has to be on the control itself. Measured after: the select
+is 231px, nothing is past the card's edge.
+
+### 18.7 What the tests pin
+
+The domain's own suite says what a line of type now carries and what it
+emits. The renderer's pins the **gesture** (§15a), which is the whole of
+the report — the record held most of the answer all along and a writer
+still could not set a word of it — and it walks **every** dialog that
+takes body text rather than the one the report came off, in
+`cast-surfaces`' shape: **a fifth screen that grows a text box and forgets
+the type fails there rather than shipping.**
+
 ## 9an. A blank page, and which side it goes on
 
 From Ken, in one message with three asks and one cause under the first two:

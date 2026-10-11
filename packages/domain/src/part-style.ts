@@ -125,9 +125,19 @@ export const partStyleSchema = z.object({
 });
 export type PartStyle = z.infer<typeof partStyleSchema>;
 
-/** What a part stores: any of the fields, the rest read from the kind's defaults. */
+/**
+ * What a part stores: any of the fields, the rest read from the kind's
+ * defaults.
+ *
+ * **The input type rather than the output** (§18): a patch is what somebody
+ * writes down and the schema fills the rest, so a line given a size and a case
+ * need not also spell out that nobody has ranged it. Taking the output type
+ * made every default table in this file restate each new field of a
+ * `LineStyle` the day it was added — which is the schema's own defaults said
+ * twice, and the second copy is the one that goes stale.
+ */
 export const partStylePatchSchema = partStyleSchema.partial();
-export type PartStylePatch = z.infer<typeof partStylePatchSchema>;
+export type PartStylePatch = z.input<typeof partStylePatchSchema>;
 
 /**
  * The kinds whose page **prints type of its own** and is therefore designed
@@ -388,7 +398,8 @@ export const proseStyleBase = (chapter: Pick<ChapterPageStyle, 'face' | 'title'>
   line: { size: bodySize, case: 'as_typed', bold: false, italic: false, tracking: 0 },
 });
 
-const lineVars = (name: string, one: LineStyle): Record<string, string> => lineStyleVars(`--pt-${name}`, one);
+const lineVars = (name: string, one: LineStyle, fonts: readonly BookFont[] = []): Record<string, string> =>
+  lineStyleVars(`--pt-${name}`, one, fonts);
 
 /**
  * The style as CSS custom properties: the one place that decides what they
@@ -413,9 +424,9 @@ export const partStyleVars = (
   '--pt-align': style.align,
   '--pt-items': style.align === 'left' ? 'flex-start' : style.align === 'right' ? 'flex-end' : 'center',
   '--pt-rule': style.rule ? '1px solid currentColor' : 'none',
-  ...lineVars('title', style.title),
-  ...lineVars('line', style.line),
-  ...lineVars('divider', style.divider),
+  ...lineVars('title', style.title, fonts),
+  ...lineVars('line', style.line, fonts),
+  ...lineVars('divider', style.divider, fonts),
 });
 
 /** The same, as a `style` attribute's text. */

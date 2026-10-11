@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  bookFontsOf,
   CHAPTER_TEMPLATES,
   CHAPTER_TEMPLATE_WORDS,
   MAX_CHAPTER_IMAGE_BYTES,
@@ -41,6 +42,7 @@ import {
   type TypeCase,
   type TypeFace,
 } from '@vcwriter/domain';
+import { CASE_WORDS, LineFields as Line } from './LineFields';
 import { useModal } from '../use-modal';
 import { ChapterLeaf } from './Paper';
 import { PICTURE_ACCEPT } from '../read-picture';
@@ -120,11 +122,6 @@ export function ChapterPageDialog({ file, open, initialMarkerId = null, onClose,
   );
 }
 
-export const CASE_WORDS: Record<TypeCase, string> = {
-  as_typed: 'As typed',
-  capitals: 'CAPITALS',
-  small_caps: 'Small caps',
-};
 
 /**
  * The faces on offer (§7a). The list is the running heads' — the book's own
@@ -732,6 +729,7 @@ export function ChapterStyleFields({
   onPage?: boolean;
 }) {
   const style = chapterPageStyleOf(file);
+  const fonts = bookFontsOf(file);
   const book = isInstructional(file.project.format);
   const nouns = nounsFor(file.project.format);
   const unit = nouns.division.toLowerCase();
@@ -768,10 +766,17 @@ export function ChapterStyleFields({
         style={style.title}
         onPatch={(patch) => onUpdate((current) => setChapterLineStyle(current, 'title', patch))}
       />
+      {/* **The two that are prose get where they are ranged and what they are
+          set in** (§18, from Ken: *the body text needs to be able to be
+          stylized, centered, justified right, left, change the font*). The
+          number and the name above them do not: a chapter opening's layout
+          places those, so a second answer here could only disagree with it. */}
       <Line
         label="The lines under it"
         style={style.epigraph}
         tracking={false}
+        align
+        fonts={fonts}
         onPatch={(patch) => onUpdate((current) => setChapterLineStyle(current, 'epigraph', patch))}
       />
       {book ? (
@@ -779,6 +784,8 @@ export function ChapterStyleFields({
           label="The summary"
           style={style.summary}
           tracking={false}
+          align
+          fonts={fonts}
           onPatch={(patch) => onUpdate((current) => setChapterLineStyle(current, 'summary', patch))}
         />
       ) : null}
@@ -986,79 +993,5 @@ export function PagePlacementFields({
         </p>
       )}
     </section>
-  );
-}
-
-export function Line({
-  label,
-  style,
-  tracking = true,
-  onPatch,
-}: {
-  label: string;
-  style: LineStyle;
-  tracking?: boolean;
-  onPatch(patch: Partial<LineStyle>): void;
-}) {
-  return (
-    <div className="chapter-line-style">
-      <span className="chapter-line-label">{label}</span>
-      <label className="chapter-line-control">
-        <span className="muted small">Size</span>
-        <input
-          type="number"
-          aria-label={`${label} size`}
-          min={6}
-          max={72}
-          value={style.size}
-          onChange={(event) => onPatch({ size: Number(event.target.value) })}
-        />
-      </label>
-      <label className="chapter-line-control">
-        <span className="muted small">Case</span>
-        <select
-          aria-label={`${label} case`}
-          value={style.case}
-          onChange={(event) => onPatch({ case: event.target.value as TypeCase })}
-        >
-          {TYPE_CASES.map((one) => (
-            <option key={one} value={one}>
-              {CASE_WORDS[one]}
-            </option>
-          ))}
-        </select>
-      </label>
-      <button
-        type="button"
-        aria-label={`${label} bold`}
-        aria-pressed={style.bold}
-        className={style.bold ? 'chapter-line-mark on' : 'chapter-line-mark'}
-        onClick={() => onPatch({ bold: !style.bold })}
-      >
-        <b>B</b>
-      </button>
-      <button
-        type="button"
-        aria-label={`${label} italic`}
-        aria-pressed={style.italic}
-        className={style.italic ? 'chapter-line-mark on' : 'chapter-line-mark'}
-        onClick={() => onPatch({ italic: !style.italic })}
-      >
-        <i>I</i>
-      </button>
-      {tracking ? (
-        <label className="chapter-line-control">
-          <span className="muted small">Tracking</span>
-          <input
-            type="range"
-            aria-label={`${label} tracking`}
-            min={0}
-            max={50}
-            value={style.tracking}
-            onChange={(event) => onPatch({ tracking: Number(event.target.value) })}
-          />
-        </label>
-      ) : null}
-    </div>
   );
 }

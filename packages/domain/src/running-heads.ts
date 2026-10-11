@@ -80,9 +80,9 @@ export const runningStyleVars = (
   fonts: readonly BookFont[] = [],
 ): Record<string, string> => ({
   '--bk-run-face': faceStackOf(style.face === 'book' ? bookFace : style.face, fonts),
-  ...lineStyleVars('--bk-run-verso', style.verso),
-  ...lineStyleVars('--bk-run-recto', style.recto),
-  ...lineStyleVars('--bk-run-folio', style.folio),
+  ...lineStyleVars('--bk-run-verso', style.verso, fonts),
+  ...lineStyleVars('--bk-run-recto', style.recto, fonts),
+  ...lineStyleVars('--bk-run-folio', style.folio, fonts),
 });
 
 // ------------------------------------------------------------------- words

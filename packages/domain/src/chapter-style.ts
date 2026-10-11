@@ -114,6 +114,19 @@ const FACE_STACKS: Record<TypeFace, string> = {
   serif: "'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif",
 };
 
+/**
+ * How a line of type may be ranged (addendum 20 §18, from Ken: *the body text
+ * needs to be able to be stylized, centered, justified right, left*).
+ *
+ * **Justified is a line of running text's and never a page's**, which is why
+ * this list is not `PartAlign`'s: a page's alignment ranges a block that has
+ * been placed on it — a title, a dedication, a heading — and nothing in a book
+ * justifies one of those. Justification is what happens to prose that fills
+ * the measure, so it is offered exactly where prose is.
+ */
+export const LINE_ALIGNS = ['left', 'center', 'right', 'justify'] as const;
+export type LineAlign = (typeof LINE_ALIGNS)[number];
+
 /** One line of type on the page: how big, how cased, how weighted. */
 export const lineStyleSchema = z.object({
   /** In points, because this prints. */
@@ -123,6 +136,49 @@ export const lineStyleSchema = z.object({
   italic: z.boolean().default(false),
   /** Letter-spacing, in hundredths of an em. Books track their heads open. */
   tracking: z.number().min(0).max(50).default(0),
+  /**
+   * **Where this line is ranged — null meaning the page's own** (§18, from
+   * Ken: *only the headings can be stylized, but the body text needs to be
+   * able to be stylized, centered, justified right, left*).
+   *
+   * Measured before it was written: a prose part's paragraphs took
+   * `--bk-align`, the book's own, and a part's `align` reached its *heading*
+   * and stopped there — so a biography could not be centred, a dedication's
+   * attribution could not be ranged right, and nothing on any of those pages
+   * could be justified at all.
+   *
+   * **Null is what makes it safe**, which is `dropInches`' shape and
+   * `partStyleOf`'s base: a line nobody has ranged draws **no `text-align`
+   * declaration whatever**, so a page made before this prints byte for byte
+   * what it printed — the rule the whole of §7a rests on. It is not defaulted
+   * to the page's value, because that would be a second copy of one fact free
+   * to drift the first time either is written.
+   */
+  align: z.enum(LINE_ALIGNS).nullable().default(null),
+  /**
+   * **What this line is set in — null meaning the page's own** (§18, Ken's
+   * *change the font*).
+   *
+   * A face per page is right for a dedication and wrong for a page that has a
+   * heading over prose: a sans heading over a serif body is ordinary
+   * typography, and `partOwnBlocks` has asked the heading and the words
+   * separately since §7a *because setting one is no reason to write
+   * declarations over the other*. This is that separation arriving in the
+   * record.
+   *
+   * **A string rather than an enum**, because `faceStackOf` is the one
+   * resolver and it takes one: an imported font is `font:<id>` (§6b), which no
+   * list of named faces can spell. Null draws nothing, so the page's face
+   * stands and nothing already set moves.
+   *
+   * **`book` is deliberately not one of the words here.** Null already says
+   * *whatever this page is set in*, and the page's own face control already
+   * offers *the book's* — two levels each with its own word, where a third
+   * spelling of the same intent on a line would be a second answer about what
+   * a face resolves against and would need the book's face carried into every
+   * caller to say it.
+   */
+  face: z.string().nullable().default(null),
 });
 export type LineStyle = z.infer<typeof lineStyleSchema>;
 
@@ -227,7 +283,12 @@ export const setChapterLineStyle = (
  * line, so all three ask this; a private copy per module is a second answer
  * waiting to drift the next time a field is added.
  */
-export const lineStyleVars = (prefix: string, one: LineStyle): Record<string, string> => ({
+export const lineStyleVars = (
+  prefix: string,
+  one: LineStyle,
+  /** The book's imported fonts, so a line set in one resolves (§6b, §18). */
+  fonts: readonly BookFont[] = [],
+): Record<string, string> => ({
   [`${prefix}-size`]: `${one.size}pt`,
   [`${prefix}-case`]: one.case === 'capitals' ? 'uppercase' : 'none',
   // Small caps is a font variant rather than a transform, so it is its own
@@ -236,6 +297,15 @@ export const lineStyleVars = (prefix: string, one: LineStyle): Record<string, st
   [`${prefix}-weight`]: one.bold ? '700' : '400',
   [`${prefix}-style`]: one.italic ? 'italic' : 'normal',
   [`${prefix}-tracking`]: `${one.tracking / 100}em`,
+  /**
+   * **Drawn only where it was asked for** (§18): the stylesheet's own fallback
+   * is the page's answer, so a line nobody has ranged or re-faced emits
+   * nothing at all and the markup of a book made before this is byte for byte
+   * what it was — `authorDrop`'s shape, and the proof the whole suite passed
+   * unedited.
+   */
+  ...(one.align === null ? {} : { [`${prefix}-align`]: one.align }),
+  ...(one.face === null ? {} : { [`${prefix}-face`]: faceStackOf(one.face, fonts) }),
 });
 
 /**
@@ -250,7 +320,7 @@ export const chapterStyleVars = (
   bookFace?: string,
   fonts: readonly BookFont[] = [],
 ): Record<string, string> => {
-  const line = (name: string, one: LineStyle): Record<string, string> => lineStyleVars(`--chapter-${name}`, one);
+  const line = (name: string, one: LineStyle): Record<string, string> => lineStyleVars(`--chapter-${name}`, one, fonts);
   return {
     // `manuscript` is the older spelling of the same intent and is stored in
     // projects made before `book` existed, so both resolve to the body face

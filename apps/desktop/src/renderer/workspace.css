@@ -17662,6 +17662,48 @@ dialog.designed-page-dialog[open] {
   gap: 12px 16px;
 }
 
+/* **A `1fr` column is still at least as wide as what is in it** (addendum 20
+   §18), which is the grid default and what drove the Typeface select — whose
+   options run to *Old-style serif — Palatino, Iowan, what most novels are set
+   in* — out past the card's own edge, carrying the title's size control off
+   the screen with it. Found by looking at the card rather than by any test:
+   the control was in the DOM, had its accessible name, and was 150px past the
+   border. `min-width: 0` lets the column be the half it says it is. */
+.dp-pair > * {
+  min-width: 0;
+}
+
+/* **And on the control itself**, which is where the minimum actually is: a
+   `<select>` inside `.field` — which is a grid of its own — gets an automatic
+   minimum of its widest option, and an automatic minimum beats `max-width`.
+   `min-width: 0` one level up frees the column and leaves the select exactly
+   as wide as *Old-style serif — Palatino, Iowan…*, which is how the Typeface
+   control went on covering the size stepper beside it. */
+.dp-pair select,
+.dp-pair input {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* **Which line the controls under it set** (addendum 20 §18).
+   It carries the whole of its own look rather than borrowing
+   `.chapter-line-label`'s, and the reason is the fault driving it found:
+   that class is `flex: 1 0 100%`, which means *take the full width* inside
+   the wrapping flex **row** it was written for and *grow to fill the height*
+   inside a flex **column**, which is what a `.dp-card` is — so the label
+   stretched to 500px and pushed every control in the Typography card out of
+   sight. One declaration, two containers, opposite meanings, and only looking
+   at the card showed it. */
+.dp-line-head {
+  margin: 10px 0 2px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
 .dp-step {
   display: flex;
   align-items: center;

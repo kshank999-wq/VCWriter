@@ -104,7 +104,10 @@ describe('how the furniture is set', () => {
   it('keeps what the writer set, and reads the rest as the default', () => {
     const settings = settingsOf({ runningHeadStyle: { verso: { size: 7, case: 'small_caps', bold: true, italic: false, tracking: 4 } } });
     const style = runningHeadStyleOf(settings);
-    expect(style.verso).toEqual({ size: 7, case: 'small_caps', bold: true, italic: false, tracking: 4 });
+    // The two a running head never asks for are null (§18): a line of
+    // furniture is placed by `place` and faced by the style's own `face`, so
+    // nothing here draws either and the vars below are what they always were.
+    expect(style.verso).toEqual({ size: 7, case: 'small_caps', bold: true, italic: false, tracking: 4, align: null, face: null });
     // Untouched, so still the default.
     expect(style.recto.italic).toBe(true);
     const vars = runningStyleVars(style, 'old_style');
