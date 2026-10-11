@@ -3330,6 +3330,57 @@ push live; the build takes a minute or two.
   pagination; one block is inserted and the convention does the rest, the
   screen says *the next left-hand page*, and a test pins the pair so the
   second blank is not later "fixed" as a fault — **which §17e overturns**.
+  **§9am is the room spending the page's memory**, from Ken (*it crashed
+  again — I think we need to expand the memory of the page. Everything was
+  working well*), with the diagnosis in his next two messages: *I was setting
+  a story page but I had done the story page previously and it was fine* and
+  *I had added a bunch of pictures and I have all five stories in now* — **the
+  same act, fine before and fatal now, with nothing between them but more
+  pictures**, which is a cost scaling with the book rather than a fault in the
+  act, and *expand the memory of the page* is not something an application can
+  do (the limit is the browser's) while **not spending it** is. Measured in
+  the real preview on five stories, adding a 4.6 MB illustration at a time:
+  **one autosave serialised 6 MB at one picture, 35 MB at six and 82 MB at
+  fourteen**, taking 836 ms of main thread, **every five seconds**, to answer
+  *has anything changed* — with the settled heap **flat at 31 MB** throughout,
+  which is the other half: nothing leaks, so what takes the tab down is the
+  churn, an 82 MB string plus an 82 MB `Uint8Array` plus an 82 MB SHA-256 plus
+  an 82 MB structured clone, over and over, while a writer types into a dialog
+  that saves as they type. It is **§9ag's argument one layer down and the
+  browser bridge never read it**: *a mutation rebuilds one collection and
+  shares the rest* (addendum 02 §6c, which undo rests on and which
+  `useIdentityKey` and `isWritersAct` both compare references for), so the
+  assets array being the identical object means nothing touched it —
+  `assetsDigest` hands back the digest worked out last time and `hashOf`
+  hashes the document with the pictures standing as that one digest, so **the
+  bytes are read when a picture arrives and never again**. It is **still a
+  hash of the pictures** rather than a guess about them, the cache keyed on
+  reference identity alone, and a module that rewrote an asset in place would
+  already have defeated the laying's key and undo's step detection. Measured
+  after, setting a story page and letting an autosave run on the six-picture
+  book: **35.3 MB and 409 ms became nought**, heap peak 244 → 140 MB, with the
+  `put` itself the only thing left. The second half is **6 MB of markup for
+  one illustration**, built in the render body of four surfaces — the spread,
+  the part's preview, the designed page's and the back matter's, the last
+  three being dialogs that save as you type, so there it was once a keystroke
+  and on the spread once a pointer move in a slide. **Nothing was drawn
+  twice** (React compares `__html` by value, so the DOM was never rewritten
+  and no picture re-decoded); what was paid is the **allocation**, six
+  megabytes built for React to compare against the six it had. `SheetInk` is
+  **one component rather than four copies**, memoised on the page, the blocks
+  and the context — exactly what the markup is a function of — with `memo` so
+  a render of the room does not reach the builder at all, which is §9ai's rule
+  pointed at the screen. The tests pin the cost (counting the characters
+  `JSON.stringify` is handed during a save, which fails without the cache) and
+  the **faithfulness**, a hash that stopped noticing a changed picture being a
+  picture that never reached the disk; the four surfaces are asserted **off
+  the source** in `late-module`'s shape, failing by being *absent*. **Named
+  rather than fixed**: the desktop's own short-circuit **can never fire**, its
+  hash reading `serializeProjectFile`, which writes `savedAt: nowIso()` — one
+  field name with two answers, harmless today because that work is in the main
+  process and the flush only runs when dirty; and the recovery point every
+  twentieth save still serialises the whole book, which addendum 33 §12 does
+  on purpose.
   **§9al is a picture on a page the book is keeping blank**, from the second
   half of the message §9aj answered (*these blank pages are treated as special
   somehow, where they're not… I should be able to pick a page, even if it's the

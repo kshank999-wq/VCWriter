@@ -121,16 +121,56 @@ const read = (path: string) =>
   withStore<StoredProject | undefined>('readonly', (store) => store.get(path) as IDBRequest<StoredProject | undefined>);
 const write = (record: StoredProject) => withStore<IDBValidKey>('readwrite', (store) => store.put(record));
 
-/**
- * Content hash of a document, ignoring the save timestamp — otherwise every
- * save would differ from the last and the "nothing changed" short-circuit
- * could never fire.
- */
-const hashOf = async (file: ProjectFile): Promise<string> => {
-  const text = JSON.stringify({ ...file, savedAt: '' });
+const sha256 = async (text: string): Promise<string> => {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
 };
+
+/**
+ * **The pictures are hashed once rather than on every save** (addendum 20
+ * §9am).
+ *
+ * A picture is a data URL of up to five megabytes, which is six and a half
+ * megabytes of string, and the assets are the whole of a project's weight:
+ * measured on five stories, the document serialised to 6 MB with one picture
+ * in it and **82 MB with fourteen**, so an autosave was stringifying,
+ * encoding and hashing eighty-two megabytes on the main thread **every five
+ * seconds**, taking 836 ms each time, purely to answer *has anything
+ * changed*.
+ *
+ * It is §9ag's argument one layer down, and the browser bridge never read it:
+ * **a mutation rebuilds one collection and shares the rest** (addendum 02
+ * §6c, which undo's whole-document stack rests on and which `useIdentityKey`
+ * and `isWritersAct` both compare references for), so a collection that is
+ * the same object is a collection nothing has touched. Where the assets are
+ * the identical array, their contribution to the hash is the digest worked
+ * out last time — so the bytes are read when a picture arrives and never
+ * again.
+ *
+ * **It is still a hash of the pictures** rather than a guess about them: what
+ * is cached is the digest of their exact bytes, and it is reused only on
+ * reference identity. A module that rewrote an asset in place without
+ * rebuilding the array would miss it — and would already have defeated the
+ * laying's own key and undo's step detection, so that rule is not one this
+ * adds a dependence on, it is the one the program is built out of.
+ */
+let heldAssets: { assets: unknown; digest: string } | null = null;
+
+const assetsDigest = async (assets: unknown): Promise<string> => {
+  if (heldAssets && heldAssets.assets === assets) return heldAssets.digest;
+  const digest = await sha256(JSON.stringify(assets ?? []));
+  heldAssets = { assets, digest };
+  return digest;
+};
+
+/**
+ * Content hash of a document, ignoring the save timestamp — otherwise every
+ * save would differ from the last and the "nothing changed" short-circuit
+ * could never fire — and reading the pictures as the one digest above rather
+ * than as their megabytes of base64.
+ */
+const hashOf = async (file: ProjectFile): Promise<string> =>
+  sha256(JSON.stringify({ ...file, assets: await assetsDigest(file.assets), savedAt: '' }));
 
 /** A readable, unique "path" for a project kept in the browser. */
 const pathFor = async (title: string): Promise<string> => {

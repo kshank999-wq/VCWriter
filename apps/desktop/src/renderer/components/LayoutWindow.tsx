@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { RoomSave } from './RoomSave';
+import { SheetInk } from './SheetInk';
 import { ContextMenu, type MenuEntry } from './ContextMenu';
 import { EbookExportDialog } from './EbookExportDialog';
 import {
@@ -87,7 +88,6 @@ import {
   type PartTemplate,
   type StoryMarkerId,
   renderBookHtml,
-  renderBookPage,
   setBookSettings,
   setInContents,
   trimPresetOf,
@@ -2943,9 +2943,8 @@ function Spreads({
         onPointerCancel={finish}
         title={drawing ? 'Drag a box where the picture goes; the text will run round it' : 'Choose this page; double-click to open what it belongs to'}
       >
-        {/* The page's own markup, from the one builder the export reads too;
-            every string in it was escaped there. */}
-        <div className="layout-sheet-ink" dangerouslySetInnerHTML={{ __html: renderBookPage(page, blocks, laying.context) }} />
+        {/* The page's own markup, from the one builder the export reads too. */}
+        <SheetInk page={page} blocks={blocks} context={laying.context} className="layout-sheet-ink" />
         {box && box.key === key ? (
           <div className="layout-draw-box" style={{ left: box.x, top: box.y, width: box.w, height: box.h }} aria-hidden="true" />
         ) : null}
@@ -3723,8 +3722,7 @@ function PagePreview({ laying, partId, focus }: { laying: Laying | null; partId:
         <>
           <div className="layout-page-preview-box" style={{ width: pageWidthPx * scale, height: pageHeightPx * scale }}>
             <div className="layout-spread" style={{ ...vars, transform: `scale(${scale})` }}>
-              {/* The page's own markup, every string in it escaped by the builder. */}
-              <div className="layout-sheet" dangerouslySetInnerHTML={{ __html: renderBookPage(page, blocks, laying.context) }} />
+              <SheetInk page={page} blocks={blocks} context={laying.context} className="layout-sheet" />
             </div>
           </div>
           <div className="layout-page-preview-foot">

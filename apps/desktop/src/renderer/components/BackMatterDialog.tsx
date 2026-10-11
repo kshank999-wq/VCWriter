@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { SheetInk } from './SheetInk';
 import {
   APPENDIX_LABELS,
   APPENDIX_LABEL_WORDS,
@@ -54,7 +55,6 @@ import {
   partPlacement,
   partsOf,
   proseStyleBase,
-  renderBookPage,
   sinkPatch,
   updatePart,
   wordsIn,
@@ -1207,7 +1207,7 @@ function Sheet({ laying, partId, guides, drop }: { laying: Laying | null; partId
     <div className="dp-sheet-box" style={{ width: pageWidthPx * scale, height: pageHeightPx * scale }}>
       <div className="layout-spread" style={{ ...vars, transform: `scale(${scale})` }}>
         {/* The page's own markup, every string in it escaped by the builder. */}
-        <div className="layout-sheet" dangerouslySetInnerHTML={{ __html: renderBookPage(page, blocks, laying.context) }} />
+        <SheetInk page={page} blocks={blocks} context={laying.context} className="layout-sheet" />
         {guides ? (
           <div className="dp-guides" aria-hidden="true">
             <span

@@ -2952,6 +2952,117 @@ second blank is not later "fixed" as a fault.
 > copyright page takes the next page now, and the assertion was rewritten
 > rather than worked around.
 
+## 9am. The room was spending the page's memory
+
+From Ken: *it crashed again — I think we need to expand the memory of the
+page. Everything was working well*, and, a minute later, the two sentences
+that are the whole diagnosis: *when it crashed, I was setting a story page but
+I had done the story page previously and it was fine*, and *I had added a
+bunch of pictures and I have all five stories in now*.
+
+**The same act, fine before and fatal now, with nothing between them but more
+pictures.** That is a cost scaling with the book rather than a fault in the
+act, so it was measured before a line was written — §9ag and §9ai each had a
+specific, measurable cause, and *expand the memory of the page* is not
+something an application can do: the limit is the browser's. What it can do is
+stop spending it.
+
+Driven in the real preview on five stories, adding a 4.6 MB illustration at a
+time and watching one autosave:
+
+| pictures | one save serialises | and takes |
+| --- | --- | --- |
+| 1 | 6 MB | 9 ms |
+| 6 | 35 MB | 409 ms |
+| 14 | 82 MB | 836 ms |
+
+**Every five seconds, on the main thread, to answer *has anything changed*.**
+The settled heap stayed flat at 31 MB throughout, which is the other half of
+the finding: nothing is retained and nothing leaks, so what takes the tab down
+is the churn — a 82 MB string, an 82 MB `Uint8Array`, an 82 MB SHA-256 and an
+82 MB structured clone, over and over, while a writer types into a dialog that
+saves as they type because a look is tuned against the sheet beside it.
+
+### The pictures are hashed once rather than on every save
+
+`hashOf` in the browser bridge did `JSON.stringify` over the whole document,
+`TextEncoder.encode` over the result and SHA-256 over that — **to decide
+whether to write**. A picture is a data URL of up to five megabytes and the
+assets are the whole of a project's weight, so the "nothing changed"
+short-circuit was costing many times the save it was there to avoid.
+
+It is **§9ag's argument one layer down, and the bridge never read it**: *a
+mutation rebuilds one collection and shares the rest* (addendum 02 §6c, which
+undo's whole-document stack rests on and which `useIdentityKey` and
+`isWritersAct` both compare references for), so a collection that is the same
+object is a collection nothing has touched. `assetsDigest` keeps the digest of
+the assets array and hands it back on reference identity; `hashOf` hashes the
+document with the pictures standing as that one digest. **The bytes are read
+when a picture arrives and never again.**
+
+**It is still a hash of the pictures** rather than a guess about them: what is
+cached is the digest of their exact bytes, and it is reused only where the
+array is the identical object. A module that rewrote an asset in place without
+rebuilding the array would miss it — and would already have defeated the
+laying's own key and undo's step detection, so this adds no dependence on that
+rule, it is the rule the program is built out of.
+
+Measured after, on the same six-picture book, setting a story page and letting
+an autosave run: **35.3 MB and 409 ms became nought** — no serialisation over
+200 KB at all, no megabyte encode, no megabyte hash — with the heap peak
+244 → 140 MB. What is left is the `put` itself at ~100 ms, which is the save.
+
+### A laid page's markup, built once per laying rather than once per render
+
+The second cost, measured at **6 MB of markup for one illustration**:
+`renderBookPage` returns the picture's data URL inline, and four surfaces
+called it straight out of a render body — the spread, the part's preview, the
+designed page's and the back matter's. The last three are dialogs that **save
+as you type**, so there it was once a keystroke; on the spread, in a slide, it
+is once a pointer move.
+
+Nothing was drawn twice: React compares `__html` by value, so the DOM was
+never rewritten and no picture was ever re-decoded. What was paid is the
+**allocation** — six megabytes built for React to compare against the six it
+already had and throw away. §9ai's rule pointed at the screen: *the box is
+given only what it is asked about*, and a render that changes nothing about
+the page is not asking for anything.
+
+`SheetInk` is the one component, memoised on the page, the blocks and the
+context — exactly what the markup is a function of, all three changing when
+the book is laid again and at no other time — with `memo` so a render of the
+room does not reach the builder at all. **One component rather than four
+copies**, for the usual reason: the next surface that draws a laid page gets
+this without being told, and four hand-written `dangerouslySetInnerHTML`s are
+four places for the fault to come back.
+
+### What the tests pin
+
+Both halves, and the second is the one that could go wrong quietly. The cost
+(a save that reads the pictures again reads exactly like this fix not being
+there — asserted by counting the characters `JSON.stringify` is handed during
+a save) and the **faithfulness**: a hash that stopped noticing a changed
+picture would be a picture that never reached the disk, which is work lost, so
+a second picture, a rewritten one and a change nothing to do with the pictures
+are each asserted to be written. The four surfaces are asserted **off the
+source**, in `late-module`'s shape, because they fail by being *absent*: a page
+drawn the old way looks exactly like one drawn the new way.
+
+### Named rather than fixed
+
+The desktop's own short-circuit **can never fire**: `saveProject` there hashes
+`serializeProjectFile(file)`, which writes `savedAt: nowIso()`, so the hash
+differs from the last one every time and `written` is always true. It is
+harmless — the flush only runs when the document is dirty, and the work is in
+the main process rather than in the renderer's heap, which is why the browser
+is where this bit — but the two hosts answer differently for one field name,
+and that is a second answer waiting for somebody to rely on it.
+
+And the recovery point every twentieth save still serialises the whole book
+(addendum 33 §12 holds the bytes on purpose, so an older build's point can be
+read). That is real work for a real purpose and is left; at Ken's size it is
+one full serialisation in twenty saves rather than twenty.
+
 ## 9al. A picture on a page the book is keeping blank
 
 From Ken, in the second half of the message §9aj answered: *these blank pages
