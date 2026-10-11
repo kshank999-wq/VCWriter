@@ -6808,6 +6808,45 @@ push live; the build takes a minute or two.
   named**: the preview keeps no copy **off this machine** — a browser's storage
   is one a writer can clear and a private window never had, *Download .vcw*
   being the only copy that leaves it and a press somebody has to remember.
+  **§13 is adding a story to a collection, checked before he did it**, from
+  Ken asking rather than pressing (*it needs to be able to put that next story
+  at the end with a page in between… I'm afraid that it might put it someplace
+  that I don't want. Can you please check this before I do it?*) — and **both
+  halves were already built, so the answer is a measurement**. Driven on a
+  collection of two documents with a third added through the dialog's own
+  *Import another story…*, the Layout rail reads *The Harbour **1** · I · II ·
+  III · **Page 5 Blank · Page 6 Blank** · In For A Pound **7** · I · II ·
+  **Page 10, 11, 12 Blank** · Falling **13** · About the author 16*: the new
+  story lands **last**, nothing above it moves, and addendum 22 §9's sheet
+  between works is in front of it. It is one line of `appendImportedStory` —
+  `after: unitsInStoryOrder(file).at(-1)?.orderKey`, so every arriving unit is
+  keyed past the last unit the project has — and the sheet needed nothing told
+  to it. **The screen says so before the press**, which is what his question
+  is really about: the landed panel reads *Another story goes on the end,
+  after what is already here. Nothing already in the collection is touched*,
+  and once the next document is read the primary button is no longer *Import*
+  but **Add to the end**. **What was wrong is one control that could only
+  mislead**: that round still offered a **Format** select — Novel, Short
+  stories and collections, Instructional — over a document going into a book
+  that is already a collection, initialised from `file.project.format`, which
+  is the whole argument against it (the right answer is already in it and a
+  writer can only move it away, after which the document is *read* as a novel
+  while going into a collection), standing on exactly the screen where
+  somebody is asking whether the import is about to put their story somewhere
+  they did not mean. The project-name box one block up already had this reason
+  (*adding a story to a collection already open has nothing to name*) and the
+  format takes the same gate, `landed || adding`, with the sharper sentence —
+  **the format is the open project's**. **The half that was broken is the half
+  he would have met**: the *More stories* row was already right, and the round
+  reached from the **collection door** was not, `kind` still being `collection`
+  there with only `landed` saying a project has been made — the test for that
+  round fails before the change and the one for the row does not, which is the
+  honest split and why both are written down. **Named rather than fixed**: a
+  collection lands in Layout (§1) and **a room covers the menu bar** (addendum
+  29 §2), so afterwards *File ▸ Import…* is painted over — measured, the File
+  button at x=192 with `elementFromPoint` answering `HEADER.sculptor-bar` — and
+  the dialog's own *Import another story…* is the route that needs no menu,
+  which is what makes it survivable rather than blocking.
   `addendum-34-project-folder.md` is **where new projects go**, from Ken (*when
   creating your project, there needs to be on that page the ability to set that
   file location and it'll save it in a file or a cloud drive and remember where

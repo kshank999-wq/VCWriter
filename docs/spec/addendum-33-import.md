@@ -710,3 +710,66 @@ storage, which a writer can clear and a private window never had; *Download
 .vcw* is the only copy that leaves it, and that is a press somebody has to
 remember. A scheduled export, or the cloud sync the desktop has, is the
 answer and is named rather than half-built.
+
+## 13. Adding a story to a collection, checked before he did it
+
+From Ken, who asked rather than pressed: *when doing a collection of short
+stories and you go back to import, it needs to be able to put that next story
+at the end with a page in between. I went to import more stories into the
+collection, and I'm afraid that it might put it someplace that I don't want.
+Can you please check this before I do it?*
+
+**Both halves of the ask are already built, and the answer is a
+measurement.** Driven at 1440×900 on a collection of two imported documents
+and a third added through the dialog's own *Import another story…*, the Layout
+rail reads:
+
+> The Harbour **1** · I 2 · II 3 · III 4 · **Page 5 Blank · Page 6 Blank** ·
+> In For A Pound **7** · I 8 · II 9 · **Page 10 Blank · Page 11 Blank ·
+> Page 12 Blank** · Falling **13** · I 14 · II 15 · About the author 16
+
+So the new story lands **last**, nothing above it moves, and the sheet §9 of
+addendum 22 puts between works is in front of it. The mechanism is one line of
+`appendImportedStory` — `after: unitsInStoryOrder(file).at(-1)?.orderKey` — so
+every unit of the arriving document is keyed past the last unit the project
+has, and §9's sheet needs nothing told to it.
+
+**The screen says so before the press**, which is the half his question is
+really about: the landed panel reads *Another story goes on the end, after
+what is already here. Nothing already in the collection is touched*, and once
+the next document is read the primary button is no longer *Import* but **Add
+to the end**.
+
+### What was wrong was one control that could only mislead
+
+On that second round the dialog still offered a **Format** select — Novel,
+Short stories and collections, Instructional — standing over a document about
+to be added to a book that is already a collection. It is initialised from
+`file.project.format`, which is the whole argument against it: the right
+answer is already in it and a writer can only move it away, after which the
+document is *read* as a novel while going into a collection. The project-name
+box one block up had already been given this reason (*adding a story to a
+collection already open has nothing to name*) and the format needed the same
+one, sharper — **the format is the open project's** — so the gate takes
+`landed || adding` beside its own.
+
+**The half that was broken is the half he would have met.** The *More stories*
+row was already right (`adding` makes the format prose and `kind !== 'collection'`
+hides it); what was not is the round reached from the **collection door** —
+import, then *Import another story…* — where `kind` is still `collection` and
+only `landed` says a project has been made. The test for that round fails
+before this change and the one for the row does not, which is the honest split
+and is why both are written down.
+
+### Named rather than fixed
+
+**A room covers the menu bar** (addendum 29 §2), and a collection lands in
+Layout (§1), so after an import *File ▸ Import…* is painted over by
+`sculptor-bar` — measured: the File button is at x=192 with
+`elementFromPoint` answering `HEADER.sculptor-bar`. A writer who closes the
+dialog and stays in Layout therefore cannot reach Import at all without
+leaving the room. The dialog's own *Import another story…* is the route that
+does not need the menu, which is what makes this survivable rather than
+blocking, and the menu bar under a room is still that section's open
+decision about what a room is.
+

@@ -576,8 +576,19 @@ export function ImportDialog({ open, kind, file, landed, onClose, onImported, on
                 {/* **Only where there is still a question.** The kind chosen
                     at the door said a novel is a novel; what it did not say
                     is which of the four kinds of script this is, so that is
-                    the one format control left (addendum 33). */}
-                {prose && kind !== 'collection' ? null : (
+                    the one format control left (addendum 33).
+
+                    **And absent where no project is being made** (`landed`,
+                    `adding`), the project-name box's own condition one block
+                    up, for a sharper version of its reason (addendum 33 §12):
+                    the format is the **open project's**, which is why it is
+                    what this control is initialised from — so the only thing
+                    a writer could do with it here is make the reading of
+                    their document disagree with the book it is going into,
+                    and it is on exactly the screen where somebody is asking
+                    whether the import is about to put their story somewhere
+                    they did not mean. */}
+                {landed || adding || (prose && kind !== 'collection') ? null : (
                   <label className="field">
                     Format
                     <select

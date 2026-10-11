@@ -361,3 +361,58 @@ describe('what the project is called', () => {
     expect(screen.queryByLabelText('Project name')).toBeNull();
   });
 });
+
+/**
+ * **Adding a story to a collection** (addendum 33 §12, from Ken before he did
+ * it: *when doing a collection of short stories and you go back to import, it
+ * needs to be able to put that next story at the end with a page in
+ * between… I'm afraid that it might put it someplace that I don't want*).
+ *
+ * The act was already right — driven on three documents, the third lands on
+ * the end with a blank sheet in front of it — and the screen was not: it went
+ * on offering a **Format** select, which is initialised from the open
+ * project's own format and so can only ever move the reading away from the
+ * book the story is going into.
+ */
+describe('adding to a collection already open', () => {
+  const collection = () =>
+    createProjectFile({ title: 'Dylan’s Tales', format: 'short_story', author: 'K. Shank' });
+
+  it('does not offer a format, the format being the open project’s', async () => {
+    const open = collection();
+    render(<ImportDialog file={open} landed={null} onAdded={() => {}} open kind="stories" onClose={() => {}} onImported={() => {}} />);
+    choose('wreck.docx', NOVEL(), 'Story files');
+    await waitFor(() =>
+      expect((screen.getByRole('button', { name: 'Add to the end' }) as HTMLButtonElement).disabled).toBe(false),
+    );
+    expect(screen.queryByLabelText('Format')).toBeNull();
+    // What is still a real question about *this document* stays.
+    expect(screen.getByLabelText('Each section arrives as')).toBeDefined();
+  });
+
+  /**
+   * The round a writer actually meets it on: the first document has landed
+   * and *Import another story…* has read a second. The dialog is still the
+   * one opened at the collection door, so `kind` says nothing about adding —
+   * `landed` is what says a project has already been made.
+   */
+  it('does not offer one on the next story either, once the first has landed', async () => {
+    const open = collection();
+    render(
+      <ImportDialog
+        file={open}
+        landed={{ file: open, names: ['The Harbour'] }}
+        onAdded={() => {}}
+        open
+        kind="collection"
+        onClose={() => {}}
+        onImported={() => {}}
+      />,
+    );
+    choose('falling.docx', NOVEL(), 'Story files');
+    await waitFor(() =>
+      expect((screen.getByRole('button', { name: 'Add to the end' }) as HTMLButtonElement).disabled).toBe(false),
+    );
+    expect(screen.queryByLabelText('Format')).toBeNull();
+  });
+});
