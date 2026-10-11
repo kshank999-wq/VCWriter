@@ -199,6 +199,10 @@ describe('a picture on the page it was added to', () => {
       // why the two positions are the same element here, as on most pages.
       elementBegins: null,
       topElementId: 'p2',
+      // Null because this page carries writing of its own: the last element of
+      // the book is read only where a page has nothing on it, which is what
+      // lets a picture asked for on the last leaf look backwards (§9ap).
+      lastElementId: null,
     });
     // And page 1, which does open it.
     expect(pagePlace(pages, blocks, 1).opensMarkerId).toBe('m1');

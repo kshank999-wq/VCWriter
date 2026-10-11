@@ -24,6 +24,7 @@ import {
   setBlankPage,
   setBlankPages,
   SHEET,
+  takePictureLeaf,
   updateBeat,
   type BeatId,
   type ProjectFile,
@@ -279,40 +280,40 @@ describe('the leaf the writer put in', () => {
     });
     const kept = lay(made.file).rows;
     /**
-     * **The picture takes the sheet's front, and the back it already had
-     * stays blank** (§9ad, from Ken: *if you insert a blank page, it's blank
-     * on front and back… and then you can place information or whatever*).
+     * **The picture takes the one page it stands on, and the rest of the
+     * leaf stands** (§9ap, from Ken: *if I add a blank page, I can do nothing
+     * with it*).
      *
-     * This is the act the room runs: one sheet fewer and the figure's own back
-     * left blank — two pages out and two back in, so the book is exactly the
-     * length it was with the blank sheet, and the writer has a separating leaf
-     * with art on it. It asserted *one page rather than two*, which is the
-     * half-leaf he is correcting, so it is **rewritten rather than worked
-     * around**.
+     * This asserted §9ad's act — two pages off and the figure's own back left
+     * blank — and it did so by **running that act here** rather than through
+     * the room, so it went on passing after the room had stopped behaving
+     * that way: a test pinning an act no screen runs is worse than a failing
+     * one. What it pins now is `takePictureLeaf`, which is the act, and §9ap
+     * says why it changed: the back blank forces a **recto** (§9j), so where
+     * the leaf's front is a verso the picture slipped a page and the book grew.
+     *
+     * §9ad's *a separating sheet with art on it* is kept and is now true on
+     * both parities — the blank behind the art is the writer's **own** second
+     * page, with its own × in the rail, rather than a field on the figure.
      */
-    const front = setBackBlank(
-      setBlankPages(made.file, offer.takesLeaf as string, blankPagesAt(made.file, offer.takesLeaf as string) - SHEET),
-      made.elementId as string,
-      true,
-    );
-    const taken = lay(front).rows;
-    // Keeping the sheet leaves the book with **both** — the picture and the
-    // sheet the writer asked for, which is the picture reading a page early.
+    const taken = lay(takePictureLeaf(made.file, offer.takesLeaf as string)).rows;
+    // Keeping the leaf leaves the book with **both** — the picture and the
+    // pages the writer asked for, which is the picture reading a page early.
     expect(kept.some((row) => row.says === 'Illustration')).toBe(true);
     expect(kept.some((row) => row.blankFor !== null)).toBe(true);
-    // Taking it is what they asked for: the picture where the sheet was.
+    // Taking it is what they asked for: the picture where the leaf's front
+    // was, on the page they pointed at.
     expect(taken.some((row) => row.says === 'Illustration')).toBe(true);
-    expect(taken.some((row) => row.blankFor !== null)).toBe(false);
-    /**
-     * **And the page behind the picture is still blank**, so what the writer
-     * is left with is the separating sheet they asked for with art on it —
-     * two pages out and two pages back in. Where exactly it lands is
-     * `pictureOffer`'s and is pinned above; the *total* is left unasserted on
-     * §9ac's own lesson, a later chapter's recto rule being free to take up
-     * the parity.
-     */
     const art = taken.findIndex((row) => row.says === 'Illustration');
+    expect(taken[art]!.sheet).toBe(leaf.sheet);
+    /**
+     * **And the page behind the picture is still blank**: the sheet was two
+     * pages, one of them is now the art, and the other is the writer's. One
+     * page out and one back in, so the book is exactly as long as it was —
+     * which the old act could only manage on one parity.
+     */
     expect(taken[art + 1]!.blank).toBe(true);
+    expect(taken).toHaveLength(lay(file).rows.length);
   });
 });
 

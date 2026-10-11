@@ -142,6 +142,7 @@ import {
   blankReason,
   sayBlankReason,
   pictureOffer,
+  OWN_PAGE_ONLY_NOTE,
   pageRemoval,
   removeBookPage,
   movePictureTo,
@@ -150,8 +151,8 @@ import {
   startDivision,
   chapterPageSchema,
   blankPagesAt,
+  takePictureLeaf,
   SHEET,
-  setPartBlank,
   setBlankPages,
   setChapterBlank,
   plateIntoStory,
@@ -251,6 +252,14 @@ type ArtTarget =
       kind: 'story';
       elementId: string;
       as: 'measure' | 'page' | 'free';
+      /**
+       * **Which end of that element it stands at** (§9ap): every page but the
+       * last answers *in front of*, and the last page of a book has nothing
+       * ahead to stand in front of, so there the picture goes **after** the
+       * story's final words — which `placeFigure` has been able to do since it
+       * was written.
+       */
+      anchor?: 'before' | 'after';
       /** Whether it stands in front of the division's opening (§9w). */
       beforeOpening?: boolean;
       /**
@@ -311,6 +320,7 @@ const NO_PICTURE: PictureOffer = {
   spot: null,
   pageSpot: null,
   of: null,
+  anchor: 'before',
   beforeOpening: false,
   note: null,
   takesLeaf: null,
@@ -897,6 +907,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
     if (offer.of === 'story') {
       importArt({
         kind: 'story',
+        anchor: offer.anchor,
         /**
          * **A page of its own goes in at the top of the page and a box in the
          * text at the first paragraph that begins on it** (§9af): two
@@ -997,7 +1008,11 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
           const made = placeFigure(added.file, {
             beatId: beat.id,
             assetId,
-            beforeElementId: target.elementId as never,
+            // **The last page of the book is the one that reads backwards**
+            // (§9ap), and the anchor is the offer's rather than this screen's.
+            ...(target.anchor === 'after'
+              ? { afterElementId: target.elementId as never }
+              : { beforeElementId: target.elementId as never }),
             attributes:
               target.as === 'page'
                 ? // Which of a division's two openings it stands in front of
@@ -1040,21 +1055,21 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
            *
            * A blank leaf and a page of its own are the same mechanism pointed
            * two ways (§9i), so a writer who asked for a sheet here and now
-           * says what stands on it meant **that** sheet. Since §9ad a leaf is
-           * two pages, so one of them goes and the picture stands where its
-           * front was, with the back it already had left blank — which is a
-           * separating sheet with art on it, and the same number of pages
-           * either way.
+           * says what stands on it meant **that** sheet.
+           *
+           * **How much of it the picture takes is `takePictureLeaf`** (§9ap):
+           * this took two pages and asked for the figure's own back blank
+           * whatever stood there, which is §9ad's answer left behind when §9an
+           * made the unit a page — so where one page had been asked for the
+           * leaf survived and the picture landed on the next page, and where
+           * the leaf's front was a verso the back blank forced a recto and
+           * moved it anyway. A picture is a page and takes the one page it
+           * stands on; the domain says so once, for this branch and the
+           * part's.
            */
           // **And the rule that held the page blank, where one did** (§9al).
           const freed = freeTheBlank(made.file, target.frees ?? null);
-          return target.takesLeaf
-            ? setBackBlank(
-                setBlankPages(freed, target.takesLeaf, blankPagesAt(freed, target.takesLeaf) - SHEET),
-                made.elementId as string,
-                true,
-              )
-            : freed;
+          return target.takesLeaf ? takePictureLeaf(freed, target.takesLeaf) : freed;
         }
 
         // A logotype and a page of art are **the part's own pictures**
@@ -1106,8 +1121,10 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
           // it already had.
           const freed = freeTheBlank(made.file, target.frees ?? null);
           if (!target.takesLeaf || !made.partId) return freed;
-          const less = setBlankPages(freed, target.takesLeaf, blankPagesAt(freed, target.takesLeaf) - SHEET);
-          return setPartBlank(less, made.partId, 'back', true);
+          // **The one page it stands on** (§9ap) — the same act the story's
+          // branch runs, so the two cannot disagree about how long the book
+          // comes out or which page the art lands on.
+          return takePictureLeaf(freed, target.takesLeaf);
         }
 
         return added.file;
@@ -4297,8 +4314,14 @@ function StoryPageSection({
                   so on a page with no words both would ride a block that is
                   on the page ahead and draw there — §9w's own fault wearing
                   two more controls. Absent rather than greyed, the picture
-                  above being what this page can have. */}
-              {offer.ownPageOnly ? null : (
+                  above being what this page can have — **with the reason in
+                  their place** (§9ap, from Ken: *I want to be able to add a
+                  vector or a picture or have the same formatting as any other
+                  page*), absence on a blank page having read as nothing
+                  applying at all. */}
+              {offer.ownPageOnly ? (
+                <p className="muted small">{OWN_PAGE_ONLY_NOTE}</p>
+              ) : (
                 <>
                   <button type="button" className={drawing ? 'small on' : 'small'} onClick={onDraw}>
                     {drawing ? 'Drawing the box…' : 'Draw a box for a picture…'}

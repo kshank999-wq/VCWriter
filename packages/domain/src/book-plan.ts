@@ -143,6 +143,12 @@ export const addPart = (
    * of a page: one meaning for *insert here*, and the page in hand moves
    * down. Null appends to its half, which is what every caller did before and
    * what the menu still does where no page is in hand.
+   *
+   * **`BOOK_END` appends too, and says so** (§9ap): a page of art asked for on
+   * the last page of a book with no back matter stands in front of nothing, so
+   * the end of the book is the position — which is the same answer appending
+   * gives, said deliberately rather than reached by an id this function
+   * happens not to recognise.
    */
   before: string | null = null,
 ): { file: ProjectFile; partId: string | null } => {
@@ -153,7 +159,8 @@ export const addPart = (
   // Only within its own half: the story stands between them and nothing
   // crosses it, which is `movePart`'s rule and the reason a dedication
   // cannot be inserted in front of the index.
-  const at = before === null ? -1 : parts.findIndex((one) => one.id === before && halfOf(one) === half);
+  const at =
+    before === null || before === BOOK_END ? -1 : parts.findIndex((one) => one.id === before && halfOf(one) === half);
   if (at !== -1) {
     return { file: writeParts(file, [...parts.slice(0, at), part, ...parts.slice(at)]), partId: part.id };
   }
@@ -1966,6 +1973,14 @@ export interface PictureOffer {
    * §9w's own fault wearing a different control. §8c's claim that a vector
    * graphic is offered *on every page, a blank leaf included* is still one the
    * mechanism cannot keep; what it can keep is the page.
+   *
+   * What it owes is the **reason**, said where the two controls are absent
+   * (§9ap, from Ken: *I want to be able to add a vector or a picture or have
+   * the same formatting as any other page*) — `OWN_PAGE_ONLY_NOTE`. Absence
+   * is this room's idiom for *this does not apply here* and on a blank page it
+   * reads as nothing applying at all, which is the whole of *I can do nothing
+   * with it*; and the sentence has a **route in it**, the picture above being
+   * what turns this leaf into a page of the book that takes both.
    */
   ownPageOnly: boolean;
   /**
@@ -2007,9 +2022,38 @@ export interface PictureOffer {
    * **printed on**, and the book's length depends on which.
    */
   frees: { id: string; rule: 'sheet' | 'back' } | null;
+  /**
+   * **Which end of `spot` the picture stands at** (§9ap). Every answer this
+   * room gives reads *in front of* something, which is the one direction with
+   * nothing to offer on the last page of a book — so the end of the book is
+   * the one place it reads backwards, and says so rather than leaving the
+   * caller to work it out from the absence of anything ahead.
+   */
+  anchor: 'before' | 'after';
   /** Why a picture may not be asked for here, in a sentence a writer can act on. */
   refusal: string | null;
 }
+
+/**
+ * **Why a blank page takes a picture and not the other two** (§9ap, from Ken:
+ * *I want to be able to add a vector or a picture or have the same formatting
+ * as any other page*).
+ *
+ * One copy of it, here, because two screens draw these controls and a sentence
+ * each would be two answers to what a blank page can carry
+ * (`describePhoneShelf`'s reason).
+ *
+ * **It names what this page can have rather than a route to the other two**,
+ * which the first draft got wrong and looking at the real room caught: it read
+ * *the picture above makes it a page of the book, and then both are offered
+ * here*, which is true of the **domain** — a page carrying the art answers
+ * `ownPageOnly: false` — and not of the screen, where a page that *is* a
+ * picture draws the figure's own section instead of these controls. A sentence
+ * that promises a control the next press does not produce is worse than the
+ * absence it was written to explain.
+ */
+export const OWN_PAGE_ONLY_NOTE =
+  'A box is cut into the words and a graphic is set over them, and this page has none of either. What can stand here is a picture that is the page itself.';
 
 export const pictureOffer = (
   place: PagePlace,
@@ -2028,6 +2072,7 @@ export const pictureOffer = (
     takesLeaf: null,
     ownPageOnly: false,
     newPageBefore: null,
+    anchor: 'before',
     frees: null,
     refusal,
   });
@@ -2094,6 +2139,53 @@ export const pictureOffer = (
         takesLeaf: page.blankFor,
         ownPageOnly: true,
         newPageBefore: ahead.partId,
+        anchor: 'before',
+        frees,
+        refusal: null,
+      };
+    }
+    /**
+     * **And at the end of the book the picture looks backwards** (§9ap, from
+     * Ken standing on the last page of a book with no back matter: *if I add a
+     * blank page, I can do nothing with it… in this instance, I need to add
+     * the final picture on page 173*).
+     *
+     * Every answer in this room until now reads **forwards** — a picture
+     * stands in front of something — which is the one direction that has
+     * nothing to offer on the last page of a book. §9aa's walk found nothing
+     * and §9ab's part was not there, so the refusal named the mechanism, which
+     * is true and is a poor answer to somebody pointing at a page their book
+     * plainly has (§9ao's own finding, one control over).
+     *
+     * **What the picture goes after is the last thing the book has**, and
+     * which act that is depends on what that thing is: after the story's last
+     * words it is a **figure**, which `placeFigure` has anchored after an
+     * element since it was written and which §9z made this room able to say;
+     * after a **part** — a book ending in back matter, where the backwards
+     * walk breaks at it and `lastElementId` is null — it is a page of art
+     * appended, which `BOOK_END` says, naming no part so `addPart` puts it
+     * last. One constant, one meaning, the leaf and the picture reaching it.
+     *
+     * A part is deliberately **not** the answer where the story is what ends
+     * the book, and measuring is what settled it: on a collection the plate
+     * would be back matter, so §9ao's sheet would stand between the story and
+     * it and the picture a writer asked for on the next page would land three
+     * pages later behind two blanks nobody asked for. The final picture of a
+     * story belongs to the story.
+     */
+    const behind = rows.some((one) => one.sheet < sheet);
+    if (page.blank && behind) {
+      const last = place.lastElementId ?? null;
+      return {
+        spot: last,
+        pageSpot: last,
+        of: last ? 'story' : null,
+        beforeOpening: false,
+        note: freedNote,
+        takesLeaf: page.blankFor,
+        ownPageOnly: true,
+        newPageBefore: last ? null : BOOK_END,
+        anchor: 'after',
         frees,
         refusal: null,
       };
@@ -2128,6 +2220,8 @@ export const pictureOffer = (
   const began =
     place.elementBegins != null ? rows.find((one) => one.sheet === place.elementBegins)?.counted ?? null : null;
   return {
+    // **In front of it**, which is every page but the last (§9ap).
+    anchor: 'before',
     spot: place.elementId ?? place.partId,
     pageSpot: place.topElementId ?? place.partId,
     of: place.elementId ? 'story' : 'part',
@@ -2268,6 +2362,33 @@ export const blankPagesAt = (file: ProjectFile, id: string): number => {
   if (marker) return pagesBefore(chapterPageSchema.parse(marker.page ?? {}).blankBefore);
   return 0;
 };
+
+/**
+ * **The leaf the picture stands on, taken** (§9ap, from Ken: *if I add a blank
+ * page, I can do nothing with it*).
+ *
+ * `takesLeaf` says *which* record and this is what both screens then do with
+ * it. Until now they took **two** pages and left the picture's own back blank,
+ * which is §9ad's answer — *a leaf is two pages, so one goes and the picture
+ * stands where its front was* — left standing after §9an settled that **the
+ * unit is a page**. Two things went wrong with it, both measured in the real
+ * room. The Add menu has put one page in at a time since §9an, so on the
+ * commonest shape one page stands, `standing - SHEET` is negative, the clamp
+ * keeps the leaf and the picture lands on the **next** page: *12 Blank · 13
+ * Illustration · 14 Blank*, with the book two pages longer. And asking for the
+ * picture's own back blank forces it onto a **recto** (§9j), so where the
+ * leaf's front is a verso the picture slips a page even when the arithmetic is
+ * right — which is §9al's own finding said at the other end of the book.
+ *
+ * So the rule is the unit again: **a picture is a page, and it takes the one
+ * page it stands on.** Measured on both shapes and both parities, the art
+ * lands on the page that was pointed at and the book is exactly as long as it
+ * was. §9ad's *a separating sheet with art on it* is better served by it than
+ * by the switch: the blank behind the art is the writer's own second page,
+ * with its own × in the rail, rather than a field on the figure.
+ */
+export const takePictureLeaf = (file: ProjectFile, leafId: string): ProjectFile =>
+  setBlankPages(file, leafId, blankPagesAt(file, leafId) - 1);
 
 /**
  * **A blank leaf before a part's page, or behind it** (§9r): the same act as
@@ -2705,6 +2826,26 @@ export const sizeBookFigure = (
 export interface PagePlace {
   /** The manuscript element the page opens with, where it is in the story. */
   elementId: string | null;
+  /**
+   * **The last thing the book has, for a page that stands after all of it**
+   * (§9ap, from Ken on the final blank page of a book with no back matter:
+   * *if I add a blank page, I can do nothing with it… I need to add the final
+   * picture on page 173*).
+   *
+   * Every other field here reads **forwards** — what this page, or the page
+   * it stands in front of, begins with — which is the one direction with
+   * nothing to offer past the last page of the book. So this is the walk
+   * backwards, and it is filled **only** where nothing of the book stands on
+   * this page and nothing of it follows: the last manuscript element, or null
+   * where what ends the book is a page of the book rather than the story.
+   *
+   * It is read from the **blocks** rather than from a page's elements because
+   * a page's own list holds what stands *whole* on it, and the last paragraph
+   * of a book very often begins on the page before — measured, a book whose
+   * final page is one paragraph's tail answered with the second-to-last
+   * element, so the picture went in one paragraph early.
+   */
+  lastElementId?: string | null;
   /** The part the page belongs to, where it is in the front or back matter. */
   partId: string | null;
   /** The chapter in force on it. */
@@ -2944,6 +3085,7 @@ export const pagePlace = (pages: readonly BookPage[], blocks: readonly BookBlock
     elementId: null,
     partId: null,
     markerId: null,
+    lastElementId: null,
     opensMarkerId: null,
     opensUnitId: null,
     opensAlone: false,
@@ -2994,6 +3136,22 @@ export const pagePlace = (pages: readonly BookPage[], blocks: readonly BookBlock
       // and nothing on the leaf itself names one.
       place.opensUnitId = ahead.opensUnitId;
       place.standsBefore = after.sheet;
+      break;
+    }
+  }
+  /**
+   * **And where nothing is ahead either, the last thing behind** (§9ap). A
+   * page past the end of the book is the one place the forward walk can say
+   * nothing, so this one goes the other way — and it stops at a **part**, for
+   * the forward walk's own reason: what follows a page of the book is another
+   * page of the book, which is `addPart`'s answer rather than a figure's.
+   */
+  if (!place.elementId && !place.partId) {
+    for (let at = blocks.length - 1; at >= 0; at -= 1) {
+      const block = blocks[at] as BookBlock;
+      if (block.partId) break;
+      if (!BODY_KINDS.has(block.kind) || block.standsIn) continue;
+      place.lastElementId = block.id;
       break;
     }
   }

@@ -3062,6 +3062,119 @@ built and reachable; the default is its own decision. **Built in §9ao**, at his
 own ask — and the field it needed turns out to be the **book's** rather than a
 work's, for the reason that section gives.
 
+## 9ap. A picture on the last page of the book
+
+From Ken, with a screenshot of the Layout room — *Villain's Tales*, 182 pages ·
+174 in the story, the page dialog open on **PAGE 173 · BLANK** and reading
+*This page is blank and nothing of the book follows it, so there is nowhere for
+a picture to stand*:
+
+> Everything is working better, but still the same problem of if I add a blank
+> page, I can do nothing with it. I want to be able to add a vector or a
+> picture or have the same formatting as any other page. In this instance, I
+> need to add the final picture on page 173.
+
+**Every reading in this room looks forwards**, and that is the one direction
+with nothing to offer past the last page of a book. §9aa's walk forward found
+nothing, §9ab's part was not there, and the refusal named the mechanism — true,
+and a poor answer to somebody pointing at a page their book plainly has, which
+is §9ao's own finding one control over. §9al freed every blank page a *rule*
+held and left this one, which is held by no rule at all: it is simply the last
+page there is.
+
+**So at the end of the book the picture looks backwards.** `PagePlace` gains
+`lastElementId`, filled **only** where nothing of the book stands on this page
+and nothing of it follows, and `PictureOffer` gains an `anchor` saying which
+end of `spot` the picture stands at — `before` on every other page in the book,
+which is why no act built on this offer changed. What the picture goes after is
+the last thing the book has, and which act that is depends on what that thing
+is: after the story's last words it is a **figure**, which `placeFigure` has
+anchored after an element since it was written and which §9z made this room
+able to say; after a **part** — a book ending in back matter, where the
+backwards walk breaks at it — it is a page of art appended, which `BOOK_END`
+says, naming no part so `addPart` puts it last. One constant, one meaning, the
+leaf and the picture reaching it.
+
+**A part is deliberately not the answer where the story ends the book**, and
+measuring is what settled it: the first draft answered with a plate, and on a
+collection a plate is back matter, so §9ao's own ending sheet stood between the
+story and it and the picture a writer asked for on the next page landed three
+pages later behind two blanks nobody asked for — `10B 11B 12B | 13 | 14B`. The
+final picture of a story belongs to the story.
+
+**It reads the element from the blocks and not from a page's own list**, which
+was measured rather than reasoned about. `elementIds` on a row holds what
+stands *whole* on it, and the last paragraph of a book very often begins on the
+page before — so the first draft answered with the second-to-last element and
+the picture went in one paragraph early, pushing the book's closing words over
+the page.
+
+### 9ap.1 The leaf the picture takes
+
+Driving the real room caught a fault in shipped code that is the better half of
+the report, and it is **§9ad's answer left standing after §9an changed the
+unit**. Both screens that act on `takesLeaf` took **two** pages off the leaf and
+asked for the picture's own back blank, which is right while *a blank page is a
+sheet* — and the Add menu has put one page in at a time since §9an settled that
+the unit is a page. So on the commonest shape there is one page standing,
+`standing - SHEET` is negative, the clamp keeps the leaf, and the picture lands
+on the **next** page: measured in the room, *12 Blank · 13 Illustration · 14
+Blank*, with the book two pages longer than before. From the writer's chair
+that is the picture refusing the page they pointed at, which is the whole of
+*if I add a blank page, I can do nothing with it*.
+
+And there is a second way it missed, which shows only on one parity: asking for
+the figure's own back blank forces it onto a **recto** (§9j), so where the
+leaf's front is a verso the picture slips a page even when the arithmetic is
+right. That is §9al's own finding said at the other end of the book.
+
+**So the rule is the unit again: a picture is a page, and it takes the one page
+it stands on.** `takePictureLeaf` is the act, in the domain, read by the story's
+branch and the part's — a second answer here is a second idea of how long a book
+is. Measured on both shapes and both parities, the art lands on the page that
+was pointed at and the book is exactly as long as it was. §9ad's *a separating
+sheet with art on it* is **better served by it than by the switch**: the blank
+behind the art is the writer's own second page, with its own × in the rail,
+rather than a field on the figure. An assertion in `blank-leaf-pages.test.ts`
+pinned the old act and is **rewritten rather than worked around** — and the way
+it survived is worth keeping, since it ran that act *itself* rather than through
+the room, so it went on passing after the room had stopped behaving that way. A
+test pinning an act no screen runs is worse than a failing one.
+
+### 9ap.2 The other two, and why they are still absent
+
+*A vector or a picture* is two of the three things a page can carry, and only
+the picture can stand on a blank one: a box is cut into the words and a graphic
+is set over them, and a page with none of either has nothing for them to ride —
+both would ride a block on the page ahead and draw there (§9aa), and past the
+last page of the book there is no block at all, so a graphic would be dropped
+in silence. They stay **absent**, which is this room's idiom for *this does not
+apply here*.
+
+What they owed is the **reason**. Absence on a blank page reads as nothing
+applying at all, which is the whole of *I can do nothing with it*, so
+`OWN_PAGE_ONLY_NOTE` stands where the two controls are — one copy, in the
+domain, because two screens draw them and a sentence each would be two answers
+to what a blank page can carry.
+
+**And looking at the real room corrected that sentence.** Its first draft named
+a route — *the picture above makes it a page of the book, and then both are
+offered here* — which is true of the **reading** (a page carrying the art
+answers `ownPageOnly: false`) and false of the **screen**, where a page that
+*is* a picture draws the figure's own section instead of these controls. A
+sentence that promises a control the next press does not produce is worse than
+the absence it was written to explain, so it names what this page can have
+instead.
+
+**Driven** at 1440×900 on a collection with no back matter, which is Ken's
+shape. 18 pages; *A blank page after this one* on the last page takes it to 18
+with **Page 12 Blank** at the foot of the rail; standing on it, the refusal is
+gone, *Put a picture on this page…* is live and the sentence is under it; the
+picture lands on **page 12**, the page pointed at, with the book still 18 pages
+and no blank left standing; and that page's own screen reads *PAGE 12 · A
+PICTURE* with its place, its side of the leaf and its ×.
+
+
 ## 9ao. The sheet that ends the story, and the page after the last one
 
 From Ken, with two screenshots of *Villain's Tales* — 180 pages, page 172 in

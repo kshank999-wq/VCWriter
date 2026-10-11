@@ -3391,6 +3391,61 @@ push live; the build takes a minute or two.
   page, and switching it on would change the length of every collection already
   laid out, so the act is built and reachable while the default is its own
   decision.
+  **§9ap is a picture on the last page of the book**, from Ken with a
+  screenshot of the page dialog reading *PAGE 173 · BLANK* and *nothing of the
+  book follows it, so there is nowhere for a picture to stand* (*still the same
+  problem of if I add a blank page, I can do nothing with it. I want to be able
+  to add a vector or a picture… In this instance, I need to add the final
+  picture on page 173*). **Every reading in this room looks forwards**, which
+  is the one direction with nothing to offer past the last page: §9aa's walk
+  forward found nothing, §9ab's part was not there, and the refusal named the
+  mechanism — true, and a poor answer to somebody pointing at a page their book
+  plainly has (§9ao's own finding one control over), with §9al having freed
+  every blank page a *rule* held and left the one held by no rule at all. **So
+  at the end of the book the picture looks backwards**: `lastElementId` on
+  `PagePlace`, filled only where nothing of the book is on this page and
+  nothing follows, and `anchor` on `PictureOffer` saying which end of `spot`
+  the picture stands at — `before` everywhere else, which is why no act built
+  on this offer changed. After the story's last words it is a **figure**
+  (`placeFigure` has anchored after an element since it was written, §9z) and
+  after a **part** a page of art appended, which `BOOK_END` says, naming no
+  part so `addPart` puts it last. **A part is deliberately not the answer where
+  the story ends the book** and measuring settled it: the first draft answered
+  with a plate, which on a collection is back matter, so §9ao's ending sheet
+  stood between the story and it and the picture landed three pages later
+  behind two blanks nobody asked for. And **the element is read from the blocks
+  rather than from a page's own list** — `elementIds` holds what stands *whole*
+  on a page and a book's last paragraph very often begins on the page before,
+  so the first draft answered with the second-to-last element and the picture
+  went in one paragraph early. **Driving the real room then caught a fault in
+  shipped code that is the better half of the report**: `takesLeaf` was acted on
+  by taking **two** pages and asking for the picture's own back blank, which is
+  §9ad's answer left standing after §9an settled that **the unit is a page** —
+  so with one page asked for the clamp kept the leaf and the picture landed on
+  the next page (*12 Blank · 13 Illustration · 14 Blank*, the book two pages
+  longer), and the back blank forces a **recto** (§9j), so on a verso it slipped
+  a page even where the arithmetic was right. **A picture is a page and takes
+  the one page it stands on**: `takePictureLeaf` is the act, in the domain, read
+  by both branches, and measured on both shapes and both parities the art lands
+  where it was pointed at with the book exactly as long as it was — §9ad's *a
+  separating sheet with art on it* **better served by it than by the switch**,
+  the blank behind the art being the writer's own second page with its own × in
+  the rail. The assertion that pinned the old act is **rewritten rather than
+  worked around**, and how it survived is the keeper: it ran that act *itself*
+  rather than through the room, so it went on passing after the room had stopped
+  behaving that way — **a test pinning an act no screen runs is worse than a
+  failing one**. The **box and the vector stay absent** (both ride a block, and
+  a blank page has none; past the last page there is no block at all, so a
+  graphic would be dropped in silence) with the **reason in their place**,
+  `OWN_PAGE_ONLY_NOTE`, one copy in the domain — and **looking at the room
+  corrected that sentence too**: its first draft named a route (*the picture
+  above makes it a page of the book, and then both are offered here*), true of
+  the reading and false of the screen, where a page that **is** a picture draws
+  the figure's own section instead of these controls, **a sentence promising a
+  control the next press does not produce being worse than the absence it
+  explains**. Driven at 1440×900 on his shape: *Page 12 Blank* at the foot of
+  the rail, the refusal gone, and the picture on **page 12** with the book still
+  18 pages.
   **§9ao is that sheet made automatic, and the page after the last one**, from
   Ken (*yes, make that end-of-story page automatic… I couldn't drag the page to
   the last page. And I couldn't drag the page again after I already dragged

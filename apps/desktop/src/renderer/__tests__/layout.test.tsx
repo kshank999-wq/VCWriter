@@ -22,7 +22,10 @@ import {
   contentsDivisions,
   backBlank,
   figurePlacement,
+  halfOf,
+  OWN_PAGE_ONLY_NOTE,
   pagesBefore,
+  removePart,
   partsOf,
   setChapterPage,
   storiesOf,
@@ -958,9 +961,63 @@ describe('the room', () => {
      */
     expect(within(panel).queryByRole('button', { name: 'Draw a box for a picture…' })).toBeNull();
     expect(within(panel).queryByRole('button', { name: 'Add a vector graphic…' })).toBeNull();
+    // **With the reason in their place** (§9ap, from Ken: *I want to be able
+    // to add a vector or a picture*): absence is the room's idiom for *this
+    // does not apply here* and on a blank page it read as nothing applying at
+    // all. One copy of the sentence, from the domain.
+    expect(within(panel).getByText(OWN_PAGE_ONLY_NOTE)).toBeDefined();
     // And the route to the page that decides whether this leaf exists at all
     // (§9x's recto rule is set on the chapter's own page).
     expect(within(panel).getByRole('button', { name: 'Set the next chapter’s page…' })).toBeDefined();
+  });
+
+  /**
+   * **And on the last page of the book, which refused everything** (§9ap,
+   * from Ken standing on page 173 of his collection: *still the same problem
+   * of if I add a blank page, I can do nothing with it… In this instance, I
+   * need to add the final picture on page 173*).
+   *
+   * §9al freed every blank page a rule held and left the one past the end of
+   * the book refusing, because every reading in the room looks **forwards**
+   * and there is nothing ahead of the last page. The domain's own suite says
+   * what the offer now answers; what this pins is the **gesture** (§15a) —
+   * a writer standing on that page can reach the act — and it is the
+   * assertion the first report needed: a screen whose one button is missing
+   * reads exactly like the feature not being there.
+   */
+  it('offers a picture on a blank page at the very end of the book', () => {
+    /**
+     * **Ken's shape, which is a book the story ends** — a collection with no
+     * back matter. It matters: where a *part* ends the book the last page is
+     * that part's own row (§17e), and where the **story** does, the last page
+     * is a page of the story and the leaf after it hangs on the book itself.
+     */
+    let file = novel();
+    for (const part of partsOf(file).filter((one) => halfOf(one) === 'back')) file = removePart(file, part.id);
+    render(<Harness initial={file} />);
+    for (const fold of Array.from(document.querySelectorAll('button[aria-label^="Show what is under"]'))) {
+      fireEvent.click(fold as HTMLElement);
+    }
+    const pageRows = () => Array.from(document.querySelectorAll('.layout-rail-page')) as HTMLElement[];
+    // Ask for one after the last page there is, which is §9ao's own act.
+    const last = pageRows()[pageRows().length - 1]!;
+    fireEvent.doubleClick(last.querySelector('.layout-rail-name') as HTMLElement);
+    let panel = document.querySelector('.layout-page-dialog') as HTMLElement;
+    fireEvent.click(within(panel).getByRole('button', { name: 'A blank page after this one' }));
+    expect(bookSettingsOf(latest as ProjectFile).blankAtEnd).toBe(1);
+
+    // Now stand on it. It is the last row of the rail and it is blank.
+    const leaf = pageRows()[pageRows().length - 1]!;
+    expect(/Blank/.test(leaf.textContent ?? '')).toBe(true);
+    fireEvent.doubleClick(leaf.querySelector('.layout-rail-name') as HTMLElement);
+    panel = document.querySelector('.layout-page-dialog') as HTMLElement;
+    expect(panel.hasAttribute('open')).toBe(true);
+    // The refusal Ken was reading is gone, and the act is here.
+    expect(within(panel).queryByText(/nowhere for a picture to stand/)).toBeNull();
+    const put = within(panel).getByRole('button', { name: 'Put a picture on this page…' }) as HTMLButtonElement;
+    expect(put.disabled).toBe(false);
+    // And the other two still say why they are not here.
+    expect(within(panel).getByText(OWN_PAGE_ONLY_NOTE)).toBeDefined();
   });
 
   it('writes the trim and says what was worked out from it', () => {
