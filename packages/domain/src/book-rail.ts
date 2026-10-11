@@ -4,7 +4,7 @@ import { removeFigure } from './instructional.js';
 import { divisionSpan, divisionRemoval, removeDivision, unclaimedUnits, type DivisionRemoval } from './outline-binding.js';
 import { isCollection, nounsFor } from './formats.js';
 import {
-  blankReason,
+  blankHold,
   bookFigures,
   halfOf,
   partTitle,
@@ -509,91 +509,81 @@ export const pageRemoval = (file: ProjectFile, rows: readonly BookPageRow[], she
   const no = (refusal: string): PageRemoval => ({ id: null, what: null, act: null, comfort: '', refusal });
   if (!page) return no('The book is still being set.');
 
-  // The leaf a writer asked for: the only place it can be found again (§9i).
-  if (page.blankFor) {
-    return {
-      id: page.blankFor,
-      what: 'leaf',
-      act: 'Take this page away',
-      // **A sheet, so both of its pages** (§9ad): the writer put a leaf in and
-      // a leaf is two sides, so a × on either of them takes the whole sheet.
-      // Nothing after it changes side, two pages being an even number.
-      comfort: 'The blank sheet goes — both its pages. Nothing else changes which side of the paper it is on.',
-      refusal: null,
-    };
-  }
-
   /**
-   * **A leaf the cutter left is removed by removing its reason** (§9x). §9w
-   * refused here and named the reason, which is honest and leaves the writer
-   * holding a page they cannot be rid of — and the reason is a setting one
-   * press away, so the × reaches it.
+   * **What holds the page blank, asked once** (§9al). This walked the
+   * neighbours itself — the picture on either side, the part or chapter page
+   * in front, the chapter after — and `pictureOffer` could not reach that
+   * walk, so the two screens that act on a blank leaf held one answer between
+   * them and only one of them could use it. `blankHold` is that reading, and
+   * the sentences stay here, where the voice belongs to the ×.
    */
-  if (page.blank) {
+  const hold = blankHold(rows, sheet);
+  if (hold) {
+    // The leaf a writer asked for: the only place it can be found again (§9i).
+    if (hold.frees === 'leaf' && hold.id) {
+      return {
+        id: hold.id,
+        what: 'leaf',
+        act: 'Take this page away',
+        // **A sheet, so both of its pages** (§9ad): the writer put a leaf in
+        // and a leaf is two sides, so a × on either of them takes the whole
+        // sheet. Nothing after it changes side, two pages being an even
+        // number.
+        comfort: 'The blank sheet goes — both its pages. Nothing else changes which side of the paper it is on.',
+        refusal: null,
+      };
+    }
     /**
      * **The sheet between two whole works** (addendum 22 §9). It is the one
      * blank in the room that is neither the writer's nor the cutter's: the
-     * book is **set** to leave it, so the × would have to reach a setting
-     * that governs every one of them at once — which is not what a × on one
-     * page means. It refuses and **names where the decision lives**, in §9x's
-     * shape rather than §9w's: disabled with the reason in its title, because
-     * absence is what read as *there's no way to delete those pages*.
+     * book is **set** to leave it, so the × writes the setting for **this**
+     * work and says so, rather than reaching one that governs every one of
+     * them at once.
      */
-    if (page.blankBetween) {
+    if (hold.frees === 'sheet' && hold.id) {
       // Nothing names a unit itself (addendum 16 §6c).
       const one = nounsFor(file.project.format).division.toLowerCase();
       return {
-        id: page.blankBetween,
+        id: hold.id,
         what: 'between',
         act: 'Take this page away',
         comfort: `The blank sheet goes — both its pages. Only this ${one} stops being separated by one; every other ${one} keeps its sheet, and Book settings is where they are all decided.`,
         refusal: null,
       };
     }
-    if (page.blankBack) {
-      const before = rows.find((one) => one.sheet === sheet - 1);
-      // **Either side** (addendum 22 §9a): a picture on a left-hand page has
-      // its back in **front** of it, that being the other side of the sheet,
-      // so the picture this leaf belongs to may be on either neighbour.
-      const after = rows.find((one) => one.sheet === sheet + 1);
-      const picture = before?.figureId ?? after?.figureId ?? null;
-      if (picture) {
-        return {
-          id: picture,
-          what: 'back',
-          act: 'Take this page away',
-          comfort: `The picture ${before?.figureId ? 'before' : 'after'} it stops leaving its back blank. The picture stays where it is.`,
-          refusal: null,
-        };
-      }
+    if (hold.frees === 'back' && hold.id) {
       /**
-       * **The leaf behind a page of the book** (§17e, from Ken: *I added the
-       * title page and said, leave the back of it blank, but it left an
-       * additional page blank*). §9i wrote this branch for a picture, which
-       * was everything it had; §17d then gave a **part** the same switch and
-       * §9r a **chapter page**, and neither reached here — so the one leaf a
-       * writer had deliberately asked for was the one with no × and a sentence
-       * about the recto rule, which is the reason for a different leaf
-       * altogether. `setBackBlank` reads which record the id names, so this
-       * needs no third branch and the act is the same act.
+       * **The back of a picture**, and **the back of a page of the book**
+       * (§17e, from Ken: *I added the title page and said, leave the back of
+       * it blank, but it left an additional page blank*). §9i wrote this for
+       * a picture, which was everything it had; §17d then gave a **part** the
+       * same switch and §9r a **chapter page**, and neither reached here.
+       * `setBackBlank` reads which record the id names, so one act serves all
+       * three and only the sentence differs.
        */
-      const owner = before?.partId ?? before?.markerId ?? null;
-      if (owner) {
+      if (hold.why === 'back') {
+        const before = rows.find((one) => one.sheet === sheet - 1);
         return {
-          id: owner,
+          id: hold.id,
           what: 'back',
           act: 'Take this page away',
-          comfort:
-            'The page before it stops leaving its back blank, so what follows prints on its reverse again. The book may lose more than this one leaf.',
+          comfort: `The picture ${before?.figureId === hold.id ? 'before' : 'after'} it stops leaving its back blank. The picture stays where it is.`,
           refusal: null,
         };
       }
+      return {
+        id: hold.id,
+        what: 'back',
+        act: 'Take this page away',
+        comfort:
+          'The page before it stops leaving its back blank, so what follows prints on its reverse again. The book may lose more than this one leaf.',
+        refusal: null,
+      };
     }
     // The verso the recto rule leaves in front of an opening.
-    const opens = rows.find((one) => one.sheet === sheet + 1);
-    if (opens?.markerId && opens.says === 'Chapter opens') {
+    if (hold.frees === 'recto' && hold.id) {
       return {
-        id: opens.markerId,
+        id: hold.id,
         what: 'recto',
         act: 'Take this page away',
         comfort: 'The chapter after it opens on whichever page comes next, rather than on a right-hand one. Only that chapter changes.',
@@ -603,9 +593,9 @@ export const pageRemoval = (file: ProjectFile, rows: readonly BookPageRow[], she
     /**
      * The one leaf with no act: the recto a page of the **book** takes — a
      * title page, a copyright page — which is a convention about that page
-     * rather than a setting, so the sentence names it and sends the writer
-     * to its own screen rather than offering a press that would have to
-     * invent a rule.
+     * rather than a setting, so the sentence names it and sends the writer to
+     * its own screen rather than offering a press that would have to invent a
+     * rule.
      */
     return no(
       'This page is blank because the page after it opens on a right-hand page. That is the page to set, and it has a row of its own below.',

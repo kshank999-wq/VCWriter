@@ -226,13 +226,22 @@ describe('getting rid of one', () => {
     expect(lay(none).rows.filter((one) => one.blankBetween !== null)).toHaveLength(SHEET);
   });
 
-  it('refuses a picture on it, and names the × rather than a setting', () => {
+  /**
+   * **Overturned by §9al.** This pinned the refusal: the sheet was kept empty
+   * on purpose, so the room named the × on its own row and left the writer to
+   * press that first. It is the same detour the back of a page was sent on,
+   * and §9ae's rule answers both — the act frees the rule. What is pinned now
+   * is the offer, what it reaches, and that the cost is said before the
+   * press.
+   */
+  it('takes a picture, which frees the separation it holds', () => {
     const file = book();
     const { blocks, laid, rows } = lay(file);
     const row = rows.find((one) => one.blankBetween !== null)!;
     const offer = pictureOffer(pagePlace(laid.pages, blocks, row.sheet), rows, row.sheet, 'stories');
-    expect(offer.spot).toBeNull();
-    expect(offer.refusal).toContain('between stories');
-    expect(offer.refusal).toContain('The × on its row');
+    expect(offer.refusal).toBeNull();
+    expect(offer.frees).toEqual({ id: row.blankBetween, rule: 'sheet' });
+    expect(offer.note).toContain('between stories');
+    expect(offer.note).toContain('facing the one that follows');
   });
 });

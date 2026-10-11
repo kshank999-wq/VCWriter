@@ -211,18 +211,30 @@ describe('a picture asked for on a blank leaf', () => {
     }
   });
 
-  it('is refused on a leaf kept empty on purpose, naming the switch rather than the recto rule', () => {
+  /**
+   * **Overturned by §9al**, from Ken (*I should be able to pick a page, even
+   * if it's the back of a text page or the back of a chapter page, and add
+   * something to it*). This asserted the refusal as a requirement: the leaf
+   * was kept empty on purpose, the room named the switch, and the writer was
+   * sent to another screen to turn it off before coming back to do what they
+   * had just asked for. §9ae's rule settles it — **where a rule holds the
+   * page, the act frees the rule** — so what is pinned now is the offer, and
+   * that it still says in a sentence what the press will do.
+   */
+  it('is offered on a leaf kept empty on purpose, and says what the press frees', () => {
     const file = novel();
     const text = lay(file).rows.find((row) => row.says === 'Chapter opens' && row.sheet > 4)!;
-    // The back of a chapter's own page (§9r), which is the switch the refusal
-    // has to name — a leaf asked for by the page in front of it.
-    const asked = setBackBlank(file, placeOn(file, text.sheet).opensMarkerId as string, true);
+    // The back of a chapter's own page (§9r): a leaf asked for by the page in
+    // front of it, which is the record the act reaches.
+    const marker = placeOn(file, text.sheet).opensMarkerId as string;
+    const asked = setBackBlank(file, marker, true);
     const back = lay(asked).rows.find((row) => row.blankBack)!;
     expect(back).toBeTruthy();
     const offer = offerOn(asked, back.sheet);
-    expect(offer.spot).toBeNull();
-    expect(offer.refusal).toMatch(/kept empty/);
-    expect(offer.refusal).toMatch(/page in front/);
+    expect(offer.refusal).toBeNull();
+    expect(offer.frees).toEqual({ id: marker, rule: 'back' });
+    expect(offer.note).toMatch(/kept empty/);
+    expect(offer.note).toMatch(/prints on that back/);
   });
 });
 

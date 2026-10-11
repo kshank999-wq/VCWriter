@@ -1382,6 +1382,67 @@ export const blankReason = (rows: readonly BookPageRow[], sheet: number): BlankR
 };
 
 /**
+ * **What holds this page blank, and which record carries that rule** (§9al,
+ * from Ken: *these blank pages are treated as special somehow, where they're
+ * not… I should be able to pick a page, even if it's the back of a text page
+ * or the back of a chapter page, and add something to it*).
+ *
+ * `blankReason` says **why** and this says **whose**, which is the question
+ * every act on a blank leaf turns out to need. `pageRemoval` worked it out
+ * for itself — the picture on either neighbour, the part or chapter page in
+ * front, the chapter after — and `pictureOffer` could not reach that walk at
+ * all, which is why it refused on three leaves and named a switch in a
+ * sentence instead of pressing it. **One reading, so a leaf that can be freed
+ * is freed from every screen that asks**, and the × on a page and a picture
+ * asked for on it cannot disagree about which record they reach.
+ *
+ * It is a reading over the rows for `blankReason`'s own reason: the answer
+ * for any page is wanted from any screen without threading the neighbours
+ * through it.
+ */
+export interface BlankHold {
+  /** Why the page is blank — `blankReason`'s answer, carried so no caller asks twice. */
+  why: BlankReason;
+  /** The record carrying the rule. Null where nothing a writer can reach holds it. */
+  id: string | null;
+  /**
+   * Which act frees it, so one reading serves every screen. `leaf` is the
+   * writer's own sheet (`setBlankPages`), `sheet` the separation the book
+   * leaves between two whole works (`setSheetBefore`), `back` the switch on
+   * the page in front (`setBackBlank`), `recto` the chapter's own rule
+   * (`setChapterRecto`). Null where the leaf is a convention of the page
+   * after it rather than a setting anybody wrote (§9x).
+   */
+  frees: 'leaf' | 'sheet' | 'back' | 'recto' | null;
+}
+
+export const blankHold = (rows: readonly BookPageRow[], sheet: number): BlankHold | null => {
+  const why = blankReason(rows, sheet);
+  const page = rows.find((one) => one.sheet === sheet);
+  if (!why || !page) return null;
+  if (why === 'writer') return { why, id: page.blankFor, frees: 'leaf' };
+  if (why === 'between') return { why, id: page.blankBetween, frees: 'sheet' };
+  if (why === 'back' || why === 'page_back') {
+    // **Either side** (addendum 22 §9a): a picture on a left-hand page has
+    // its back in **front** of it, that being the other side of the sheet, so
+    // the picture this leaf belongs to may be on either neighbour. A part's
+    // or a chapter page's back is always the leaf after it, those pages
+    // taking a recto.
+    const before = rows.find((one) => one.sheet === sheet - 1);
+    const after = rows.find((one) => one.sheet === sheet + 1);
+    const id = why === 'back' ? before?.figureId ?? after?.figureId ?? null : before?.partId ?? before?.markerId ?? null;
+    return { why, id, frees: id ? 'back' : null };
+  }
+  // The verso the recto rule leaves in front of an opening. Where the page
+  // after it is a page of the **book** rather than a chapter, the leaf is a
+  // convention of that page and there is no rule to turn off (§9x).
+  const opens = rows.find((one) => one.sheet === sheet + 1);
+  return opens?.markerId && opens.says === 'Chapter opens'
+    ? { why, id: opens.markerId, frees: 'recto' }
+    : { why, id: null, frees: null };
+};
+
+/**
  * The reason in words, in one place, for the help text and both refusals.
  *
  * **Who the sentence is about** (§17e). The help text stands on the blank
@@ -1802,6 +1863,32 @@ export interface PictureOffer {
    * page of art goes **here** instead, which is `addPart`'s new position.
    */
   newPageBefore: string | null;
+  /**
+   * **The rule holding this page blank, which the act frees** (§9al, from
+   * Ken: *these blank pages are treated as special somehow, where they're
+   * not… I should be able to pick a page, even if it's the back of a text
+   * page or the back of a chapter page, and add something to it*).
+   *
+   * Three leaves refused a picture — the back of a picture, the back of a
+   * page whose own screen asked for one, and the sheet the book leaves
+   * between two whole works — each naming in a sentence the switch that would
+   * free it. That is honest and it is a detour: the writer pointed at a page
+   * and was sent to another screen to turn something off before they could
+   * come back and do what they had just asked for, which is §9aa's own
+   * complaint about §9w, and §4b's about a door.
+   *
+   * §9ae settled it one control over: **where a rule holds the page, the act
+   * frees the rule.** Putting a picture on the back of a page *is* a writer
+   * saying they want something printed there, so the press says it and the
+   * switch goes with it. What it costs is said before the press and never
+   * found after it, which is the half this room always owes.
+   *
+   * `leaf` is the writer's own sheet, which `takesLeaf` has named since
+   * §9aa and which is the same question's first answer; it stays its own
+   * field because the act differs — a sheet is **taken away** while a back is
+   * **printed on**, and the book's length depends on which.
+   */
+  frees: { id: string; rule: 'sheet' | 'back' } | null;
   /** Why a picture may not be asked for here, in a sentence a writer can act on. */
   refusal: string | null;
 }
@@ -1823,36 +1910,47 @@ export const pictureOffer = (
     takesLeaf: null,
     ownPageOnly: false,
     newPageBefore: null,
+    frees: null,
     refusal,
   });
   if (!page) return none('The book is still being set.');
   /**
-   * **A leaf kept empty on purpose is not a page to fill** (§9aa). The back of
-   * a picture, and the back of a page whose own screen asks for one, exist in
-   * order to have nothing on them — so the refusal names the switch and where
-   * it is, rather than the reason for a different leaf. It is the one blank the
-   * forward walk is right about and the room must still say no to.
+   * **A leaf held empty by a rule is freed by the act** (§9al). §9aa refused
+   * here and named the switch, which is §9w's detour in another control: the
+   * writer points at a page and is sent elsewhere to turn something off.
+   *
+   * What is freed is read from `blankHold`, the one place that knows which
+   * record carries the rule, so this and the page's × cannot reach different
+   * ones. The `recto` leaf is **not** among them: it is the cutter's gap and
+   * a picture asked for there **fills** it (§9aa), which is the note further
+   * down and not a rule to turn off.
    */
-  if (page.blank) {
-    const why = blankReason(rows, sheet);
-    if (why === 'back' || why === 'page_back') {
-      return none(
-        `This leaf is kept empty because ${sayBlankReason(why)}. Print on that back, from the page in front of it, and a picture can stand here.`,
-      );
-    }
-    /**
-     * **The sheet between two works is kept empty on purpose too** (addendum
-     * 22 §9), so it refuses for the same reason the backs above do — and
-     * **names the way out**, which is the × on this page's own row: that
-     * takes the separation off this work and nothing else, after which the
-     * page is an ordinary leaf and a picture may stand on it.
-     */
-    if (why === 'between') {
-      return none(
-        `This leaf is kept empty because ${sayBlankReason(why, 'the leaf', divisions)}. The × on its row takes that sheet away, and then a picture can stand here.`,
-      );
-    }
-  }
+  const hold = page.blank ? blankHold(rows, sheet) : null;
+  const frees: PictureOffer['frees'] =
+    hold && hold.id && (hold.frees === 'back' || hold.frees === 'sheet') ? { id: hold.id, rule: hold.frees } : null;
+  /**
+   * **What it costs, said before the press** — and the two differ enough that
+   * one sentence for both would be true of neither.
+   *
+   * A back is **printed on**: the leaf keeps its place and the side of the
+   * paper it had, the switch goes, and the book is exactly as long. A
+   * separating sheet is **taken away** and the picture stands in its place,
+   * which was **measured rather than reasoned about**: the first draft gave
+   * the picture its own blank back on §9ad's rule (two pages out and two back
+   * in) and that is right for the writer's own sheet, which nothing forces
+   * onto a side — here the next work opens on a right-hand page, so a picture
+   * asked to leave its back blank takes a recto (§9j) and the book came back
+   * **one page longer** than the sheet it replaced rather than the same
+   * length. Without it the picture faces the work that follows and the book
+   * is a page shorter. No number is given: it depends on the parity, which
+   * is the room's business, and §9ae's own sentence is the precedent.
+   */
+  const freedNote =
+    frees?.rule === 'back'
+      ? `This page is kept empty because ${sayBlankReason(hold?.why ?? 'back')}. A picture asked for here prints on that back instead, and no other page moves.`
+      : frees
+        ? `This page is one of the two the book leaves blank between ${divisions}. That sheet goes and the picture stands in its place, facing the one that follows.`
+        : null;
   if (!place.elementId && !place.partId) {
     /**
      * **A leaf among the front or back pages takes a page of art, here**
@@ -1871,10 +1969,14 @@ export const pictureOffer = (
         pageSpot: null,
         of: null,
         beforeOpening: false,
-        note: null,
+        // The rule, where one holds this leaf (§9al): the back of the title
+        // page is exactly this shape, a leaf among the front matter whose
+        // answer is a page of art standing where it is.
+        note: freedNote,
         takesLeaf: page.blankFor,
         ownPageOnly: true,
         newPageBefore: ahead.partId,
+        frees,
         refusal: null,
       };
     }
@@ -1951,14 +2053,25 @@ export const pictureOffer = (
      * leaf in front and a chapter opening here both break the flow, so
      * neither page can be carrying the tail of anything.
      */
-    note: leaf
-      ? `A picture of its own will stand on page ${leaf.counted}: the leaf in front of this page is empty, and it fills that rather than adding one.`
-      : place.opensMarkerId !== null && place.standsBefore === null
-        ? 'A picture of its own goes in front of the opening that stands here, so the opening moves on a page. Setting this page’s own art instead puts the picture on the opening, and nothing moves.'
-        : began
-          ? `This page is the middle of one paragraph, which begins on page ${began}. A picture cut into the text stands in front of a paragraph rather than inside one, so a box asked for here will stand on page ${began}; a picture of its own still stands on this page.`
-          : null,
+    /**
+     * **And the rule this page is held blank by** (§9al), which comes
+     * **first**: a leaf the book is keeping empty is the one fact a writer
+     * standing on it needs, and it cannot overlap the other three — a page
+     * held blank carries no chapter opening, no half paragraph, and where it
+     * follows another blank it is that one's own reason rather than the
+     * cutter's gap.
+     */
+    note:
+      freedNote ??
+      (leaf
+        ? `A picture of its own will stand on page ${leaf.counted}: the leaf in front of this page is empty, and it fills that rather than adding one.`
+        : place.opensMarkerId !== null && place.standsBefore === null
+          ? 'A picture of its own goes in front of the opening that stands here, so the opening moves on a page. Setting this page’s own art instead puts the picture on the opening, and nothing moves.'
+          : began
+            ? `This page is the middle of one paragraph, which begins on page ${began}. A picture cut into the text stands in front of a paragraph rather than inside one, so a box asked for here will stand on page ${began}; a picture of its own still stands on this page.`
+            : null),
     newPageBefore: null,
+    frees,
     refusal: null,
   };
 };

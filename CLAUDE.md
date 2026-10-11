@@ -3330,6 +3330,54 @@ push live; the build takes a minute or two.
   pagination; one block is inserted and the convention does the rest, the
   screen says *the next left-hand page*, and a test pins the pair so the
   second blank is not later "fixed" as a fault — **which §17e overturns**.
+  **§9al is a picture on a page the book is keeping blank**, from the second
+  half of the message §9aj answered (*these blank pages are treated as special
+  somehow, where they're not… I should be able to pick a page, even if it's the
+  back of a text page or the back of a chapter page, and add something to it*).
+  **Three leaves refused and each named in a sentence the switch that would
+  free it** — the back of a picture, the back of a page whose own screen asked
+  for one, and the sheet the book leaves between two whole works — which is
+  honest and is the **two-step detour** §9aa was written to remove and §4b
+  removed from another room: a writer points at a page and is sent to another
+  screen to turn something off before coming back. §9ae settled it one control
+  over and the sentence is the design: **where a rule holds the page, the act
+  frees the rule**, putting a picture on the back of a page *being* a writer
+  saying they want something printed there. **The reason it was not bolted onto
+  the refusal is that `pageRemoval` already knew the answer and `pictureOffer`
+  could not reach it** — that walk lives in `book-rail.ts`, which imports from
+  `book-plan.ts` and so cannot be called back into it, so one answer existed
+  and only one of the two screens could use it; `blankHold` is that reading
+  beside `blankReason` (**why** a page is blank against **whose rule**), and
+  the proof it is faithful is that `pageRemoval`'s whole suite passed
+  **unedited**. **What each act costs is measured.** A **back is printed on**:
+  the leaf keeps its place and its side of the paper, the switch goes and
+  nothing else moves — driven, a chapter page's back ticked takes the book
+  18 → 19 and the picture leaves it at **19**, the sentence word for word. A
+  **separating sheet is taken away and the picture stands in its place**, and
+  this half was **measured rather than reasoned about, the measurement
+  correcting the design**: the first draft gave the picture its own blank back
+  on §9ad's rule (one sheet off, two pages back in), which is right for the
+  writer's own sheet where nothing forces the leaf onto a side — here the next
+  work opens recto, so a picture leaving its back blank takes a recto (§9j) and
+  the book came back **one page longer** than the sheet it replaced (17 → 18
+  with it, 16 without), while without it the picture **faces the work that
+  follows**, which is what a reader sees and is more of a separation than two
+  blank pages rather than less; driven on an imported collection, **18 pages
+  become 16** with the art on page 12 and the second story still opening recto
+  on 13. **The note gives no number** (§9ae's precedent), what it costs
+  depending on the parity and on the gap the recto rule had already left.
+  **Deliberately not freed**: the leaf the recto rule leaves is **filled**
+  rather than freed (§9aa, the cutter's gap, held by no switch anybody set),
+  the writer's own sheet is **taken** (`takesLeaf`, a separate field because
+  the acts differ in what they do to the book's length), and **`ownPageOnly`
+  stands** — a blank leaf takes a page of its own and not a box cut into the
+  text or a graphic over it, there being no block of the writing on it for
+  either to ride. **The test is the walk rather than the report**: it walks
+  **every** blank page the room draws and fails if one lacks an enabled *Put a
+  picture on this page…*, §9x's shape and for its reason, with the control
+  having been **absent** on those three before (`{!offer.refusal ? …}`) so it
+  fails without the change. Two assertions pinned the refusals as requirements
+  and were **rewritten rather than worked around**.
   **§9ak is the picture placed rather than the box drawn**, from Ken the
   morning after §9aj (*maybe the best way is to insert a picture on the page
   and then resize that picture to where you want it to be. You can move it

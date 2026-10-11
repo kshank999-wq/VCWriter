@@ -161,6 +161,7 @@ import {
   placeFigure,
   removeBookRow,
   setBackBlank,
+  setSheetBefore,
   setBlankBefore,
   setFigurePicture,
   whatGoesWithRow,
@@ -256,6 +257,8 @@ type ArtTarget =
        * as the picture arrives rather than standing in front of it.
        */
       takesLeaf?: string | null;
+      /** The rule holding this page blank, freed as the picture goes on (§9al). */
+      frees?: PictureOffer['frees'];
     }
   /** Into a part: cut into its words where it has them, a page of its own where it has not. */
   | {
@@ -269,6 +272,8 @@ type ArtTarget =
       before?: string | null;
       /** The writer's own leaf it takes, as a story page-figure does (§9aa). */
       takesLeaf?: string | null;
+      /** The rule holding this page blank, freed as the picture goes on (§9al). */
+      frees?: PictureOffer['frees'];
     }
   /** A logotype in place of a designed page's title (§9n). */
   | { kind: 'logo'; partId: string }
@@ -309,6 +314,7 @@ const NO_PICTURE: PictureOffer = {
   takesLeaf: null,
   ownPageOnly: false,
   newPageBefore: null,
+  frees: null,
   refusal: 'Choose a page first: the picture goes at the top of it.',
 };
 
@@ -838,6 +844,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
         as: 'page',
         before: offer.newPageBefore,
         takesLeaf: offer.takesLeaf,
+        frees: offer.frees,
       });
       return;
     }
@@ -858,10 +865,52 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
         as,
         beforeOpening: as === 'page' && offer.beforeOpening,
         takesLeaf: as === 'page' ? offer.takesLeaf : null,
+        // **The rule goes with the page it holds** (§9al), so it is carried
+        // only where the picture really is the page: a box cut into the text
+        // is never asked for on a blank leaf (`ownPageOnly`), and freeing a
+        // back for one would be turning a switch off for a picture that
+        // cannot stand there.
+        frees: as === 'page' ? offer.frees : null,
       });
       return;
     }
     importArt({ kind: 'part', partId: offer.spot, as });
+  };
+
+  /**
+   * **The rule holding the page blank, freed as the picture goes on it**
+   * (§9al, from Ken: *I should be able to pick a page, even if it's the back
+   * of a text page or the back of a chapter page, and add something to it*).
+   *
+   * §9ae's rule — *where a rule holds the page, the act frees the rule* — and
+   * the two it can meet differ in exactly what they do to the book's length,
+   * which is why they are one act and not one line:
+   *
+   * - a **back** is printed on, so the leaf keeps its place and the side of
+   *   the paper it had, the switch goes, and nothing else moves;
+   * - a **separating sheet** is taken away and the picture stands in its
+   *   place, facing the work that follows.
+   *
+   * The second was **measured rather than reasoned about**. The first draft
+   * gave the picture its own blank back on §9ad's rule — one sheet off and
+   * two pages back in — which is right for the writer's own sheet, where
+   * nothing forces the leaf onto a side. Here the next work opens on a
+   * right-hand page, so a picture asked to leave its back blank takes a recto
+   * (§9j) and the book came back **one page longer** than the sheet it
+   * replaced: measured on a collection of two stories, 17 pages became 18
+   * with the back blank and 16 without it. The picture facing the next work
+   * is what a reader sees either way, and it is the shorter book.
+   *
+   * It is the same act for a figure in the story and a part's page of art:
+   * `setBackBlank` already reads which of the three collections an id names
+   * (§17e), and there is nothing else to tell them apart.
+   */
+  const freeTheBlank = (file: ProjectFile, frees: PictureOffer['frees']): ProjectFile => {
+    if (!frees) return file;
+    if (frees.rule === 'back') return setBackBlank(file, frees.id, false);
+    // **For this work and never for every one of them at once** (addendum 22
+    // §9): `null` is *use the book's*, which is the separation switched on.
+    return setSheetBefore(file, frees.id, false);
   };
 
   /**
@@ -955,13 +1004,15 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
            * separating sheet with art on it, and the same number of pages
            * either way.
            */
+          // **And the rule that held the page blank, where one did** (§9al).
+          const freed = freeTheBlank(made.file, target.frees ?? null);
           return target.takesLeaf
             ? setBackBlank(
-                setBlankPages(made.file, target.takesLeaf, blankPagesAt(made.file, target.takesLeaf) - SHEET),
+                setBlankPages(freed, target.takesLeaf, blankPagesAt(freed, target.takesLeaf) - SHEET),
                 made.elementId as string,
                 true,
               )
-            : made.file;
+            : freed;
         }
 
         // A logotype and a page of art are **the part's own pictures**
@@ -1008,10 +1059,12 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
             setSelectedRowId(made.partId);
             turnTo.current = made.partId;
           }
-          // The art page takes the sheet's front, as it does in the story
-          // (§9aa, §9ad), and keeps the back it already had.
-          if (!target.takesLeaf || !made.partId) return made.file;
-          const less = setBlankPages(made.file, target.takesLeaf, blankPagesAt(made.file, target.takesLeaf) - SHEET);
+          // The rule that held the page blank, where one did (§9al), and then
+          // the sheet's front, as in the story (§9aa, §9ad), keeping the back
+          // it already had.
+          const freed = freeTheBlank(made.file, target.frees ?? null);
+          if (!target.takesLeaf || !made.partId) return freed;
+          const less = setBlankPages(freed, target.takesLeaf, blankPagesAt(freed, target.takesLeaf) - SHEET);
           return setPartBlank(less, made.partId, 'back', true);
         }
 

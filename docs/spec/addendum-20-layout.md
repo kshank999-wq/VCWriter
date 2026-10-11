@@ -2952,6 +2952,101 @@ second blank is not later "fixed" as a fault.
 > copyright page takes the next page now, and the assertion was rewritten
 > rather than worked around.
 
+## 9al. A picture on a page the book is keeping blank
+
+From Ken, in the second half of the message §9aj answered: *these blank pages
+are treated as special somehow, where they're not. They need to be like every
+other page, where I can add a graphic, or I can add formatting. I can add a
+picture… I don't know why these blank pages are treated like isolated,
+independent type pages that can't have any type of thing on them. We need to
+make it so every page has a similar formatting ability. And I should be able
+to pick a page, even if it's the back of a text page or the back of a chapter
+page, and add something to it.*
+
+**Three leaves refused, and each named in a sentence the switch that would
+free it.** The back of a picture, the back of a page whose own screen asked
+for one, and the sheet the book leaves between two whole works: a writer
+pointed at a page, and the room told them to go to another screen, turn
+something off, and come back. That is honest, and it is the two-step detour
+§9aa was itself written to remove and §4b removed from another room — an
+argument about *what this page is* answered with a door.
+
+§9ae settled it one control over, and the sentence is the whole design:
+**where a rule holds the page, the act frees the rule.** Putting a picture on
+the back of a page *is* a writer saying they want something printed there.
+
+### One reading, because two screens act on a blank leaf
+
+The reason this was not bolted onto the refusal is that **`pageRemoval`
+already knew the answer and `pictureOffer` could not reach it**. The × on a
+page row walked the neighbours itself — the picture on either side, the part
+or chapter page in front, the chapter after — and that walk was in
+`book-rail.ts`, which imports from `book-plan.ts` and so cannot be called
+back into it. So one answer existed and only one of the two screens could use
+it.
+
+`blankHold` is that reading, in `book-plan.ts` beside `blankReason`: the
+latter says **why** a page is blank and this says **whose rule**, which is the
+question every act on such a leaf turns out to need. `pageRemoval` asks it
+now, and the proof it is faithful is that **its whole suite passed unedited** —
+the sentences stayed where they were, the voice belonging to the ×.
+
+### What each act costs, measured
+
+**A back is printed on.** The leaf keeps its place and the side of the paper
+it had, the switch goes, the picture stands there and **nothing else moves**.
+Driven in the real room: a chapter page's back ticked takes the book 18 → 19,
+and a picture asked for on that leaf leaves it at **19**, which is what the
+sentence promises word for word.
+
+**A separating sheet is taken away and the picture stands in its place.** This
+half was **measured rather than reasoned about, and the measurement corrected
+the design**. The first draft gave the picture its own blank back on §9ad's
+rule — one sheet off, two pages back in, so the book does not move — which is
+right for the writer's own sheet, where nothing forces the leaf onto a side.
+Here the next work opens on a right-hand page, so a picture asked to leave its
+back blank takes a recto (§9j) and the book came back **one page longer** than
+the sheet it replaced: measured on a collection of two stories, 17 became 18
+with the back blank and 16 without it. Without it the picture faces the work
+that follows, which is what a reader sees and more of a separation than two
+blank pages rather than less. Driven on an imported collection: **18 pages
+become 16**, the picture on page 12 with the second story opening on 13, still
+on a right-hand page.
+
+**The note gives no number**, which is §9ae's own precedent: what it costs
+depends on the parity and on the gap the recto rule had already left, so a
+figure said here would be wrong on half the books. It says what happens.
+
+### What is deliberately not freed
+
+**The leaf the recto rule leaves is filled rather than freed** (§9aa). It is
+the cutter's gap, held by no switch anybody set: a picture asked for there
+takes the page and the book does not grow, which is what the note has said
+since §9aa and is not a rule to turn off. **The writer's own sheet** is not
+freed either — it is **taken**, which `takesLeaf` has named since §9aa, and the
+two stay separate fields because the acts differ in what they do to the book's
+length.
+
+And **`ownPageOnly` stands**: a blank leaf still takes a picture that is a page
+of its own and not a box cut into the text or a graphic set over it, because
+there is no block of the writing on it for either to ride — they would draw on
+the page ahead, which is §9w's fault wearing a different control. Ken's
+sentence names those too, and what the mechanism can keep today is the page.
+
+### The test is the walk, not the report
+
+`layout.test.tsx` walks **every** blank page the room draws and fails if any
+one of them lacks an enabled *Put a picture on this page…* — §9x's own shape,
+and for its reason: a refusal that survives on a second kind of blank leaf
+reads to a writer exactly like the feature not being there, and a new kind
+added later fails here rather than shipping silent. Before this the control
+was **absent** on those three (`{!offer.refusal ? …}`), so the test fails
+without the change.
+
+Two assertions pinned the refusals as requirements and were **rewritten rather
+than worked around**: one in `blank-leaf-pages.test.ts` and one in
+`sheet-between-stories.test.ts`.
+
 ## 9ak. The picture placed, rather than the box drawn
 
 From Ken, the morning after §9aj: *before we move on, maybe the best way is to

@@ -354,6 +354,45 @@ describe('the room', () => {
   });
 
   /**
+   * **No blank page refuses a picture** (§9al, from Ken: *these blank pages
+   * are treated as special somehow, where they're not… every page should be
+   * formattable*).
+   *
+   * The domain proves which rule each leaf is held by and what freeing it
+   * costs. What has to be proved here is the **gesture**, and in the shape
+   * §9x's own test took: it walks **every** page the room draws rather than
+   * the one the report came off, because a refusal that survives on a second
+   * kind of blank leaf reads to a writer exactly like the feature not being
+   * there. A new kind of blank page added later fails here rather than
+   * shipping silent.
+   */
+  it('offers a picture on every blank page it draws, rather than refusing on any', () => {
+    render(<Harness initial={novel()} />);
+    const next = screen.getByRole('button', { name: 'Next spread' });
+    let looked = 0;
+    for (let turn = 0; turn < 12; turn += 1) {
+      const sheets = Array.from(document.querySelectorAll('.layout-sheet:not(.layout-no-sheet)')) as HTMLElement[];
+      for (const sheet of sheets) {
+        if (!sheet.getAttribute('aria-label')) continue;
+        if ((sheet.querySelector('.bk-text')?.textContent ?? '').trim().length > 0) continue;
+        if (sheet.querySelector('[data-figure]')) continue;
+        fireEvent.click(sheet);
+        fireEvent.doubleClick(sheet);
+        const panel = document.querySelector('.layout-page-dialog') as HTMLElement | null;
+        if (!panel || !panel.hasAttribute('open')) continue;
+        const put = within(panel).queryByRole('button', { name: /^Put a picture on this page/ });
+        expect(put).not.toBeNull();
+        expect((put as HTMLButtonElement).disabled).toBe(false);
+        looked += 1;
+      }
+      fireEvent.click(next);
+    }
+    // And there really were some: a test that found no blank page would pass
+    // by having asked nothing.
+    expect(looked).toBeGreaterThan(0);
+  });
+
+  /**
    * **A picture already in the book is moved where it stands** (§9ak, from
    * Ken: *maybe the best way is to insert a picture on the page and then
    * resize that picture to where you want it to be… instead of trying to
