@@ -176,6 +176,20 @@ export const PART_KINDS = [
   'also_by',
   'index',
   'plate',
+  /**
+   * **A page of the book that is nobody else's page** (addendum 20 §19, from
+   * Ken: *on blank pages, I want this level of styling to where you can add a
+   * graphic at the top, you can add text in it, you can add a graphic at the
+   * bottom… you're able to put the text and everything in the dialog box*).
+   *
+   * It is a part rather than a new idea of what a designed page is, which is
+   * what §9aa named as the blocker and what the audit found mostly built: a
+   * part already stands in the story (`halfOf` has answered *body* since
+   * plates faced chapters), already carries a template, a drop, a rule, an
+   * alignment, a face and its own words, and already has a screen of its own.
+   * What was new is one kind and one anchor.
+   */
+  'leaf',
 ] as const;
 export const partKindSchema = z.enum(PART_KINDS);
 export type PartKind = z.infer<typeof partKindSchema>;
@@ -298,6 +312,32 @@ export const bookPartSchema = z.object({
    * back, which `inFront` decides.
    */
   beforeMarkerId: z.string().nullable().default(null),
+  /**
+   * **The record this page stands in front of** (addendum 20 §19) — a
+   * manuscript element, a chapter page's marker, or another part: whichever
+   * of them a blank leaf was hanging on when the writer designed it.
+   *
+   * `beforeMarkerId` is the **older and narrower spelling** of the same
+   * intent, kept because a plate facing a chapter reads it by name and
+   * nothing about an existing book may move; `anchorOf` is the one reading
+   * that answers for both.
+   *
+   * A page is not a record, so this names the record rather than a page
+   * number: the words move, and the page that stands in front of them moves
+   * with them (§9i).
+   */
+  beforeId: z.string().nullable().default(null),
+  /**
+   * **Where a picture stands when the page carries words too** (addendum 20
+   * §19, from Ken: *you can add a graphic at the top, you can add text in it,
+   * you can add a graphic at the bottom*).
+   *
+   * A logotype has stood **where the title would** since the title page took
+   * one, which is above the words — so the default is false and no page
+   * already set moves. It means nothing on a page that is all picture or all
+   * words, and the control is absent there.
+   */
+  pictureBelow: z.boolean().default(false),
   /**
    * A plate with no chapter to face stands in the front matter when this is
    * set, at the back otherwise (§9, from Ken: a title page or an index that

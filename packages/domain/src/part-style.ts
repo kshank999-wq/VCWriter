@@ -177,7 +177,17 @@ export const partPlacement = (kind: PartKind): PartPlacement =>
     ? 'foot'
     : kind === 'contents' || kind === 'index'
       ? 'flows'
-      : kind === 'half_title' || kind === 'title_page' || kind === 'dedication' || kind === 'epigraph' || kind === 'plate'
+      : kind === 'half_title' ||
+          kind === 'title_page' ||
+          kind === 'dedication' ||
+          kind === 'epigraph' ||
+          kind === 'plate' ||
+          // **A page of the writer's own is a block on a page** (addendum 20
+          // §19, from Ken: *on blank pages, I want this level of styling*),
+          // which is what gives it the template, the drop, the rule, the
+          // alignment and the designed-page screen without one of them being
+          // written a second time.
+          kind === 'leaf'
         ? 'block'
         : 'prose';
 

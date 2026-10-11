@@ -7,6 +7,7 @@ import {
   blankHold,
   bookFigures,
   halfOf,
+  anchorOf,
   partTitle,
   partsOf,
   removeBookFigure,
@@ -169,7 +170,20 @@ export const bookRows = (file: ProjectFile): BookRow[] => {
   const noun = chapters ? 'Story' : 'Chapter';
   const rows: BookRow[] = [];
 
-  for (const part of parts) if (halfOf(part) === 'front') rows.push(partRow(file, part, 0));
+  /**
+   * **A page of the writer's own stands where it stands** (§19): anchored on
+   * a part, it prints in front of that part's page, so it is listed in front
+   * of that part's row. Without it the page would be in the book, reachable
+   * from the spread, and on no row — which is §9w's stray page exactly.
+   */
+  const anchored = (part: BookPart, depth: number): BookRow[] =>
+    parts.filter((one) => one.id !== part.id && one.beforeId === part.id).map((one) => partRow(file, one, depth));
+
+  for (const part of parts) {
+    if (halfOf(part) !== 'front') continue;
+    rows.push(...anchored(part, 0));
+    rows.push(partRow(file, part, 0));
+  }
   // Pictures before the first chapter belong to no chapter, so they stand
   // where they are rather than being hidden under one.
   for (const figure of figures) if (figure.markerId === null) rows.push(figureRow(figure, 0));
@@ -199,7 +213,10 @@ export const bookRows = (file: ProjectFile): BookRow[] => {
 
   for (const placed of contentsDivisions(file)) {
     const id = placed.marker.id as string;
-    for (const part of parts) if (part.beforeMarkerId === id) rows.push(partRow(file, part, 0));
+    // Anchored here: a plate facing the chapter, or a page of the writer’s
+    // own standing in front of its opening (§19). `anchorOf` is the one
+    // reading of where a part stands.
+    for (const part of parts) if (anchorOf(part) === id) rows.push(partRow(file, part, 0));
     rows.push({
       id,
       kind: 'chapter',
@@ -243,7 +260,11 @@ export const bookRows = (file: ProjectFile): BookRow[] => {
     }
   }
 
-  for (const part of parts) if (halfOf(part) === 'back') rows.push(partRow(file, part, 0));
+  for (const part of parts) {
+    if (halfOf(part) !== 'back') continue;
+    rows.push(...anchored(part, 0));
+    rows.push(partRow(file, part, 0));
+  }
   return rows;
 };
 

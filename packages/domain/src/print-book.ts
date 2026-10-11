@@ -351,10 +351,20 @@ const displayInner = (block: BookBlock, context: BookRenderContext): string => {
       // title's style and the rest the lines-under-it style, which is the
       // title page's own rule — an epigraph's attribution and a dedication's
       // second line are what those lines are.
-      return `<div class="bk-display bk-words"${styled}>${drop}${block.text
+      const words = block.text
         .split(/\n/)
         .map((line, index) => `<p${index === 0 ? '' : ' class="bk-words-under"'}>${escapeHtml(line)}</p>`)
-        .join('')}</div>`;
+        .join('');
+      /**
+       * **A picture standing with the words** (§19, Ken's *a graphic at the
+       * top… a graphic at the bottom*). Above them is where a logotype has
+       * always stood; below them is the one arrangement no designed page
+       * could say, and it is the same picture drawn in the other order rather
+       * than a second kind of thing.
+       */
+      const mark = logoMarkup(block, context, block.text.split(/\n/)[0] ?? '');
+      const withPicture = mark ? (block.pictureBelow ? `${words}${mark}` : `${mark}${words}`) : words;
+      return `<div class="bk-display bk-words"${styled}>${drop}${withPicture}</div>`;
     }
   }
 };

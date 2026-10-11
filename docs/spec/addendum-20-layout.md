@@ -2952,6 +2952,121 @@ second blank is not later "fixed" as a fault.
 > copyright page takes the next page now, and the assertion was rewritten
 > rather than worked around.
 
+## 19. A page of your own
+
+From Ken, with a screenshot of the chapter page's own **THIS PAGE** section:
+
+> On blank pages, I want this level of styling to where you can add a graphic
+> at the top, you can add text in it, you can add a graphic at the bottom, but
+> you can add, if you select, you're able to put the text and everything in the
+> dialog box.
+
+### 19.1 §9aa named the blocker, and the audit found it mostly built
+
+§9aa ended by naming what this needs: *a designed page standing alone
+mid-story, which is a chapter page without a chapter and so is either a
+chapter break or §9i's named blocker, **a part that can stand between two
+pages of the story***.
+
+Reading the code against that found it **already standing**:
+
+- `halfOf` has returned **three** answers since plates faced chapters —
+  `front`, **`body`**, `back` — and `beforeMarkerId` already anchors a part in
+  the story;
+- a part with `block` placement already carries a **template**, a **drop**, a
+  **rule**, an **alignment**, a **face**, its own **words** and a **screen of
+  its own** (§9n), every one of them built;
+- `partCarriesOwnWords` already answers *yes* to anything that is a block,
+  carries text and is not the copyright page.
+
+So what was missing is **one kind and one anchor**, not a second idea of what
+a designed page is. A page of the writer's own that re-implemented the
+template, the drop and the type would be exactly the second answer this room
+has removed four times.
+
+### 19.2 One kind
+
+`leaf` — **A page of your own** — joins `PART_KINDS`: `carries: 'text'` so it
+has words, `half: 'either'` so it may stand in the story, and not `once`
+because a book may have as many as a writer puts in. `partPlacement` puts it
+among the blocks, which is what hands it everything above.
+
+### 19.3 One anchor, and one reading of it
+
+`beforeId` names **the record this page stands in front of** — a manuscript
+element, a chapter page's marker, or another part: whichever of them the blank
+leaf was hanging on.
+
+`beforeMarkerId` is the **older and narrower spelling** of the same intent,
+kept because a plate facing a chapter reads it by name and nothing about an
+existing book may move. `anchorOf` answers for both, because *where does this
+page stand* must have one answer.
+
+And **a page is not a record**: this names the record rather than a page
+number, so the words move and the page standing in front of them moves with
+them — §9i's own rule.
+
+### 19.4 The act
+
+`designOffer` says what a press would do and `designPage` refuses the same
+things again — `trackRemoval`'s shape, so a caller cannot get past the reading
+by not reading it.
+
+**Only the writer's own blank page may be designed.** A blank page is one of
+three things (§9i): the leaf the cutter left before a recto is held by a rule
+rather than by anybody's intention, and the back of a picture exists in order
+to have nothing on it. Both are refused, with the refusal naming where the
+reason is said.
+
+**The leaf becomes the page**, which is `takePictureLeaf`'s rule said of words
+rather than of a picture: a page is a page, so the leaf goes and the designed
+page takes its place.
+
+### 19.5 A picture with the words
+
+On the half title and the title page a logotype stands **in place of the
+title**, which is what *Logotype* names and why those three tiles are
+exclusive. On a page of the writer's own there is no title to replace, so the
+picture stands **with** the words — above them, which is where a logotype has
+always stood, or **below** them, which is Ken's *a graphic at the bottom* and
+the one arrangement no designed page could say.
+
+`pictureBelow` is one boolean defaulting to false, so no page already set
+moves, and the control is **absent until there is a picture**, there being
+nothing to place.
+
+### 19.6 What driving it caught
+
+**The page printed the program's own label.** `partTitle` falls back to the
+kind's name — right for a *Foreword*, and on this page it set the words **A
+page of your own** across the top of somebody's book. A page of the writer's
+own takes the dedication's branch, whose `title: ''` is the rule already.
+
+**The screen said *back matter* about a page in the story.** `halfOf` has
+answered three since plates faced chapters and the heading read two, so a page
+standing between chapter one and chapter two was headed with a fact about the
+book that was wrong.
+
+**The note promised a length it could not keep.** It read *the book stays the
+length it is* — `takePictureLeaf`'s own rule — and a 14-page book was measured
+going to **16**: the leaf costs nothing by itself, and what the book then does
+depends on the parity and on whether the page after it opens on a right-hand
+page. §9al had already learned this and said it in one line (*the note gives
+no number*); the sentence says what the act does and no number. **The
+assertion that pinned the old claim was rewritten rather than worked around.**
+
+**And the rail had to list it**, or it would be a page in the book, reachable
+from the spread, and on no row — §9w's stray page exactly.
+
+### 19.7 Driven
+
+An imported novel at 1440 × 900: a blank page put in mid-story offers **Design
+this page…**, the press opens the designed page's own screen headed *A page of
+your own · the story · page 3 · right-hand page*, the tiles read **The words /
+A picture / Full-page art**, the page prints *A page of my own.* and nothing
+else, and the rail lists **A page of your own** between Chapter 1 and
+Chapter 2.
+
 ## 18. The body text can be set, on every screen a writer types it into
 
 From Ken, in one sentence:

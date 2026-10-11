@@ -137,6 +137,8 @@ import {
   rowHasUnder,
   visibleRows,
   blankOffer,
+  designOffer,
+  designPage,
   blankSpot,
   moveBlankPage,
   blankReason,
@@ -1434,6 +1436,20 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
          and one field, the room owning which mechanism moves a page half a
          sheet rather than the writer. */
       onAddBlank={addBlank}
+      /**
+       * **Design this page** (§19): the leaf becomes a page of the writer's
+       * own and the room turns to its screen, which is §9u's rule — *a page
+       * made opens* — and is the whole of Ken's *you're able to put the text
+       * and everything in the dialog box*.
+       */
+      onDesign={() => {
+        const made = designPage(file, page);
+        if (made.refusal || !made.partId) return;
+        setPageDialogSheet(null);
+        onUpdate(() => made.file);
+        setSelectedRowId(made.partId);
+        setPartDialogId(made.partId);
+      }}
       format={pageFormat(page).markerId ? pageFormat(page).label : null}
       onFormat={() => {
         const to = pageFormat(page);
@@ -4176,6 +4192,7 @@ function StoryPageSection({
   format,
   divisions,
   openings,
+  onDesign,
 }: {
   page: BookPageRow;
   /**
@@ -4233,6 +4250,8 @@ function StoryPageSection({
    * next to.
    */
   openings: ReactNode;
+  /** Turn this blank leaf into a page of the book (§19). */
+  onDesign(): void;
 }) {
   /**
    * Whether a blank leaf may be asked for here, where it would go, and what a
@@ -4241,6 +4260,8 @@ function StoryPageSection({
    * a second answer about either.
    */
   const blank = blankOffer(place, rows, page.sheet, nextPlace);
+  /** What designing this page would do, or why it cannot be (§19). */
+  const design = designOffer(page);
   /** The × asks once, inline, exactly as the row's does (§9x). */
   const [asking, setAsking] = useState(false);
   /** Which of the three reasons this page is blank (§9w), where it is. */
@@ -4305,6 +4326,23 @@ function StoryPageSection({
               gating on the record drew no buttons at all on exactly the page
               Ken reported being locked out of, with the domain answering
               perfectly the whole time. */}
+          {/* **A blank page the writer put in is a page of the book waiting
+              to be one** (§19, from Ken: *on blank pages, I want this level of
+              styling to where you can add a graphic at the top, you can add
+              text in it, you can add a graphic at the bottom*).
+
+              The leaf becomes a part, which is what gives it a template, a
+              drop, a rule, an alignment, a face and its own words with none
+              of them written a second time — and the book stays the length it
+              is, `takePictureLeaf`'s own rule (§9ap). Absent rather than
+              greyed on a page the book is keeping blank, with the reason
+              already said above it. */}
+          {design.refusal === null ? (
+            <button type="button" className="small" onClick={onDesign}>
+              Design this page…
+            </button>
+          ) : null}
+          {design.refusal === null ? <p className="field-note">{design.note}</p> : null}
           {!offer.refusal ? (
             <>
               <button type="button" className="small" onClick={onPut}>

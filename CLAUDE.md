@@ -3511,6 +3511,55 @@ push live; the build takes a minute or two.
   page, and switching it on would change the length of every collection already
   laid out, so the act is built and reachable while the default is its own
   decision.
+  **§19 is a page of your own**, from Ken with a screenshot of the chapter
+  page's own controls (*on blank pages, I want this level of styling to where
+  you can add a graphic at the top, you can add text in it, you can add a
+  graphic at the bottom… you're able to put the text and everything in the
+  dialog box*), and **§9aa had already named the blocker** — *a part that can
+  stand between two pages of the story* — which the audit found **mostly
+  built**: `halfOf` has returned **three** answers since plates faced chapters
+  (`front`, **`body`**, `back`) with `beforeMarkerId` anchoring a part in the
+  story, and a part with `block` placement already carries a template, a drop,
+  a rule, an alignment, a face, its own words and **a screen of its own**
+  (§9n). So what was missing is **one kind and one anchor**, a page that
+  re-implemented the template and the type being exactly the second answer
+  this room has removed four times. `leaf` — **A page of your own** — joins
+  `PART_KINDS` (`text`, `either`, not `once`) and `partPlacement` puts it
+  among the blocks, which hands it everything above. **`beforeId` names the
+  record this page stands in front of** — an element, a marker, another part,
+  whichever the blank leaf was hanging on — with `beforeMarkerId` the **older
+  and narrower spelling** a plate still writes and `anchorOf` the one reading,
+  because *where does this page stand* must have one answer; it names the
+  **record and never a page number**, so the words move and the page in front
+  of them moves with them (§9i). `designOffer` says what a press would do and
+  `designPage` refuses the same things again (`trackRemoval`'s shape), and
+  **only the writer's own blank page may be designed** — the leaf the cutter
+  left is held by a rule rather than by anybody's intention and the back of a
+  picture exists in order to have nothing on it, both refused with the refusal
+  naming where the reason is said. **The leaf becomes the page**,
+  `takePictureLeaf`'s rule said of words. **A picture stands *with* the words
+  rather than instead of them**: on the half title and the title page a
+  logotype replaces the title, which is why those tiles are exclusive, and
+  here there is no title to replace — so `pictureBelow` is one boolean
+  (defaulting false, so no page already set moves, and absent until there is a
+  picture) and it is Ken's *a graphic at the bottom*, the one arrangement no
+  designed page could say. **Driving it caught four.** The page printed **the
+  program's own label** — `partTitle` falls back to the kind's name, right for
+  a *Foreword* and here setting *A page of your own* across the top of
+  somebody's book, fixed by taking the dedication's branch whose `title: ''`
+  is the rule already. The screen said **back matter about a page in the
+  story**, `halfOf` answering three while the heading read two. **The note
+  promised a length it could not keep** — *the book stays the length it is*,
+  measured taking a 14-page book to **16**, because the leaf costs nothing by
+  itself and what follows depends on the parity and on the recto rule; §9al
+  had learned this and said it in one line (*the note gives no number*), and
+  **the assertion that pinned the old claim was rewritten rather than worked
+  around**. And **the rail had to list it**, or it is a page in the book,
+  reachable from the spread and on no row — §9w's stray page exactly. Driven:
+  a blank page mid-story offers *Design this page…*, the press opens the
+  designed page's screen headed *the story · page 3*, the tiles read **The
+  words / A picture / Full-page art**, the page prints *A page of my own.* and
+  nothing else, and the rail lists it between Chapter 1 and Chapter 2.
   **§18 is the body text being settable, on every screen a writer types it
   into**, from Ken (*in any of the dialog boxes that you can add text, right
   now only the headings can be stylized, but the body text needs to be able to

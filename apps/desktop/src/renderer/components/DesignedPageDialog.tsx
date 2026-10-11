@@ -264,15 +264,34 @@ function Body({
    * title's vocabulary reaching a page it does not describe — the fault §6c
    * removed from seventeen components, in copy rather than in a noun.
    */
-  const wordsName = part.kind === 'epigraph' ? 'The quotation' : 'The dedication';
+  /**
+   * **What the words on this page are called**, which must be the same name
+   * the field below it carries — §17e's own finding, where a dedication's box
+   * was headed in the half title's vocabulary. A page of the writer's own has
+   * no name but its own (§19).
+   */
+  const wordsName =
+    part.kind === 'epigraph' ? 'The quotation' : part.kind === 'leaf' ? 'The words' : 'The dedication';
   const modes = useMemo(
     () =>
-      MODES.map((one) =>
-        one.id === 'text' && ownWords
-          ? { ...one, label: 'The words', hint: `${wordsName}, set in the book’s own type` }
-          : one,
-      ),
-    [ownWords, wordsName],
+      MODES.map((one) => {
+        if (one.id === 'text' && ownWords) {
+          return { ...one, label: 'The words', hint: `${wordsName}, set in the book’s own type` };
+        }
+        /**
+         * **A picture with the words, rather than in place of a title**
+         * (§19). On the half title and the title page a logotype stands
+         * *instead* of the title, which is what *Logotype* names; on a page
+         * of the writer's own there is no title, so the same picture is one
+         * that stands with the words — above them or below them, which is
+         * Ken's *a graphic at the top… a graphic at the bottom*.
+         */
+        if (one.id === 'logo' && part.kind === 'leaf') {
+          return { ...one, label: 'A picture', hint: 'A picture above the words, or below them' };
+        }
+        return one;
+      }),
+    [ownWords, wordsName, part.kind],
   );
   const plan = useMemo(() => partsOf(file), [file]);
   const fields = titlePageFieldsOf(part);
@@ -477,7 +496,14 @@ function Body({
   /** Whether a leaf may be asked for in front of this page, and what it says (§9r). */
   const blankLeaf = partBlankOffer(rows, part);
   const here = at >= 0 ? rows[at] : undefined;
-  const half = halfOf(part) === 'front' ? 'front matter' : 'back matter';
+  /**
+   * **Where in the book this page stands.** `halfOf` has answered three since
+   * plates faced chapters, and this read two — so a page of the writer's own
+   * standing between chapter one and chapter two was headed *back matter*,
+   * which is a fact about the book and it was wrong (§19).
+   */
+  const where = halfOf(part);
+  const half = where === 'front' ? 'front matter' : where === 'body' ? 'the story' : 'back matter';
 
   /**
    * What goes on the page. A tile is **the act**, not a flag: choosing art
@@ -621,7 +647,7 @@ function Body({
                   })}
                 </ul>
               </>
-            ) : mode === 'text' && ownWords ? (
+            ) : (mode === 'text' || (mode === 'logo' && part.kind === 'leaf')) && ownWords ? (
               /**
                * **The words on this page are the writer's** (§17e, from Ken:
                * *when I add a dedication page, it doesn't allow me to actually
@@ -643,6 +669,45 @@ function Body({
                   value={part.text}
                   onChange={(event) => onUpdate((current) => updatePart(current, part.id, { text: event.target.value }))}
                 />
+                {/* **A picture stands with the words rather than instead of
+                    them** (§19, from Ken: *you can add a graphic at the top,
+                    you can add text in it, you can add a graphic at the
+                    bottom*). On every other designed page a logotype replaces
+                    the title, which is why those three tiles are exclusive;
+                    here there is no title to replace, so the picture and the
+                    words are one page and the only question is which is on
+                    top. Absent until there is a picture, there being nothing
+                    to place. */}
+                {part.kind === 'leaf' && logo ? (
+                  <div className="dp-element-pair">
+                    <div className="chips" role="group" aria-label="Where the picture stands">
+                      {[
+                        { below: false, label: 'Above the words' },
+                        { below: true, label: 'Below the words' },
+                      ].map((one) => (
+                        <button
+                          key={one.label}
+                          type="button"
+                          className={part.pictureBelow === one.below ? 'chip on' : 'chip'}
+                          aria-pressed={part.pictureBelow === one.below}
+                          onClick={() => onUpdate((current) => updatePart(current, part.id, { pictureBelow: one.below }))}
+                        >
+                          {one.label}
+                        </button>
+                      ))}
+                    </div>
+                    <button type="button" className="ghost small" onClick={() => onPickLogo(partId)}>
+                      Another picture…
+                    </button>
+                    <button
+                      type="button"
+                      className="ghost small"
+                      onClick={() => onUpdate((current) => updatePart(current, partId, { logoAssetId: null }))}
+                    >
+                      Take the picture off
+                    </button>
+                  </div>
+                ) : null}
               </label>
             ) : mode === 'text' ? (
               <div className="dp-slot">
@@ -1215,10 +1280,14 @@ function Body({
                 *has* first, and how far it has been taken as a clause after
                 it — a page that is complete should say so, not lead with an
                 arithmetic nobody asked about. */}
-            {isTitle ? 'All required elements present' : changes > 0 ? '' : `Matches the ${half === 'front matter' ? 'front-matter' : 'back-matter'} style`}
+            {isTitle
+              ? 'All required elements present'
+              : changes > 0
+                ? ''
+                : `Matches the ${where === 'front' ? 'front-matter' : where === 'body' ? 'book’s own' : 'back-matter'} style`}
             {changes > 0
               ? `${isTitle ? ' · ' : ''}${changes} change${changes === 1 ? '' : 's'} from the ${
-                  half === 'front matter' ? 'front-matter' : 'back-matter'
+                  where === 'front' ? 'front-matter' : where === 'body' ? 'book’s own' : 'back-matter'
                 } style`
               : ''}
           </span>

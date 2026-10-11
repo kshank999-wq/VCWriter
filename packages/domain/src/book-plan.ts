@@ -86,6 +86,12 @@ export const PART_INFO: Record<PartKind, PartKindInfo> = {
   also_by: info('also_by', 'Also by', 'text', 'back', true, 'the author’s other books'),
   index: info('index', 'Index', 'reading', 'back', true, 'the marks the writer placed, with their pages'),
   plate: info('plate', 'Art page', 'plate', 'either', false, 'a picture that fills the page, edge to edge'),
+  /**
+   * **A page of your own** (§19). `text` so it carries words, `either` so it
+   * may stand in the story where the blank leaf it replaced stood, and not
+   * `once` because a book may have as many as a writer puts in.
+   */
+  leaf: info('leaf', 'A page of your own', 'text', 'either', false, 'a picture, a few words, or both — set like any other page'),
 };
 
 export const partInfo = (kind: PartKind): PartKindInfo => PART_INFO[kind];
@@ -113,12 +119,31 @@ export const partsOf = (file: ProjectFile): BookPart[] => bookSettingsOf(file).p
  * with no chapter to face is in the front matter if it says so, at the back
  * otherwise (§9).
  */
+/**
+ * **The record a part stands in front of** (§19), where it stands in one.
+ *
+ * `beforeId` is the general anchor — a manuscript element, a marker, another
+ * part — and `beforeMarkerId` is the older and narrower spelling a plate
+ * facing a chapter still writes, so nothing about an existing book moves.
+ * One reading, because *where does this page stand* must have one answer.
+ */
+export const anchorOf = (part: Pick<BookPart, 'beforeId' | 'beforeMarkerId'>): string | null =>
+  part.beforeId ?? part.beforeMarkerId ?? null;
+
 export const halfOf = (part: BookPart): 'front' | 'body' | 'back' => {
   const half = PART_INFO[part.kind].half;
   if (half !== 'either') return half;
-  if (part.beforeMarkerId) return 'body';
+  if (anchorOf(part)) return 'body';
   return part.inFront ? 'front' : 'back';
 };
+
+/**
+ * The designed pages standing in front of a record, in the order they were
+ * put there (§19). A reading over the plan, so cutting the words the page
+ * hangs on takes the page with nothing run.
+ */
+export const pagesBeforeRecord = (parts: readonly BookPart[], recordId: string): BookPart[] =>
+  parts.filter((part) => part.kind !== 'plate' && part.beforeId === recordId);
 
 export const frontParts = (parts: readonly BookPart[]): BookPart[] => parts.filter((part) => halfOf(part) === 'front');
 export const backParts = (parts: readonly BookPart[]): BookPart[] => parts.filter((part) => halfOf(part) === 'back');
@@ -556,6 +581,8 @@ export interface BookBlock {
   face?: string;
   size?: number;
   ownSize?: boolean;
+  /** A picture on a designed page sits under the words rather than over them (§19). */
+  pictureBelow?: boolean;
   align?: ParagraphAlign;
   /** The ink this paragraph is set in (addendum 02 §19a). Always honoured. */
   colour?: string;
@@ -645,7 +672,21 @@ const partBlocks = (
    * **As many leaves in front of this page as the writer asked for** (§9ac),
    * each of them a **sheet** rather than a side (§9ad).
    */
-  const front = blankPages(pagesBefore(part.blankBefore), (suffix) => leaf(suffix));
+  const front = [
+    ...blankPages(pagesBefore(part.blankBefore), (suffix) => leaf(suffix)),
+    /**
+     * **And the writer's own designed pages, where they stand** (§19): they
+     * hang on a record exactly as a blank leaf does, so one stands in front
+     * of this page wherever a leaf would have.
+     *
+     * Only one level deep, which is enough and is the whole of what a writer
+     * can ask for: a page of your own hangs on a record that has a page, and
+     * a page of your own is not one of those.
+     */
+    ...plan
+      .filter((one) => one.kind !== 'plate' && one.beforeId === part.id)
+      .flatMap((one) => partOwnBlocks(one, numbering, chapterTitle, prose, file, plan)),
+  ];
   if (!part.backBlank || !partTakesBlankBack(part.kind)) return [...front, ...own];
   const first = own[0] as BookBlock;
   return [...front, { ...first, starts: 'recto' }, ...own.slice(1), leaf('back')];
@@ -839,6 +880,19 @@ const partOwnBlocks = (
       ];
     case 'dedication':
     case 'epigraph':
+    /**
+     * **A page of the writer's own** (§19) is set exactly as a dedication is:
+     * words alone on a page, no number, the page able to be a piece of art.
+     * What it adds is a **picture with the words** — above them, which is
+     * where a logotype has always stood, or below them, which is Ken's *a
+     * graphic at the bottom* and the one thing no designed page could say.
+     *
+     * And **no heading**: `title: ''` is the dedication's own rule, and it
+     * matters more here, `partTitle` falling back to the kind's name — so a
+     * page of the writer's own printed the words *A page of your own* across
+     * the top of it, which is the program's label on somebody's book.
+     */
+    case 'leaf':
       // A page of their own, the words alone on it, no number.
       return [
         block({
@@ -855,6 +909,8 @@ const partOwnBlocks = (
           spans: parseInline(part.text),
           // The page may be a piece of art like any other designed page (§7a).
           assetId: part.assetId,
+          logo: partLogo(part) ?? undefined,
+          pictureBelow: part.pictureBelow,
           partStyle: partHasStyle(part.kind) ? partStyleOf(part) : undefined,
         }),
       ];
@@ -2415,6 +2471,80 @@ export const takePictureLeaf = (file: ProjectFile, leafId: string): ProjectFile 
   setBlankPages(file, leafId, blankPagesAt(file, leafId) - 1);
 
 /**
+ * **What designing a blank page would do** (§19, from Ken: *on blank pages, I
+ * want this level of styling to where you can add a graphic at the top, you
+ * can add text in it, you can add a graphic at the bottom… you're able to put
+ * the text and everything in the dialog box*).
+ *
+ * `trackRemoval`'s shape: a sentence a writer can act on, or a refusal that
+ * says why, answered **before the act can be asked for** — and `designPage`
+ * refuses the same things again, so a caller cannot get past the reading by
+ * not reading it.
+ */
+export interface DesignOffer {
+  /** The leaf this would take, or null where there is nothing to take. */
+  leafId: string | null;
+  /** What a press would do, in the writer's own words. */
+  note: string;
+  refusal: string | null;
+}
+
+/**
+ * A blank page is one of three things (§9i) and **only the writer's own may be
+ * designed**: the leaf the cutter left before a recto is held by a rule rather
+ * than by anybody's intention, and the back of a picture exists in order to
+ * have nothing on it.
+ */
+export const designOffer = (page: Pick<BookPageRow, 'blank' | 'blankFor'> | null): DesignOffer => {
+  if (!page || !page.blank) {
+    return { leafId: null, note: '', refusal: 'There is writing on this page already.' };
+  }
+  if (!page.blankFor) {
+    return {
+      leafId: null,
+      note: '',
+      // Named rather than merely refused: the page's own screen says which of
+      // the three reasons holds it blank, and the way out is to remove the
+      // reason (§9al).
+      refusal: 'The book leaves this page blank, so it is not a page to design. Its own screen says why.',
+    };
+  }
+  return {
+    leafId: page.blankFor,
+    /**
+     * **What it does, and no number** — §9al's own rule, learned here by
+     * driving it: the leaf becomes this page, which costs nothing by itself,
+     * and what the book then does depends on the parity and on whether the
+     * page after it opens on a right-hand page. A sentence promising *the
+     * book stays the length it is* was measured taking a 14-page book to 16.
+     */
+    note: 'This blank page becomes a page you set yourself — a picture, a few words, or both.',
+    refusal: null,
+  };
+};
+
+/**
+ * **Design this page.** The leaf the writer put in becomes a page of their
+ * own, standing where it stood.
+ *
+ * It is `takePictureLeaf`'s rule said of words rather than of a picture: a
+ * page is a page, so the leaf goes and the designed page takes its place,
+ * which is why the book does not grow by it. And it is a **part**, which is
+ * what gives it a template, a drop, a rule, an alignment, a face and its own
+ * words without one of them being written a second time (§19).
+ */
+export const designPage = (
+  file: ProjectFile,
+  page: Pick<BookPageRow, 'blank' | 'blankFor'> | null,
+): { file: ProjectFile; partId: string | null; refusal: string | null } => {
+  const offer = designOffer(page);
+  if (offer.refusal || !offer.leafId) return { file, partId: null, refusal: offer.refusal };
+  const freed = takePictureLeaf(file, offer.leafId);
+  const made = addPart(freed, 'leaf', { beforeId: offer.leafId });
+  return { file: made.file, partId: made.partId, refusal: null };
+};
+
+/**
  * **A blank leaf before a part's page, or behind it** (§9r): the same act as
  * the manuscript's, said of the front and back matter, where *wherever you
  * want* had no answer at all.
@@ -3646,6 +3776,19 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
    * five has not finished anything.
    */
   const separates = holdsWholeWorks(file.project.format);
+  /**
+   * **The writer's own designed pages, where they stand** (§19).
+   *
+   * They hang on a record exactly as a blank leaf does, so they are emitted
+   * at the same three places and in the same breath — which is the whole of
+   * why a page of your own needed no second idea of where a page may stand:
+   * the mechanism that puts a blank leaf in front of a paragraph is the one
+   * that puts this in front of it.
+   */
+  const designedBefore = (recordId: string): BookBlock[] =>
+    pagesBeforeRecord(parts, recordId).flatMap((part) =>
+      partBlocks(part, 'arabic', chapterTitle, prose, file, parts),
+    );
   let worksSoFar = 0;
   let pending: BookBlock | null = null;
   /** Free graphics waiting for the next block to ride (§8c). */
@@ -3814,6 +3957,7 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
           }),
         ),
       );
+      out.push(...designedBefore(placed.marker.id as string));
       const leaf = chapterLeafContent(file, placed);
       chapterTitle = leaf.title.trim() || leaf.label;
       const onLeaf = opensOnLeaf(leaf);
@@ -3916,6 +4060,14 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
               }),
             ),
           );
+        }
+        const designed = designedBefore(element.id as string);
+        if (designed.length > 0) {
+          if (pending) {
+            out.push(pending);
+            pending = null;
+          }
+          out.push(...designed);
         }
         if (atUnitHead) {
           atUnitHead = false;
