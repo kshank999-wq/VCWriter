@@ -3058,7 +3058,114 @@ sheet between works on for that reason. This is the same rule stopping one
 work short, and it is a separate piece: the back matter is not a division, the
 field that carries the sheet lives on a *work's* chapter page, and switching it
 on would change the length of every collection already laid out. The act is
-built and reachable; the default is its own decision.
+built and reachable; the default is its own decision. **Built in §9ao**, at his
+own ask — and the field it needed turns out to be the **book's** rather than a
+work's, for the reason that section gives.
+
+## 9ao. The sheet that ends the story, and the page after the last one
+
+From Ken, with two screenshots of *Villain's Tales* — 180 pages, page 172 in
+hand, *A blank page before this one* on offer and the other side refused:
+
+> yes, make that end-of-story page automatic. So I tried to shift the pages
+> around and then it got confused, but I couldn't drag the page to the last
+> page. And I couldn't drag the page again after I already dragged it. There's
+> a blank page before this one, but we need a blank page after this one also.
+> Because now I'm at the end of the story and I drag things around and it got
+> messed up, but now I'm back in the same situation to where I can't put a
+> page after the end once I remove it.
+
+Three asks: the first approves §9an's **named rather than built** item, the
+second is two reports about the drag, and the third is the refusal §9an wrote
+coming back at him.
+
+### The sheet that ends the story
+
+§9an named this rather than building it and gave its reason — switching it on
+changes the length of every collection already laid out — which is a reason to
+**ask** rather than a reason to withhold, and he has now answered. So it is
+addendum 22 §9's sheet said at the other end: `holdsWholeWorks` only, two
+pages, default on, and the pair of ticks stands together in Book settings.
+
+Two things decide where it stands, and both are §9's own argument read
+forwards. **Only where something follows the story**: a separation is between
+two things — the first work gets none because the front matter already stands
+in front of it, and by exactly that reading a blank sheet at the very end of a
+book separates nothing and is two pages nobody turns to. And **the book
+carries it, not a work**: `sheetBefore` is a fact about the work it stands in
+front of, while which work is *last* changes the day another is imported, so a
+`sheetAfter` set there would turn into a sheet between two works and duplicate
+the one already standing. `blankEnds` is therefore a flag where `blankBetween`
+is an id, and the × on either of its two pages reaches `setSheetAfter` — the
+book's own switch, which is why the tick reads back off after the press.
+
+Measured: three stories of two chapters, the sheet at pages 20–21 between the
+story's last page and *About the author*; every opening is where it was, two
+pages being an even number (§9ad); 28 pages with it, 26 with the × pressed.
+
+### The page after the last one
+
+A leaf hangs **in front of** a record (§9i), which is what makes *after this
+page* mean *in front of the next one* (§9an) — and at the last page of the book
+there is no next one, so §9an refused with *there is nothing after it for a
+leaf to stand in front of*. That sentence is true about the mechanism and is a
+poor answer to somebody asking for a page a book plainly has.
+
+**The book is the record.** `BOOK_END` names it and `settings.book.blankAtEnd`
+holds the count, so `setBlankPages`, `blankPagesAt`, `moveBlankPage`, the Add
+menu, the page's own × and the rail's drag all reach it with nothing added to
+them. The note is the simplest one in the room — *nothing comes after it, so
+the book simply grows by a page* — because the general note is about what a
+single page does to everything following it, and here there is nothing
+following.
+
+Two things fell out of driving it. **A part that ends the book answers for that
+page too**: a part with nothing under it but the page its own row names has no
+page row at all (§17e), so the last page of a book ending in *About the author*
+cannot be double-clicked or chosen, and `partBlankOffer`'s refusal named *that
+page's own screen* — a route pointing at nothing (addendum 10 §8). And **the
+rail listed the leaf inside the story**: `bookPageRows` carries the unit and
+the marker forward, which is right for a page in the story and wrong after the
+end, so it was claimed by the last section and drew *above* the back matter —
+page 13 over page 12, out of the book's own order.
+
+### The two drag reports
+
+**Reproduced, and they are one fault.** Driven in the real rail, a drop on a
+**page** row works, twice and three times over — so *I couldn't drag the page
+again* is not the drop failing. Every **other** row accepted the drag, **lit up
+as a drop target**, and did nothing with it: `dropOn` had no branch for a
+blank. That is worse than a refusal, because the highlight says the drop will
+be taken; and it is where the last page of his book is. *A row is a page*,
+which the picture drag has read off `pageOf` since §9w, so the drop and the
+highlight now ask one reading — and an **area heading** is a half of the book
+rather than a page, so it does not light at all.
+
+### A page at a time
+
+§9ad made the leaf a sheet and the × took both of its pages; §9an then settled
+that *the unit is a page and the choice is a side* and left the × alone. So the
+Add menu put one page in and the × took two — the one act in the room that
+undid more than its opposite did, which is what *I drag things around and it
+got messed up* is made of. One in, one out; two presses still make a sheet and
+two × still take it.
+
+### What looking at it caught
+
+**The Add menu's *after* item said nothing.** It read the combined note, which
+is the *first* side with anything to say, so the after item carried none — and
+at the end of the book, where the two sides differ most, the one sentence a
+writer needs was on the wrong item. Each item reads its own side.
+
+**A refusal that could not reach the reason.** *Nothing of the book stands on
+this page for a leaf to go in front of* is true of the mechanism and says
+nothing a writer can act on — and the page it is said about is, in practice,
+always a page the **book** left blank, which `blankReason` can say. It names
+the reason and the row that takes it away, which is §9w's own finding one
+sentence on: standing on the story's last page a writer now hears *the page
+after this one is already blank — the book leaves a blank sheet after the last
+of the works*, which is the page he asked for.
+
 
 ## 9am. The room was spending the page's memory
 

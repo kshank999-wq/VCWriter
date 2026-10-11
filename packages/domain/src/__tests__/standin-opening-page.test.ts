@@ -15,6 +15,8 @@ import {
   pagePlace,
   placeFigure,
   setBlankPage,
+  setBookSettings,
+  SHEET,
   updateBeat,
   type ProjectFile,
 } from '../index.js';
@@ -208,11 +210,19 @@ describe('a page whose heading stands in', () => {
 });
 
 describe('a book nobody has asked anything of', () => {
-  it('is laid exactly as it was', () => {
+  it('is laid exactly as it was, but for the sheet that ends the story', () => {
     // The stand-in is unchanged in the printed order: this is a fix to what
     // a page *answers*, never to what it prints.
+    //
+    // **The one thing that moved is the book's and is meant to** (§9ao, from
+    // Ken: *yes, make that end-of-story page automatic*): this fixture is a
+    // collection, so a sheet now stands between its one story and the back
+    // matter. The assertion said *nothing is blank at all*, which was true
+    // until this and is now the wrong claim rather than a failing one — and
+    // the setting off gives the old shape back, which is what pins it.
     const file = imported();
-    expect(shape(file).filter((one) => one === 'blank')).toHaveLength(0);
+    expect(shape(file).filter((one) => one === 'blank')).toHaveLength(SHEET);
+    expect(shape(setBookSettings(file, { sheetAfterWorks: false })).filter((one) => one === 'blank')).toHaveLength(0);
     expect(bookBlocks(file).filter((block) => block.standsIn === true)).toHaveLength(3);
   });
 });

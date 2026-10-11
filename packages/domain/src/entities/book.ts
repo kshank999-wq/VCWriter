@@ -411,6 +411,36 @@ export const bookSettingsSchema = z.object({
    * requirement rather than as an option.
    */
   sheetBetweenWorks: z.boolean().default(true),
+  /**
+   * **And a sheet at the end of the last one** (§9ao, from Ken: *yes, make
+   * that end-of-story page automatic*, approving §9an's named item — *there
+   * always needs to be an extra page at the end of all the stories between
+   * the stories and the back matter*).
+   *
+   * It is `sheetBetweenWorks`' other end and the same sheet, so it is read on
+   * `holdsWholeWorks` alone and defaults **on** for that field's own reason.
+   * What it is *not* is a sheet after a particular work: which work is last
+   * changes the day another is imported, so this is the book's and there is
+   * no per-work override — it separates the story from the back matter rather
+   * than one story from another, which is also why it is absent where nothing
+   * follows the story. A separation is between two things (addendum 22 §9),
+   * and a blank sheet at the very end of a book separates nothing.
+   */
+  sheetAfterWorks: z.boolean().default(true),
+  /**
+   * **The writer's own blank pages after the last page of the book** (§9ao,
+   * from Ken: *I can't put a page after the end once I remove it*).
+   *
+   * A leaf hangs **in front of** a record (§9i), so the end of the book was
+   * the one position with nothing to hang on and the only answer the room had
+   * was a refusal. The book is the record: `BOOK_END` names it, and every act
+   * that reaches a leaf — the Add menu, the page's own ×, a drag — works
+   * unchanged through `setBlankPages`.
+   *
+   * A count in pages (§9an), with `true` the older spelling of one sheet
+   * (`blankBefore`'s shape), so nothing is migrated.
+   */
+  blankAtEnd: z.union([z.boolean(), z.number().int().min(0).max(MAX_BLANK_PAGES)]).default(false),
   runningHeads: z
     .object({
       verso: headContentSchema.default('author'),

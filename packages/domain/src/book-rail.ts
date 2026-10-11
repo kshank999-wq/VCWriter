@@ -13,10 +13,11 @@ import {
   setBackBlank,
   setChapterRecto,
   setSheetBefore,
+  setSheetAfter,
   removePart,
   sayBlankReason,
   blankPagesAt,
-  SHEET,
+  BOOK_END,
   setBlankPages,
   type BookFigure,
   type BookPageRow,
@@ -293,6 +294,8 @@ export const pagesUnder = (
   };
   let current: string | null = null;
   let marker: string | null = null;
+  /** The last row anything was given to, for the leaves after the last page. */
+  let last: string | null = null;
   /**
    * **Pages that stand in front of the division they belong to** (§9w).
    *
@@ -306,6 +309,18 @@ export const pagesUnder = (
    */
   let waiting: BookPageRow[] = [];
   for (const page of pages) {
+    /**
+     * **A leaf after the last page of the book is inside nothing** (§9ao).
+     * `bookPageRows` carries the unit and the marker forward, which is right
+     * for a page inside the story and wrong here: measured, a page asked for
+     * after the end was claimed by the last **section** and so drew above the
+     * back matter, out of the book's own order — page 13 listed over page 12.
+     * It is held and given to the last row there is, below.
+     */
+    if (page.blankFor === BOOK_END) {
+      waiting.push(page);
+      continue;
+    }
     if (page.partId !== null) {
       // The part's own page, and whatever stood unclaimed in front of it —
       // the leaf its recto rule left there, which is nobody else's. `current`
@@ -316,6 +331,7 @@ export const pagesUnder = (
       if (owner !== null) {
         for (const held of waiting) put(owner, held);
         put(owner, page);
+        last = owner;
       }
       current = null;
       marker = null;
@@ -337,6 +353,18 @@ export const pagesUnder = (
     for (const held of waiting) put(current, held);
     waiting = [];
     put(current, page);
+    last = current;
+  }
+  /**
+   * **And anything still waiting at the end of the book goes to the last row
+   * there is** (§9ao). §9w's rule is that every page is accounted for, and the
+   * walk gives a held page to the **next** division — which at the end of the
+   * book is no division at all, so a leaf the writer asks for after the last
+   * page was held and then dropped: a page of their own, with a × and a grip,
+   * listed under nothing.
+   */
+  for (const held of waiting) {
+    if (last !== null) put(last, held);
   }
   return under;
 };
@@ -494,8 +522,8 @@ export const removeBookRow = (file: ProjectFile, row: BookRow): ProjectFile => {
 export interface PageRemoval {
   /** What the act needs: the leaf's own spot, the picture, or the chapter. */
   id: string | null;
-  /** Which act it is, so one × can serve six kinds of page. */
-  what: 'leaf' | 'picture' | 'words' | 'back' | 'recto' | 'between' | 'division' | null;
+  /** Which act it is, so one × can serve seven kinds of page. */
+  what: 'leaf' | 'picture' | 'words' | 'back' | 'recto' | 'between' | 'ending' | 'division' | null;
   /** The ×'s label, where there is one. */
   act: string | null;
   /** What goes with it, said beside the ask. */
@@ -525,11 +553,18 @@ export const pageRemoval = (file: ProjectFile, rows: readonly BookPageRow[], she
         id: hold.id,
         what: 'leaf',
         act: 'Take this page away',
-        // **A sheet, so both of its pages** (§9ad): the writer put a leaf in
-        // and a leaf is two sides, so a × on either of them takes the whole
-        // sheet. Nothing after it changes side, two pages being an even
-        // number.
-        comfort: 'The blank sheet goes — both its pages. Nothing else changes which side of the paper it is on.',
+        /**
+         * **One page, because one page is what a press puts in** (§9ao).
+         * §9ad made the leaf a sheet and the × took both of its pages, which
+         * §9an then quietly broke in the other direction: it settled that
+         * *the unit is a page and the choice is a side*, so the Add menu adds
+         * one and the × went on taking two. A writer poking at the end of
+         * their book met an act that undid more than its opposite did — which
+         * is exactly what *I drag things around and it got messed up* is made
+         * of. One in, one out; two presses still make a sheet and two × still
+         * take it.
+         */
+        comfort: 'The blank page goes. Put two in and you have a whole blank sheet; take one away and the other stays.',
         refusal: null,
       };
     }
@@ -548,6 +583,27 @@ export const pageRemoval = (file: ProjectFile, rows: readonly BookPageRow[], she
         what: 'between',
         act: 'Take this page away',
         comfort: `The blank sheet goes — both its pages. Only this ${one} stops being separated by one; every other ${one} keeps its sheet, and Book settings is where they are all decided.`,
+        refusal: null,
+      };
+    }
+    /**
+     * **The sheet that ends the story** (§9ao). There is one of these in a
+     * book, so unlike the separation between two works there is nothing
+     * narrower to write: the × reaches the book's own switch and the sentence
+     * says so, a control acting on something nobody is looking at being the
+     * fault that kept §9's × off the book-wide setting.
+     */
+    if (hold.frees === 'ending') {
+      const many = nounsFor(file.project.format).divisionPlural.toLowerCase();
+      return {
+        // **The book carries it, so there is no id**, which is why the act is
+        // read before `removeBookPage`'s guard rather than handed a made-up
+        // one: an id that named something would be a second answer about
+        // whose rule this is.
+        id: null,
+        what: 'ending',
+        act: 'Take this page away',
+        comfort: `The blank sheet goes — both its pages. The book stops ending the ${many} with one; the back matter then follows the story directly.`,
         refusal: null,
       };
     }
@@ -675,14 +731,20 @@ export const pageRemoval = (file: ProjectFile, rows: readonly BookPageRow[], she
  * page's × does.
  */
 export const removeBookPage = (file: ProjectFile, page: BookPageRow, what: PageRemoval): ProjectFile => {
+  /**
+   * **The one act that names no record** (§9ao): the sheet ending the story is
+   * the book's own setting, so it is read before the guard below rather than
+   * being handed an id that would claim some work carries it.
+   */
+  if (what.what === 'ending') return setSheetAfter(file, false);
   if (!what.id) return file;
   // **One leaf, not all of them** (§9ac): a writer may ask for several in one
   // place now, so a × on one of them takes that one — clearing the count
   // would take a run of pages away for a press on one row.
-  // **A × takes the whole sheet, both its pages** (§9ad) — and the count is
-  // in pages since the shift (§9ae), so it says how many that is rather than
-  // leaving `1` to mean half a leaf.
-  if (what.what === 'leaf') return setBlankPages(file, what.id, blankPagesAt(file, what.id) - SHEET);
+  // **One page, the same unit a press puts in** (§9ao): §9ad's × took a whole
+  // sheet, which §9an's *the unit is a page* left as the one act in the room
+  // that undid more than its opposite did.
+  if (what.what === 'leaf') return setBlankPages(file, what.id, blankPagesAt(file, what.id) - 1);
   if (what.what === 'picture') return removeBookFigure(file, what.id);
   if (what.what === 'back') return setBackBlank(file, what.id, false);
   if (what.what === 'recto') return setChapterRecto(file, what.id, false);

@@ -4,7 +4,9 @@ import {
   addMarker,
   addPart,
   addUnit,
+  BOOK_END,
   blankOffer,
+  bookRows,
   blankSpot,
   bookBlocks,
   bookNames,
@@ -14,6 +16,7 @@ import {
   geometryOf,
   layPages,
   pagePlace,
+  pagesUnder,
   partBlankOffer,
   partsOf,
   setBlankPage,
@@ -151,7 +154,16 @@ describe('where a blank page may be entered', () => {
     const offer = offerOn(file, left.sheet);
     expect(offer.before.spot).toBeNull();
     expect(offer.before.act).toBeNull();
-    expect(offer.before.refusal).toMatch(/Nothing of the book stands on this page/i);
+    /**
+     * **And the sentence names the reason** (§9ao). §9y's answer said *nothing
+     * of the book stands on this page*, which is true of the mechanism and
+     * says nothing a writer can act on — and the page it is said about is, in
+     * practice, always a page the **book** left blank, which `blankReason` can
+     * say and this refusal could not reach. §9w's own finding one sentence on.
+     */
+    expect(offer.before.refusal).toMatch(/already blank/i);
+    expect(offer.before.refusal).toMatch(/opens on a right-hand page/i);
+    expect(offer.before.refusal).toMatch(/row of its own/i);
     /**
      * **And the other side is still offered** (§9an), which is the half the
      * two vocabularies could not say: a leaf the cutter left has nothing on
@@ -361,6 +373,51 @@ describe('a page that already has a leaf in front of it', () => {
     expect(offer.after.refusal).toMatch(/that page’s own screen/);
   });
 
+  /**
+   * **Except where the part ends the book** (§9ao, from Ken: *I can't put a
+   * page after the end once I remove it*).
+   *
+   * Driving the real rail is what found this. A part with nothing under it but
+   * the page its own row names has **no page row at all** (§17e), so the last
+   * page of a book that ends in *About the author* cannot be double-clicked
+   * and cannot be chosen — the refusal above named *that page's own screen*,
+   * which in this one case there is no route to (addendum 10 §8). The **book**
+   * is the record for the one position after the end, so this panel answers
+   * with it.
+   */
+  it('offers a page after a part that ends the book, hung on the book itself', () => {
+    const file = collection();
+    const rows = lay(file).rows;
+    const last = partsOf(file).find((part) => rows.filter((row) => row.partId === part.id).some((row) => row.sheet === rows.at(-1)!.sheet))!;
+    expect(last).toBeTruthy();
+    const offer = partBlankOffer(rows, last);
+    expect(offer.after.act).toBe('A blank page after this one');
+    expect(offer.after.spot).toBe(BOOK_END);
+    expect(offer.after.refusal).toBeNull();
+    expect(offer.after.note).toMatch(/Nothing comes after it/);
+
+    // And it is the act every other leaf takes, so the page's own × reaches it.
+    const put = setBlankPages(file, BOOK_END, 1);
+    const now = lay(put).rows;
+    expect(now).toHaveLength(rows.length + 1);
+    expect(now.at(-1)!.blankFor).toBe(BOOK_END);
+    /**
+     * **And the rail lists it under the last row there is** (§9ao). Measured
+     * before the fix: `bookPageRows` carries the unit and the marker forward,
+     * which is right inside the story and wrong after the end, so the leaf was
+     * claimed by the last **section** and drew above the back matter — page 13
+     * listed over page 12, out of the book's own order.
+     */
+    const under = pagesUnder(bookRows(put, now), now);
+    expect(under.get(last.id)?.some((one) => one.blankFor === BOOK_END)).toBe(true);
+    expect([...under.values()].flat()).toHaveLength(now.length);
+
+    // Every other part still sends the writer to the page's own screen.
+    for (const part of partsOf(file).filter((one) => one.id !== last.id)) {
+      expect(partBlankOffer(rows, part).after.act).toBeNull();
+    }
+  });
+
   it('offers a part its leaf where nothing stands in front of it', () => {
     const file = collection();
     const { rows } = lay(file);
@@ -409,14 +466,23 @@ describe('a book nobody has asked anything of', () => {
    * it replaces said *nothing is added at all*, which was true until this
    * and is now the wrong claim rather than a failing one.
    */
-  it('is laid as it was, but for the sheet between its stories', () => {
+  it('is laid as it was, but for the sheets around its stories', () => {
     const file = collection();
     const stories = file.markers.length;
     expect(stories).toBeGreaterThan(1);
-    // A separation is between two things, so one fewer sheet than there are
-    // stories — the first gets none, the front matter standing in front of it.
-    expect(shape(file).filter((one) => one === 'blank')).toHaveLength((stories - 1) * SHEET);
-    expect(shape(setBookSettings(file, { sheetBetweenWorks: false })).filter((one) => one === 'blank')).toHaveLength(0);
+    /**
+     * A separation is between two things, so one fewer sheet than there are
+     * stories — the first gets none, the front matter standing in front of
+     * it — **and one after the last** (§9ao, from Ken: *yes, make that
+     * end-of-story page automatic*), which is the same argument read forwards:
+     * what follows the last story is the back matter, so there are two things
+     * there too. One sheet per story, counted that way.
+     */
+    expect(shape(file).filter((one) => one === 'blank')).toHaveLength(stories * SHEET);
+    expect(shape(setBookSettings(file, { sheetBetweenWorks: false })).filter((one) => one === 'blank')).toHaveLength(SHEET);
+    expect(
+      shape(setBookSettings(file, { sheetBetweenWorks: false, sheetAfterWorks: false })).filter((one) => one === 'blank'),
+    ).toHaveLength(0);
     expect(partsOf(file).every((part) => part.blankBefore === false)).toBe(true);
   });
 });

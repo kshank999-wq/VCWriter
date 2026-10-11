@@ -763,6 +763,28 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
     return row ? blankSpot(pagePlaceFor(sheet), row) : null;
   };
   /**
+   * **Where a blank page dropped on a row of the rail would land** (§9ao, from
+   * Ken: *I couldn't drag the page to the last page. And I couldn't drag the
+   * page again after I already dragged it*).
+   *
+   * §9an gave the drag to the **page** rows and nowhere else, and measuring
+   * the real rail is what showed what that costs: every other row — a part, a
+   * division, a section — accepted the drag, **lit up as a drop target**, and
+   * then did nothing with it, `dropOn` having no branch for a blank. That is
+   * worse than a refusal, because the highlight says the drop will be taken.
+   * And it is most of the book: a part with nothing under it but the page its
+   * own row names has no page row at all (§17e), so the last page of a book
+   * that ends in *About the author* is precisely one of these.
+   *
+   * **A row is a page**, which the picture drag has read off `pageOf` since
+   * §9w, so this is that reading with `blankSpotFor` after it — one answer the
+   * dragover and the drop both take, or the highlight could go on lying.
+   */
+  const blankLandingOn = (row: BookRow): string | null => {
+    const at = laying ? pageOf(laying, row.id) : undefined;
+    return at ? blankSpotFor(at.sheet) : null;
+  };
+  /**
    * **Whether a picture may be asked for on the page in hand, and where it
    * will land** (§9w). The one reading the rail's button, the Add menu and the
    * page's own dialog all take, where each used to decide for itself — which
@@ -1165,12 +1187,17 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
     {
       label: pageBlank.before.act ?? 'A blank page before this one',
       disabled: pageBlank.before.act ? null : (pageBlank.before.refusal ?? pageBlank.refusal),
-      note: pageBlank.note,
+      // **Each side's own note** (§9ao): this read the combined one, which is
+      // the *first* side that has anything to say — so the after item said
+      // nothing at all, and at the end of the book, where the two differ most,
+      // the one sentence a writer needs was on the wrong item.
+      note: pageBlank.before.note,
       onPick: () => addBlank(pageBlank.before),
     },
     {
       label: pageBlank.after.act ?? 'A blank page after this one',
       disabled: pageBlank.after.act ? null : (pageBlank.after.refusal ?? pageBlank.refusal),
+      note: pageBlank.after.note,
       onPick: () => addBlank(pageBlank.after),
     },
     /**
@@ -1571,6 +1598,16 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
         return row.kind === 'chapter' ? moveChapterBlock(current, moving.id as never, row.placed?.marker.id ?? null) : current;
       }
       /**
+       * **A blank page dropped on a row lands on that row's page** (§9ao) —
+       * the same `moveBlankPage` the page rows take, off the same reading, so
+       * a leaf cannot land somewhere the panel and the Add menu would not put
+       * one. Without this branch the drop was taken and thrown away.
+       */
+      if (moving.kind === 'blank') {
+        const to = blankLandingOn(row);
+        return to ? moveBlankPage(current, moving.id, to) : current;
+      }
+      /**
        * **A picture dropped on a division comes to its opening page** (§9w):
        * the analogue of *a picture page dropped on a chapter faces that
        * chapter*, which this room has done for a plate since §9a, said of a
@@ -1917,6 +1954,12 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
                     // by being a copyright page.
                     onDragOver={(event) => {
                       if (!dragging || row.half === 'body') return;
+                      // **A blank page has no half** (§9ao): dropping on an
+                      // area asks for that half of the book, which is a
+                      // question about a part — a leaf stands in front of a
+                      // record, so there is nothing here for one to land on
+                      // and the heading must not light as though there were.
+                      if (dragging.kind === 'blank') return;
                       event.preventDefault();
                       setOver(`area-${row.half}`);
                     }}
@@ -1963,6 +2006,15 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
                   }}
                   onDragOver={(event) => {
                     if (!dragging || dragging.id === row.id) return;
+                    // **A row lights only where the drop will be taken**
+                    // (§9ao): a blank leaf lands on the row's own page, and
+                    // where that answers nothing the row is no target — the
+                    // same reading `dropOn` makes, so the highlight cannot
+                    // promise what the drop refuses.
+                    if (dragging.kind === 'blank') {
+                      const to = blankLandingOn(row);
+                      if (!to || to === dragging.id) return;
+                    }
                     event.preventDefault();
                     setOver(row.id);
                   }}
@@ -5239,6 +5291,20 @@ function FurnitureSection({
             Both sides of one leaf, so the reader turns a page with nothing on it. The first {noun.toLowerCase()} gets none — the front
             matter already stands in front of it.
           </p>
+          {/*
+            **And one at the end of the last** (§9ao, from Ken: *yes, make that
+            end-of-story page automatic*). The same sheet said at the other
+            end, so it stands immediately under its own pair rather than
+            somewhere else in the fold.
+          */}
+          <label className="check">
+            <input type="checkbox" checked={settings.sheetAfterWorks} onChange={(event) => write({ sheetAfterWorks: event.target.checked })} />{' '}
+            A blank sheet after the last {noun.toLowerCase()}
+          </label>
+          <p className="field-note">
+            Between the {nounPlural.toLowerCase()} and the back matter, so the reader knows the last one has ended. There is none where the
+            book has no back matter — a blank sheet at the very end separates nothing.
+          </p>
         </>
       ) : null}
       <p className="muted small">
@@ -5318,6 +5384,28 @@ function PartFields({
           {blank.before.act}
         </button>
       ) : null}
+      {/* **And one after it where this page ends the book** (§9ao, from Ken:
+          *I can't put a page after the end once I remove it*).
+
+          This panel is the only screen a writer can reach for the **last page
+          of the book**: a part with nothing under it but the page its own row
+          names has no page row at all (§17e), so that page cannot be
+          double-clicked or chosen, and the refusal that used to stand here
+          named a screen with no route to it. There is one position after the
+          end and the **book** is its record, so the act is the general one
+          rather than a write to this part's field. */}
+      {blank.after.act && blank.after.spot ? (
+        <button
+          type="button"
+          className="ghost small layout-part-blank"
+          onClick={() => {
+            const spot = blank.after.spot as string;
+            onUpdate((current) => setBlankPages(current, spot, blankPagesAt(current, spot) + 1));
+          }}
+        >
+          {blank.after.act}
+        </button>
+      ) : null}
       {/* **And one fewer** (§9ac): it is a count rather than a switch, so the
           `aria-pressed` went with it — a control that adds one more is not in
           a state, and the number standing there is said by the two buttons. */}
@@ -5330,7 +5418,8 @@ function PartFields({
           {blank.fewer}
         </button>
       ) : null}
-      {blank.note ? <p className="muted small">{blank.note}</p> : null}
+      {blank.before.note ? <p className="muted small">{blank.before.note}</p> : null}
+      {blank.after.note && blank.after.note !== blank.before.note ? <p className="muted small">{blank.after.note}</p> : null}
       {/* **A part has a front and no back** (§9an): *after this page* needs to
           know which page of the part a writer is looking at, which a part does
           not, so the refusal names the screen that does. */}

@@ -14,7 +14,9 @@ import {
   bookMetrics,
   bookNames,
   bookPageRows,
+  blankPagesAt,
   partBlankOffer,
+  setBlankPages,
   bookSettingsOf,
   bookVars,
   chapterPageStyleSchema,
@@ -1052,6 +1054,22 @@ function Body({
                 {blankLeaf.before.act}
               </button>
             ) : null}
+            {/* **And one after it where this page ends the book** (§9ao): the
+                part has no page after it to hang a leaf on except that one,
+                where the record is the book itself — so the act is the general
+                one rather than a write to this part's own field. */}
+            {blankLeaf.after.act && blankLeaf.after.spot ? (
+              <button
+                type="button"
+                className="small"
+                onClick={() => {
+                  const spot = blankLeaf.after.spot as string;
+                  onUpdate((current) => setBlankPages(current, spot, blankPagesAt(current, spot) + 1));
+                }}
+              >
+                {blankLeaf.after.act}
+              </button>
+            ) : null}
             {blankLeaf.fewer ? (
               <button
                 type="button"
@@ -1068,10 +1086,15 @@ function Body({
                   ? 'One blank page stands in front of this one.'
                   : `${blankLeaf.pages} blank pages stand in front of this one.`}
             </p>
-            {blankLeaf.note ? <p className="muted small">{blankLeaf.note}</p> : null}
+            {blankLeaf.before.note ? <p className="muted small">{blankLeaf.before.note}</p> : null}
+            {blankLeaf.after.note && blankLeaf.after.note !== blankLeaf.before.note ? (
+              <p className="muted small">{blankLeaf.after.note}</p>
+            ) : null}
             {/* **A part has a front and no back** (§9an): the three surfaces
                 that reach this field say the same words, and *after this
-                page* is the page's own screen's to answer. */}
+                page* is the page's own screen's to answer — **unless this page
+                ends the book** (§9ao), where there is no page after it to go
+                to and the act stands here. */}
             {!blankLeaf.before.act && blankLeaf.before.refusal ? (
               <p className="muted small">{blankLeaf.before.refusal}</p>
             ) : null}

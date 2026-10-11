@@ -245,3 +245,99 @@ describe('getting rid of one', () => {
     expect(offer.note).toContain('facing the one that follows');
   });
 });
+
+/**
+ * **And the sheet that ends the story** (§9ao, from Ken: *yes, make that
+ * end-of-story page automatic*, approving §9an's named item — *I'm trying to
+ * add a blank page after the story is over. There always needs to be an extra
+ * page at the end of all the stories between the stories and the back
+ * matter*).
+ *
+ * §9an built the act and left the default to its own decision, on the ground
+ * that switching it on changes the length of every collection already laid
+ * out. He has now made that decision, so it is the same sheet said at the
+ * other end: `holdsWholeWorks` only, two pages, default on.
+ *
+ * The one place it parts from its twin is **whose it is**. A sheet before a
+ * work is a fact about that work and is set on its own page; which work is
+ * *last* changes the day another is imported, so a sheet set there would turn
+ * into a sheet between two works and duplicate the one already standing. The
+ * book carries this one, and the × reaches the book.
+ */
+describe('the sheet that ends the story', () => {
+  it('stands between the last work and the back matter, and is two pages', () => {
+    const rows = lay(book()).rows;
+    const ending = rows.filter((row) => row.blankEnds);
+    expect(ending).toHaveLength(SHEET);
+    // Consecutive, and both of them really print nothing.
+    expect(ending[1]!.sheet).toBe(ending[0]!.sheet + 1);
+    for (const row of ending) expect(row.blank).toBe(true);
+    // The last of the story's own words are in front of it, the back matter
+    // behind it: that is what it separates.
+    const words = rows.filter((row) => row.partId === null && !row.blank);
+    const back = rows.filter((row) => row.partId !== null && row.sheet > ending[1]!.sheet);
+    expect(words.at(-1)!.sheet).toBeLessThan(ending[0]!.sheet);
+    expect(back.length).toBeGreaterThan(0);
+  });
+
+  /**
+   * **A separation is between two things** (addendum 22 §9's own argument read
+   * forwards): what follows the last work is the back matter, so a book with
+   * none has nothing there to separate and a blank sheet at the very end would
+   * be two pages nobody turns to.
+   */
+  it('is absent where nothing follows the story', () => {
+    const noBack = book();
+    const bare = setBookSettings(noBack, {
+      parts: (bookSettingsOf(noBack).parts ?? []).filter((part) => part.kind === 'half_title'),
+    });
+    expect(lay(bare).rows.filter((row) => row.blankEnds)).toHaveLength(0);
+    // And the sheets between the stories are untouched by that.
+    expect(lay(bare).rows.filter((row) => row.blankBetween !== null)).toHaveLength(2 * SHEET);
+  });
+
+  it('is absent on a novel, and there on a series', () => {
+    expect(lay(book('novel')).rows.filter((row) => row.blankEnds)).toHaveLength(0);
+    expect(lay(book('series')).rows.filter((row) => row.blankEnds)).toHaveLength(SHEET);
+  });
+
+  /** Two pages, so no opening changes side (§9ad), which is why it can default on. */
+  it('moves no opening across the spine', () => {
+    const file = book();
+    const off = setBookSettings(file, { sheetAfterWorks: false });
+    expect(openings(file)).toEqual(openings(off));
+    expect(lay(file).rows).toHaveLength(lay(off).rows.length + SHEET);
+  });
+
+  it('says it is the book leaving one, and which end', () => {
+    const rows = lay(book()).rows;
+    const ending = rows.find((row) => row.blankEnds)!;
+    expect(blankReason(rows, ending.sheet)).toBe('ending');
+    // *Between works* said of the last one would be a claim about a work that
+    // is not there, so the sentence says which end it is.
+    expect(sayBlankReason('ending', 'the leaf', 'stories')).toContain('after the last of the stories');
+    // And it is not read as the leaf the recto rule leaves, nor as its twin.
+    expect(ending.blankBetween).toBeNull();
+    expect(ending.blankFor).toBeNull();
+  });
+
+  it('has a × on both of its pages, which reaches the book’s own switch', () => {
+    const file = book();
+    const rows = lay(file).rows;
+    for (const row of rows.filter((one) => one.blankEnds)) {
+      const removal = pageRemoval(file, rows, row.sheet);
+      expect(removal.what).toBe('ending');
+      expect(removal.act).toBe('Take this page away');
+      expect(removal.comfort).toContain('both its pages');
+      expect(removal.comfort).toContain('back matter');
+      // **No id, because no work carries it** — the act is read before the
+      // guard that refuses a missing one.
+      expect(removal.id).toBeNull();
+      const after = removeBookPage(file, row, removal);
+      expect(bookSettingsOf(after).sheetAfterWorks).toBe(false);
+      expect(lay(after).rows.filter((one) => one.blankEnds)).toHaveLength(0);
+      // And every other separation keeps its sheet.
+      expect(lay(after).rows.filter((one) => one.blankBetween !== null)).toHaveLength(2 * SHEET);
+    }
+  });
+});

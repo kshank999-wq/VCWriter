@@ -3391,6 +3391,58 @@ push live; the build takes a minute or two.
   page, and switching it on would change the length of every collection already
   laid out, so the act is built and reachable while the default is its own
   decision.
+  **§9ao is that sheet made automatic, and the page after the last one**, from
+  Ken (*yes, make that end-of-story page automatic… I couldn't drag the page to
+  the last page. And I couldn't drag the page again after I already dragged
+  it… we need a blank page after this one also… I can't put a page after the
+  end once I remove it*) — three asks, the first approving §9an's own named
+  item. **The sheet is addendum 22 §9's said at the other end** and its two
+  rules are that section's argument read forwards: **only where something
+  follows the story** (a separation is between two things, so the first work
+  gets none and a blank sheet at the very end of a book separates nothing), and
+  **the book carries it rather than a work** — `sheetBefore` is a fact about
+  the work it stands in front of, while *which work is last* changes the day
+  another is imported, so a `sheetAfter` set there would become a sheet between
+  two works and duplicate the one already standing; `blankEnds` is a flag where
+  `blankBetween` is an id, and the × on either page reaches `setSheetAfter`,
+  which is why the tick reads back off after the press. Measured: the sheet at
+  pages 20–21, every opening where it was (two pages being even, §9ad), 28
+  pages with it and 26 after the ×. **And the end of the book is a record**:
+  §9an refused *after* there with a sentence about the mechanism, which is true
+  and is a poor answer to somebody asking for a page a book plainly has, so
+  `BOOK_END` names the book and `settings.book.blankAtEnd` holds the count —
+  `setBlankPages`, `blankPagesAt`, `moveBlankPage`, the Add menu, the page's
+  own × and the rail's drag all reach it unchanged. Driving it found two halves
+  of that: **a part that ends the book answers for that page too**, a part with
+  nothing under it but the page its own row names having no page row at all
+  (§17e), so the last page of a book ending in *About the author* cannot be
+  double-clicked or chosen and `partBlankOffer` named *that page's own screen*,
+  a route pointing at nothing (addendum 10 §8); and **the rail listed the leaf
+  inside the story**, `bookPageRows` carrying the unit and the marker forward
+  being right for a page in the story and wrong after the end, so it was
+  claimed by the last section and drew *above* the back matter, page 13 over
+  page 12. **The two drag reports are one fault and it was reproduced**: a drop
+  on a **page** row works twice and three times over, while every **other** row
+  accepted the drag, **lit up as a drop target** and did nothing with it,
+  `dropOn` having had no branch for a blank — worse than a refusal, the
+  highlight saying the drop will be taken, and it is exactly where the last
+  page of his book is; *a row is a page* (`pageOf`, which the picture drag has
+  read since §9w) so the drop and the highlight ask one reading, and an **area
+  heading** is a half of the book rather than a page and does not light at all.
+  **And a page at a time**: §9ad made the leaf a sheet and the × took both
+  pages, §9an settled that *the unit is a page* and left the × alone, so the
+  Add menu put one in and the × took two — the one act in the room that undid
+  more than its opposite did, which is what *I drag things around and it got
+  messed up* is made of. Looking at it caught two more: the Add menu's *after*
+  item **said nothing**, reading the combined note (the first side with
+  anything to say) so the one sentence a writer needs at the end of the book
+  was on the wrong item; and a refusal that **could not reach the reason** —
+  *nothing of the book stands on this page* is true of the mechanism and the
+  page it is said about is in practice always one the **book** left blank,
+  which `blankReason` can say, so standing on the story's last page a writer
+  now hears *the page after this one is already blank — the book leaves a blank
+  sheet after the last of the works*, which is the page he asked for (§9w's own
+  finding one sentence on).
   **§9am is the room spending the page's memory**, from Ken (*it crashed
   again — I think we need to expand the memory of the page. Everything was
   working well*), with the diagnosis in his next two messages: *I was setting

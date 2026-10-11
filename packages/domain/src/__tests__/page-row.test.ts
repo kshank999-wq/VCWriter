@@ -186,16 +186,26 @@ describe('what a × on a page row takes away', () => {
     expect(lay(after).rows).toHaveLength(rows.length);
   });
 
-  it('takes away the blank leaf the writer put in, and says nothing else moves', () => {
+  /**
+   * **A page at a time, which is what a press puts in** (§9ao). This pinned
+   * §9ad's sheet — one × taking both sides — and §9an quietly made it wrong by
+   * settling that the unit is a page: the Add menu adds one and this took two,
+   * so the act and its opposite disagreed about what a blank page is. Two
+   * presses take the sheet `setBlankPage` put in, which is what the second
+   * half asserts.
+   */
+  it('takes away the blank page the writer put in, one at a time', () => {
     const file = collection();
     const text = lay(file).rows.find((row) => row.says === 'Text')!;
     const with_ = setBlankPage(file, text.elementId!, true);
     const { row, removal } = removalOn(with_, (one) => one.blankFor !== null);
     expect(removal.what).toBe('leaf');
-    expect(removal.comfort).toMatch(/blank sheet goes — both its pages/i);
+    expect(removal.comfort).toMatch(/blank page goes/i);
     const after = removeBookPage(with_, row, removal);
-    expect(lay(after).rows).toHaveLength(lay(file).rows.length);
-    expect(lay(after).rows.some((one) => one.blankFor !== null)).toBe(false);
+    expect(lay(after).rows.filter((one) => one.blankFor !== null)).toHaveLength(1);
+    const twice = removeBookPage(after, row, pageRemoval(after, lay(after).rows, row.sheet));
+    expect(lay(twice).rows).toHaveLength(lay(file).rows.length);
+    expect(lay(twice).rows.some((one) => one.blankFor !== null)).toBe(false);
   });
 
   it('takes the picture out of the writing and leaves it in the library', () => {

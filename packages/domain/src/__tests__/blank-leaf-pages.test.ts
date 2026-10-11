@@ -384,15 +384,27 @@ describe('a blank page asked for on a blank page', () => {
     expect(offer.fewer).toBe('Take one away');
   });
 
-  it('takes one leaf and not the run, when a × is pressed on one of them', () => {
+  /**
+   * **One page, and not the run** (§9ac, and corrected by §9ao). This asserted
+   * that a × took a whole **sheet**, which §9ad settled and §9an then broke
+   * from the other side without noticing: §9an made *the unit a page and the
+   * choice a side*, so the Add menu puts one page in while the × went on
+   * taking two — the one act in the room that undid more than its opposite
+   * did. One in, one out; two presses still make a sheet and two × still take
+   * it, which the second half of this asserts.
+   */
+  it('takes one page and not the run, when a × is pressed on one of them', () => {
     const file = novel();
     const text = lay(file).rows.find((row) => row.says === 'Chapter opens' && row.sheet > 4)!;
-    const asked = setBlankPages(file, placeOn(file, text.sheet).opensMarkerId as string, 3 * SHEET);
+    const spot = placeOn(file, text.sheet).opensMarkerId as string;
+    const asked = setBlankPages(file, spot, 3 * SHEET);
     const rows = lay(asked).rows;
     const leaf = rows.find((row) => row.blankFor !== null)!;
     const after = removeBookPage(asked, leaf, pageRemoval(asked, rows, leaf.sheet));
-    // Two sheets left, which is four pages (§9ad).
-    expect(lay(after).rows.filter((row) => row.blankFor !== null)).toHaveLength(4);
+    expect(lay(after).rows.filter((row) => row.blankFor !== null)).toHaveLength(3 * SHEET - 1);
+    // And a second press takes the other side of that leaf.
+    const twice = removeBookPage(after, leaf, pageRemoval(after, lay(after).rows, leaf.sheet));
+    expect(lay(twice).rows.filter((row) => row.blankFor !== null)).toHaveLength(2 * SHEET);
   });
 });
 

@@ -6,6 +6,7 @@ import {
   addUnit,
   blankOffer,
   blankPagesAt,
+  BOOK_END,
   moveBlankPage,
   bookBlocks,
   bookNames,
@@ -21,6 +22,7 @@ import {
   pictureOffer,
   removeDivision,
   setBlankPages,
+  setBookSettings,
   setChapterRecto,
   SHEET,
   sideOf,
@@ -117,6 +119,15 @@ const lay = (file: ProjectFile) => {
   const laid = layPages(blocks, measured, geometryOf(settings, 40), settings, bookNames(file));
   return { blocks, laid, rows: bookPageRows(laid.pages, blocks) };
 };
+
+/**
+ * **The last page the story's own words land on** (§9ao). It used to be the
+ * last row with no `partId`, which the sheet ending the story made wrong: that
+ * answer is now a blank page the book put there, and a test about where a
+ * writer's words end has to mean the words.
+ */
+const lastWords = (rows: ReturnType<typeof lay>['rows']) =>
+  rows.filter((one) => one.partId === null && !one.blank).at(-1)!;
 
 /** The third story's own opening page, which is the gap he was working in. */
 const thirdOpens = (file: ProjectFile) => {
@@ -407,10 +418,16 @@ describe('a blank page on either side of the page in hand', () => {
    * neither of them had an *after*.
    */
   it('puts a leaf behind this page by putting it in front of the next', () => {
-    const file = collection(5);
+    /**
+     * **The sheet that ends the story is switched off here on purpose**
+     * (§9ao): it stands in exactly the place this test is about, so with it on
+     * the page after the story's last words carries nothing of the book and
+     * there is nothing for a leaf to hang on — which is §9ao's own behaviour
+     * and is asserted below rather than worked around here.
+     */
+    const file = setBookSettings(collection(5), { sheetAfterWorks: false });
     const { rows } = lay(file);
-    const story = rows.filter((one) => one.partId === null);
-    const last = story[story.length - 1]!;
+    const last = lastWords(rows);
     const offer = offerOn(file, last.sheet);
     expect(offer.after.act).toBe('A blank page after this one');
     // The next page's own record, which is what makes *after* need no field.
@@ -424,14 +441,60 @@ describe('a blank page on either side of the page in hand', () => {
     expect(now.length).toBe(rows.length + 1);
   });
 
-  it('has no page after the last one, and says so', () => {
+  /**
+   * **And with the sheet on, the page he asked for is already there** (§9ao,
+   * from Ken: *I'm trying to add a blank page after the story is over*).
+   *
+   * The refusal is the useful half: a leaf hangs on a record and a page the
+   * book left blank carries none, which this used to answer with a sentence
+   * about records. It names the reason and the row that takes it away —
+   * §9w's rule that a refusal must be able to reach the reason.
+   */
+  it('says the page after the story is already blank, and why', () => {
+    const file = collection(5);
+    const { rows } = lay(file);
+    const last = lastWords(rows);
+    const offer = offerOn(file, last.sheet);
+    expect(offer.after.act).toBeNull();
+    expect(offer.after.spot).toBeNull();
+    expect(offer.after.refusal).toMatch(/already blank/);
+    expect(offer.after.refusal).toMatch(/blank sheet after the last of the works/);
+    expect(offer.after.refusal).toMatch(/row of its own/);
+    // And the page before this one is still the writer's to use.
+    expect(offer.before.act).toBe('A blank page before this one');
+  });
+
+  /**
+   * **And the last page of the book has one after it too** (§9ao, from Ken:
+   * *there's a blank page before this one, but we need a blank page after this
+   * one also… I can't put a page after the end once I remove it*).
+   *
+   * This asserted the refusal §9an wrote — *there is nothing after it for a
+   * leaf to stand in front of* — which is a true sentence about the mechanism
+   * and a poor answer to somebody asking for a page a book plainly has. The
+   * **book** is the record, so the side is offered and the assertion is its
+   * own opposite.
+   */
+  it('offers a page after the last one, hung on the book itself', () => {
     const file = collection(5);
     const { rows } = lay(file);
     const end = rows[rows.length - 1]!;
     const offer = offerOn(file, end.sheet);
-    expect(offer.after.act).toBeNull();
-    expect(offer.after.spot).toBeNull();
-    expect(offer.after.refusal).toMatch(/last page of the book/);
+    expect(offer.after.act).toBe('A blank page after this one');
+    expect(offer.after.spot).toBe(BOOK_END);
+    expect(offer.after.refusal).toBeNull();
+    // Nothing follows it, so the note is the simplest one there is.
+    expect(offer.after.note).toMatch(/Nothing comes after it/);
+
+    const put = setBlankPages(file, BOOK_END, 1);
+    const now = lay(put).rows;
+    expect(now).toHaveLength(rows.length + 1);
+    const leaf = now[now.length - 1]!;
+    expect(leaf.blank).toBe(true);
+    expect(leaf.blankFor).toBe(BOOK_END);
+    // And it is the writer's, so the page's own × reaches it.
+    expect(blankPagesAt(put, BOOK_END)).toBe(1);
+    expect(blankPagesAt(setBlankPages(put, BOOK_END, 0), BOOK_END)).toBe(0);
   });
 
   it('takes one away again, and is absent where none of the writer’s own stand', () => {
@@ -514,10 +577,10 @@ describe('a blank page on either side of the page in hand', () => {
    * not a record, so there is nothing about a page number to change.
    */
   it('moves a blank page from one record to another, and the numbering follows', () => {
-    const file = collection(5);
+    // The sheet ending the story stands where this one works, as above.
+    const file = setBookSettings(collection(5), { sheetAfterWorks: false });
     const { rows } = lay(file);
-    const story = rows.filter((one) => one.partId === null);
-    const last = story[story.length - 1]!;
+    const last = lastWords(rows);
     const offer = offerOn(file, last.sheet);
     const from = offer.after.spot as string;
     const to = offer.before.spot as string;

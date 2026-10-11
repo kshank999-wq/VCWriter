@@ -438,6 +438,18 @@ export interface BookBlock {
    */
   blankBetween?: string;
   /**
+   * **This blank block is the sheet the book leaves at the end of the last
+   * whole work** (§9ao), between the story and the back matter.
+   *
+   * It is a **flag rather than an id**, which is the difference from
+   * `blankBetween` above and the whole of why it is a second field: that
+   * sheet stands in front of a work and is set on that work's own page, while
+   * this one stands in front of nothing in particular — which work is last
+   * changes the day another is imported — so the only record that can carry
+   * it is the book, and the × reaches the book's own switch.
+   */
+  blankEnds?: boolean;
+  /**
    * **This block is not a manuscript element** (§9s): it stands in for a
    * section's missing heading (§9l), so its id names the *unit* rather than
    * anything a writer can point at.
@@ -1277,6 +1289,28 @@ export const pagesBefore = (value: unknown): number => {
   return Math.max(0, Math.min(MAX_BLANK_PAGES, Math.floor(value)));
 };
 
+/**
+ * **The end of the book, as a record** (§9ao, from Ken: *there's a blank page
+ * before this one, but we need a blank page after this one also… now I'm back
+ * in the same situation to where I can't put a page after the end once I
+ * remove it*).
+ *
+ * A leaf hangs **in front of** something (§9i), which is what makes *after
+ * this page* mean *in front of the next one* (§9an) — and at the last page of
+ * the book there is no next one, so that side was refused with a sentence
+ * about the mechanism. The sentence was true and is a poor answer: a writer
+ * who asks for a page at the end of their book is asking for something a book
+ * has.
+ *
+ * So the **book** is the record. It is an id like any other, so
+ * `setBlankPages`, `blankPagesAt`, `moveBlankPage`, the Add menu, the page's
+ * own × and the rail's drag all reach it with nothing added to them; what it
+ * names is `settings.book.blankAtEnd`. It is deliberately a string nothing
+ * else can be — no marker, element or part is called this — so a stale id
+ * cannot collide with it.
+ */
+export const BOOK_END = 'book:end';
+
 /** How many blank pages stand before this element (§9ac). */
 export const blanksBefore = (element: ManuscriptElement): number => pagesBefore(element.attributes?.bookBlankBefore);
 
@@ -1345,7 +1379,7 @@ export const blankSpot = (place: PagePlace, page: Pick<BookPageRow, 'blankFor'>)
  * It is a **reading over the rows**, so the reason for any page is answerable
  * from any screen without threading neighbours through it.
  */
-export type BlankReason = 'writer' | 'between' | 'back' | 'page_back' | 'recto';
+export type BlankReason = 'writer' | 'between' | 'ending' | 'back' | 'page_back' | 'recto';
 
 export const blankReason = (rows: readonly BookPageRow[], sheet: number): BlankReason | null => {
   const page = rows.find((one) => one.sheet === sheet);
@@ -1357,6 +1391,11 @@ export const blankReason = (rows: readonly BookPageRow[], sheet: number): BlankR
   // be told apart from — they fall in the same place and only one of them is
   // there because somebody asked for a separation.
   if (page.blankBetween) return 'between';
+  // **And the sheet that ends the story** (§9ao), said by the block for the
+  // same reason: it falls exactly where the recto gap in front of the back
+  // matter falls, and only one of the two is there because somebody asked for
+  // a separation.
+  if (page.blankEnds) return 'ending';
   // **The block says so** (§9w). This read *the page in front is an
   // illustration, so this is its back*, which is a guess — and wrong exactly
   // where a picture opens a division, the leaf after it being the recto gap
@@ -1408,12 +1447,13 @@ export interface BlankHold {
   /**
    * Which act frees it, so one reading serves every screen. `leaf` is the
    * writer's own sheet (`setBlankPages`), `sheet` the separation the book
-   * leaves between two whole works (`setSheetBefore`), `back` the switch on
+   * leaves between two whole works (`setSheetBefore`), `ending` the one it
+   * leaves at the end of the last (`setSheetAfter`), `back` the switch on
    * the page in front (`setBackBlank`), `recto` the chapter's own rule
    * (`setChapterRecto`). Null where the leaf is a convention of the page
    * after it rather than a setting anybody wrote (§9x).
    */
-  frees: 'leaf' | 'sheet' | 'back' | 'recto' | null;
+  frees: 'leaf' | 'sheet' | 'ending' | 'back' | 'recto' | null;
 }
 
 export const blankHold = (rows: readonly BookPageRow[], sheet: number): BlankHold | null => {
@@ -1422,6 +1462,9 @@ export const blankHold = (rows: readonly BookPageRow[], sheet: number): BlankHol
   if (!why || !page) return null;
   if (why === 'writer') return { why, id: page.blankFor, frees: 'leaf' };
   if (why === 'between') return { why, id: page.blankBetween, frees: 'sheet' };
+  // **The book carries it, so there is no id** (§9ao): a sheet after the last
+  // work is not a fact about any one work, so the act is the book's switch.
+  if (why === 'ending') return { why, id: null, frees: 'ending' };
   if (why === 'back' || why === 'page_back') {
     // **Either side** (addendum 22 §9a): a picture on a left-hand page has
     // its back in **front** of it, that being the other side of the sheet, so
@@ -1476,6 +1519,10 @@ export const sayBlankReason = (
   // One sentence for both voices: *it* can only be the blank either way, the
   // separation being named in the same breath (`back`'s own shape).
   if (reason === 'between') return `the book leaves a blank sheet between ${divisions}`;
+  // **The other end of the same sheet** (§9ao), and the sentence says which
+  // end — *between works* said of the last one would be a claim about a work
+  // that is not there.
+  if (reason === 'ending') return `the book leaves a blank sheet after the last of the ${divisions}`;
   // The back of a picture reads the same either way: *it* can only be the
   // blank, the picture being named in the same breath.
   if (reason === 'back') return 'it is the back of the picture in front of it, kept empty so nothing shows through';
@@ -1606,6 +1653,28 @@ export const blankOffer = (
    * leaf hangs on a record, so a page with nothing of the book on it has
    * nothing for one to stand before.
    */
+  /**
+   * **Why a leaf cannot hang on a page, with the reason that page is blank**
+   * (§9ao). A leaf stands in front of a record, so a page carrying none has
+   * nothing for one to stand before — and a page carrying none is nearly
+   * always a page the **book** left blank, which this answered with a sentence
+   * about records that says nothing a writer can act on. Standing on the last
+   * page of a story since §9ao's sheet, *a blank page after this one* is
+   * exactly the page that is already there, so the refusal says so and names
+   * the row that takes it away: §9w's own finding, that a refusal which cannot
+   * reach the reason tells the writer to go and look it up.
+   *
+   * It can never be a leaf the writer put in — `blankSpot` answers with that
+   * leaf's own record, so this is only ever reached for the book's.
+   */
+  const nothingOn = (atSheet: number, which: 'this page' | 'the page after this one'): string => {
+    const why = blankReason(rows, atSheet);
+    const named = which === 'this page' ? 'This page' : 'The page after this one';
+    return why
+      ? `${named} is already blank — ${sayBlankReason(why)}. It has a row of its own in the rail, with a × on it.`
+      : `Nothing of the book stands on ${which} for a leaf to go in front of.`;
+  };
+
   const spot = blankSpot(place, page);
   /**
    * **Where a leaf behind this page goes** (§9an). *After this page* is *in
@@ -1614,9 +1683,20 @@ export const blankOffer = (
    * write, and the end of the book is the one place there is no answer.
    */
   const nextRow = rows.find((one) => one.sheet === sheet + 1);
-  const afterSpot = nextRow && nextPlace ? blankSpot(nextPlace, nextRow) : null;
+  /**
+   * **And at the last page of the book the record is the book** (§9ao, from
+   * Ken: *we need a blank page after this one also… I can't put a page after
+   * the end once I remove it*). This answered with a refusal naming the
+   * mechanism — *there is nothing after it for a leaf to stand in front of* —
+   * which is a true sentence and a poor answer to somebody asking for a page
+   * a book plainly has. `BOOK_END` is that record, so the side is offered
+   * here and every act behind it is unchanged.
+   */
+  const afterSpot = nextRow ? (nextPlace ? blankSpot(nextPlace, nextRow) : null) : BOOK_END;
   if (spot === null && afterSpot === null) {
-    return none('Nothing of the book stands on this page for a leaf to go in front of.');
+    // The sentence is about the page in hand, which is what a refusal with no
+    // side to it can only be about.
+    return none(nothingOn(sheet, 'this page'));
   }
   /**
    * **How many of the writer's own leaves stand there** (§9ac), read off the
@@ -1631,22 +1711,16 @@ export const blankOffer = (
   const pages = spot === null ? 0 : rows.filter((one) => one.blankFor === spot).length;
   const room = pages < MAX_BLANK_PAGES;
 
-  const side = (
-    where: 'before' | 'after',
-    at: string | null,
-    standing: number,
-    atSheet: number,
-    atPlace: PagePlace | null,
-  ): BlankSide => {
+  const side = (where: 'before' | 'after', at: string | null, standing: number, atSheet: number): BlankSide => {
     if (at === null) {
       return {
         spot: null,
         act: null,
         note: null,
-        refusal:
-          where === 'after'
-            ? 'This is the last page of the book, so there is nothing after it for a leaf to stand in front of.'
-            : 'Nothing of the book stands on this page for a leaf to go in front of.',
+        // **The end of the book is no longer one of these** (§9ao), so what is
+        // left on either side is the same fact: the page the leaf would stand
+        // in front of carries nothing of the book to stand in front of.
+        refusal: where === 'after' ? nothingOn(atSheet, 'the page after this one') : nothingOn(atSheet, 'this page'),
       };
     }
     if (standing >= MAX_BLANK_PAGES) {
@@ -1684,9 +1758,17 @@ export const blankOffer = (
      * by the gap* (addendum 09 §14a), and side by side there is no gap to say
      * it with. Where both sides say the same thing it is printed once.
      */
-    const note = held
-      ? `A blank page already stands ${where === 'before' ? 'in front of this one' : 'after this one'} because of how the book opens. The first one you put in takes its place and becomes yours, so the book does not grow by it.`
-      : 'A blank page is one side of one leaf: the pages after it swap sides with it, as far as the next opening the book holds on a right-hand page. Put two in and nothing moves — that is a whole sheet, blank front and back.';
+    /**
+     * **At the end of the book the sentence is the simplest one there is**
+     * (§9ao): there is nothing after it to swap sides, so the general note —
+     * which is about what a single page does to everything following it —
+     * would describe something that cannot happen here.
+     */
+    const note = at === BOOK_END
+      ? 'Nothing comes after it, so the book simply grows by a page. Put two in and the last leaf is blank on both sides.'
+      : held
+        ? `A blank page already stands ${where === 'before' ? 'in front of this one' : 'after this one'} because of how the book opens. The first one you put in takes its place and becomes yours, so the book does not grow by it.`
+        : 'A blank page is one side of one leaf: the pages after it swap sides with it, as far as the next opening the book holds on a right-hand page. Put two in and nothing moves — that is a whole sheet, blank front and back.';
     return {
       spot: at,
       act: where === 'before' ? 'A blank page before this one' : 'A blank page after this one',
@@ -1695,8 +1777,8 @@ export const blankOffer = (
     };
   };
 
-  const before = side('before', spot, pages, sheet, place);
-  const after = side('after', afterSpot, afterSpot === null ? 0 : rows.filter((one) => one.blankFor === afterSpot).length, sheet + 1, nextPlace);
+  const before = side('before', spot, pages, sheet);
+  const after = side('after', afterSpot, afterSpot === null ? 0 : rows.filter((one) => one.blankFor === afterSpot).length, sheet + 1);
   return {
     before,
     after,
@@ -1722,6 +1804,15 @@ export const blankOffer = (
  * which page of it the writer is looking at, so *after this page* has no page
  * to be after. The refusal names the screen that does know, which is the
  * page's own.
+ *
+ * **Except where the part ends the book** (§9ao, from Ken: *I can't put a page
+ * after the end once I remove it*). Driving the real rail is what found this:
+ * a part with nothing under it but the page its own row names has **no page
+ * row at all** (§17e), so the last page of a book that ends in *About the
+ * author* cannot be double-clicked, cannot be chosen, and the refusal above
+ * named a screen a writer has no way to reach — a route that points at
+ * nothing (addendum 10 §8). There is one page after the end of the book and
+ * the book is its record, so the part's own panel answers with it.
  */
 export const partBlankOffer = (
   rows: readonly BookPageRow[],
@@ -1741,12 +1832,35 @@ export const partBlankOffer = (
    * what the first press costs and nothing else.
    */
   const held = at !== null && blankReason(rows, at - 1) === 'recto';
-  const after: BlankSide = {
-    spot: null,
-    act: null,
-    note: null,
-    refusal: 'A page after this one is set on that page’s own screen, which is what knows where it falls.',
-  };
+  /**
+   * **Whether this part's last page is the last page of the book** (§9ao).
+   * Read off the rows rather than from the part's kind or its place in the
+   * list: a part may run to several pages and what matters is where the last
+   * of them falls.
+   */
+  const ends =
+    rows.length > 0 &&
+    rows.filter((one) => one.partId === part.id).some((one) => one.sheet === (rows.at(-1) as BookPageRow).sheet);
+  const standing = rows.filter((one) => one.blankFor === BOOK_END).length;
+  const after: BlankSide = ends
+    ? {
+        spot: BOOK_END,
+        act: standing < MAX_BLANK_PAGES ? 'A blank page after this one' : null,
+        note:
+          standing < MAX_BLANK_PAGES
+            ? 'Nothing comes after it, so the book simply grows by a page. Put two in and the last leaf is blank on both sides.'
+            : null,
+        refusal:
+          standing < MAX_BLANK_PAGES
+            ? null
+            : `${standing} blank pages already stand there, which is as many as one place takes.`,
+      }
+    : {
+        spot: null,
+        act: null,
+        note: null,
+        refusal: 'A page after this one is set on that page’s own screen, which is what knows where it falls.',
+      };
   const room = pages < MAX_BLANK_PAGES;
   /**
    * **Offered rather than refused where the gap would absorb it** (§9ac): a
@@ -2105,6 +2219,9 @@ export const setBlankPage = (file: ProjectFile, id: string, blank: boolean): Pro
  */
 export const setBlankPages = (file: ProjectFile, id: string, count: number): ProjectFile => {
   const want = pagesBefore(count);
+  // **The end of the book is a record too** (§9ao), read first so no id a
+  // document happens to carry can shadow it.
+  if (id === BOOK_END) return setBookSettings(file, { blankAtEnd: want });
   if (file.beats.some((beat) => beat.manuscript.elements.some((element) => (element.id as string) === id))) {
     return setBlanksBefore(file, id, want);
   }
@@ -2137,8 +2254,10 @@ export const moveBlankPage = (file: ProjectFile, from: string, to: string): Proj
   return setBlankPages(setBlankPages(file, from, standing - 1), to, landing + 1);
 };
 
-/** How many leaves stand before whatever this id names (§9ac). */
+/** How many leaves stand before whatever this id names (§9ac), or after the
+ * last page of the book where it names the book itself (§9ao). */
 export const blankPagesAt = (file: ProjectFile, id: string): number => {
+  if (id === BOOK_END) return pagesBefore(bookSettingsOf(file).blankAtEnd);
   for (const beat of file.beats) {
     const element = beat.manuscript.elements.find((one) => (one.id as string) === id);
     if (element) return blanksBefore(element);
@@ -2226,6 +2345,18 @@ export const setSheetBefore = (file: ProjectFile, markerId: string, sheet: boole
     return { ...marker, page: { ...page, sheetBefore: sheet } };
   }),
 });
+
+/**
+ * **Whether a blank sheet ends the story** (§9ao): the same separation said of
+ * the other end, and the act behind the × on either of its two pages.
+ *
+ * It is the **book's** rather than a work's, which is the one place this
+ * parts from `setSheetBefore`: which work is last changes the day another is
+ * imported, so a sheet set on *that* work would become a sheet between two
+ * works and duplicate the one already there.
+ */
+export const setSheetAfter = (file: ProjectFile, sheet: boolean): ProjectFile =>
+  setBookSettings(file, { sheetAfterWorks: sheet });
 
 /**
  * Ask for that leaf, or stop asking. Only what differs from the default is
@@ -2946,6 +3077,13 @@ export interface BookPageRow {
    * falls, and the two mean different things to a reader.
    */
   blankBetween: string | null;
+  /**
+   * Whether this blank page is one of the two the book leaves **at the end of
+   * the last whole work** (§9ao), between the story and the back matter. A
+   * flag rather than an id for the block field's own reason: no work carries
+   * it, the book does.
+   */
+  blankEnds: boolean;
   blank: boolean;
   /**
    * **The manuscript elements that stand whole on this page** (§9x): what a ×
@@ -3022,6 +3160,7 @@ export const bookPageRows = (
       blankFor: leaf?.blankFor ?? null,
       blankBack: leaf?.blankBack === true,
       blankBetween: leaf?.blankBetween ?? null,
+      blankEnds: leaf?.blankEnds === true,
       blank: empty,
       elementIds: page.pieces
         .filter((piece) => piece.cut !== true)
@@ -3724,7 +3863,71 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
   }
   if (pending) out.push(pending);
 
-  for (const part of backParts(parts)) out.push(...partBlocks(part, 'arabic', bookTitle, prose, file, parts));
+  const back = backParts(parts);
+  /**
+   * **The sheet that ends the story** (§9ao, from Ken: *yes, make that
+   * end-of-story page automatic*, approving §9an's named item — *there always
+   * needs to be an extra page at the end of all the stories between the
+   * stories and the back matter*).
+   *
+   * It is addendum 22 §9's own sheet said at the other end, so it is a
+   * **sheet and never a side** for that section's reason and goes on a
+   * collection and a series alone. Two things about where it stands:
+   *
+   * - **only where something follows the story**, because §9's own argument
+   *   is that a separation is between two things — the first work gets none,
+   *   the front matter already standing in front of it, and by the same
+   *   reading a blank sheet at the very end of a book separates nothing and
+   *   is merely two pages nobody turns to. A collection with no back matter
+   *   is laid exactly as it was;
+   * - **only where the story holds whole works at all** (`separates`) and
+   *   where at least one has been laid, so an empty collection gains nothing.
+   */
+  if (separates && worksSoFar > 0 && back.length > 0 && settings.sheetAfterWorks) {
+    out.push(
+      ...blankPages(SHEET, (suffix) =>
+        block({
+          id: `book:ending:${suffix}`,
+          kind: 'blank',
+          numbering: 'arabic',
+          starts: 'page',
+          display: true,
+          folio: false,
+          unbreakable: true,
+          chapterTitle,
+          // **No `blankFor`** (addendum 22 §9): the writer did not put it
+          // here, so its rows carry no grip and the way to be rid of it is
+          // the book's own switch, which the × reaches through `blankEnds`.
+          blankEnds: true,
+        }),
+      ),
+    );
+  }
+  for (const part of back) out.push(...partBlocks(part, 'arabic', bookTitle, prose, file, parts));
+  /**
+   * **The writer's own leaves after the last page of the book** (§9ao). There
+   * is no record after the last page, so the **book** is the record: this is
+   * `BOOK_END`, and everything that reaches a leaf reaches it unchanged.
+   *
+   * It is emitted last of all and on **every** format, this being an act
+   * rather than a separation — a page a writer asked for is theirs wherever
+   * they asked for it.
+   */
+  out.push(
+    ...blankPages(pagesBefore(settings.blankAtEnd), (suffix) =>
+      block({
+        id: `${BOOK_END}:${suffix}`,
+        kind: 'blank',
+        numbering: 'arabic',
+        starts: 'page',
+        display: true,
+        folio: false,
+        unbreakable: true,
+        chapterTitle: bookTitle,
+        blankFor: BOOK_END,
+      }),
+    ),
+  );
   return out;
 };
 

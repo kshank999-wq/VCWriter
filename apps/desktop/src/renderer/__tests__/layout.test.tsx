@@ -22,6 +22,7 @@ import {
   contentsDivisions,
   backBlank,
   figurePlacement,
+  pagesBefore,
   partsOf,
   setChapterPage,
   storiesOf,
@@ -865,6 +866,64 @@ describe('the room', () => {
     // The record it hangs on changed, and not a word of the manuscript.
     expect(latest).not.toBe(was);
     expect((latest as ProjectFile).beats.flatMap((beat) => beat.manuscript.elements).length).toBe(words_);
+  });
+
+  /**
+   * **And onto a row of the rail, which is most of the book** (§9ao, from Ken:
+   * *I couldn't drag the page to the last page. And I couldn't drag the page
+   * again after I already dragged it*).
+   *
+   * Driving the real rail is what told the two complaints apart: a drop on a
+   * **page** row worked, twice and three times, while every other row — a
+   * part, a division, a section — accepted the drag, **lit up as a drop
+   * target**, and then did nothing with it, `dropOn` having had no branch for
+   * a blank. That is worse than a refusal, because the highlight says the drop
+   * will be taken; and it is where the last page of his book is, a part with
+   * nothing under it but the page its own row names having no page row at all
+   * (§17e).
+   *
+   * What this pins is the pair: a row that **is** a page takes the leaf, and
+   * an area heading — a half of the book, which is not a page — does not light
+   * at all. The second is the half that fails by being invisible.
+   */
+  it('drags a blank page onto a row of the rail, and not onto an area heading', () => {
+    render(<Harness initial={novel()} />);
+    for (const fold of Array.from(document.querySelectorAll('button[aria-label^="Show what is under"]'))) {
+      fireEvent.click(fold as HTMLElement);
+    }
+    const pageRows = () => Array.from(document.querySelectorAll('.layout-rail-page')) as HTMLElement[];
+    const words = pageRows().find((one) => /^Page 2/.test((one.textContent ?? '').trim()))!;
+    fireEvent.doubleClick(words.querySelector('.layout-rail-name') as HTMLElement);
+    const panel = document.querySelector('.layout-page-dialog') as HTMLElement;
+    fireEvent.click(within(panel).getByRole('button', { name: 'A blank page after this one' }));
+
+    const leaf = pageRows().find((one) => /Blank/.test(one.textContent ?? '') && one.getAttribute('draggable') === 'true')!;
+    expect(leaf).toBeTruthy();
+    const was = latest as ProjectFile;
+
+    fireEvent.dragStart(leaf, { dataTransfer: { setData: () => {}, effectAllowed: '' } });
+
+    // **An area heading is not a page**, so it never lights: `fireEvent`
+    // answers false where the handler called `preventDefault`, which is how a
+    // drop target says it will take the drop.
+    const area = document.querySelector('.layout-rail-area') as HTMLElement;
+    expect(area).toBeTruthy();
+    expect(fireEvent.dragOver(area)).toBe(true);
+
+    // **A part's row is a page**, and takes it.
+    const part = document.querySelector('.layout-rail-part') as HTMLElement;
+    expect(part).toBeTruthy();
+    expect(fireEvent.dragOver(part)).toBe(false);
+    fireEvent.drop(part);
+    fireEvent.dragEnd(leaf);
+
+    expect(latest).not.toBe(was);
+    // The leaf now hangs on that part rather than on the manuscript, and not
+    // a word of the story moved.
+    expect(partsOf(latest as ProjectFile).some((one) => pagesBefore(one.blankBefore) > 0)).toBe(true);
+    expect((latest as ProjectFile).beats.flatMap((beat) => beat.manuscript.elements).length).toBe(
+      was.beats.flatMap((beat) => beat.manuscript.elements).length,
+    );
   });
 
   it('offers a picture on a blank leaf, where the screen used to offer nothing', () => {
@@ -1935,7 +1994,8 @@ describe('the room', () => {
     expect(leaf).toBeTruthy();
     fireEvent.click(within(leaf as HTMLElement).getByLabelText(/^Remove page /));
     // Asked once inline, with what would go said beside it.
-    expect((leaf as HTMLElement).textContent).toMatch(/blank sheet goes|opens on whichever page comes next/i);
+    // §9ao: a page at a time, which is the unit a press puts in.
+    expect((leaf as HTMLElement).textContent).toMatch(/blank page goes|opens on whichever page comes next/i);
     fireEvent.click(within(leaf as HTMLElement).getByRole('button', { name: 'Remove' }));
     expect(document.querySelector('.layout-rail')).toBeTruthy();
   });
