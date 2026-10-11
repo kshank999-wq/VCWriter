@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { WritingToolbar } from './WritingToolbar';
 import { ContextMenu, type MenuEntry } from './ContextMenu';
 import {
   dictationKind,
@@ -74,6 +75,10 @@ import {
   styleShortcuts,
   subHeadingsUnder,
   toggleInline,
+  lineTypeOf,
+  setByWriter,
+  withLineType,
+  maySetType,
   updateBeat,
   type AssetId,
   type Beat,
@@ -82,6 +87,7 @@ import {
   type CharacterTraitId,
   type InlineMark,
   type InlineSpan,
+  type LineType,
   type ManuscriptElement,
   type ManuscriptElementId,
   type ManuscriptElementType,
@@ -154,6 +160,18 @@ interface BeatBodyProps {
    * is what any other surface gets.
    */
   dictationSlot?: HTMLElement | null;
+  /**
+   * **How the writing is set** (addendum 02 §19a, from Ken: *put a toolbar on
+   * the top of the beats screen*): emphasis, and — on a prose format — how
+   * the paragraph is ranged, how big it is and what ink it is in.
+   *
+   * It is opt-in per surface for the reason dictation is: the writing screen
+   * is where somebody sets a paragraph, and the Script drawing every beat
+   * with one would put a row of buttons over every scene in the script. It
+   * goes through `dictationSlot` where there is one, both being tools of the
+   * surface rather than of the paper.
+   */
+  toolbar?: boolean;
 }
 
 const MARK_KEYS: Record<string, InlineMark> = { b: 'bold', i: 'italic', u: 'underline' };
@@ -246,6 +264,7 @@ export function BeatBody({
   readOnly = false,
   dictation = false,
   dictationSlot = null,
+  toolbar = false,
 }: BeatBodyProps) {
   const format = file.project.format;
   const layout = layoutForFile(file);
@@ -266,6 +285,18 @@ export function BeatBody({
   const [focusId, setFocusId] = useState<ManuscriptElementId | null>(null);
   const [selection, setSelection] = useState<{ id: ManuscriptElementId; start: number; end: number } | null>(null);
   const inputs = useRef(new Map<ManuscriptElementId, HTMLTextAreaElement>());
+
+  /**
+   * **The line the toolbar acts on** (addendum 02 §19a).
+   *
+   * It is the line the cursor was last **in**, kept rather than read off the
+   * document's focus, because pressing a button in the toolbar takes focus
+   * off the writing — so a toolbar that asked *what is focused now* would
+   * find itself. It is remembered on the way in and left standing on the way
+   * out, which is what lets a writer press **Centred** and then **18 pt**
+   * without clicking back into the paragraph between them.
+   */
+  const [atLine, setAtLine] = useState<ManuscriptElementId | null>(null);
 
   /**
    * Right-clicked writing, waiting to be made into characterization (addendum
@@ -623,6 +654,43 @@ export function BeatBody({
     onUpdate((current) => setDualDialogue(current, beat.id, cue.id, !isDual(cue)));
   };
 
+  /**
+   * Emphasis, put on from the toolbar (addendum 02 §19a).
+   *
+   * **This is the act the keys run**, lifted out so that the two doors are
+   * one answer: `toggleInline` on the selection, the text written back, the
+   * selection put where the marks left it. Where the cursor is a caret
+   * rather than a range the marks go round nothing and the caret lands
+   * between them, which is what somebody pressing **B** before typing means.
+   */
+  const markLine = (mark: InlineMark) => {
+    const id = atLine;
+    const element = id ? latest.current.find((one) => one.id === id) : undefined;
+    const input = id ? inputs.current.get(id) : undefined;
+    if (!element || !input || readOnly) return;
+    const edit = toggleInline(element.text, input.selectionStart, input.selectionEnd, mark);
+    updateElement(element.id, { text: edit.text });
+    setSelection({ id: element.id, start: edit.selectionStart, end: edit.selectionEnd });
+  };
+
+  /**
+   * How the line the cursor is in is set (addendum 02 §19a). `withLineType` is
+   * the one writer of those attributes, and **null clears rather than
+   * writing a default**, so a paragraph put back to the book's own carries
+   * nothing at all and prints exactly as it did before anybody touched it.
+   */
+  const typeLine = (patch: Partial<LineType>) => {
+    const id = atLine;
+    const element = id ? latest.current.find((one) => one.id === id) : undefined;
+    if (!element || readOnly) return;
+    const set = withLineType(element, patch);
+    updateElement(element.id, { attributes: set.attributes });
+    // The caret goes back where it was: a press on the toolbar is not a
+    // reason for a writer to lose their place in the sentence.
+    const input = inputs.current.get(element.id);
+    if (input) setSelection({ id: element.id, start: input.selectionStart, end: input.selectionEnd });
+  };
+
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>, element: ManuscriptElement, index: number) => {
     const input = event.currentTarget;
     const empty = element.text.trim().length === 0;
@@ -739,6 +807,17 @@ export function BeatBody({
     const page = breaks?.get(element.id);
     const importedFace = typeof element.attributes.face === 'string' ? element.attributes.face : '';
     const importedSize = typeof element.attributes.size === 'number' && element.attributes.size > 0 ? element.attributes.size : 0;
+    /**
+     * How this line is set, read the one way the toolbar and the book read it.
+     *
+     * The **size** is drawn here only where the writer chose it, which is the
+     * printer's own rule (addendum 02 §19a): an import's size is the
+     * document's and shows under the Script's *As imported* face, so drawing
+     * it here would make this screen disagree with the page. The alignment
+     * and the ink have no such gate, the book honouring both outright.
+     */
+    const line = lineTypeOf(element);
+    const own = { ...line, size: setByWriter(element) ? line.size : null };
     return (
       <Fragment key={element.id}>
         {page ? (
@@ -754,6 +833,19 @@ export function BeatBody({
             // only under the Script's *As imported* face.
             importedFace ? 'imported-face' : '',
             importedSize ? 'imported-size' : '',
+            /**
+             * **What is set here is drawn here** (addendum 02 §19a). The
+             * element has carried a size and an alignment since the Word
+             * importer was built and the writing screen drew neither: the
+             * variables were set on this very row and the only rules that
+             * read them were the Script's, under *As imported*. So a writer
+             * setting a paragraph on the one screen built for writing saw
+             * nothing happen, which reads exactly like the control not
+             * working.
+             */
+            own.size !== null ? 'own-size' : '',
+            own.align !== null ? 'own-align' : '',
+            own.colour !== null ? 'inked' : '',
           ]
             .filter(Boolean)
             .join(' ')}
@@ -766,6 +858,9 @@ export function BeatBody({
               '--first-indent': `${firstIndent}ch`,
               ...(importedFace ? { '--imported-face': `'${importedFace.replace(/'/g, '')}', serif` } : {}),
               ...(importedSize ? { '--imported-size': `${importedSize}pt` } : {}),
+              ...(own.size !== null ? { '--own-size': `${own.size}pt` } : {}),
+              ...(own.align !== null ? { '--own-align': own.align } : {}),
+              ...(own.colour !== null ? { '--line-ink': own.colour } : {}),
             } as React.CSSProperties
           }
         >
@@ -829,7 +924,10 @@ export function BeatBody({
                   ? { list: 'vcwriter-slugs' }
                   : {})}
               readOnly={readOnly}
-              onFocus={onActivate}
+              onFocus={() => {
+                setAtLine(element.id);
+                onActivate?.();
+              }}
               // A name typed as a cue is a character. Noted when the writer
               // leaves the line rather than on every keystroke, so R, RU, RUV
               // do not become three people (addendum 02 §16).
@@ -957,6 +1055,12 @@ export function BeatBody({
     return entries;
   };
 
+  /** How the line the cursor is in is set, for the toolbar to read back. */
+  const lineAt = (() => {
+    const element = atLine ? elements.find((one) => one.id === atLine) : undefined;
+    return element ? lineTypeOf(element) : null;
+  })();
+
   return (
     <div
       className={readOnly ? 'page-column reading' : 'page-column'}
@@ -987,6 +1091,29 @@ export function BeatBody({
           </div>
         );
       })}
+
+      {/* **How the writing is set** (addendum 02 §19a, from Ken: *put a toolbar
+          on the top of the beats screen*).
+
+          It goes through the same slot the Dictate button does, for §8c's own
+          reason: the paper holds nothing but somebody's words, and a tool of
+          the writing screen stands in the writing screen's chrome. Given no
+          slot it draws in place, which is what every surface but the writing
+          screen gets. */}
+      {toolbar && !readOnly
+        ? (() => {
+            const control = (
+              <WritingToolbar
+                type={maySetType(format)}
+                line={lineAt}
+                noun={nounsFor(format).sub}
+                onMark={markLine}
+                onType={typeLine}
+              />
+            );
+            return dictationSlot ? createPortal(control, dictationSlot) : control;
+          })()
+        : null}
 
       {elements.length === 0 && emptyLabel && !readOnly ? (
         <button

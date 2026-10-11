@@ -590,13 +590,21 @@ export const renderChapterOpening = (
  */
 export const blockStyle = (block: BookBlock, context: BookRenderContext): string => {
   const rules: string[] = [];
-  if (context.settings.face === 'imported') {
-    if (block.face) rules.push(`font-family:'${block.face.replace(/'/g, '')}',${faceStackOf('imported')}`);
-    if (block.size) {
-      rules.push(`font-size:${(block.size * PX_PER_PT).toFixed(3)}px`);
-      const lines = Math.max(1, Math.ceil(block.size / context.geometry.size - 0.001));
-      if (lines > 1) rules.push(`line-height:calc(var(--bk-lead) * ${lines})`);
-    }
+  const imported = context.settings.face === 'imported';
+  if (imported && block.face) rules.push(`font-family:'${block.face.replace(/'/g, '')}',${faceStackOf('imported')}`);
+  /**
+   * **A size the writer chose is honoured whatever the book is set in**
+   * (addendum 02 §19a). The *As imported* gate above it is right about a
+   * document — Word's accidental eleven point on four hundred paragraphs has
+   * no business surviving a writer choosing Garamond at twelve — and wrong
+   * about somebody who deliberately pressed **18** on this paragraph, which
+   * is why the block carries which of the two it is rather than a second
+   * size for the printer to choose between.
+   */
+  if (block.size && (imported || block.ownSize)) {
+    rules.push(`font-size:${(block.size * PX_PER_PT).toFixed(3)}px`);
+    const lines = Math.max(1, Math.ceil(block.size / context.geometry.size - 0.001));
+    if (lines > 1) rules.push(`line-height:calc(var(--bk-lead) * ${lines})`);
   }
   // A paragraph of a designed prose part (§7a): set from the page's own line
   // style, as concrete declarations on that paragraph alone. The body rule is
@@ -636,6 +644,12 @@ export const blockStyle = (block: BookBlock, context: BookRenderContext): string
     if (one.align) rules.push(`text-align:${one.align}`);
   }
   if (block.align) rules.push(`text-align:${block.align}`, 'text-indent:0');
+  /**
+   * The ink (addendum 02 §19a, Ken's *change the color*). Always drawn: unlike
+   * the face and the size there is no importer behind it, so a colour on a
+   * paragraph is somebody's own and nothing else.
+   */
+  if (block.colour) rules.push(`color:${block.colour}`);
   return rules.length > 0 ? ` style="${rules.join(';')}"` : '';
 };
 

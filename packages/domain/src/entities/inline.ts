@@ -157,9 +157,30 @@ export const toggleInline = (text: string, start: number, end: number, mark: Inl
     };
   }
 
+  /**
+   * **The marks go round the words and never round the spaces beside them**
+   * — the Word importer's own rule when it writes emphasis back (`*the *` for
+   * `the ` reads as a stray asterisk), said here because this is where a
+   * writer makes one.
+   *
+   * It matters more than it did: a double-click selects a word **and its
+   * trailing space** in every browser, and the toolbar (addendum 02 §19a)
+   * makes double-click-then-press the commonest way emphasis is put on. An
+   * empty selection is left exactly as it is, that being somebody asking for
+   * a pair of marks to type between.
+   */
+  let from = start;
+  let to = end;
+  while (from < to && /\s/.test(text[from] as string)) from += 1;
+  while (to > from && /\s/.test(text[to - 1] as string)) to -= 1;
+  if (from === to) {
+    from = start;
+    to = end;
+  }
+
   return {
-    text: `${text.slice(0, start)}${marks}${text.slice(start, end)}${marks}${text.slice(end)}`,
-    selectionStart: start + width,
-    selectionEnd: end + width,
+    text: `${text.slice(0, from)}${marks}${text.slice(from, to)}${marks}${text.slice(to)}`,
+    selectionStart: from + width,
+    selectionEnd: to + width,
   };
 };

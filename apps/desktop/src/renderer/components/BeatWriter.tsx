@@ -295,6 +295,12 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
             // One beat, being written: the place dictation belongs (spec §9).
             dictation
             dictationSlot={tools}
+            // **How the writing is set** (addendum 02 §19a, from Ken: *put a
+            // toolbar on the top of the beats screen*). The writing screen is
+            // where somebody sets a paragraph; the Script draws every beat at
+            // once, and a row of buttons over each would be the distraction
+            // §8c took the Dictate button off the page to avoid.
+            toolbar
           />
         </div>
 

@@ -293,6 +293,75 @@ push live; the build takes a minute or two.
   not one of them asked how a writer gets there; the new one presses the
   row and then double-clicks it and asserts the same dialog opens both
   times.
+  **§19a is the toolbar on the writing screen**, from Ken (*I imported some
+  text that was italicized and I realized that there's no way to adjust the
+  style of the text in the beats. So you need to be able to bold, italicize,
+  or underline. and be able to justify it left, right, or center. Put a
+  toolbar on the top of the beats screen… And even change the color and size
+  of the text, especially for novels, short stories, and instructional books.
+  That will not be needed in scripts, episodic, or short form*), and **the
+  audit paid a thirty-second time and paid nearly all of it**: emphasis has
+  been built since spec §6 (`entities/inline.ts` writes Fountain's own marks,
+  the screen draws them, the print reads them, and **Ctrl/Cmd+B, I and U have
+  put them on the selection since the beat editor was written**), and
+  **alignment and size have been on the element and in the printed book since
+  addendum 21 §3** — `attributes`, read by `book-plan.ts`'s own `setting()`.
+  Only the colour was missing. So what was wrong is **a way in**: every one of
+  those was written by the Word importer and reachable by nobody, and the keys
+  were reachable only by somebody who already knew they were there — addendum
+  29 §2's lesson, *the act worked, every test passed, and there was no way to
+  see it was there*, which is why Ken looked at his own italics and correctly
+  concluded nothing could change them. **A mark is the selection's and the
+  type is the line's**: bold, italic and underline are **characters in the
+  text** and travel with it into Fountain, into the eBook and into a paste,
+  while alignment, size and colour are the **paragraph's**, an inline colour
+  having to invent a mark this program's own exports have never heard of and
+  would then print into them — which is not a limitation dressed up as a rule
+  but the sentence `entities/inline.ts` opens with, and it is **said on the
+  screen** rather than found by pressing, somebody who picks three words and
+  presses *Centred* watching the whole paragraph move with nothing able to
+  tell them why. **It is a slot that was already there** — §8c of addendum 09
+  took the Dictate button off the manuscript and built `writer-tools` as *a
+  slot, never a second control*, and a toolbar is the same kind of thing — and
+  it **draws controls and decides nothing**, the buttons running the
+  `toggleInline` the keys run and the type being `withLineType` on the element
+  the cursor is in, **a second door onto one act** (addendum 20 §16d); the
+  line is **remembered rather than read off the document's focus**, a toolbar
+  that asked *what is focused now* finding itself, which is what lets somebody
+  press *Centred* and then *18 pt* without clicking back between them.
+  **Who set the size is the one new fact**: `attributes.size` has meant *what
+  the document said* since the importer, honoured only under the **As
+  imported** face — right about Word's accidental eleven point on four hundred
+  paragraphs and wrong about somebody who deliberately pressed 18 — so one
+  field carries the size and a second says where it came from (`found`'s
+  shape, addendum 25 §2), written by the toolbar and never by the importer,
+  with **no stamp on alignment or ink**, which have no importer behind them to
+  be told apart from. **Emphasis is every format's and the type is prose's**,
+  Ken's own split: a screenplay uses Fountain's marks and the keys always
+  worked there, while a paragraph in 18 point centred is not a screenplay, so
+  those are **absent rather than greyed**. **An ink is chosen on one screen
+  and read on another** — the writing screen may be white on dark and the book
+  is white paper always — so every offered ink is a mid-tone with **no white
+  and no black**, and the swatches are drawn **on paper**. **Three faults.**
+  Writing the first test found one in shipped code: `toggleInline` wrapped the
+  selection exactly as given and **a double-click takes the word's trailing
+  space**, so `the ` came back `*the *`, the very thing the importer refuses
+  when it writes emphasis back — harmless while the only way in was a key, and
+  the toolbar makes double-click-then-press the commonest gesture there is.
+  Driving the room found the ink **correct and overruled**, a four-class paper
+  rule beating it (addendum 20 §9w again), fixed not with more specificity but
+  with **one rule that decides what colour a line of the manuscript is drawn
+  in** — `.element .ink` reads `--line-ink`, then `--sheet-ink`, then the
+  room's text colour, every paper mode setting the variable instead of
+  `color`, four rules becoming one declaration — and `--own-ink` **already
+  taken** by the writer's own *paper*, the eighth name stepped around. And
+  **looking at it caught the third**: the custom swatch drew a red **A** on
+  cream beside **Red**, which draws a red A on cream, two controls tellable
+  apart only by pressing; with nothing of their own in force it is a
+  **spectrum** now. **Named rather than built**: the face (the importer's
+  literal family name and the book's face keys are two vocabularies, and a
+  control mixing them would be the second answer this project removes
+  everywhere else) and an inline colour.
   **§23a is two more colour schemes**, from Ken with a screenshot of each
   (*add these two colour schemes to the preferences. One we'll call green and
   the other one name it whatever*) — **Green** and **Cobalt**. A scheme is

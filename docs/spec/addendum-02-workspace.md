@@ -2004,6 +2004,173 @@ speaks in it, what it sets up or pays off, what it is linked to — because
 the arc is what the scene is being read against, and the two belong on the
 same screen.
 
+## 19a. How the writing is set: the toolbar on the writing screen
+
+From Ken:
+
+> Another thing that is left out is I imported some text that was italicized
+> and I realized that there's no way to adjust the style of the text in the
+> beats. So you need to be able to bold, italicize, or underline. and be able
+> to justify it left, right, or center. Put a toolbar on the top of the beats
+> screen. or passage depending on what it's called in the novels and short
+> stories and instructional… And even change the color and size of the text,
+> especially for novels, short stories, and instructional books. That will not
+> be needed in scripts, episodic, or short form.
+
+### 19a.1 The audit, which pays nearly all of it
+
+Measured before a line was written:
+
+| What he asks for | Where it already was |
+| --- | --- |
+| Bold, italic, underline | **Built since spec §6.** `entities/inline.ts` writes Fountain's `**bold**`, `*italic*` and `_underline_` into the text, the writing screen draws them, the print reads them, and **Ctrl/Cmd+B, I and U have put them on the selection since the beat editor was written.** |
+| Ranged left, right, centre | **Stored and printed since addendum 21 §3.** `attributes.align` on the element, read by `book-plan.ts`'s own `setting()` onto the block, emitted by `blockStyle`. |
+| A size | Likewise — `attributes.size`, honoured under the *As imported* face. |
+| A colour | **Nothing at all.** |
+
+So almost nothing here is a new fact about a manuscript. **What was missing is
+a way in**: every one of those was written by the Word importer and reachable
+by nobody, and the keys were reachable only by somebody who already knew they
+were there — addendum 29 §2's lesson exactly, where *the act worked, every
+test passed, and there was no way to see it was there*.
+
+That is also why the report reads as it does. Ken imported a document, saw
+italics on the page, and correctly concluded there was no way to change them:
+there wasn't, unless you knew a chord nothing on the screen names.
+
+### 19a.2 Two kinds of thing, and the line between them
+
+**A mark is the selection's and the type is the line's.**
+
+Bold, italic and underline go round the words a writer picked, because they
+are **characters in the text** and travel with it — into Fountain, into the
+eBook, into a paste. Alignment, size and colour are the **paragraph's**,
+because the manuscript is a list of typed elements whose text is plain text
+(spec §14): an inline colour would have to invent a mark this program's own
+export formats have never heard of, and it would print into them.
+
+That is not a limitation dressed up as a rule. It is the sentence
+`entities/inline.ts` opens with, which is what keeps a project file readable,
+diffable and convertible with no rich-text engine anywhere in it.
+
+The line is **said rather than found by pressing**: a writer who picks three
+words and presses **Centred** watches the whole paragraph move, and nothing
+else on the screen could tell them why.
+
+### 19a.3 It is a slot that was already there
+
+§8c of addendum 09 took the Dictate button off the manuscript and built
+`writer-tools` as *a slot, never a second control* — empty and of no height
+until something is put in it. The toolbar goes in the same slot, for the same
+reason: the paper holds nothing but somebody's words, and a tool of the
+writing screen stands in the writing screen's chrome.
+
+And it **draws controls and decides nothing.** Every act is one `BeatBody`
+already performs: the buttons run the `toggleInline` the keys run, and the
+type is `withLineType` on the element the cursor is in. **A second door onto
+one act** (addendum 20 §16d), never a second answer.
+
+The line the toolbar acts on is **remembered rather than read off the
+document's focus**, because pressing a button takes focus off the writing — a
+toolbar that asked *what is focused now* would find itself. That is what lets
+somebody press **Centred** and then **18 pt** without clicking back into the
+paragraph between them.
+
+### 19a.4 Who set the size
+
+`attributes.size` has meant *what the document this came from said* since the
+Word importer was built, and the book honours it **only under the *As
+imported* face** — under any other the book is set in one face, which is what
+choosing one means.
+
+That rule is right about an import and wrong about a writer. Word's accidental
+eleven point on four hundred paragraphs has no business surviving somebody
+choosing Garamond at twelve; a size they deliberately pressed **18** for on
+*this* paragraph is a different thing, and dropping it would read as the
+control not working.
+
+So **one field carries the size and a second says where it came from** —
+`found`'s shape (addendum 25 §2), a fact about provenance and never a status,
+written by the toolbar and never by the importer. Nothing already imported
+changes, which is why the whole domain suite passed with no assertion edited.
+
+Alignment and ink get **no stamp**: alignment is honoured whatever the book is
+set in, a colour has no importer behind it at all, and writing the stamp for
+them would be claiming a provenance about fields that never had one.
+
+### 19a.5 Which format gets which half
+
+**Emphasis is every format's and the type is prose's** — the split Ken's own
+sentence makes.
+
+Bold, italic and underline are Fountain's own marks: a screenplay uses them
+and the keys have worked on every format since the editor was written, so
+three buttons for an act that already works everywhere cost a screenwriter
+nothing and are strictly better than a chord nobody knows about.
+
+A paragraph set in 18 point and centred is **not a screenplay** — a script's
+geometry is the format's, Courier on a character grid at a fixed measure —
+and a short-form board is a sheet of timings. Those controls are **absent
+rather than greyed** there.
+
+### 19a.6 An ink is chosen on one screen and read on another
+
+The writing screen may be dark ink on white paper or white on dark depending
+on the gear. The Layout room draws white paper always. The printed book **is**
+white paper.
+
+So every offered ink is a **mid-tone that reads against both**, and there is
+no white and no black — white would be a paragraph that vanishes when it
+prints, black is what the default already is. The swatches are drawn **on
+paper** rather than on the room's own background, because what a writer judges
+here is what will print.
+
+### 19a.7 What it caught
+
+**Writing the first test found a fault in shipped code.** `toggleInline`
+wrapped the selection exactly as given, and **a double-click selects a word
+and its trailing space in every browser** — so `the ` came back `*the *`,
+which is precisely what the Word importer refuses when it writes emphasis
+back (*the editor reads `** word**` as a stray asterisk*). It had been that
+way since the editor was written and cost little while the only way in was a
+key; the toolbar makes double-click-then-press the commonest gesture there
+is. An empty selection is still left exactly as it is, that being somebody
+asking for a pair of marks to type between.
+
+**Driving the real room found two more.**
+
+The writer's ink was **correct and overruled** — `.workspace.script-paper
+.writer-sheet .element .ink` is four classes deep and beat it, which is
+addendum 20 §9w's fault and addendum 02 §4a's before it. The fix is not more
+specificity but **one rule that decides what colour a line of the manuscript
+is drawn in**: `.element .ink` reads `--line-ink`, then `--sheet-ink`, then
+the room's text colour, and every paper mode sets the variable instead of
+setting `color` at its own depth. Four rules became one declaration.
+
+And `--own-ink` was **already taken** by the writer's own *paper* colour — the
+eighth name this project has had to step around, after `origin`→`found`,
+`Standing`→`Situation`, `code`→`discount`, `LAPSE_PROMISE`, `ProjectHome`,
+`labelFor`→`sectionLabel` and `SnapshotReason`→`RecoveryReason`.
+
+**And looking at it caught the third**, which no test could: the custom colour
+swatch drew a red **A** on cream standing beside **Red**, which draws a red A
+on cream. Two controls a writer can only tell apart by pressing. With nothing
+of their own in force it is a **spectrum** now — what a colour picker looks
+like everywhere — and once there is one it wears it, because then the thing
+worth showing is what they picked.
+
+### 19a.8 Named rather than built
+
+**The face.** `attributes.face` is the document's own family name, written by
+the importer as a literal string, while the book's faces (§6a) are a short
+list of keys `faceStackOf` resolves. Those are two vocabularies, and a control
+that mixed them would be exactly the second answer this project removes
+everywhere else — so settling them is its own piece of work, and Ken did not
+ask for it here.
+
+**An inline colour**, for §19a.2's reason: the mark would print into Fountain
+and the eBook.
+
 ## 20. Editing mode
 
 Spec §8.1 asks for grammar, spelling, punctuation and mechanics, with

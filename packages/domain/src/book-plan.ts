@@ -17,6 +17,7 @@ import { beatsInScript, unitsInStoryOrder } from './selectors.js';
 import { newId } from './ids.js';
 import { partHasStyle, partLogo, partPlacement, partStyleOf, proseStyleBase, type PartStyle, type PartStylePatch } from './part-style.js';
 import { holdsWholeWorks, isCollection } from './formats.js';
+import { lineTypeOf, setByWriter, type ParagraphAlign } from './writing-type.js';
 import { placeFigure } from './instructional.js';
 import { copyrightLines, copyrightOf, type CopyrightLine } from './copyright-page.js';
 import { titlePageContent, titlePageFieldsOf, type TitlePageContent } from './title-page.js';
@@ -544,10 +545,20 @@ export interface BookBlock {
    * How the document this came from set it (addendum 21 §3): a face, a size
    * in points, an alignment. Read by the printer only under the *As imported*
    * face, except the alignment, which is a fact about the words.
+   *
+   * **Or how the writer set it** (addendum 02 §19a): the same three fields
+   * carry what somebody chose on the writing screen, with `ownSize` saying
+   * the size is theirs rather than the document's — which is what lets the
+   * printer honour it whatever face the book is set in, where an import's is
+   * rightly dropped. One fact, with a second field saying where it came from
+   * (`found`'s shape, addendum 25 §2).
    */
   face?: string;
   size?: number;
-  align?: 'center' | 'right';
+  ownSize?: boolean;
+  align?: ParagraphAlign;
+  /** The ink this paragraph is set in (addendum 02 §19a). Always honoured. */
+  colour?: string;
 }
 
 const block = (input: Partial<BookBlock> & Pick<BookBlock, 'id' | 'kind' | 'numbering'>): BookBlock => ({
@@ -1069,13 +1080,26 @@ const partOwnBlocks = (
   }
 };
 
-/** What an element kept of how its document set it, where it kept anything. */
-const setting = (element: ManuscriptElement): Pick<BookBlock, 'face' | 'size' | 'align'> => {
-  const out: Pick<BookBlock, 'face' | 'size' | 'align'> = {};
-  const { face, size, align } = element.attributes;
+/**
+ * What an element kept of how it is set — by the document it came from
+ * (addendum 21 §3) or by the writer on the writing screen (addendum 02 §19a).
+ *
+ * `lineTypeOf` is the **one reading** of a line's alignment, size and ink, so
+ * the toolbar, the writing screen and the printed page cannot disagree about
+ * what a paragraph says it is; the face is still the importer's alone, there
+ * being no control that sets one.
+ */
+const setting = (element: ManuscriptElement): Pick<BookBlock, 'face' | 'size' | 'ownSize' | 'align' | 'colour'> => {
+  const out: Pick<BookBlock, 'face' | 'size' | 'ownSize' | 'align' | 'colour'> = {};
+  const { face } = element.attributes;
+  const line = lineTypeOf(element);
   if (typeof face === 'string' && face.trim().length > 0) out.face = face.trim();
-  if (typeof size === 'number' && size > 0) out.size = size;
-  if (align === 'center' || align === 'right') out.align = align;
+  if (line.size !== null) {
+    out.size = line.size;
+    if (setByWriter(element)) out.ownSize = true;
+  }
+  if (line.align !== null) out.align = line.align;
+  if (line.colour !== null) out.colour = line.colour;
   return out;
 };
 

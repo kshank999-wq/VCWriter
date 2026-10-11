@@ -2298,7 +2298,13 @@ input[type='color'].swatch {
 .element .ink {
   pointer-events: none;
   border-color: transparent;
-  color: var(--text);
+  /* **One rule decides what colour a line of the manuscript is drawn in**
+     (addendum 02 §19a). The writer's own ink where this paragraph has one,
+     otherwise whatever paper is in force, otherwise the room's text colour —
+     a chain rather than four rules each setting `color` at a different
+     specificity, which is how the writer's ink came to be correct and
+     overruled (addendum 20 §9w's fault, found by looking at it). */
+  color: var(--line-ink, var(--sheet-ink, var(--text)));
 }
 
 .element textarea {
@@ -2460,7 +2466,7 @@ input[type='color'].swatch {
 }
 
 .element-general .ink {
-  color: var(--muted);
+  --sheet-ink: var(--muted);
 }
 
 .add-element {
@@ -3215,7 +3221,7 @@ dialog.writer-dialog::backdrop {
 .workspace.script-paper .script-sheet .element .ink,
 .workspace.script-paper .page-sheet .element .ink,
 .workspace.script-paper .writer-sheet .element .ink {
-  color: var(--paper-ink);
+  --sheet-ink: var(--paper-ink);
 }
 
 .workspace.script-paper .script-sheet .element textarea,
@@ -3254,7 +3260,7 @@ dialog.writer-dialog::backdrop {
 .workspace.script-paper .script-sheet .element-general .ink,
 .workspace.script-paper .page-sheet .element-general .ink,
 .workspace.script-paper .writer-sheet .element-general .ink {
-  color: var(--paper-muted);
+  --sheet-ink: var(--paper-muted);
 }
 
 .workspace.script-paper .script-sheet .add-element,
@@ -3950,8 +3956,11 @@ dialog.marker-dialog {
   color-scheme: light;
 }
 
+.workspace .script-view.own-paper .element .ink {
+  --sheet-ink: var(--own-ink);
+}
+
 .workspace .script-view.own-paper .page-column,
-.workspace .script-view.own-paper .element .ink,
 .workspace .script-view.own-paper .script-title-block h1,
 .workspace .script-view.own-paper .scene-name input,
 .workspace .script-view.own-paper .chapter-leaf-block {
@@ -20628,3 +20637,198 @@ dialog.note-dialog > header {
   min-height: min(46vh, 420px);
   resize: vertical;
 }
+
+/* ---------------------------------------------------------------------------
+   How the writing is set (addendum 02 §19a, from Ken: *put a toolbar on the
+   top of the beats screen*).
+
+   It stands in §8c's `writer-tools` strip, which the Dictate button already
+   uses, and takes the left of it so the two do not compete for the same
+   corner — `margin-right: auto` rather than a change to the strip, because
+   the strip is laid out for a surface that may hold neither.
+   --------------------------------------------------------------------------- */
+
+.writing-tools {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin-right: auto;
+  min-width: 0;
+}
+
+.wt-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.writing-tools button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 24px;
+  padding: 0;
+  font-size: 12px;
+  line-height: 1;
+}
+
+/* A control that is on says so by being lit rather than by being a shade
+   darker: `aria-pressed` is the state, and it is drawn as well as said. */
+.writing-tools button[aria-pressed='true'] {
+  background: var(--gold-deep);
+  border-color: var(--gold);
+  color: var(--gold-bright);
+}
+
+.wt-bold {
+  font-weight: 800;
+}
+
+.wt-italic {
+  font-style: italic;
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+.wt-underline {
+  text-decoration: underline;
+}
+
+.wt-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.wt-size select {
+  font-size: 11px;
+  text-transform: none;
+  letter-spacing: 0;
+  padding: 2px 4px;
+  min-width: 0;
+}
+
+/* **The swatch is drawn on paper.** An ink is chosen against this screen,
+   which may be dark, and read in a printed book, which is white — so the
+   button carries the paper under the letter rather than the room's own
+   background, and what a writer judges is what will print. */
+.writing-tools .wt-ink {
+  background: #fdfcf8;
+  border: 1px solid var(--border);
+  font-weight: 700;
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+.writing-tools .wt-ink span {
+  color: var(--swatch, #111);
+}
+
+.writing-tools .wt-ink-none span {
+  color: #111;
+}
+
+.writing-tools .wt-ink[aria-pressed='true'] {
+  background: #fdfcf8;
+  border-color: var(--gold-bright);
+  box-shadow: 0 0 0 1px var(--gold-bright);
+}
+
+/* The writer's own ink: a label wrapping a colour input, because a native
+   colour well cannot be made to look like the six beside it and a row where
+   one swatch is a different shape is a row with a stranger in it. */
+.writing-tools .wt-ink-own {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 24px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* With nothing of the writer's own in force the square is a spectrum, which
+   is what a colour picker looks like everywhere and what keeps it from
+   reading as a seventh ink. */
+.writing-tools .wt-ink-own:not(.on) {
+  background: conic-gradient(
+    from 0.25turn,
+    #b4232a,
+    #9a5b1e,
+    #c9a45c,
+    #1d6b45,
+    #1f5fa9,
+    #6b3fa0,
+    #b4232a
+  );
+}
+
+.writing-tools .wt-ink-own.on {
+  background: #fdfcf8;
+  color: var(--swatch);
+  border-color: var(--gold-bright);
+  box-shadow: 0 0 0 1px var(--gold-bright);
+}
+
+.writing-tools .wt-ink-own.on span {
+  color: var(--swatch);
+}
+
+.writing-tools .wt-ink-own input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+}
+
+/* What the two halves reach, in a tooltip rather than in standing prose
+   under somebody's manuscript (§8a's lesson). */
+.wt-note {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  cursor: help;
+}
+
+/* ---------------------------------------------------------------------------
+   And what is set is drawn on the line (addendum 02 §19a).
+
+   The element has carried a size and an alignment since the Word importer was
+   built and this screen drew neither: the variables were set on the row and
+   the only rules that read them were the Script's, under *As imported*.
+   --------------------------------------------------------------------------- */
+
+.element.own-size .ink,
+.element.own-size textarea {
+  font-size: var(--own-size);
+}
+
+/* A ranged paragraph keeps no first-line indent — the print says the same in
+   one line (`text-align` with `text-indent:0`), and a centred paragraph
+   pushed in by three ems is centred on nothing. */
+.element.own-align {
+  text-align: var(--own-align);
+}
+
+.element.own-align .ink,
+.element.own-align textarea {
+  text-indent: 0;
+}
+
+/* The ink itself needs no rule at all: `--line-ink` is set on the row and
+   `.element .ink`'s own chain reads it first, which is the whole point of
+   making that one rule the only one that says `color`. The class is kept
+   because the row still has to say, to anything else reading it, that this
+   paragraph carries an ink of its own. */

@@ -172,3 +172,4 @@ export * from './error-report.js';
 export * from './editor-daily.js';
 export * from './editor-final.js';
 export * from './voice.js';
+export * from './writing-type.js';
