@@ -101,7 +101,16 @@ describe('the device preview (phase 3)', () => {
     expect(html).toContain(`src="${PNG}"`);
     expect(html).not.toContain('src="../images/');
     // The stylesheet rides inside, so the frame needs no second file.
-    expect(html).toContain('p.p { margin: 0; text-indent: 1.3em');
+    /**
+     * **Rewritten rather than worked around** (§12). It pinned the literal
+     * indent of a stylesheet that had never heard of the book; the sheet is
+     * the book's now, and what matters is that it rides inside the frame —
+     * and that the frame draws the **book's own margins** rather than the 5%
+     * it used to invent over them.
+     */
+    expect(html).toContain('p.p { margin:');
+    expect(html).toContain(`padding-left: ${pkg.margins!.side}`);
+    expect(html).toContain(`padding-top: ${pkg.margins!.head}`);
     expect(previewDocument(pkg, 'text/nope.xhtml', device)).toBeNull();
   });
 

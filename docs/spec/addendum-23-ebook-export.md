@@ -278,3 +278,108 @@ presentation role, a chapter device the same, and neither is counted
 against the book. `needsDescription` on a package image is the one thing
 the preflight and the metadata read, so they cannot disagree.
 
+
+## 12. The Layout room reaches the eBook
+
+From Ken, looking at a book he had set:
+
+> I'm looking at the ebook and the formatting is all messed up compared to
+> what the layout has. The margins are right at the edge and things are
+> skewed. But the pictures aren't right to the edge. So please check the top
+> margins. And make sure that the layout transfers to the ebook.
+
+**Measured first**, in a 412-pixel reading pane, on a 5.5 × 8.5 novel set in
+Garamond at eleven point and **ranged left**:
+
+| | the book | the eBook |
+| --- | --- | --- |
+| side margin | 10.23% of the page | **3%** |
+| head margin | 0.5 in | **nought** |
+| ranged | left | **justified** |
+| face | Garamond | Times New Roman |
+| hyphenation | on | off |
+| a designed page's type | the writer's | one fixed size |
+
+Every clause of the report is in that table. *The margins are right at the
+edge* is twelve pixels of a four-hundred-pixel screen; *things are skewed* is
+justified setting in a book ranged left, which on a narrow column is stretched
+word spacing; *please check the top margins* is the one that is simply
+missing, `padding: 0 3%` having no vertical component at all. And *the
+pictures aren't right to the edge* is the sharpest observation of the four: a
+picture narrower than the measure sits centred, so the pictures were the
+evidence that the page had room the text was not using.
+
+### What was wrong is how far §1 was read
+
+§1 settled that **nothing about a page survives** — no folio, no running head,
+no blank verso, no trim — and that is right and stays. What it was read to
+mean is *and therefore nothing the writer set survives*, which does not
+follow. It is this project's recurring correction: **an argument about the
+page, mistaken for an argument about the type.** A trim cannot survive reflow
+and a *proportion* can; a point size cannot survive the reader's own size and
+a *ratio to the body* can.
+
+So `ebook-style.ts` draws the line:
+
+- **the page is the printer's** — the trim, the page count, the folio, the
+  running head, the blank verso, a drop in inches, a template that places a
+  block at a height on a sheet. None of it travels, and the log says so;
+- **the type is the writer's** — the face, how it is ranged, the indent,
+  whether the paragraphs are indented or blocked, the hyphenation, and every
+  size **as a share of the body**. All of it travels, and the body's own size
+  is left at the reader's, which is what a reflowable book is for;
+- **and a margin is a proportion**, which is why the number a writer most
+  notices was the one most obviously missing.
+
+### Three decisions
+
+**The fore-edge and never the gutter.** A screen has no binding, and the
+inside margin is the one that walks its band with how thick the book is
+(addendum 20 §3b) — so both sides take the **outside** margin, the thumb
+margin, and nothing here can reach a page count a reflowable book does not
+have. `EBOOK_NOMINAL_PAGES` is named so nobody later reads one out of it.
+
+**The head is in ems and the sides are a percentage**, because a percentage
+padding resolves against the **width** even at the top (addendum 20 §9g,
+learned there by drawing a chapter sink three quarters of the way to where it
+meant to go). *The head margin is so many ems of the body* is a real
+typographic statement rather than a conversion invented to fill the slot.
+
+**The preview draws the file rather than a second idea of it.** Its pagination
+is CSS columns, where a padding on the container falls outside **all** the
+columns rather than inside each — so the body's own padding has to be lifted
+onto the children, and the numbers lifted are the stylesheet's. It invented 5%
+and shrank every picture to 90% on top of the book's own margins, which is the
+preview disagreeing with the file it exists to show; the package carries its
+margins now and the one cap left is the device's, a picture taller than the
+screen being a picture nobody can see.
+
+### The fault only the page showed
+
+Driving the rendered file caught what nothing else could. The chapter rule
+came out as
+
+```
+letter-spacing:0em text-align: center;
+```
+
+— a fragment pasted into a rule, joined with `'; '` and nothing at the end, so
+one invalid declaration stood where two good ones should have. The heading
+silently lost **both** its tracking and its centring and opened ranged left in
+a book that centres its openings; the markup was right, the package was valid
+and EPUBCheck passed. **A fragment pasted into a rule has to end the way a
+declaration ends**, and what is pinned now is the shape of every rule in the
+sheet rather than any one of its values — a test that fails on exactly that
+string and passes on the fix.
+
+Validated after: **EPUBCheck 5.2.1, 0 fatals / 0 errors / 0 warnings / 0
+infos.** Measured after, in the same pane: 42 pixels of side margin and 52 of
+head where there were 12 and nought, ranged left, set in Garamond, hyphenating
+— and the preview frame reporting the same two numbers as the file.
+
+### Still not done, and named
+
+No font file is **embedded**, so a device without the named face falls back to
+the stack's generic — §8's line since phase 1, and the log says it. The fixed
+layout book is unaffected: it is a reader of the *pages* and already carried
+the trim.

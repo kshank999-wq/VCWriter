@@ -1,10 +1,11 @@
 import { isFullPageArt } from './chapter-style.js';
 import { bookBlocks, partsOf, partTitle, type BookBlock } from './book-plan.js';
-import { bookNames, bookSettingsOf, trimOf } from './book-layout.js';
+import { bookNames, bookSettingsOf } from './book-layout.js';
 import { parseInline, type InlineSpan } from './entities/inline.js';
 import { titlePageOf } from './entities/title-page.js';
 import { nowIso } from './entities/common.js';
 import { ebookRulesFor, type EbookRules } from './ebook-presets.js';
+import { ebookCss, ebookMargins, ebookTransferLog, lineStyleAttr, type EbookMargins } from './ebook-style.js';
 import { writeZip } from './zip-write.js';
 import type { ProjectFile } from './project-file.js';
 import type { BookPart, BookSettings, EbookSettings } from './entities/book.js';
@@ -147,6 +148,8 @@ export interface EbookPackage {
   cover: EbookCover | null;
   /** The contents, as the navigation document lists them. */
   nav: EbookNavItem[];
+  /** The book's own margins, for the preview (§12); null on a fixed-layout book. */
+  margins: EbookMargins | null;
   /** What was done to the book on the way, one sentence each. */
   log: string[];
   /** `The Lighthouse.epub` */
@@ -173,12 +176,12 @@ const renderSpans = (spans: InlineSpan[], text: string): string => {
     .join('');
 };
 
-const lines = (text: string): string =>
+const lines = (text: string, style = ''): string =>
   text
     .split(/\n/)
     .map((line) => line.trim())
     .filter((line) => line.length > 0)
-    .map((line) => `<p>${escapeXml(line)}</p>`)
+    .map((line) => `<p${style}>${escapeXml(line)}</p>`)
     .join('');
 
 /** A file name a filesystem and a zip both take: letters, digits, dashes. */
@@ -390,6 +393,15 @@ export interface PackageDraft {
   navInSpine: boolean;
   /** The stylesheet: its path under OEBPS and its text. */
   css: { href: string; text: string };
+  /**
+   * **The book's own margins** (§12), carried so the device preview can draw
+   * them rather than inventing a second set. A reflowable file puts them on
+   * `body`, and the preview fakes its pagination with CSS columns, where a
+   * padding on the container falls outside **all** the columns — so the
+   * preview has to put the same numbers on the children, and the two must be
+   * the same numbers.
+   */
+  margins?: EbookMargins | null;
   /** Package-level `rendition:` and other `meta` lines beyond the standard set. */
   extraMeta?: string[];
   log: string[];
@@ -497,7 +509,7 @@ export const finishPackage = (draft: PackageDraft): EbookPackage => {
   const encoder = new TextEncoder();
   const size = all.reduce((total, entry) => total + (typeof entry.data === 'string' ? encoder.encode(entry.data).length : entry.data.length), 0);
 
-  return { metadata, rules, layout, entries: all, sections, images, cover, nav: draft.nav, log, fileName: draft.fileName, size, pages: draft.pages };
+  return { metadata, rules, layout, entries: all, sections, images, cover, nav: draft.nav, margins: draft.margins ?? null, log, fileName: draft.fileName, size, pages: draft.pages };
 };
 
 // ---------------------------------------------------------------- building
@@ -544,6 +556,13 @@ export const ebookOf = (file: ProjectFile, options: { modified?: string; target?
   let opening: string | null = null;
   const openingClass = settings.opening === 'small_caps' ? ' opens-small-caps' : settings.opening === 'drop_cap' ? ' opens-drop' : '';
   const ornament = settings.ornament.trim() || '* * *';
+  /**
+   * **The body's size, which every other size is said against** (§12). A
+   * reflowable book leaves the size to the reader, so what travels is the
+   * ratio — a fourteen-point heading in an eleven-point book is a quarter
+   * again as big as the body, whatever the body turns out to be.
+   */
+  const bodyPt = settings.size > 0 ? settings.size : 11;
   const begin = (draft: Omit<Draft, 'html'>) => {
     current = { ...draft, html: [] };
     drafts.push(current);
@@ -624,10 +643,29 @@ export const ebookOf = (file: ProjectFile, options: { modified?: string; target?
         current?.html.push(`<div class="copyright">${lines(text)}</div>`);
         break;
       }
-      case 'part_opening':
-        if (block.display) current?.html.push(`<div class="words">${lines(block.text)}</div>`);
-        else current?.html.push(`<h1 class="part-title">${escapeXml(block.title ?? current.title)}</h1>`);
+      case 'part_opening': {
+        /**
+         * **A designed page's own type travels** (§12, from Ken: *the
+         * formatting is all messed up compared to what the layout has*).
+         * §18 made the words of a dedication, an epigraph, a page of the
+         * writer's own and every prose part a `LineStyle` the writer sets,
+         * and the eBook drew all of them in one fixed size — so a foreword
+         * set at ten point ranged left read as a centred heading's sibling.
+         * The sizes are shares of the body, so the reader's own size still
+         * rules (`lineCss`).
+         */
+        const own = block.partStyle;
+        if (block.display) {
+          const words = lineStyleAttr(own?.line, bodyPt, settings.fonts);
+          const ranged = own?.align ? ` style="text-align:${own.align}"` : '';
+          current?.html.push(`<div class="words"${ranged}>${lines(block.text, words)}</div>`);
+        } else {
+          current?.html.push(
+            `<h1 class="part-title"${lineStyleAttr(own?.title, bodyPt, settings.fonts)}>${escapeXml(block.title ?? current.title)}</h1>`,
+          );
+        }
         break;
+      }
       case 'plate':
         current?.html.push(figure(bank.asset(block.assetId, block.caption ?? ''), block.caption ?? '', 'plate'));
         break;
@@ -684,7 +722,10 @@ export const ebookOf = (file: ProjectFile, options: { modified?: string; target?
             inset = `<span class="inset inset-${block.inset.place}" style="width:${Math.round(block.inset.span * 100)}%">${img}${cap}</span>`;
           }
         }
-        draft.html.push(`<p class="p${first}${align}">${inset}${renderSpans(block.spans, block.text)}</p>`);
+        // The page's own words where this paragraph belongs to a designed
+        // part (§18), the story's own type otherwise.
+        const own = lineStyleAttr(block.partStyle?.line, bodyPt, settings.fonts);
+        draft.html.push(`<p class="p${first}${align}"${own}>${inset}${renderSpans(block.spans, block.text)}</p>`);
         break;
       }
       case 'heading':
@@ -743,11 +784,7 @@ export const ebookOf = (file: ProjectFile, options: { modified?: string; target?
     });
   });
 
-  log.unshift(
-    'Page numbers, running heads and blank versos were left out: a reflowable book has no pages.',
-    `The trim (${trimOf(settings, file.project.format).width} × ${trimOf(settings, file.project.format).height} in) and margins were ignored; the reader sets the page.`,
-    'The face and size are the reader’s; no font was embedded.',
-  );
+  log.unshift(...ebookTransferLog(file));
 
   const listed = sections.filter((section) => section.kind !== 'cover');
   return finishPackage({
@@ -761,7 +798,12 @@ export const ebookOf = (file: ProjectFile, options: { modified?: string; target?
     nav: listed.map((section) => ({ href: section.href, title: section.title })),
     firstBody: sections.find((section) => section.kind === 'chapter' || section.kind === 'body') ?? null,
     navInSpine: true,
-    css: { href: 'css/book.css', text: EBOOK_CSS },
+    // **The book's own stylesheet** (§12): the margins as the proportions
+    // they are, the face, the alignment, the indent and the hyphenation the
+    // writer set — where this was one fixed sheet of literal numbers that had
+    // never heard of the book.
+    css: { href: 'css/book.css', text: ebookCss(file) },
+    margins: ebookMargins(file),
     log,
     fileName: `${safeName(metadata.title)}.epub`,
     pages: null,
@@ -781,40 +823,3 @@ export const epubBytes = async (pkg: EbookPackage): Promise<Uint8Array> => {
     Number.isNaN(at.getTime()) ? new Date(0) : at,
   );
 };
-
-export const EBOOK_CSS = `/* VC Writer eBook stylesheet: small, relative, the reader's own face and size left alone. */
-body { margin: 0; padding: 0 3%; }
-h1, h2 { text-align: center; font-weight: normal; page-break-after: avoid; }
-h1.book-title { font-size: 2em; margin: 3em 0 1em; }
-p.author { text-align: center; font-size: 1.2em; margin: 1em 0; }
-p.imprint { text-align: center; font-size: 0.9em; margin-top: 4em; }
-h1.chapter-title, h1.part-title { font-size: 1.6em; margin: 3em 0 1.5em; }
-.chapter-label { display: block; font-size: 0.7em; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 0.6em; }
-.chapter-name { display: block; }
-p.device { text-align: center; margin: 1em 0; }
-p.device img { max-width: 40%; height: auto; }
-blockquote.epigraph { margin: 1em 15% 2em; font-style: italic; font-size: 0.95em; }
-p.summary { margin: 0 8% 2em; font-style: italic; }
-p.p { margin: 0; text-indent: 1.3em; text-align: justify; }
-p.p.first { text-indent: 0; }
-p.p.opens-small-caps::first-line { font-variant: small-caps; }
-p.p.opens-drop::first-letter { font-size: 3em; float: left; line-height: 0.8; margin: 0.05em 0.1em 0 0; }
-p.p.center { text-align: center; text-indent: 0; }
-p.p.right { text-align: right; text-indent: 0; }
-h2.heading { font-size: 1.2em; margin: 2em 0 1em; }
-blockquote { margin: 1em 8%; }
-blockquote p { text-indent: 0; }
-p.break { text-align: center; margin: 1.5em 0; text-indent: 0; }
-figure { margin: 1.5em 0; text-align: center; page-break-inside: avoid; }
-.inset { float: left; margin: 0.2em 1em 0.3em 0; }
-.inset-right { float: right; margin: 0.2em 0 0.3em 1em; }
-.inset img { display: block; width: 100%; height: auto; }
-.inset .cap { display: block; font-size: 0.8em; text-align: center; margin-top: 0.3em; }
-figure img { max-width: 100%; height: auto; }
-figcaption { font-size: 0.85em; margin-top: 0.5em; }
-img.cover { max-width: 100%; max-height: 100%; margin: 0 auto; display: block; }
-.words p { text-align: center; text-indent: 0; margin: 0.3em 0; }
-.words { margin-top: 30%; }
-.copyright p { font-size: 0.85em; text-indent: 0; margin: 0.2em 0; }
-.u { text-decoration: underline; }
-`;

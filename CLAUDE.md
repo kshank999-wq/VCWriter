@@ -5836,6 +5836,51 @@ push live; the build takes a minute or two.
   by the browser, nothing saying what the thing was — so the print window
   now carries a screen-only banner naming the document and what to choose,
   and its tab is the file name.
+  **§12 is the Layout room reaching the eBook**, from Ken (*I'm looking at
+  the ebook and the formatting is all messed up compared to what the layout
+  has. The margins are right at the edge and things are skewed. But the
+  pictures aren't right to the edge. So please check the top margins. And make
+  sure that the layout transfers to the ebook*). **Measured first** in a
+  412-pixel reading pane on a 5.5 × 8.5 novel set in Garamond at eleven point
+  and ranged left: **3% of side margin against the book's 10.23%, no top
+  margin at all, justified setting in a book ranged left, Times New Roman, and
+  hyphenation off** — every clause of the report, with *the pictures aren't
+  right to the edge* the sharpest of the four, a picture narrower than the
+  measure sitting centred and so being the **evidence that the page had room
+  the text was not using**. §1's *nothing about a page survives* is right and
+  stays; what was wrong is how far it was read — *and therefore nothing the
+  writer set survives*, which does not follow, and is **an argument about the
+  page mistaken for an argument about the type** a further time. So
+  `ebook-style.ts` draws the line: **the page is the printer's** (the trim,
+  the count, the folio, the running head, the blank verso, a drop in inches),
+  **the type is the writer's** (the face, how it is ranged, the indent,
+  indented or blocked paragraphs, the hyphenation, and every size **as a share
+  of the body**, the body's own left at the reader's), **and a margin is a
+  proportion**. Three decisions: **the fore-edge and never the gutter** (a
+  screen has no binding and the inside margin is the one that walks its band
+  with the page count, so `EBOOK_NOMINAL_PAGES` is named so nobody later reads
+  a count out of a book that has none); **the head in ems and the sides as a
+  percentage**, a percentage padding resolving against the **width** even at
+  the top (addendum 20 §9g), so *the head margin is so many ems of the body*
+  is the only honest vertical unit; and **the preview draws the file rather
+  than a second idea of it** — its pagination is CSS columns, where a padding
+  on the container falls outside **all** of them, so the body's padding is
+  lifted onto the children and the numbers lifted are the stylesheet's, where
+  it invented 5% and shrank every picture to 90% over the book's own margins.
+  **The fault only the page showed**: the chapter rule came out
+  `letter-spacing:0em text-align: center`, a fragment joined with `'; '` and
+  nothing at the end, so the heading silently lost **both** its tracking and
+  its centring and opened ranged left in a book that centres its openings —
+  with the markup right, the package valid and EPUBCheck passing. **A fragment
+  pasted into a rule has to end the way a declaration ends**, and what is
+  pinned is the **shape of every rule in the sheet** rather than any one
+  value, a test that fails on that exact string and passes on the fix.
+  Validated after at **EPUBCheck 5.2.1, 0/0**, and measured after: 42 pixels
+  of side margin and 52 of head where there were 12 and nought, with the
+  preview frame reporting the same two numbers as the file. **No font is
+  embedded** (§8's line since phase 1, said in the log), and the fixed-layout
+  book is untouched, being a reader of the pages that already carried the
+  trim.
   `addendum-24-graveyard.md` is **the graveyard**, from Ken: *anything that
   gets removed or deleted, instead of deleting it permanently, it goes to the
   graveyard, just in case you accidentally delete something, you can restore

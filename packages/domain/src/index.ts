@@ -56,6 +56,7 @@ export * from './import-text.js';
 export * from './collection.js';
 export * from './series-import.js';
 export * from './ebook-presets.js';
+export * from './ebook-style.js';
 export * from './ebook.js';
 export * from './ebook-preflight.js';
 export * from './ebook-fixed.js';

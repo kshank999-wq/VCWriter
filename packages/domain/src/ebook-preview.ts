@@ -84,14 +84,30 @@ html, body { width: ${device.width}px; height: ${device.height}px; background: #
 </style></head><body${bodyAttributes}><div id="page">${inner}</div></body></html>`;
   }
 
-  // The reader's font size is the root's; everything in the stylesheet is
-  // relative to it, which is the point of the stylesheet.
+  /**
+   * The reader's font size is the root's; everything in the stylesheet is
+   * relative to it, which is the point of the stylesheet.
+   *
+   * **And the margins are the book's** (§12, from Ken: *the margins are right
+   * at the edge… but the pictures aren't right to the edge*). The pagination
+   * here is CSS columns, where a padding on the container falls outside
+   * **all** the columns rather than inside each — so the body's own padding
+   * has to be lifted onto the children, and the numbers lifted are the
+   * stylesheet's rather than a second set invented here. Two answers to *how
+   * wide is the margin* is exactly what made the preview disagree with the
+   * file it exists to show.
+   */
+  const margins = pkg.margins ?? { side: '5%', head: '2em', foot: '2em' };
   return `<!doctype html><html><head><meta charset="utf-8"><style>${css}
 html { font-size: ${Math.round(size * 100)}%; }
 html, body { margin: 0; padding: 0; width: ${device.width}px; height: ${device.height}px; overflow: hidden; background: #fff; }
 #flow { height: ${device.height}px; width: ${device.width}px; column-width: ${device.width}px; column-gap: 0; column-fill: auto; overflow: hidden; }
-#flow > * { padding-left: 5%; padding-right: 5%; box-sizing: border-box; }
-#flow img { max-width: 90%; max-height: ${Math.round(device.height * 0.9)}px; }
+#flow > * { padding-left: ${margins.side}; padding-right: ${margins.side}; box-sizing: border-box; }
+#flow > *:first-child { padding-top: ${margins.head}; }
+#flow > *:last-child { padding-bottom: ${margins.foot}; }
+/* The one cap that is the device's rather than the book's: a picture taller
+   than the screen is a picture nobody can see. The width is the stylesheet's. */
+#flow img { max-height: ${Math.round(device.height * 0.9)}px; }
 </style></head><body><div id="flow">${inner}</div></body></html>`;
 };
 
