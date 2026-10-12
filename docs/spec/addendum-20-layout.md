@@ -2952,6 +2952,115 @@ second blank is not later "fixed" as a fault.
 > copyright page takes the next page now, and the assertion was rewritten
 > rather than worked around.
 
+## 9aq. Every blank page is a page you can design, and the words on it ranged
+
+From Ken, in one message:
+
+> When I added the picture this time, I saw where it said design this page. And
+> I added another blank page. And it wouldn't have that same function. Also, on
+> all the back matter and front matter, we need to be able to where there's a
+> heading and a text box. The text box needs to be able to be centered or
+> justified to the right or left also. But any blank page, I should be able to
+> design the page. I didn't even get to look at that function. And now I can't
+> find it.
+
+Three asks, and the first and the third are **one fault with two causes** —
+both of them routes rather than acts, which is §15a a further time.
+
+### The pair of blank pages, one with an act and one with nothing
+
+**Measured first.** A writer who asks for one blank page in front of a page the
+book holds on a right-hand side gets **two**: theirs, and the one the cutter
+then has to leave to keep that page a recto. Driven on a collection, the rail
+reads *Page v Blank · Page vi Blank · Page vii Page*, and §19's reading offered
+*Design this page…* on the first and refused the second — *the book leaves this
+page blank, so it is not a page to design; its own screen says why* — with the
+room drawing **no control and no sentence at all** where it refused. Two pages
+side by side, identical to look at, one with an act and one with nothing. That
+is the report word for word.
+
+§9al settled the rule one control over and it arrives here unchanged: **where a
+rule holds the page, the act frees the rule.** `designOffer` reads `blankHold`
+— the one walk that knows whose rule holds a leaf, so this and the page's ×
+cannot reach different records — and `designPage` frees it before it makes the
+page, refusing the same things again (`trackRemoval`'s shape). What each costs
+differs enough that the four were **measured rather than reasoned about**:
+
+- the **writer's own leaf** becomes the page, as it always did;
+- the **recto gap** is stood in rather than freed — a designed page is a block
+  that takes the next page there is, and the verso in front of an opening *is*
+  the next page there is, so nothing is turned off and the book is the length it
+  was (18 pages either way on three stories). It is §9ac's *the first blank
+  asked for in that gap takes its place and becomes the writer's*, said of a
+  page rather than of a leaf;
+- a **back** is printed on: the switch goes, the leaf keeps its place and its
+  side of the paper, and nothing else moves (20 → 20);
+- a **separating sheet** is taken away and the page stands in its place
+  (two out, one in).
+
+`freedBlank` is **one shape for both acts** rather than one per act, because a
+picture and a page of the writer's own meet the same four rules; `pictureOffer`
+reads it too, which gains it the sheet after the last work it could not free
+before. And `sayBlankFreed` is **one sentence, about the page rather than about
+what goes on it** — which is what lets the room print it **once** under two
+buttons instead of standing two near-identical notes one under the other
+(§9an's own rule). That cost §9al's own clause: its sentence ended *facing the
+one that follows*, measured for a picture and **not true** of a page the writer
+sets, which lands where the sheet's front was with the book the length it was.
+The clause is left out rather than said to both — §9ae's *the note gives no
+number* — and the assertion that pinned it was rewritten with the reason.
+
+### And the leaf whose screen could not be reached
+
+The second half is why he could not find a function he had just used. A blank
+leaf in front of a **part** carries that part's id, so the rail can fold its row
+under it — and `onPage` read that as *this page is the part's own page*. The
+room's `openPage` short-circuits on exactly that field, so a writer who
+double-clicked the blank page they had just put in front of the contents page
+landed on the screen that sets **the contents page**, where nothing says
+anything about their leaf; `pictureOffer` took the part's branch for the same
+reason, so a picture asked for there would have gone onto the page ahead.
+
+§9aa's own comment says this in so many words — *nor does a part answer: a leaf
+in the front matter given one would put it on the page ahead rather than on
+itself, which is the very fault this fixes* — and guarded only the **walk
+forward** with it. The leaf carrying the part's id walked straight past the
+guard. **A `blank` block does not answer with a part**, and `partsOwnPage` is
+the predicate both screens ask, because *which screen does this page open* must
+have one answer: the first fix put it in `openPage` alone and the page dialog's
+own `partId === null` then rendered nothing, which from the writer's chair is
+the double-click doing nothing at all.
+
+Two more things came out of looking at the real room. A page the writer set in
+the sheet between the last story and the back matter read **the story · page
+10**, because `halfOf` answers *body* for anything anchored; `partArea` now
+reads the anchor through, so a page standing in front of another page is in that
+page's half. And on a leaf of the writer's own, *Take the blank page away* and
+the page's own *Take this page away* were the **same act said twice**, one named
+for the record and one for the page the screen is about — the × keeps it, and it
+asks before it acts, which the other never did.
+
+### The text box, ranged
+
+§18 gave the alignment and the face to the three screens it walked and **this is
+the fourth**: the panel a foreword, a preface, an introduction, a prologue, an
+epilogue, an afterword, the contents page and the index open, which is most of
+the front matter. Its *Ranged* select is the **heading's**, so a writer who
+pressed it watched the heading move and correctly concluded the body could not
+be ranged at all.
+
+The keeper is not the control, which is `LineFields` with `align` passed. It is
+that **§18's own surfaces test said it walked every dialog that takes body text
+and walked three.** A claim a test makes about its own coverage is worth no more
+than the screens it actually renders, so `PageStyle` is exported and the walk
+now reaches it.
+
+### What is not built, and named
+
+A blank leaf still takes **a page of its own and nothing else** — a box is cut
+into words and a graphic is set over them, and a blank page has neither (§9aa) —
+so designing one and putting a picture on it are the two acts there are.
+
 ## 19a. Which leaf you are standing on
 
 From Ken, on the last page of his own book:

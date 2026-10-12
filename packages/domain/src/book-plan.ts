@@ -168,8 +168,23 @@ export const pagesBeforeRecord = (parts: readonly BookPart[], recordId: string):
  * page in `backParts` as well as in the run, so the book grew by a page and
  * the rail listed it twice. Two questions, two readings.
  */
-export const partArea = (part: BookPart): 'front' | 'story' | 'back' => {
-  if (anchorOf(part) === BOOK_END) return 'back';
+export const partArea = (
+  part: BookPart,
+  /**
+   * **And a page anchored in front of another page is in that page's half**
+   * (§9aq). A page the writer set in the sheet between the last story and the
+   * back matter is anchored on the back matter's first part, and `halfOf`
+   * answers *body* because it is drawn in the run — so the screen read *the
+   * story* about a page standing past the last of them. Passing the parts is
+   * what lets the anchor be looked up; without them it answers as before.
+   */
+  parts: readonly BookPart[] = [],
+  seen: readonly string[] = [],
+): 'front' | 'story' | 'back' => {
+  const anchor = anchorOf(part);
+  if (anchor === BOOK_END) return 'back';
+  const on = anchor && !seen.includes(anchor) ? parts.find((one) => one.id === anchor) : undefined;
+  if (on) return partArea(on, parts, [...seen, anchor as string]);
   const half = halfOf(part);
   return half === 'body' ? 'story' : half;
 };
@@ -1659,6 +1674,78 @@ export interface BlankHold {
   frees: 'leaf' | 'sheet' | 'ending' | 'back' | 'recto' | null;
 }
 
+/**
+ * **What freeing the rule costs, in one place** (§9al, §9aq).
+ *
+ * It is a sentence about **the page** rather than about what goes on it, which
+ * is what lets one copy of it serve both acts and be printed **once**: a
+ * picture and a page of the writer's own meet the same four rules and the
+ * arithmetic is the same either way, so a sentence per act would have stood
+ * two near-identical notes one under the other under two buttons — §9an's own
+ * finding, that where both sides say the same thing it is printed once.
+ */
+export const sayBlankFreed = (hold: BlankHold | null, divisions = 'works'): string => {
+  if (!hold) return '';
+  if (hold.frees === 'back') {
+    return `This page is kept empty because ${sayBlankReason(
+      hold.why,
+    )}. What you put here is printed on that back instead, and no other page moves.`;
+  }
+  if (hold.frees === 'sheet') {
+    /**
+     * **And no claim about which side or how long** (§9aq). §9al's own
+     * sentence ended *facing the one that follows*, which was measured for a
+     * picture and is **not** true of a page of the writer's own: a designed
+     * page is a block that takes the next page there is, which after the last
+     * story's verso is a right-hand page — measured on a collection of three
+     * stories, the page lands where the sheet's front was with the verso
+     * after it still blank and the book exactly 18 pages either way, where
+     * the picture's art came back at 17. Two acts, one rule, one sentence,
+     * and the detail that holds for only one of them is left out rather than
+     * said to both: §9ae's *the note gives no number*.
+     */
+    return `This page is one of the two the book leaves blank between ${divisions}. That sheet goes and what you put here stands in its place.`;
+  }
+  if (hold.frees === 'ending') {
+    return `This page is one of the two the book leaves blank after the last of the ${divisions}. That sheet goes and what you put here stands in its place.`;
+  }
+  // The verso the book keeps in front of an opening. Nothing is turned off:
+  // what stands here takes the next page there is, and that gap *is* the next
+  // page there is, so the book is the length it was (§9aa, §9ac).
+  return 'This page is the one the book leaves blank because of how the page after it opens. What you put here stands in it, so the book does not grow by it.';
+};
+
+/**
+ * **The rule an act on a blank page turns off**, and the one shape for it
+ * (§9al): the record carrying it and which switch that is. `ending` carries no
+ * id, a sheet after the last work being a fact about the book rather than
+ * about any one work (§9ao).
+ *
+ * One type rather than one per act, because putting a picture on a page the
+ * book is keeping blank and setting that page yourself meet **the same four
+ * rules** — two shapes would be two answers to which of them may be freed, and
+ * the act a writer reached for first would decide what their book could do.
+ */
+export interface FreedBlank {
+  id: string | null;
+  rule: 'back' | 'sheet' | 'ending';
+}
+
+/**
+ * Which of the rules an act may turn off, read off `blankHold` — so the one
+ * walk that knows whose rule it is decides, and no caller keeps a list.
+ *
+ * The **recto gap is not among them**: it is the cutter's, held by no switch
+ * anybody set, and what stands on it fills it rather than freeing anything
+ * (§9aa, §9ac).
+ */
+export const freedBlank = (hold: BlankHold | null): FreedBlank | null => {
+  if (!hold) return null;
+  if (hold.frees === 'ending') return { id: null, rule: 'ending' };
+  if ((hold.frees === 'back' || hold.frees === 'sheet') && hold.id) return { id: hold.id, rule: hold.frees };
+  return null;
+};
+
 export const blankHold = (rows: readonly BookPageRow[], sheet: number): BlankHold | null => {
   const why = blankReason(rows, sheet);
   const page = rows.find((one) => one.sheet === sheet);
@@ -2227,7 +2314,7 @@ export interface PictureOffer {
    * field because the act differs — a sheet is **taken away** while a back is
    * **printed on**, and the book's length depends on which.
    */
-  frees: { id: string; rule: 'sheet' | 'back' } | null;
+  frees: FreedBlank | null;
   /**
    * **Which end of `spot` the picture stands at** (§9ap). Every answer this
    * room gives reads *in front of* something, which is the one direction with
@@ -2296,8 +2383,7 @@ export const pictureOffer = (
    * down and not a rule to turn off.
    */
   const hold = page.blank ? blankHold(rows, sheet) : null;
-  const frees: PictureOffer['frees'] =
-    hold && hold.id && (hold.frees === 'back' || hold.frees === 'sheet') ? { id: hold.id, rule: hold.frees } : null;
+  const frees = freedBlank(hold);
   /**
    * **What it costs, said before the press** — and the two differ enough that
    * one sentence for both would be true of neither.
@@ -2315,12 +2401,7 @@ export const pictureOffer = (
    * is a page shorter. No number is given: it depends on the parity, which
    * is the room's business, and §9ae's own sentence is the precedent.
    */
-  const freedNote =
-    frees?.rule === 'back'
-      ? `This page is kept empty because ${sayBlankReason(hold?.why ?? 'back')}. A picture asked for here prints on that back instead, and no other page moves.`
-      : frees
-        ? `This page is one of the two the book leaves blank between ${divisions}. That sheet goes and the picture stands in its place, facing the one that follows.`
-        : null;
+  const freedNote = frees ? sayBlankFreed(hold, divisions) : null;
   if (!place.elementId && !place.partId) {
     /**
      * **A leaf among the front or back pages takes a page of art, here**
@@ -2614,39 +2695,113 @@ export const takePictureLeaf = (file: ProjectFile, leafId: string): ProjectFile 
  * not reading it.
  */
 export interface DesignOffer {
-  /** The leaf this would take, or null where there is nothing to take. */
+  /**
+   * The writer's **own** leaf this would take, or null where a rule of the
+   * book's holds the page instead — which is then what `frees` turns off.
+   */
   leafId: string | null;
   /** Which of that record's leaves, counted from nought (§19a). */
   leafAt: number;
+  /**
+   * The record the page stands in front of, which is where the designed page
+   * is anchored. Null is the only thing that refuses: a page is not a record,
+   * so with nothing of the book after it there is nowhere for one to stand.
+   */
+  beforeId: string | null;
+  /**
+   * The rule holding this page blank, turned off as the page is made (§9al) —
+   * `back` the switch on the page in front, `sheet` the separation between two
+   * whole works, `ending` the one after the last. The **recto gap is not
+   * among them**: nothing is turned off there, the page simply standing in it
+   * (§9ac), which is why the book does not grow by it.
+   */
+  frees: FreedBlank | null;
   /** What a press would do, in the writer's own words. */
   note: string;
   refusal: string | null;
 }
 
 /**
- * A blank page is one of three things (§9i) and **only the writer's own may be
- * designed**: the leaf the cutter left before a recto is held by a rule rather
- * than by anybody's intention, and the back of a picture exists in order to
- * have nothing on it.
+ * **Every blank page is a page you can design** (from Ken: *any blank page, I
+ * should be able to design the page. I didn't even get to look at that
+ * function. And now I can't find it*).
+ *
+ * §19 offered this on the writer's **own** leaf alone, and reading it back
+ * against the real book is what showed how narrow that is: a writer who asks
+ * for one blank page in front of a page the book holds on a right-hand side
+ * gets **two** — theirs and the one the cutter then has to leave — measured on
+ * a collection as *v ✓ design · vi ✗ the book leaves this page blank*. Two
+ * pages side by side, identical to look at, and only the first with an act on
+ * it; and the refusal drew **nothing at all**, so the function a writer had
+ * just seen was simply not there any more. That is Ken's report word for word.
+ *
+ * So §9al's rule arrives in one more control: **where a rule holds the page,
+ * the act frees the rule.** What each costs is measured and said before the
+ * press, because the four differ:
+ *
+ * - the writer's own leaf becomes the page, as it always did;
+ * - the **recto gap** is stood in rather than freed — a designed page is a
+ *   block that takes the next page, and the verso in front of an opening is
+ *   exactly that page, so the book is the length it was (§9ac's *the first
+ *   blank asked for in that gap takes its place and becomes the writer's*,
+ *   said of a page rather than of a leaf);
+ * - a **back** is printed on: the switch goes, the leaf keeps its place and
+ *   its side of the paper, and nothing else moves;
+ * - a **separating sheet** is taken away and the page stands in its place,
+ *   facing the work that follows — two pages out and one back in, which is
+ *   what §9al measured for a picture and is the same arithmetic here.
  */
-export const designOffer = (page: Pick<BookPageRow, 'blank' | 'blankFor' | 'blankAt'> | null): DesignOffer => {
-  if (!page || !page.blank) {
-    return { leafId: null, leafAt: 0, note: '', refusal: 'There is writing on this page already.' };
+export const designOffer = (
+  place: PagePlace,
+  rows: readonly BookPageRow[],
+  sheet: number,
+  /** What the book holds, in the format's own plural (addendum 22 §9). */
+  divisions = 'works',
+): DesignOffer => {
+  const page = rows.find((one) => one.sheet === sheet);
+  const none = (refusal: string): DesignOffer => ({ leafId: null, leafAt: 0, beforeId: null, frees: null, note: '', refusal });
+  if (!page) return none('The book is still being set.');
+  if (!page.blank) return none('There is writing on this page already.');
+  /**
+   * **Which record carries the rule** — `blankHold`, the one place that knows,
+   * so this and the page's × cannot reach different ones (§9al).
+   */
+  const hold = blankHold(rows, sheet);
+  const frees = freedBlank(hold);
+  if (hold && (hold.frees === 'back' || hold.frees === 'sheet') && !frees) {
+    return none('Nothing on the page in front of this one says why it is kept empty, so there is no rule here to free.');
   }
-  if (!page.blankFor) {
-    return {
-      leafId: null,
-      leafAt: 0,
-      note: '',
-      // Named rather than merely refused: the page's own screen says which of
-      // the three reasons holds it blank, and the way out is to remove the
-      // reason (§9al).
-      refusal: 'The book leaves this page blank, so it is not a page to design. Its own screen says why.',
-    };
-  }
+  /**
+   * **Where the page stands**, which `blankSpot` has answered since §9r: the
+   * writer's own leaf names its record, and a leaf the book left answers with
+   * the record the page after it hangs on, `pagePlace`'s own walk forward
+   * (§9aa). One reading, so a designed page and a blank leaf asked for on the
+   * same page cannot land in different places.
+   */
+  /**
+   * **And in the front and back matter the answer is the next part** (§9ab).
+   * `pagePlace`'s walk forward stops at a part without answering with it,
+   * because a part's *picture* is its own art or an inset in its words — so a
+   * leaf there answers with a position and no record, and `blankSpot` has
+   * nothing to give. A page of the writer's own has no such trouble: it
+   * **stands in front of that part**, which is the same reading
+   * `pictureOffer` makes for its page of art.
+   */
+  const ahead = rows.find((one) => one.sheet > sheet && one.partId !== null);
+  const beforeId = blankSpot(place, page) ?? ahead?.partId ?? null;
+  if (!beforeId) return none('Nothing of the book stands after this page for a page of your own to go in front of.');
+  /**
+   * **After the writer's own leaves on that record** (§19a). A gap the cutter
+   * left falls immediately before the opening, so it stands after any leaf the
+   * writer put in front of it; anchoring at nought would have put the designed
+   * page in front of their own blank pages.
+   */
+  const leafAt = page.blankFor ? page.blankAt ?? 0 : rows.filter((one) => one.blankFor === beforeId).length;
   return {
     leafId: page.blankFor,
-    leafAt: page.blankAt ?? 0,
+    leafAt,
+    beforeId,
+    frees,
     /**
      * **What it does, and no number** — §9al's own rule, learned here by
      * driving it: the leaf becomes this page, which costs nothing by itself,
@@ -2654,31 +2809,46 @@ export const designOffer = (page: Pick<BookPageRow, 'blank' | 'blankFor' | 'blan
      * page after it opens on a right-hand page. A sentence promising *the
      * book stays the length it is* was measured taking a 14-page book to 16.
      */
-    note: 'This blank page becomes a page you set yourself — a picture, a few words, or both.',
+    note: page.blankFor
+      ? 'This blank page becomes a page you set yourself — a picture, a few words, or both.'
+      : sayBlankFreed(hold, divisions),
     refusal: null,
   };
 };
 
 /**
- * **Design this page.** The leaf the writer put in becomes a page of their
- * own, standing where it stood.
+ * **Design this page.** The leaf becomes a page of the writer's own, standing
+ * where it stood — and where a rule of the book's was holding it empty, that
+ * rule goes with the press (§9al).
  *
  * It is `takePictureLeaf`'s rule said of words rather than of a picture: a
  * page is a page, so the leaf goes and the designed page takes its place,
  * which is why the book does not grow by it. And it is a **part**, which is
  * what gives it a template, a drop, a rule, an alignment, a face and its own
  * words without one of them being written a second time (§19).
+ *
+ * It **refuses the same things again** and frees the rule itself, so a caller
+ * cannot get past the reading by not reading it — `trackRemoval`'s shape.
  */
 export const designPage = (
   file: ProjectFile,
-  page: Pick<BookPageRow, 'blank' | 'blankFor' | 'blankAt'> | null,
+  place: PagePlace,
+  rows: readonly BookPageRow[],
+  sheet: number,
+  divisions = 'works',
 ): { file: ProjectFile; partId: string | null; refusal: string | null } => {
-  const offer = designOffer(page);
-  if (offer.refusal || !offer.leafId) return { file, partId: null, refusal: offer.refusal };
-  const freed = takePictureLeaf(file, offer.leafId);
+  const offer = designOffer(place, rows, sheet, divisions);
+  if (offer.refusal || !offer.beforeId) return { file, partId: null, refusal: offer.refusal };
+  let next = file;
+  if (offer.frees?.rule === 'back' && offer.frees.id) next = setBackBlank(next, offer.frees.id, false);
+  // **For this work and never for every one of them at once** (addendum 22
+  // §9): `null` is *use the book's*, which is the separation switched on.
+  if (offer.frees?.rule === 'sheet' && offer.frees.id) next = setSheetBefore(next, offer.frees.id, false);
+  if (offer.frees?.rule === 'ending') next = setSheetAfter(next, false);
+  if (offer.leafId) next = takePictureLeaf(next, offer.leafId);
   // **Where the leaf stood**, which is the whole of §19a: the record may
   // carry several and a page made from the second of them stands second.
-  const made = addPart(freed, 'leaf', { beforeId: offer.leafId, afterLeaves: offer.leafAt });
+  const made = addPart(next, 'leaf', { beforeId: offer.beforeId, afterLeaves: offer.leafAt });
   return { file: made.file, partId: made.partId, refusal: null };
 };
 
@@ -3311,6 +3481,27 @@ const onPage = (
   for (const piece of page.pieces) {
     const block = index.get(piece.blockId);
     if (!block) continue;
+    /**
+     * **A blank leaf is not the part's own page** (§9aq, from Ken: *I didn't
+     * even get to look at that function. And now I can't find it*).
+     *
+     * The blank block in front of a part carries that part's id, so the rail
+     * can fold the row under it — and read here it answered *this page is the
+     * contents page* about a page with nothing of the contents on it. The cost
+     * was the whole of the second half of the report: `openPage` short-circuits
+     * on this field, so a writer who double-clicked the blank page they had
+     * just put in front of the contents page landed on the screen that sets
+     * the **contents page**, where nothing says anything about their leaf —
+     * and `pictureOffer` took the part's branch, so a picture asked for there
+     * would have gone onto the page ahead.
+     *
+     * §9aa's own comment says this in so many words (*nor does a part answer:
+     * a leaf in the front matter given one would put it on the page ahead
+     * rather than on itself, which is the very fault this fixes*) and guarded
+     * only the walk forward with it; the leaf carrying the part's id walked
+     * straight past the guard.
+     */
+    if (block.kind === 'blank') continue;
     if (block.partId && !partId) partId = block.partId;
   }
   /**
@@ -3547,6 +3738,19 @@ export interface BookPageRow {
    */
   elementIds: string[];
 }
+
+/**
+ * **Whether this page is the part's own page** (§9aq), as against a blank leaf
+ * standing in front of it.
+ *
+ * A row carries the part it falls under so the rail can fold it there, and
+ * two screens read that as *this page is that part's page* — which sent a
+ * writer who double-clicked their own blank page to the screen that sets the
+ * contents page, and then, with that fixed in one of the two, to no screen at
+ * all. One predicate, because *which screen does this page open* must have one
+ * answer.
+ */
+export const partsOwnPage = (row: Pick<BookPageRow, 'partId' | 'blank'>): boolean => row.partId !== null && !row.blank;
 
 export const bookPageRows = (
   pages: readonly BookPage[],

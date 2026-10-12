@@ -74,6 +74,7 @@ import {
   type CopyrightPage,
   partTitle,
   partsOf,
+  partsOwnPage,
   placePart,
   removePart,
   removePartInset,
@@ -166,6 +167,7 @@ import {
   placeFigure,
   removeBookRow,
   setBackBlank,
+  setSheetAfter,
   setSheetBefore,
   setBlankBefore,
   setFigurePicture,
@@ -734,7 +736,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
   const selectedFigure = figures.find((figure) => figure.elementId === selectedRowId) ?? null;
 
   /** The page a double-click opened, and the picture standing on it (§9j). */
-  const dialogPage = pageRows.find((one) => one.sheet === pageDialogSheet && one.partId === null) ?? null;
+  const dialogPage = pageRows.find((one) => one.sheet === pageDialogSheet && !partsOwnPage(one)) ?? null;
   /**
    * The picture the dialog is about (§9u).
    *
@@ -971,10 +973,14 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
    */
   const freeTheBlank = (file: ProjectFile, frees: PictureOffer['frees']): ProjectFile => {
     if (!frees) return file;
-    if (frees.rule === 'back') return setBackBlank(file, frees.id, false);
+    if (frees.rule === 'back' && frees.id) return setBackBlank(file, frees.id, false);
+    // **And the one after the last of them** (§9ao's sheet), which carries no
+    // id: a separation after the last work is a fact about the **book** rather
+    // than about any one work, so the act is the book's own switch.
+    if (frees.rule === 'ending') return setSheetAfter(file, false);
     // **For this work and never for every one of them at once** (addendum 22
     // §9): `null` is *use the book's*, which is the separation switched on.
-    return setSheetBefore(file, frees.id, false);
+    return frees.id ? setSheetBefore(file, frees.id, false) : file;
   };
 
   /**
@@ -1376,12 +1382,20 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
   const openPage = (page: BookPage) => {
     if (!laying) return;
     const at = pagePlace(laying.laid.pages, laying.blocks, page.sheet);
-    if (at.partId) {
-      setSelectedRowId(at.partId);
-      setPartDialogId(at.partId);
+    const row = bookPageRows(laying.laid.pages, laying.blocks).find((one) => one.sheet === page.sheet);
+    /**
+     * **A part's page opens the part, and a blank leaf in front of it does
+     * not** (§9aq). The place no longer answers with a part for a blank page,
+     * which is where the fault was; the row is asked as well because *is this
+     * the part's own page* is a question about what prints on it, and the one
+     * screen a writer reaches for their own blank page is the page's.
+     */
+    if (row ? partsOwnPage(row) : at.partId !== null) {
+      const part = row?.partId ?? at.partId;
+      setSelectedRowId(part);
+      setPartDialogId(part);
       return;
     }
-    const row = bookPageRows(laying.laid.pages, laying.blocks).find((one) => one.sheet === page.sheet);
     /**
      * **Every page of the story opens the page's own screen** (§9u, and
      * §9j's own words from Ken: *if I double-click any page, the page setup
@@ -1466,7 +1480,10 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
        * and everything in the dialog box*.
        */
       onDesign={() => {
-        const made = designPage(file, page);
+        // The rows and the place, because a leaf the **book** is keeping blank
+        // is designed too now and the act has to know whose rule holds it and
+        // what the page stands in front of (§9aq).
+        const made = designPage(file, place, pageRows, page.sheet, nounPlural.toLowerCase());
         if (made.refusal || !made.partId) return;
         setPageDialogSheet(null);
         onUpdate(() => made.file);
@@ -4303,8 +4320,8 @@ function StoryPageSection({
    * a second answer about either.
    */
   const blank = blankOffer(place, rows, page.sheet, nextPlace);
-  /** What designing this page would do, or why it cannot be (§19). */
-  const design = designOffer(page);
+  /** What designing this page would do, or why it cannot be (§19, §9aq). */
+  const design = designOffer(place, rows, page.sheet, divisions);
   /** The × asks once, inline, exactly as the row's does (§9x). */
   const [asking, setAsking] = useState(false);
   /** Which of the three reasons this page is blank (§9w), where it is. */
@@ -4377,15 +4394,38 @@ function StoryPageSection({
               The leaf becomes a part, which is what gives it a template, a
               drop, a rule, an alignment, a face and its own words with none
               of them written a second time — and the book stays the length it
-              is, `takePictureLeaf`'s own rule (§9ap). Absent rather than
-              greyed on a page the book is keeping blank, with the reason
-              already said above it. */}
+              is, `takePictureLeaf`'s own rule (§9ap).
+
+              **And on every blank page, not only the writer's own** (§9aq,
+              from Ken: *any blank page, I should be able to design the page.
+              I didn't even get to look at that function. And now I can't find
+              it*). One leaf asked for in front of a page the book holds on a
+              right-hand side produces **two** blank pages — the writer's and
+              the one the cutter then has to leave — and only the first had
+              this button, with the second drawing nothing at all. §9al's rule
+              answers it: where a rule holds the page, the act frees the
+              rule. */}
           {design.refusal === null ? (
             <button type="button" className="small" onClick={onDesign}>
               Design this page…
             </button>
           ) : null}
-          {design.refusal === null ? <p className="field-note">{design.note}</p> : null}
+          {/* **Printed once where the two agree** (§9aq). Both acts meet the
+              same four rules and `sayBlankFreed` is one sentence about the
+              **page**, so on a leaf the book was keeping blank this and the
+              picture's note are the same words — and two near-identical notes
+              one under the other under two buttons is §9an's own fault. What
+              stands here is what designing does and the picture does not. */}
+          {design.refusal === null && design.note && design.note !== offer.note ? (
+            <p className="field-note">{design.note}</p>
+          ) : null}
+          {/* **Why this page cannot be one of yours** (§9aq). It drew nothing
+              at all, which is what Ken reported after seeing the button once:
+              on a page the book holds blank there was no control and no
+              sentence, so the function he had just used read as gone. Nearly
+              every blank page is designed now, so this is the narrow case the
+              mechanism really cannot reach — and it says so. */}
+          {design.refusal && page.blank ? <p className="muted small">{design.refusal}</p> : null}
           {!offer.refusal ? (
             <>
               <button type="button" className="small" onClick={onPut}>
@@ -4459,7 +4499,15 @@ function StoryPageSection({
                 {blank.after.act}
               </button>
             ) : null}
-            {blank.fewer && blank.before.spot ? (
+            {/* **And never beside the page's own ×** (§9aq). On a leaf the
+                writer put in, *Take the blank page away* and the *Take this
+                page away* at the foot are the **same act** said twice — one
+                named for the record and one for the page in hand — which is
+                two answers to one question on a screen that is about this
+                page. The × is the one that is about it, so it keeps the act
+                here and this button stands only where the leaves are in
+                front of the page rather than under it. */}
+            {blank.fewer && blank.before.spot && !(page.blank && page.blankFor) ? (
               <button type="button" className="small" onClick={() => onBlank(blank.before.spot as string, blank.pages - 1)}>
                 {blank.fewer}
               </button>
@@ -5715,7 +5763,15 @@ function PartFields({
  * at this one page. The template is read back from the placement, never
  * stored, so a hand change reads as *Custom* by itself.
  */
-function PageStyle({ part, file, onUpdate }: { part: BookPart; file: ProjectFile; onUpdate(mutate: (current: ProjectFile) => ProjectFile): void }) {
+/**
+ * **Exported so the body-type walk can reach it** (§18, read a second time).
+ * §18's own surfaces test said it walked *every* dialog that takes body text
+ * and walked three, this panel — the one the front matter's prose pages and
+ * the two that flow actually open — being the fourth and the one Ken's report
+ * came off. `ChapterStyleFields`' own reason: a control a test cannot render
+ * is a control the next change forgets.
+ */
+export function PageStyle({ part, file, onUpdate }: { part: BookPart; file: ProjectFile; onUpdate(mutate: (current: ProjectFile) => ProjectFile): void }) {
   /* A prose part starts as the book's own — its chapter opening for the
      heading, its body for the words (§7a) — so the controls open on what the
      page already prints and every field is an override of it. The print
@@ -5826,12 +5882,31 @@ function PageStyle({ part, file, onUpdate }: { part: BookPart; file: ProjectFile
           apart from the words above them. They start as those words, so a page
           made before this is unchanged. On a page that flows they are the
           entries under the heading, which is the same pair said of a list. */}
+      {/* **And the body text is settable here too** (§18, read a second time
+          from Ken: *on all the back matter and front matter, we need to be
+          able to where there's a heading and a text box. The text box needs to
+          be able to be centered or justified to the right or left also*).
+
+          §18 gave the alignment and the face to the three screens it walked
+          and **this is the fourth** — the panel a foreword, a preface, an
+          introduction, a prologue, an epilogue, an afterword, the contents and
+          the index open, which is most of the front matter and the pages its
+          own test never asked about. The `Ranged` select above is the
+          **heading's**, so a writer who pressed it watched the heading move
+          and correctly concluded the words could not be ranged at all. */}
       {part.kind === 'title_page' || words || flows || prose ? (
-        <Line
-          label={flows ? 'The entries' : prose ? 'The words' : 'Lines under it'}
-          style={style.line}
-          onPatch={(patch) => write({ line: { ...style.line, ...patch } })}
-        />
+        <>
+          <Line
+            label={flows ? 'The entries' : prose ? 'The words' : 'Lines under it'}
+            style={style.line}
+            align
+            fonts={bookFontsOf(file)}
+            onPatch={(patch) => write({ line: { ...style.line, ...patch } })}
+          />
+          <p className="field-note">
+            Left alone, {flows ? 'the entries take' : 'the words take'} the page’s own face and the way the book ranges its text.
+          </p>
+        </>
       ) : null}
       {/* The letter dividers (§7a, from Ken: *separate out the letter
           dividers*). An index's A and B are a third kind of line rather than

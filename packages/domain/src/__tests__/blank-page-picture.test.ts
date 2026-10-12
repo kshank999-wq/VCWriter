@@ -193,7 +193,17 @@ describe('a picture asked for on a leaf the book is keeping blank', () => {
     const offer = offerAt(file, blankAt(file, 'between'));
     // The format's own plural, handed down: nothing names a unit itself.
     expect(offer.note).toContain('between stories');
-    expect(offer.note).toContain('facing the one that follows');
+    /**
+     * **Rewritten rather than worked around** (§9aq). It pinned *facing the
+     * one that follows*, which was measured for a picture and is **not** true
+     * of a page the writer sets: that is a block taking the next page there
+     * is, so on the same collection it lands where the sheet's front was with
+     * the book the length it was, where the art came back a page shorter. One
+     * rule, two acts, one sentence — so the clause that holds for only one of
+     * them is left out rather than said to both (§9ae's *the note gives no
+     * number*). What the sentence must still do is say the sheet goes.
+     */
+    expect(offer.note).toContain('That sheet goes');
   });
 
   it('says the other sentence on a back, which is a different cost', () => {
@@ -201,7 +211,9 @@ describe('a picture asked for on a leaf the book is keeping blank', () => {
     const offer = offerAt(file, blankAt(file, 'page_back'));
     expect(offer.refusal).toBeNull();
     expect(offer.frees?.rule).toBe('back');
-    expect(offer.note).toContain('prints on that back');
+    // One sentence for both acts now (§9aq), so the subject is what you put
+    // here rather than a picture.
+    expect(offer.note).toContain('printed on that back');
     expect(offer.note).toContain('no other page moves');
   });
 

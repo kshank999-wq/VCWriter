@@ -13,6 +13,7 @@ import {
   bookBlocks,
   outOfContents,
   setChapterBlank,
+  setPartBlank,
   bookNames,
   bookSettingsOf,
   bookFontsOf,
@@ -796,7 +797,16 @@ describe('the room', () => {
     // One press writes one page, and the way back appears.
     fireEvent.click(within(panel).getByRole('button', { name: 'A blank page before this one' }));
     const after = document.querySelector('.layout-page-dialog') as HTMLElement;
-    expect(within(after).getByRole('button', { name: 'Take the blank page away' })).toBeDefined();
+    /**
+     * **Rewritten rather than worked around** (§9aq). The dialog is keyed to
+     * the sheet, so after the press the page in hand **is** the leaf — and
+     * there *Take the blank page away* and the page's own *Take this page
+     * away* were the same act said twice, one named for the record and one
+     * for the page the screen is about. The × keeps it, and it asks before it
+     * acts, which the other never did.
+     */
+    expect(within(after).queryByRole('button', { name: 'Take the blank page away' })).toBeNull();
+    expect(within(after).getByRole('button', { name: 'Take this page away' })).toBeDefined();
   });
 
   /**
@@ -2136,5 +2146,86 @@ describe('drawing a box that never happens', () => {
     // tool was armed every click on a page returned before selecting one.
     fireEvent.click(story);
     expect(document.querySelector('.layout-sheet-chosen')).toBeTruthy();
+  });
+});
+
+/**
+ * **Every blank page opens the screen that designs it** (addendum 20 §9aq,
+ * from Ken: *when I added the picture this time, I saw where it said design
+ * this page. And I added another blank page. And it wouldn't have that same
+ * function… I didn't even get to look at that function. And now I can't find
+ * it*).
+ *
+ * Two faults under one report, and both are **routes** rather than acts, which
+ * is §15a a further time. The act refused every leaf but the writer's own, so
+ * the gap the cutter leaves behind a leaf asked for in front of a page the
+ * book holds on a right-hand side drew no control and no sentence at all. And
+ * the writer's **own** leaf in the front matter opened the part's screen
+ * instead of the page's — `onPage` answered with the part whose id the blank
+ * block carries so the rail can fold the row under it — so the one screen the
+ * button stands on could not be reached from the one page it was built for.
+ *
+ * What this pins is the **gesture**: a writer double-clicks a blank page and
+ * must land on a screen that can design it.
+ */
+describe('designing a blank page, from the rail', () => {
+  /** A novel with a leaf the writer put in front of its second chapter. */
+  const withLeaf = (): ProjectFile => {
+    const file = novel();
+    const second = contentsDivisions(file)[1]!;
+    return setChapterBlank(file, second.marker.id as string, 'before', true);
+  };
+
+  const openPages = (): HTMLElement[] => {
+    for (let pass = 0; pass < 6; pass += 1) {
+      const shut = document.querySelector('.layout-rail-fold[aria-expanded="false"]');
+      if (!shut) break;
+      fireEvent.click(shut);
+    }
+    return Array.from(document.querySelectorAll('.layout-rail-page')) as HTMLElement[];
+  };
+
+  const openPanel = (row: HTMLElement): HTMLElement => {
+    fireEvent.doubleClick(row.querySelector('.layout-rail-name') as HTMLElement);
+    return document.querySelector('.layout-page-dialog') as HTMLElement;
+  };
+
+  it('carries the act on every blank page the rail draws', () => {
+    render(<Harness initial={withLeaf()} />);
+    const blanks = openPages().filter((row) => /Blank/.test(row.textContent ?? ''));
+    expect(blanks.length).toBeGreaterThan(0);
+    for (const row of blanks) {
+      const panel = openPanel(row);
+      expect(panel, row.textContent ?? '').toBeTruthy();
+      expect(within(panel).queryByRole('button', { name: 'Design this page…' }), row.textContent ?? '').not.toBeNull();
+      fireEvent.click(within(panel).getByRole('button', { name: 'Close' }));
+    }
+  });
+
+  it('opens the page’s own screen rather than the part’s', () => {
+    /**
+     * The half that made the function unfindable: a blank leaf in front of a
+     * part carries that part's id, and the room read it as *this page is the
+     * part's own page*.
+     */
+    const file = addPart(novel(), 'contents').file;
+    const part = partsOf(file).find((one) => one.kind === 'contents')!;
+    render(<Harness initial={setPartBlank(file, part.id, 'before', true)} />);
+    const leaf = openPages().find((row) => /Blank/.test(row.textContent ?? ''))!;
+    expect(leaf).toBeTruthy();
+    fireEvent.doubleClick(leaf.querySelector('.layout-rail-name') as HTMLElement);
+    // Not the part's screen, which says nothing at all about this page.
+    expect(document.querySelector('.layout-part-dialog[open]')).toBeNull();
+    const panel = document.querySelector('.layout-page-dialog') as HTMLElement;
+    expect(panel).toBeTruthy();
+    expect(within(panel).queryByRole('button', { name: 'Design this page…' })).not.toBeNull();
+  });
+
+  it('makes a page of the writer’s own, which the rail then lists', () => {
+    render(<Harness initial={withLeaf()} />);
+    const leaf = openPages().find((row) => /Blank/.test(row.textContent ?? ''))!;
+    const panel = openPanel(leaf);
+    fireEvent.click(within(panel).getByRole('button', { name: 'Design this page…' }));
+    expect(partsOf(latest as ProjectFile).some((one) => one.kind === 'leaf')).toBe(true);
   });
 });

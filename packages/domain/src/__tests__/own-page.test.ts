@@ -75,6 +75,38 @@ const laid = (file: ProjectFile) => {
 
 const length = (file: ProjectFile): number => laid(file).pages.length;
 
+/** The book's pages as the rail reads them. */
+const rowsOf = (file: ProjectFile) => bookPageRows(laid(file).pages, bookBlocks(file));
+
+/**
+ * **Asked of the real page rather than of a page object made up here** (§9aq).
+ * `designOffer` reads `blankHold`, which is a walk over the laid pages, so a
+ * fabricated row cannot answer whose rule holds a leaf — and a test that
+ * fabricated one would go on passing while the room did something else, which
+ * is §9ap's own lesson about an assertion that runs the act itself.
+ */
+const at = (file: ProjectFile, pick: (rows: ReturnType<typeof rowsOf>) => unknown) => {
+  const pages = laid(file);
+  const blocks = bookBlocks(file);
+  const rows = bookPageRows(pages.pages, blocks);
+  const row = pick(rows) as (typeof rows)[number] | undefined;
+  if (!row) throw new Error('no such page');
+  return { rows, row, place: pagePlace(pages.pages, blocks, row.sheet) };
+};
+
+const offerAt = (file: ProjectFile, pick: (rows: ReturnType<typeof rowsOf>) => unknown) => {
+  const { place, rows, row } = at(file, pick);
+  return designOffer(place, rows, row.sheet, 'chapters');
+};
+
+const designAt = (file: ProjectFile, pick: (rows: ReturnType<typeof rowsOf>) => unknown) => {
+  const { place, rows, row } = at(file, pick);
+  return designPage(file, place, rows, row.sheet, 'chapters');
+};
+
+/** The writer's own leaf hanging on this record. */
+const leafOn = (id: string) => (rows: ReturnType<typeof rowsOf>) => rows.find((row) => row.blankFor === id);
+
 describe('it is a part, which is what makes it a designed page', () => {
   it('is set like every other designed page, with nothing written twice', () => {
     /**
@@ -95,7 +127,7 @@ describe('it is a part, which is what makes it a designed page', () => {
   it('stands in the story where it is anchored', () => {
     const file = novel();
     const at = anchorElement(file);
-    const made = designPage(setBlankPages(file, at, 1), { blank: true, blankFor: at } as never);
+    const made = designAt(setBlankPages(file, at, 1), leafOn(at));
     const part = partsOf(made.file).find((one) => one.id === made.partId)!;
     expect(anchorOf(part)).toBe(at);
     expect(halfOf(part)).toBe('body');
@@ -117,33 +149,36 @@ describe('designing a blank page', () => {
   it('says what it would do before it can be asked for', () => {
     const file = novel();
     const at = anchorElement(file);
-    const offer = designOffer({ blank: true, blankFor: at } as never);
+    const offer = offerAt(setBlankPages(file, at, 1), leafOn(at));
     expect(offer.refusal).toBeNull();
     expect(offer.leafId).toBe(at);
+    expect(offer.beforeId).toBe(at);
     // **What it does, and no number** (§9al): the leaf becomes the page, and
     // what the book then does depends on the parity — driving it measured a
     // sentence promising *the book stays the length it is* taking 14 to 16.
     expect(offer.note).toMatch(/a picture, a few words, or both/);
   });
 
-  it('refuses a page the book is keeping blank, and says where to look', () => {
+  it('refuses a page with writing on it, and nothing else', () => {
     /**
-     * A blank page is one of three things (§9i) and only the writer's own may
-     * be designed: the leaf the cutter left before a recto is held by a rule
-     * rather than by anybody's intention, and the back of a picture exists in
-     * order to have nothing on it.
+     * **This assertion is the one §9aq rewrote rather than worked around.** It
+     * pinned the refusal *the book leaves this page blank, so it is not a page
+     * to design — its own screen says why*, which is the thing Ken reported:
+     * a leaf he asked for in front of a page the book holds on a right-hand
+     * side produced **two** blank pages, and the second drew no control and no
+     * sentence at all. §9al's rule answers it, so what is left to refuse is a
+     * page that is not blank.
      */
-    const cutters = designOffer({ blank: true, blankFor: null } as never);
-    expect(cutters.refusal).toMatch(/Its own screen says why/);
-    expect(designOffer({ blank: false, blankFor: null } as never).refusal).toMatch(/writing on this page/);
-    expect(designOffer(null).refusal).not.toBeNull();
+    const file = novel();
+    const written = offerAt(file, (rows) => rows.find((row) => !row.blank));
+    expect(written.refusal).toMatch(/writing on this page/);
   });
 
   it('refuses the same things again, so the reading cannot be skipped', () => {
     // `trackRemoval`'s shape: a caller that did not read the offer gets the
     // same answer from the act.
     const file = novel();
-    const out = designPage(file, { blank: true, blankFor: null } as never);
+    const out = designAt(file, (rows) => rows.find((row) => !row.blank));
     expect(out.partId).toBeNull();
     expect(out.refusal).not.toBeNull();
     expect(out.file).toBe(file);
@@ -164,7 +199,7 @@ describe('designing a blank page', () => {
     const at = anchorElement(file);
     const withLeaf = setBlankPages(file, at, 1);
     expect(blankPagesAt(withLeaf, at)).toBe(1);
-    const made = designPage(withLeaf, { blank: true, blankFor: at } as never);
+    const made = designAt(withLeaf, leafOn(at));
     expect(made.refusal).toBeNull();
     expect(blankPagesAt(made.file, at)).toBe(0);
     // And the page is really in the book rather than merely recorded.
@@ -174,7 +209,7 @@ describe('designing a blank page', () => {
   it('prints where the leaf stood, in the story', () => {
     const file = novel();
     const at = anchorElement(file);
-    const made = designPage(setBlankPages(file, at, 1), { blank: true, blankFor: at } as never);
+    const made = designAt(setBlankPages(file, at, 1), leafOn(at));
     const written = updatePart(made.file, made.partId as string, { text: 'A page of my own.' });
     const blocks = bookBlocks(written);
     const mine = blocks.findIndex((one) => one.partId === made.partId);
@@ -194,15 +229,15 @@ describe('designing a blank page', () => {
      */
     const file = novel();
     const front = partsOf(file)[0]!;
-    const made = designPage(setBlankPages(file, front.id, 1), { blank: true, blankFor: front.id } as never);
+    const made = designAt(setBlankPages(file, front.id, 1), leafOn(front.id));
     expect(bookRows(made.file).some((row) => row.id === made.partId)).toBe(true);
   });
 
   it('has a page of its own in the book’s pages', () => {
     const file = novel();
     const at = anchorElement(file);
-    const made = designPage(setBlankPages(file, at, 1), { blank: true, blankFor: at } as never);
-    const rows = bookPageRows(laid(made.file).pages, bookBlocks(made.file));
+    const made = designAt(setBlankPages(file, at, 1), leafOn(at));
+    const rows = rowsOf(made.file);
     expect(rows.some((row) => row.partId === made.partId)).toBe(true);
   });
 });
@@ -250,7 +285,7 @@ describe('a record with several leaves', () => {
     const file = ended(2);
     const { blank } = blanks(file);
     for (const [at, row] of blank.entries()) {
-      const made = designPage(file, row);
+      const made = designAt(file, (rows) => rows.find((one) => one.sheet === row.sheet));
       expect(made.refusal).toBeNull();
       const after = blanks(made.file).rows;
       const mine = after.findIndex((one) => one.partId === made.partId);
@@ -283,7 +318,7 @@ describe('a record with several leaves', () => {
      */
     const file = ended(2);
     const { blank } = blanks(file);
-    const made = designPage(file, blank[1]!);
+    const made = designAt(file, (rows) => rows.find((one) => one.sheet === blank[1]!.sheet));
     const block = bookBlocks(made.file).find((one) => one.partId === made.partId)!;
     expect(block.starts).toBe('page');
   });

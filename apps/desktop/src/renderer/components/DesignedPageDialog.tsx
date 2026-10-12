@@ -502,7 +502,9 @@ function Body({
    * standing between chapter one and chapter two was headed *back matter*,
    * which is a fact about the book and it was wrong (§19).
    */
-  const where = partArea(part);
+  // The parts, so a page anchored in front of another reads as being in that
+  // page's half of the book rather than in the story (§9aq).
+  const where = partArea(part, partsOf(file));
   const half = where === 'front' ? 'front matter' : where === 'story' ? 'the story' : 'back matter';
 
   /**

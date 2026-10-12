@@ -20,6 +20,7 @@ import {
 import { BackMatterDialog } from '../components/BackMatterDialog';
 import { DesignedPageDialog } from '../components/DesignedPageDialog';
 import { ChapterStyleFields } from '../components/ChapterPageDialog';
+import { PageStyle } from '../components/LayoutWindow';
 
 /**
  * **The body text can be set, on every screen a writer types it into**
@@ -34,9 +35,21 @@ import { ChapterStyleFields } from '../components/ChapterPageDialog';
  * since §7a — and the controls were on the heading and nowhere else, so from
  * the writer's chair the body simply could not be set.
  *
- * It walks **every** dialog that takes body text rather than the one the
- * report came off, in `cast-surfaces`' shape: a fifth screen that grows a text
- * box and forgets the type fails here rather than shipping.
+ * It walks **every** screen that sets body text rather than the one the
+ * report came off, in `cast-surfaces`' shape: one that grows a text box and
+ * forgets the type fails here rather than shipping.
+ *
+ * **And the first draft of this test made that claim and walked three** (from
+ * Ken, a second time: *on all the back matter and front matter, we need to be
+ * able to where there's a heading and a text box. The text box needs to be
+ * able to be centered or justified to the right or left also*). The fourth is
+ * `PageStyle`, which is what a **foreword, a preface, an introduction, a
+ * prologue, an epilogue, an afterword, the contents page and the index**
+ * open — most of the front matter, and the pages §18 never asked about. The
+ * `Ranged` select above the words there is the **heading's**, so a writer who
+ * pressed it watched the heading move and correctly concluded the body could
+ * not be ranged at all. A claim a test makes about its own coverage is worth
+ * no more than the screens it actually renders.
  */
 
 beforeAll(() => {
@@ -118,6 +131,17 @@ function Chapter({ initial }: { initial: ProjectFile }) {
   return <ChapterStyleFields file={file} marker={null} onUpdate={(mutate) => setFile((current) => mutate(current))} />;
 }
 
+/**
+ * The panel a prose page and a page that flows open (§18, second reading) —
+ * reached through `PartDialog`, which is where Ken's report came from.
+ */
+function Page({ initial, partId }: { initial: ProjectFile; partId: string }) {
+  const [file, setFile] = useState(initial);
+  latest = file;
+  const part = partsOf(file).find((one) => one.id === partId);
+  return part ? <PageStyle file={file} part={part} onUpdate={(mutate) => setFile((current) => mutate(current))} /> : null;
+}
+
 /** The style the page resolves to now, which is what the control wrote. */
 const styleOf = (partId: string) => partStyleOf(partsOf(latest as ProjectFile).find((one) => one.id === partId)!);
 
@@ -188,6 +212,35 @@ describe('the body text, on every screen that takes it', () => {
      */
     expect(screen.queryByLabelText('The number alignment')).toBeNull();
     expect(screen.queryByLabelText('The name alignment')).toBeNull();
+  });
+
+  it('ranges a foreword’s words, which is the screen §18 never walked', () => {
+    /**
+     * The front matter's prose pages open `PartDialog`, not the back-matter
+     * screen, so §18's alignment and face never reached them. Measured on the
+     * panel before the change: a Size, a Case, a bold, an italic and a
+     * tracking for *The words*, and nowhere at all to range them.
+     */
+    const { file, partId } = withPart('foreword', 'Before we begin.');
+    render(<Page initial={file} partId={partId} />);
+    fireEvent.change(screen.getByLabelText('The words alignment'), { target: { value: 'justify' } });
+    fireEvent.change(screen.getByLabelText('The words face'), { target: { value: 'gill_sans' } });
+    expect(styleOf(partId).line.align).toBe('justify');
+    expect(styleOf(partId).line.face).toBe('gill_sans');
+    // The heading's own `Ranged` is untouched: two questions, two answers.
+    expect(styleOf(partId).align).toBe(partStyleOf({ kind: 'foreword', style: {} }).align);
+  });
+
+  it('ranges the entries on a page that flows', () => {
+    /**
+     * A contents page and an index run to as many pages as they need, so the
+     * pair is the heading and **the entries** — the same two lines said of a
+     * list, which is why they take the same control rather than a third.
+     */
+    const { file, partId } = withPart('contents', '');
+    render(<Page initial={file} partId={partId} />);
+    fireEvent.change(screen.getByLabelText('The entries alignment'), { target: { value: 'right' } });
+    expect(styleOf(partId).line.align).toBe('right');
   });
 
   it('offers justified, which the page’s own alignment never could', () => {

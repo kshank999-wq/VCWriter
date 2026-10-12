@@ -235,7 +235,10 @@ describe('a picture asked for on a blank leaf', () => {
     expect(offer.refusal).toBeNull();
     expect(offer.frees).toEqual({ id: marker, rule: 'back' });
     expect(offer.note).toMatch(/kept empty/);
-    expect(offer.note).toMatch(/prints on that back/);
+    // The sentence is about the **page** rather than about what goes on
+    // it, which is what lets one copy of it serve the picture and a page of
+    // the writer's own and be printed once (§9aq).
+    expect(offer.note).toMatch(/printed on that back/);
   });
 });
 

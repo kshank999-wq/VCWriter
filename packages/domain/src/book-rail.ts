@@ -112,7 +112,7 @@ const partRow = (file: ProjectFile, part: BookPart, depth: number): BookRow => (
    * page of the writer's own at the very end of the book was listed under a
    * second **THE STORY** heading after the back matter.
    */
-  half: ((area) => (area === 'story' ? 'body' : area))(partArea(part)) as BookRow['half'],
+  half: ((area) => (area === 'story' ? 'body' : area))(partArea(part, partsOf(file))) as BookRow['half'],
   title: part.kind === 'plate' ? plateName(file, part) : partTitle(part),
   label: '',
   depth,
@@ -689,7 +689,11 @@ export const pageRemoval = (file: ProjectFile, rows: readonly BookPageRow[], she
      * rule.
      */
     return no(
-      'This page is blank because the page after it opens on a right-hand page. That is the page to set, and it has a row of its own below.',
+      // **And it says what can be done here instead** (§9aq). Written before
+      // a blank page could be designed, it read *that is the page to set* —
+      // pointing at the page after it — which now stands under a *Design this
+      // page…* on this very screen and reads as a contradiction.
+      'This page is blank because the page after it opens on a right-hand page, which is a convention of that page rather than a rule to turn off — so there is nothing here to take away. A page you set here stands in it instead.',
     );
   }
 

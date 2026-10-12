@@ -242,7 +242,17 @@ describe('getting rid of one', () => {
     expect(offer.refusal).toBeNull();
     expect(offer.frees).toEqual({ id: row.blankBetween, rule: 'sheet' });
     expect(offer.note).toContain('between stories');
-    expect(offer.note).toContain('facing the one that follows');
+    /**
+     * **Rewritten rather than worked around** (§9aq). It pinned *facing the
+     * one that follows*, which was measured for a picture and is **not** true
+     * of a page the writer sets: that is a block taking the next page there
+     * is, so on the same collection it lands where the sheet's front was with
+     * the book the length it was, where the art came back a page shorter. One
+     * rule, two acts, one sentence — so the clause that holds for only one of
+     * them is left out rather than said to both (§9ae's *the note gives no
+     * number*). What the sentence must still do is say the sheet goes.
+     */
+    expect(offer.note).toContain('That sheet goes');
   });
 });
 

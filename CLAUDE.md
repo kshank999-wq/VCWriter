@@ -3511,6 +3511,67 @@ push live; the build takes a minute or two.
   page, and switching it on would change the length of every collection already
   laid out, so the act is built and reachable while the default is its own
   decision.
+  **§9aq is every blank page being one you can design, and the text box
+  ranged**, from Ken in one message (*I saw where it said design this page. And
+  I added another blank page. And it wouldn't have that same function… on all
+  the back matter and front matter… the text box needs to be able to be
+  centered or justified to the right or left also. But any blank page, I should
+  be able to design the page. I didn't even get to look at that function. And
+  now I can't find it*). **The first and third asks are one fault with two
+  causes, both of them routes** (§15a again). **Measured first**: one leaf asked
+  for in front of a page the book holds on a right-hand side produces **two**
+  blank pages — the writer's and the one the cutter then has to leave — and
+  §19's reading offered the act on the first and refused the second, drawing
+  **no control and no sentence at all** where it refused; two pages side by
+  side, identical to look at, one with an act and one with nothing. §9al's rule
+  arrives unchanged — **where a rule holds the page, the act frees the rule** —
+  with `designOffer` reading `blankHold` (the one walk that knows whose rule it
+  is, so this and the page's × cannot reach different records) and `designPage`
+  freeing it and refusing the same things again. **What each costs is measured
+  rather than reasoned about**: the recto gap is **stood in rather than freed**,
+  a designed page being a block that takes the next page there is and that gap
+  being exactly it (18 pages either way — §9ac's *the first blank asked for in
+  that gap takes its place* said of a page), a **back** is printed on with
+  nothing else moving (20 → 20), and a **separating sheet** is taken away, two
+  out and one in. `freedBlank` is **one shape for both acts** rather than one
+  per act, the picture meeting the same four rules, which gains it the ending
+  sheet it could not free; and `sayBlankFreed` is **one sentence about the page
+  rather than about what goes on it**, which is what lets the room print it
+  **once** under two buttons instead of two near-identical notes one under the
+  other (§9an). That cost §9al's own clause — its sentence ended *facing the one
+  that follows*, measured for a picture and **not true** of a page the writer
+  sets, which lands where the sheet's front was with the book the length it was
+  — left out rather than said to both (§9ae's *the note gives no number*), the
+  assertion that pinned it **rewritten rather than worked around**. **The second
+  half is why he could not find it**: a blank leaf in front of a part carries
+  that part's id so the rail can fold its row under it, and `onPage` read that
+  as *this page is the part's own page* — `openPage` short-circuits on exactly
+  that field, so double-clicking the blank page he had just put in front of the
+  contents page landed on the screen that sets **the contents page**, and
+  `pictureOffer` took the part's branch so a picture there would have gone onto
+  the page ahead. **§9aa's own comment says this in so many words** and guarded
+  only the walk forward with it, which the leaf walked straight past: **a
+  `blank` block does not answer with a part**, and `partsOwnPage` is the one
+  predicate both screens ask, *which screen does this page open* having to have
+  one answer — the first fix put it in `openPage` alone and the page dialog's
+  own `partId === null` then rendered nothing, which reads as the double-click
+  doing nothing at all. Looking at the real room caught two more: a page set in
+  the sheet between the last story and the back matter read **the story · page
+  10** (`halfOf` answers *body* for anything anchored), so `partArea` reads the
+  anchor through and a page standing in front of another is in that page's half;
+  and on a leaf of the writer's own *Take the blank page away* and the page's
+  own *Take this page away* were the **same act said twice**, one named for the
+  record and one for the page the screen is about, so the × keeps it and asks
+  before it acts. **The third ask is §18 read a second time**: the alignment and
+  the face went to the three screens it walked and **this is the fourth** — the
+  panel a foreword, a preface, an introduction, a prologue, an epilogue, an
+  afterword, the contents page and the index open, which is most of the front
+  matter — whose *Ranged* select is the **heading's**, so pressing it moved the
+  heading and the body read as unsettable. The keeper is not the control but
+  that **§18's own surfaces test claimed to walk every dialog that takes body
+  text and walked three**: a claim a test makes about its own coverage is worth
+  no more than the screens it actually renders, so `PageStyle` is exported and
+  the walk reaches it.
   **§19a is which leaf you are standing on**, from Ken on the last page of his
   own book (*I'm trying to put a logo on the last page… if I add a page after
   and go on that, it's adding the page on the page before for some reason… on
