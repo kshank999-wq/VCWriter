@@ -19,6 +19,7 @@ import {
   holdsWholeWorks,
   layPages,
   pagePlace,
+  designOffer,
   pictureOffer,
   removeDivision,
   setBlankPages,
@@ -332,18 +333,26 @@ describe('a picture on a blank sheet', () => {
    * in front of it would name a page the act never touches.
    */
   it('says nothing about the gap in front of the writer’s own sheet', () => {
+    /**
+     * **Asked of the act that now runs** (§9ar). The argument is untouched —
+     * standing on a sheet the *writer* put in, what goes there takes that
+     * sheet and lands exactly where they pointed, so naming the gap in front
+     * of it would name a page the act never touches — and what carries it is
+     * the design route, the picture having had three landing rules on a blank
+     * page and none of them the writer's own press.
+     */
     const file = collection(5);
     const { marker } = thirdOpens(file);
     const asked = setBlankPages(file, marker, SHEET);
     const { blocks, laid, rows } = lay(asked);
     const leaf = rows.find((one) => one.blankFor === marker)!;
-    const offer = pictureOffer(pagePlace(laid.pages, blocks, leaf.sheet), rows, leaf.sheet);
-    expect(offer.takesLeaf).toBe(marker);
-    expect(offer.note).toBeNull();
-    // And where the leaf really is the cutter's, it still says so.
+    const offer = designOffer(pagePlace(laid.pages, blocks, leaf.sheet), rows, leaf.sheet);
+    expect(offer.leafId).toBe(marker);
+    expect(offer.note).not.toMatch(/fills that rather than adding one/);
+    // And where the leaf really is the cutter's, the room still says so.
     const plain = thirdOpens(file);
     const cutters = pictureOffer(plain.place, plain.rows, plain.row.sheet);
-    expect(cutters.note).toMatch(/fills that rather than adding one/);
+    expect(cutters.refusal ?? cutters.note ?? '').toMatch(/Design this page|fills that rather than adding one/);
   });
 });
 

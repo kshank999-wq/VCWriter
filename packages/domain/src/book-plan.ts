@@ -2348,6 +2348,52 @@ export interface PictureOffer {
 export const OWN_PAGE_ONLY_NOTE =
   'A box is cut into the words and a graphic is set over them, and this page has none of either. What can stand here is a picture that is the page itself.';
 
+/**
+ * **A picture goes on a blank page by designing the page** (§9ar, from Ken,
+ * who gave the diagnosis and then the design: *it doesn't want me to put a
+ * picture on certain pages… I tried to put a picture on page 68 and it put
+ * it on the right on page 69 for some reason… it just keeps going in circles
+ * and it never gets fixed. We need to think about this in another way*, and
+ * then — *if we just use the design a page function, it works fine. So
+ * instead of trying to do it the other way, we'll just make sure that the
+ * only way to do it is to design a page*).
+ *
+ * He is right about both halves, and **measuring the two routes side by side
+ * is what shows why**. On a collection with a story opening on a right-hand
+ * page, standing on each of the six blank pages in turn:
+ *
+ * - **designing** landed the page on the page pointed at, every time;
+ * - **the picture** took one of three branches depending on what lay ahead
+ *   of the leaf — a page of art as a *part* in the front matter, a *figure*
+ *   anchored before an element in the story, a backwards reading at the end
+ *   of the book — and each of the three decides where it lands **from the
+ *   record it anchors to** rather than from the page the writer pointed at.
+ *
+ * That is the whole of the circle. A figure that is a page of its own carries
+ * `starts`, and `starts` is about *which side of the paper a plate falls on*
+ * — a real rule, and one that has no business overruling somebody who pointed
+ * at page 68. Three branches, three landing rules, and the writer's own press
+ * is not among them.
+ *
+ * So the routes become one. **A blank page the design route can reach refuses
+ * the picture and names it**, and the end of the book — the one page
+ * designing cannot reach, nothing standing after it to go in front of — keeps
+ * its own backwards answer (§9ap), so no page is left with nothing.
+ *
+ * It is this room's own idiom and not a retreat: *a route rather than a
+ * second copy* (§15c), arrived at by the shorter road of finding out which of
+ * two answers is true and deleting the other.
+ */
+/**
+ * **What a blank page becomes**, in one copy, because two sentences about it
+ * would be two answers to the question a writer actually has — *can I put my
+ * illustration here?* (§9ar).
+ */
+export const BECOMES_YOUR_PAGE = 'becomes a page you set yourself — a picture, a few words, or both.';
+
+export const PICTURE_BY_DESIGNING =
+  'A picture goes on a blank page by designing the page: press Design this page… and choose the picture there, and it lands on this page. Put in among the writing instead, a picture that is a page of its own is placed by the rules that decide which side of the paper a plate falls on — which is how one asked for here came out on the page opposite.';
+
 export const pictureOffer = (
   place: PagePlace,
   rows: readonly BookPageRow[],
@@ -2371,6 +2417,21 @@ export const pictureOffer = (
     refusal,
   });
   if (!page) return none('The book is still being set.');
+  /**
+   * **On a blank page there is one route and it is the design** (§9ar). It is
+   * asked here, before any of the three branches below, because the point is
+   * that a blank page no longer has three answers — the one that lands where
+   * the writer pointed is the one it gets, and `designOffer` is the reading
+   * that knows whether it can reach this page, so the two screens cannot
+   * disagree about which act a blank page takes.
+   *
+   * The end of the book is deliberately **not** caught by it: nothing stands
+   * after that page for a page of your own to go in front of, so designing
+   * refuses there and §9ap's backwards answer below still stands. No blank
+   * page is left with nothing, which is the rule this room keeps breaking and
+   * is what every one of these reports has been about.
+   */
+  if (page.blank && !designOffer(place, rows, sheet, divisions).refusal) return none(PICTURE_BY_DESIGNING);
   /**
    * **A leaf held empty by a rule is freed by the act** (§9al). §9aa refused
    * here and named the switch, which is §9w's detour in another control: the
@@ -2404,35 +2465,19 @@ export const pictureOffer = (
   const freedNote = frees ? sayBlankFreed(hold, divisions) : null;
   if (!place.elementId && !place.partId) {
     /**
-     * **A leaf among the front or back pages takes a page of art, here**
-     * (§9ab). §9aa's walk forward stops at a part without answering with it,
-     * because a part's picture is its own art or an inset in its words: put
-     * there, a picture asked for on the leaf would draw on the page ahead,
-     * which is §9w's fault wearing a different control. So the answer is not
-     * that part but **a new page of art standing where the leaf is** — which
-     * §9aa named as a route and made the writer walk, and which `addPart`'s
-     * position now does in one press.
+     * **§9ab's page of art for a leaf in the front matter is gone, not
+     * disabled** (§9ar). It stood here and answered with `newPageBefore`, a
+     * third landing rule for a blank page — and a blank page in the front or
+     * back matter is exactly a page the design route reaches, so the refusal
+     * above now answers first and this could never run again. A branch that
+     * cannot run is a second answer waiting for somebody to restore it, which
+     * is what §9ak did with the redraw: deleted rather than kept beside it.
+     *
+     * Nothing is lost. Designing the leaf makes a page of the writer's own
+     * standing where the leaf stood, whose own screen offers the picture and
+     * the full-page art — more than this branch gave, by the one route that
+     * lands where it was asked for.
      */
-    const ahead = rows.find((one) => one.sheet > sheet && one.partId !== null);
-    if (page.blank && ahead) {
-      return {
-        spot: null,
-        pageSpot: null,
-        of: null,
-        beforeOpening: false,
-        // The rule, where one holds this leaf (§9al): the back of the title
-        // page is exactly this shape, a leaf among the front matter whose
-        // answer is a page of art standing where it is.
-        note: freedNote,
-        takesLeaf: page.blankFor,
-        takesLeafAt: page.blankAt,
-        ownPageOnly: true,
-        newPageBefore: ahead.partId,
-        anchor: 'before',
-        frees,
-        refusal: null,
-      };
-    }
     /**
      * **And at the end of the book the picture looks backwards** (§9ap, from
      * Ken standing on the last page of a book with no back matter: *if I add a
@@ -2462,24 +2507,21 @@ export const pictureOffer = (
      * pages later behind two blanks nobody asked for. The final picture of a
      * story belongs to the story.
      */
-    const behind = rows.some((one) => one.sheet < sheet);
-    if (page.blank && behind) {
-      const last = place.lastElementId ?? null;
-      return {
-        spot: last,
-        pageSpot: last,
-        of: last ? 'story' : null,
-        beforeOpening: false,
-        note: freedNote,
-        takesLeaf: page.blankFor,
-        takesLeafAt: page.blankAt,
-        ownPageOnly: true,
-        newPageBefore: last ? null : BOOK_END,
-        anchor: 'after',
-        frees,
-        refusal: null,
-      };
-    }
+    /**
+     * **§9ap's backwards reading is gone with the rest** (§9ar). It was the
+     * third of the three landing rules and the cleverest — the one place this
+     * room read backwards, because the last page of a book has nothing ahead
+     * of it — and measuring is what retired it: over four book shapes, every
+     * blank page the room draws is reachable by the design route, the end of
+     * the book included, so this branch could never run again.
+     *
+     * What it was for is kept and is better served. §9ap's own report was *I
+     * need to add the final picture on page 173*, and designing that page
+     * stands a page of the writer's own on it — on the page pointed at, with
+     * the book the length it was — whose screen offers the picture and the
+     * full-page art. One act, one landing rule, and the clever one deleted
+     * rather than left for somebody to restore.
+     */
     /**
      * **A page with nothing of the book on it and nothing of the book after
      * it.** A leaf is not a record — it is where the cutter stopped — so there
@@ -2809,9 +2851,23 @@ export const designOffer = (
      * page after it opens on a right-hand page. A sentence promising *the
      * book stays the length it is* was measured taking a 14-page book to 16.
      */
-    note: page.blankFor
-      ? 'This blank page becomes a page you set yourself — a picture, a few words, or both.'
-      : sayBlankFreed(hold, divisions),
+    /**
+     * **And it says what the page becomes, not only what it costs** (§9ar).
+     *
+     * Driving the real room is what caught it: on a leaf the **cutter** left —
+     * which is nearly every blank page in a book — the note was
+     * `sayBlankFreed`'s alone, which is one sentence about *the page* and
+     * says what happens to the book. True, and the word **picture** then
+     * appeared nowhere at all on the one panel a writer opens in order to put
+     * a picture on the page, which is this whole run of reports in miniature:
+     * the act was there, the sentence was true, and it answered a question
+     * nobody was asking.
+     *
+     * The writer's own leaf had always said it. Now both do, in the same
+     * words, one copy — what it costs first where there is a cost, then what
+     * it becomes.
+     */
+    note: page.blankFor ? `This blank page ${BECOMES_YOUR_PAGE}` : `${sayBlankFreed(hold, divisions)} It ${BECOMES_YOUR_PAGE}`,
     refusal: null,
   };
 };

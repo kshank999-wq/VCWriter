@@ -667,7 +667,19 @@ function Body({
                 <textarea
                   aria-label="The words on this page"
                   rows={4}
-                  placeholder={part.kind === 'epigraph' ? 'A line, and who said it.' : 'For whom, and why.'}
+                  /* **A placeholder names its own page's question** (§9ar).
+                     This was a pair written when two kinds reached it, and a
+                     page of your own then arrived prompting *For whom, and
+                     why.* — the **dedication's** question, asked of a page
+                     that is not one. §17e's own finding in a placeholder
+                     rather than a tile. */
+                  placeholder={
+                    part.kind === 'epigraph'
+                      ? 'A line, and who said it.'
+                      : part.kind === 'dedication'
+                        ? 'For whom, and why.'
+                        : 'Whatever this page says.'
+                  }
                   value={part.text}
                   onChange={(event) => onUpdate((current) => updatePart(current, part.id, { text: event.target.value }))}
                 />

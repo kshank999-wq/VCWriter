@@ -10,8 +10,11 @@ import {
   bookBlocks,
   bookNames,
   bookPageRows,
+  bookRows,
   bookSettingsOf,
   createProjectFile,
+  designOffer,
+  designPage,
   geometryOf,
   layPages,
   takePictureLeaf,
@@ -19,8 +22,8 @@ import {
   pagePlace,
   pageRemoval,
   partsOf,
+  PICTURE_BY_DESIGNING,
   pictureOffer,
-  placeFigure,
   removePart,
   setBlankPages,
   SHEET,
@@ -93,35 +96,29 @@ const offerOn = (file: ProjectFile, sheet: number) => {
   return pictureOffer(pagePlace(laid.pages, blocks, sheet), rows, sheet, 'stories');
 };
 
+/** The one act a blank page takes (§9ar), read and then run. */
+const designOn = (file: ProjectFile, sheet: number) => {
+  const { blocks, laid, rows } = lay(file);
+  return designOffer(pagePlace(laid.pages, blocks, sheet), rows, sheet, 'stories');
+};
+
+const designAt = (file: ProjectFile, sheet: number) => {
+  const { blocks, laid, rows } = lay(file);
+  return designPage(file, pagePlace(laid.pages, blocks, sheet), rows, sheet, 'stories');
+};
+
 /** The blank page a writer asked for at the end of the book (§9ao's BOOK_END). */
 const endLeaf = (file: ProjectFile) => lay(file).rows.find((one) => one.blankFor === BOOK_END)!;
 
-/** Exactly what the room's own act does with a story answer. */
-const putPicture = (file: ProjectFile, offer: ReturnType<typeof pictureOffer>) => {
-  const added = addGraphic(file, {
-    name: 'final.png',
-    dataUrl: 'data:image/png;base64,iVBORw0KGgo=',
-    width: 1200,
-    height: 1800,
-  });
-  const beat = added.file.beats.find((one) =>
-    (one.manuscript.elements as readonly { id: string }[]).some((element) => element.id === offer.spot),
-  )!;
-  const made = placeFigure(added.file, {
-    beatId: beat.id,
-    assetId: added.asset.id,
-    ...(offer.anchor === 'after'
-      ? { afterElementId: offer.spot as never }
-      : { beforeElementId: offer.spot as never }),
-    attributes: { bookPlace: 'page' },
-  });
-  // Exactly the room's own act (§9ap): a picture is a page and takes the one
-  // page it stands on.
-  const out = offer.takesLeaf ? takePictureLeaf(made.file, offer.takesLeaf) : made.file;
-  return { file: out, figureId: made.elementId as string };
-};
-
-describe('a picture on the last page of the book', () => {
+/**
+ * **Rewritten to the one route** (§9ar). §9ap's answer was the third of three
+ * landing rules for a blank page and the cleverest; what retired it is a
+ * measurement rather than an argument — over four book shapes **every** blank
+ * page the room draws is reachable by the design route, the last page of the
+ * book included — so what these pin now is that the page Ken pointed at takes
+ * a page of his own, lands there, and leaves the book the length it was.
+ */
+describe('the last page of the book', () => {
   it('refused before this, with the mechanism named', () => {
     // The sentence Ken was looking at, which is why the report reads *I can
     // do nothing with it*: it is true about the walk forward and says nothing
@@ -135,20 +132,19 @@ describe('a picture on the last page of the book', () => {
     expect(pagePlace(laid.pages, blocks, last.sheet).lastElementId ?? null).toBeNull();
   });
 
-  it('answers with the last words of the story, after them', () => {
+  it('answers, where the walk forward has nothing to offer', () => {
+    /**
+     * This asserted the picture reading **backwards** off the story's last
+     * element. The reading is gone and the fact it was for is kept: the page
+     * past the end of the book answers, rather than refusing somebody who is
+     * pointing at a page their book plainly has.
+     */
     const file = setBlankPages(collection(false), BOOK_END, SHEET);
     const leaf = endLeaf(file);
-    const offer = offerOn(file, leaf.sheet);
-    expect(offer.refusal).toBeNull();
-    expect(offer.of).toBe('story');
-    // **The one place this room reads backwards** (§9ap).
-    expect(offer.anchor).toBe('after');
-    // And it is the story's own last element, so no part is made.
-    expect(offer.newPageBefore).toBeNull();
-    const words = unitsInStoryOrder(file);
-    const beats = file.beats.filter((one) => one.unitId === words[words.length - 1]!.id);
-    const elements = beats[beats.length - 1]!.manuscript.elements as readonly { id: string }[];
-    expect(offer.spot).toBe(elements[elements.length - 1]!.id);
+    expect(designOn(file, leaf.sheet).refusal).toBeNull();
+    expect(designOn(file, leaf.sheet).leafId).toBe(BOOK_END);
+    // And the picture asked for on the same page names that act.
+    expect(offerOn(file, leaf.sheet).refusal).toBe(PICTURE_BY_DESIGNING);
   });
 
   it('reads that element from the blocks, so the book’s last paragraph counts', () => {
@@ -172,25 +168,23 @@ describe('a picture on the last page of the book', () => {
     expect(behind.elementIds?.includes(place.lastElementId as string) ?? false).toBe(false);
   });
 
-  it('puts the picture on the page that was pointed at, and moves no words', () => {
+  it('puts the page on the one that was pointed at, and moves no words', () => {
     const file = setBlankPages(collection(false), BOOK_END, SHEET);
     const before = lay(file);
     const leaf = endLeaf(file);
-    const offer = offerOn(file, leaf.sheet);
-    // **The leaf is the picture's page** (§9aa): the writer asked for one page
-    // and then said what is on it, so the sheet goes as the picture arrives.
-    expect(offer.takesLeaf).toBe(BOOK_END);
-    const done = putPicture(file, offer);
-    const after = lay(done.file);
-    const art = after.rows.find((one) => one.figureId === done.figureId)!;
+    // **The leaf is that page** (§9aa): the writer asked for one page and then
+    // said what is on it, so the leaf goes as the page arrives.
+    expect(designOn(file, leaf.sheet).leafId).toBe(BOOK_END);
+    const made = designAt(file, leaf.sheet);
+    expect(made.refusal).toBeNull();
+    const after = lay(made.file);
+    const own = after.rows.find((one) => one.partId === made.partId)!;
     // The page he pointed at, and not the page after it.
-    expect(art.counted).toBe(leaf.counted);
+    expect(own.counted).toBe(leaf.counted);
     // The story's last page is where it was, with the same words on it.
     const was = before.rows.find((one) => one.sheet === leaf.sheet - 1)!;
-    const now = after.rows.find((one) => one.sheet === art.sheet - 1)!;
+    const now = after.rows.find((one) => one.sheet === own.sheet - 1)!;
     expect(now.elementIds).toEqual(was.elementIds);
-    // **Exactly as long as it was**: one sheet off, the picture and its own
-    // blank back in.
     expect(after.rows).toHaveLength(before.rows.length);
   });
 
@@ -198,51 +192,57 @@ describe('a picture on the last page of the book', () => {
     /**
      * **The Add menu puts one page in at a time** (§9an), so this is what a
      * writer actually has in hand — and until §9ap both screens took two off
-     * the leaf, so it survived and the picture landed on the page after it.
+     * the leaf, so it survived and what was put there landed on the page
+     * after it.
      */
     const file = setBlankPages(collection(false), BOOK_END, 1);
     const before = lay(file);
     const leaf = endLeaf(file);
-    const done = putPicture(file, offerOn(file, leaf.sheet));
-    const after = lay(done.file);
-    const art = after.rows.find((one) => one.figureId === done.figureId)!;
+    const made = designAt(file, leaf.sheet);
+    const after = lay(made.file);
+    const own = after.rows.find((one) => one.partId === made.partId)!;
     // The page he pointed at, and the book exactly as long as it was.
-    expect(art.counted).toBe(leaf.counted);
+    expect(own.counted).toBe(leaf.counted);
     expect(after.rows).toHaveLength(before.rows.length);
     // And no blank left standing anywhere at the end of it.
-    expect(after.rows[after.rows.length - 1]!.figureId).toBe(done.figureId);
+    expect(after.rows[after.rows.length - 1]!.partId).toBe(made.partId);
   });
 
-  it('gives that page a × that takes the picture away', () => {
+  it('gives that page a × that takes it away again', () => {
     const file = setBlankPages(collection(false), BOOK_END, SHEET);
-    const offer = offerOn(file, endLeaf(file).sheet);
-    const done = putPicture(file, offer);
-    const after = lay(done.file);
-    const art = after.rows.find((one) => one.figureId === done.figureId)!;
-    // §9x's rule: no page row is without one.
-    expect(pageRemoval(done.file, after.rows, art.sheet).refusal).toBeNull();
+    const made = designAt(file, endLeaf(file).sheet);
+    const after = lay(made.file);
+    const own = after.rows.find((one) => one.partId === made.partId)!;
+    /**
+     * **§9x's rule, kept in the shape a part has it** (§17e): a page of the
+     * writer's own is a *part*, so what takes it away is the × on its own row
+     * in the rail, and the page's × says so rather than drawing nothing —
+     * *disabled with the reason in its title rather than absent*, which is
+     * what absence had read as.
+     */
+    const removal = pageRemoval(made.file, after.rows, own.sheet);
+    expect(removal.refusal).toMatch(/row of its own/);
+    expect(bookRows(made.file).some((row) => row.id === made.partId)).toBe(true);
   });
 
-  it('appends a page of art where the book ends in back matter', () => {
+  it('answers the same where the book ends in back matter', () => {
     /**
-     * **A part is not the answer where the story ends the book**, and this is
-     * the other half of that: where a *part* ends it, another page of the book
-     * is exactly right, and `BOOK_END` is the position — it names no part, so
-     * `addPart` puts the plate last.
+     * The two shapes §9ap told apart — a book ending in the story's words and
+     * one ending in a part — needed two acts under the picture and need one
+     * under this: a page of the writer's own stands where the leaf stood
+     * either way, which is the whole of what one landing rule buys.
      */
     const file = setBlankPages(collection(true), BOOK_END, SHEET);
-    const offer = offerOn(file, endLeaf(file).sheet);
-    expect(offer.refusal).toBeNull();
-    expect(offer.of).toBeNull();
-    expect(offer.spot).toBeNull();
-    expect(offer.newPageBefore).toBe(BOOK_END);
-    const made = addPart(file, 'plate', { assetId: 'a1', inFront: false }, offer.newPageBefore as string);
-    const parts = partsOf(made.file);
-    // Last of all, which is where the leaf stood.
-    expect(parts[parts.length - 1]!.id).toBe(made.partId);
+    const leaf = endLeaf(file);
+    expect(offerOn(file, leaf.sheet).refusal).toBe(PICTURE_BY_DESIGNING);
+    const made = designAt(file, leaf.sheet);
+    expect(made.refusal).toBeNull();
+    const after = lay(made.file);
+    expect(after.rows.find((one) => one.partId === made.partId)!.counted).toBe(leaf.counted);
+    expect(partsOf(made.file).some((one) => one.id === made.partId)).toBe(true);
   });
 
-  it('says why a blank page takes the picture and not the other two', () => {
+  it('says why a blank page takes a page of its own and not the other two', () => {
     /**
      * **Absence is this room's idiom for *this does not apply here*** and on
      * a blank page it reads as nothing applying at all, which is the whole of
@@ -251,8 +251,14 @@ describe('a picture on the last page of the book', () => {
      * page of the book.
      */
     const file = setBlankPages(collection(false), BOOK_END, SHEET);
-    const offer = offerOn(file, endLeaf(file).sheet);
-    expect(offer.ownPageOnly).toBe(true);
+    /**
+     * **The sentence outlived the control it explained** (§9ar). It stood
+     * under the picture on a blank page and there is no picture there now, so
+     * what it is for is the designed page's own screen — where a box cut into
+     * the words and a graphic set over them still do not apply, there being
+     * no words on this page to cut into or set over.
+     */
+    expect(offerOn(file, endLeaf(file).sheet).refusal).toBe(PICTURE_BY_DESIGNING);
     /**
      * **And it names what this page can have rather than a route to the other
      * two.** The first draft said *the picture above makes it a page of the
@@ -287,14 +293,22 @@ describe('a picture on the last page of the book', () => {
     expect(blankPagesAt(takePictureLeaf(collection(false), BOOK_END), BOOK_END)).toBe(0);
   });
 
-  it('leaves every other page reading forwards', () => {
-    // The field is `before` everywhere else, which is what keeps every act
-    // built on this offer exactly as it was.
+  it('leaves every page reading forwards, there being one direction again', () => {
+    /**
+     * §9ap added the one backwards reading in the room and this asserted that
+     * it was the only one; with it gone the assertion is simply true of every
+     * page, which is what *one landing rule* means — and what is walked with
+     * it is that **no blank page anywhere is left without an act** (§9x's
+     * rule, which is Ken's own sentence: *every single page that's blank
+     * should have the same ability to design it*).
+     */
     const file = collection(true);
     const { blocks, laid, rows } = lay(file);
     for (const row of rows) {
-      const offer = pictureOffer(pagePlace(laid.pages, blocks, row.sheet), rows, row.sheet, 'stories');
-      expect(offer.anchor).toBe('before');
+      const place = pagePlace(laid.pages, blocks, row.sheet);
+      expect(pictureOffer(place, rows, row.sheet, 'stories').anchor).toBe('before');
+      if (!row.blank) continue;
+      expect(designOffer(place, rows, row.sheet, 'stories').refusal, `no act on the blank page at sheet ${row.sheet}`).toBeNull();
     }
   });
 });

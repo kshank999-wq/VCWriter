@@ -10,10 +10,13 @@ import {
   bookPageRows,
   bookSettingsOf,
   createProjectFile,
+  designOffer,
+  designPage,
   geometryOf,
   layPages,
   pagePlace,
   pageRemoval,
+  PICTURE_BY_DESIGNING,
   pictureOffer,
   placeBookFigure,
   placeFigure,
@@ -130,6 +133,17 @@ const offerAt = (file: ProjectFile, sheet: number) => {
   return pictureOffer(pagePlace(laid.pages, blocks, sheet), rows, sheet, 'stories');
 };
 
+/** The one act a blank page takes (§9ar): read it, and run it. */
+const designAt = (file: ProjectFile, sheet: number) => {
+  const { laid, blocks, rows } = lay(file);
+  return designOffer(pagePlace(laid.pages, blocks, sheet), rows, sheet, 'stories');
+};
+
+const designOn = (file: ProjectFile, sheet: number) => {
+  const { laid, blocks, rows } = lay(file);
+  return designPage(file, pagePlace(laid.pages, blocks, sheet), rows, sheet, 'stories');
+};
+
 describe('what holds a page blank', () => {
   it('names the writer’s own sheet and the act that takes it away', () => {
     let file = collection();
@@ -180,17 +194,32 @@ describe('what holds a page blank', () => {
   });
 });
 
-describe('a picture asked for on a leaf the book is keeping blank', () => {
+/**
+ * **The act is the design and no longer the picture** (§9ar, from Ken: *if we
+ * just use the design a page function, it works fine… we'll just make sure
+ * that the only way to do it is to design a page*).
+ *
+ * §9al's rule — *where a rule holds the page, the act frees the rule* — is
+ * what these pin and it is untouched; what changed under them is **which act
+ * carries it**, the picture having had three landing rules for a blank page
+ * and none of them the writer's own press. `designPage` frees exactly the
+ * same rules and says the same sentence, which is why one copy of it serves
+ * both (§9aq) and why these needed their subject changed and not their
+ * argument.
+ */
+describe('a page of your own, on a leaf the book is keeping blank', () => {
   it('is offered rather than refused, and says what it would free', () => {
     const file = collection();
-    const offer = offerAt(file, blankAt(file, 'between'));
+    const offer = designAt(file, blankAt(file, 'between'));
     expect(offer.refusal).toBeNull();
     expect(offer.frees).toEqual({ id: file.markers[1]!.id as string, rule: 'sheet' });
+    // And the picture, asked for on the same page, names this act.
+    expect(offerAt(file, blankAt(file, 'between')).refusal).toBe(PICTURE_BY_DESIGNING);
   });
 
   it('says what the press will cost before the press', () => {
     const file = collection();
-    const offer = offerAt(file, blankAt(file, 'between'));
+    const offer = designAt(file, blankAt(file, 'between'));
     // The format's own plural, handed down: nothing names a unit itself.
     expect(offer.note).toContain('between stories');
     /**
@@ -208,7 +237,7 @@ describe('a picture asked for on a leaf the book is keeping blank', () => {
 
   it('says the other sentence on a back, which is a different cost', () => {
     const { file } = backBlankTitlePage();
-    const offer = offerAt(file, blankAt(file, 'page_back'));
+    const offer = designAt(file, blankAt(file, 'page_back'));
     expect(offer.refusal).toBeNull();
     expect(offer.frees?.rule).toBe('back');
     // One sentence for both acts now (§9aq), so the subject is what you put
@@ -228,18 +257,17 @@ describe('a picture asked for on a leaf the book is keeping blank', () => {
     const { rows } = lay(file);
     const gap = rows.find((row) => row.blank && blankHold(rows, row.sheet)?.why === 'recto');
     if (!gap) return;
-    const offer = offerAt(file, gap.sheet);
-    expect(offer.frees).toBeNull();
+    expect(designAt(file, gap.sheet).frees).toBeNull();
   });
 
-  it('frees nothing on the writer’s own sheet, which the picture takes', () => {
+  it('frees nothing on the writer’s own sheet, which the page takes', () => {
     let file = collection();
     const unit = unitsInStoryOrder(file)[1]!;
     const element = file.beats.find((beat) => beat.unitId === unit.id)!.manuscript.elements[0]!;
     file = setBlankPage(file, element.id as string, true);
-    const offer = offerAt(file, blankAt(file, 'writer'));
+    const offer = designAt(file, blankAt(file, 'writer'));
     expect(offer.frees).toBeNull();
-    expect(offer.takesLeaf).toBe(element.id as string);
+    expect(offer.leafId).toBe(element.id as string);
   });
 });
 
@@ -251,18 +279,28 @@ describe('what the act costs the book', () => {
    * §9aj and §9ad were both written for.
    */
   it('leaves the book exactly as long when a back is printed on', () => {
-    const { file, partId } = backBlankTitlePage();
-    const was = pages(file);
     /**
-     * The act: the switch goes and a page of art stands where the leaf was.
+     * **Driven through the act the room runs** (§9ar). This ran
+     * `setBackBlank` and then `addPart('plate')` by hand, which is §9ap's own
+     * warning — *a test pinning an act no screen runs is worse than a failing
+     * one* — and it went on passing after the room had stopped offering a
+     * picture on a blank page at all. One press now: the switch goes and the
+     * page of the writer's own stands where the leaf was.
+     *
      * **The end-to-end count is what is asserted** rather than the state
      * between the two halves — the leaf is the only page in question and
-     * where it falls is the cutter's, so an intermediate count says nothing
-     * a writer would notice.
+     * where it falls is the cutter's, so an intermediate count says nothing a
+     * writer would notice.
      */
-    const freed = setBackBlank(file, partId, false);
-    const made = addPart(freed, 'plate', { assetId: ASSET, inFront: true }, partsOf(freed).find((one) => one.kind === 'copyright')?.id ?? null);
+    const { file } = backBlankTitlePage();
+    const was = pages(file);
+    const sheet = blankAt(file, 'page_back');
+    const made = designOn(file, sheet);
+    expect(made.refusal).toBeNull();
     expect(pages(made.file)).toBe(was);
+    // On the page pointed at, which is the claim every one of these reports
+    // has been about.
+    expect(lay(made.file).rows.find((row) => row.partId === made.partId)!.sheet).toBe(sheet);
   });
 
   /**
@@ -274,28 +312,43 @@ describe('what the act costs the book', () => {
    * right-hand page, so a picture asked to leave its back blank takes a recto
    * (§9j): the book came back **one page longer** than the sheet it replaced.
    */
-  it('puts the picture where the separating sheet was, and the book is shorter rather than longer', () => {
+  it('puts the page where the separating sheet was, and the book is shorter rather than longer', () => {
+    /**
+     * **The arithmetic is kept and the act is the one a writer presses**
+     * (§9ar). It was measured for a picture — one sheet off, one page back in
+     * — and the same holds of a page of the writer's own, which is a block
+     * taking the next page there is. The half this was written to catch is
+     * still what it catches: the first draft gave the picture its own blank
+     * back on §9ad's rule, and the next work opening recto (§9j) made the
+     * book come back **one page longer** than the sheet it replaced.
+     */
     const file = collection();
     const was = pages(file);
     const story = file.markers[1]!.id as string;
-    const freed = setSheetBefore(file, story, false);
-    expect(pages(freed)).toBe(was - 2);
-    const made = pictureBeforeSecondStory(freed, file);
-    // One page for the picture where two were blank.
-    expect(pages(made.file)).toBe(was - 1);
-    // And the back blank, which the first draft wrote, costs two more.
-    expect(pages(setBackBlank(made.file, made.elementId as string, true))).toBe(was + 1);
+    const freed = pages(setSheetBefore(file, story, false));
+    expect(freed).toBe(was - 2);
+    const made = designOn(file, blankAt(file, 'between'));
+    expect(made.refusal).toBeNull();
+    /**
+     * **And it costs nothing beyond freeing the sheet, which the picture did
+     * not manage** — measured at 19 → 17, the same as taking the separation
+     * away by hand. The sheet's two pages go, and the page of the writer's
+     * own **stands in the gap the recto rule then leaves** rather than adding
+     * one to it (§9ac's *the first blank asked for in that gap takes its
+     * place*, said of a page). The picture came back at 18, a page longer,
+     * for want of being able to stand in a gap at all.
+     */
+    expect(pages(made.file)).toBe(freed);
   });
 
-  it('leaves the picture facing the work that follows', () => {
+  it('leaves that page facing the work that follows', () => {
     // Which is what a reader sees, and more of a separation than two blank
     // pages rather than less — the reason this is an act and not a refusal.
     const file = collection();
-    const story = file.markers[1]!.id as string;
-    const made = pictureBeforeSecondStory(setSheetBefore(file, story, false), file);
+    const made = designOn(file, blankAt(file, 'between'));
     const { rows } = lay(made.file);
-    const art = rows.find((row) => row.figureId === (made.elementId as string))!;
-    expect(rows.find((row) => row.sheet === art.sheet + 1)?.says).toBe('Chapter opens');
+    const own = rows.find((row) => row.partId === made.partId)!;
+    expect(rows.find((row) => row.sheet === own.sheet + 1)?.says).toBe('Chapter opens');
   });
 
   it('changes nothing in a book nobody has asked anything of', () => {

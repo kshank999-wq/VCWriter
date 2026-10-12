@@ -16,6 +16,7 @@ import {
   geometryOf,
   layPages,
   pagePlace,
+  PICTURE_BY_DESIGNING,
   pictureOffer,
   partsOf,
   setBlankPages,
@@ -174,20 +175,24 @@ describe('a blank leaf in front of a part', () => {
     expect(pagePlace(laid.pages, blocks, leaf.sheet).partId).toBeNull();
   });
 
-  it('answers a picture with a page of its own rather than with the part’s', () => {
+  it('sends a picture to the one act, rather than answering with a second', () => {
     /**
      * §9aa's own comment says this in so many words — *a leaf in the front
-     * matter given one would put it on the page ahead rather than on itself* —
-     * and guarded only the walk forward with it.
+     * matter given one would put it on the page ahead rather than on itself*
+     * — and guarded only the walk forward with it, so §9ab gave the leaf a
+     * page of art of its own. **That was the third landing rule** (§9ar): the
+     * leaf is a page the design route reaches, so it takes the same act as
+     * every other blank page and the picture names it.
      */
     const { file, partId } = withLeaf();
     const { blocks, laid, rows } = lay(file);
     const leaf = rows.find((row) => row.blankFor === partId)!;
     const offer = pictureOffer(pagePlace(laid.pages, blocks, leaf.sheet), rows, leaf.sheet, 'stories');
-    expect(offer.refusal).toBeNull();
-    expect(offer.ownPageOnly).toBe(true);
-    expect(offer.newPageBefore).toBe(partId);
-    expect(offer.takesLeaf).toBe(partId);
+    expect(offer.refusal).toBe(PICTURE_BY_DESIGNING);
+    expect(offer.newPageBefore).toBeNull();
+    // And the act it names carries the leaf, which is what the picture's own
+    // `takesLeaf` was for.
+    expect(offerOn(file, leaf.sheet).leafId).toBe(partId);
   });
 
   it('carries the act, which is what could not be found', () => {

@@ -843,6 +843,32 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
     onUpdate((current) => setBlankPages(current, spot, blankPagesAt(current, spot) + 1));
   };
   /**
+   * **Design this page, from wherever a writer is standing** (§9ar, from Ken:
+   * *every single page that should, that's blank should have the same ability
+   * to design it or put something on there*).
+   *
+   * It is **one act read by both screens** rather than a second copy on the
+   * menu: the page's own panel has offered this since §19 and the *+ Add*
+   * button — where anything else that puts a page in is asked for — had never
+   * heard of it, which is §9y's own finding about the blank page and §15c's
+   * about a route. That matters more now than it did an hour ago, because on
+   * a blank page this is the **only** way a picture gets there, so a menu that
+   * greys the picture and names the design route has to be a menu the design
+   * route is on (addendum 10 §8).
+   */
+  const designHere = (sheet: number) => {
+    const made = designPage(file, pagePlaceFor(sheet), pageRows, sheet, nounPlural.toLowerCase());
+    if (made.refusal || !made.partId) return;
+    setPageDialogSheet(null);
+    onUpdate(() => made.file);
+    setSelectedRowId(made.partId);
+    setPartDialogId(made.partId);
+  };
+  const pageDesign =
+    selectedSheet === null
+      ? { leafId: null, leafAt: 0, beforeId: null, frees: null, note: '', refusal: 'No page is chosen.' }
+      : designOffer(place, pageRows, selectedSheet, nounPlural.toLowerCase());
+  /**
    * **Whether a division may be started on the page in hand** (§9ab), which is
    * `divisionRemoval`'s inverse and so the thing that makes the × on a
    * division's page an act a writer can take back. A marker sits on a unit, so
@@ -1233,6 +1259,19 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
      * two screens cannot disagree about which record a press writes — and
      * each item says in its own disabled title why that side has no press.
      */
+    /**
+     * **The design, beside the picture it is now the route to** (§9ar). The
+     * same `designOffer` the panel reads, so the menu cannot offer what the
+     * panel refuses, and its note is the panel's own sentence.
+     */
+    {
+      label: 'Design this page…',
+      disabled: pageDesign.refusal,
+      note: pageDesign.refusal ? null : pageDesign.note,
+      onPick: () => {
+        if (selectedSheet !== null) designHere(selectedSheet);
+      },
+    },
     {
       label: pageBlank.before.act ?? 'A blank page before this one',
       disabled: pageBlank.before.act ? null : (pageBlank.before.refusal ?? pageBlank.refusal),
@@ -1479,17 +1518,12 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
        * made opens* — and is the whole of Ken's *you're able to put the text
        * and everything in the dialog box*.
        */
-      onDesign={() => {
-        // The rows and the place, because a leaf the **book** is keeping blank
-        // is designed too now and the act has to know whose rule holds it and
-        // what the page stands in front of (§9aq).
-        const made = designPage(file, place, pageRows, page.sheet, nounPlural.toLowerCase());
-        if (made.refusal || !made.partId) return;
-        setPageDialogSheet(null);
-        onUpdate(() => made.file);
-        setSelectedRowId(made.partId);
-        setPartDialogId(made.partId);
-      }}
+      /* **One act for both screens** (§9ar): `designHere` reads the rows and
+         the place for the sheet it is given, because a leaf the **book** is
+         keeping blank is designed too now and the act has to know whose rule
+         holds it and what the page stands in front of (§9aq) — and because
+         the *+ Add* menu runs the same press. */
+      onDesign={() => designHere(page.sheet)}
       format={pageFormat(page).markerId ? pageFormat(page).label : null}
       onFormat={() => {
         const to = pageFormat(page);
@@ -4468,8 +4502,17 @@ function StoryPageSection({
               graphic on every page, a blank leaf included, and the mechanism
               could not keep it: a leaf is where the cutter stopped, so there
               is nothing on it for a picture to stand before, and pressing
-              put an art page at the back of the book. */}
-          {offer.refusal ? <p className="muted small">{offer.refusal}</p> : null}
+              put an art page at the back of the book.
+
+              **Left to the design note where designing is on offer** (§9ar).
+              On a blank page the picture's refusal *is* the design route, and
+              the note under the button above has said *a picture, a few words,
+              or both* since §19 — so printing both puts one fact on the screen
+              twice, two sentences one under the other reading as two things to
+              do (§9y). Where designing is refused — the end of the book, which
+              keeps its own backwards answer — this still stands, which is the
+              only place the two can differ. */}
+          {offer.refusal && design.refusal !== null ? <p className="muted small">{offer.refusal}</p> : null}
           {/* **A blank page, and which side it goes on** (§9an, from Ken:
               *when I add a blank page, I need to be able to decide whether it
               goes after or before. So it'll have to ask you, enter a blank

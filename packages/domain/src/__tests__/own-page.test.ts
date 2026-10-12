@@ -12,6 +12,7 @@ import {
   bookSettingsOf,
   blankPagesAt,
   pagePlace,
+  PICTURE_BY_DESIGNING,
   pictureOffer,
   createProjectFile,
   designOffer,
@@ -296,15 +297,25 @@ describe('a record with several leaves', () => {
     }
   });
 
-  it('offers the index to the act, so a picture lands where it is asked for', () => {
+  it('offers the index to the act, so a page lands where it is asked for', () => {
+    /**
+     * **Asked of the act that now runs** (§9ar). This read the index off
+     * `pictureOffer`, which no longer answers on a blank page at all — the
+     * picture had three landing rules there and none of them the writer's own
+     * press. The index is the half §19a was about and it is unchanged: which
+     * of a record's several leaves the page in hand is.
+     */
     const file = ended(2);
     const pages = laid(file);
     const blocks = bookBlocks(file);
     const { blank } = blanks(file);
     for (const [at, row] of blank.entries()) {
-      const offer = pictureOffer(pagePlace(pages.pages, blocks, row.sheet), blanks(file).rows, row.sheet, 'stories');
-      expect(offer.takesLeaf).toBe(BOOK_END);
-      expect(offer.takesLeafAt).toBe(at);
+      const place = pagePlace(pages.pages, blocks, row.sheet);
+      const offer = designOffer(place, blanks(file).rows, row.sheet, 'stories');
+      expect(offer.leafId).toBe(BOOK_END);
+      expect(offer.leafAt).toBe(at);
+      // And the picture asked for on the same page names that act.
+      expect(pictureOffer(place, blanks(file).rows, row.sheet, 'stories').refusal).toBe(PICTURE_BY_DESIGNING);
     }
   });
 

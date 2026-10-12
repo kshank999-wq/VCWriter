@@ -18,6 +18,7 @@ import {
   pagePlace,
   pageRemoval,
   pagesUnder,
+  PICTURE_BY_DESIGNING,
   pictureOffer,
   placeFigure,
   removeBookPage,
@@ -456,12 +457,18 @@ describe('whether a picture may be asked for on this page', () => {
     const file = collection();
     const leaf = lay(file).rows.find((row) => row.blank && row.partId === null)!;
     const offer = offerOn(file, leaf.sheet);
-    expect(offer.refusal).toBeNull();
-    // No record of its own, so nothing to hang a picture from — and the part
-    // it stands in front of, which is where the page of art goes in.
+    /**
+     * **And the promise is kept by there being one act rather than three**
+     * (§9ar). §9aa gave a leaf in the story somewhere to put a picture and
+     * §9ab gave a leaf in the front matter a position, and each decided where
+     * it landed from the record it anchored to — which is how a picture asked
+     * for on page 68 came out on page 69. The leaf refuses now and names the
+     * act that lands on the page pointed at, which is the promise this was
+     * written for, kept at last by subtraction.
+     */
+    expect(offer.refusal).toBe(PICTURE_BY_DESIGNING);
     expect(offer.spot).toBeNull();
-    expect(offer.of).toBeNull();
-    expect(offer.newPageBefore).not.toBeNull();
+    expect(offer.newPageBefore).toBeNull();
   });
 
   it('is offered on a page of the story, and names the element it goes before', () => {

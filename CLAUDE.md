@@ -3511,6 +3511,58 @@ push live; the build takes a minute or two.
   page, and switching it on would change the length of every collection already
   laid out, so the act is built and reachable while the default is its own
   decision.
+  **§9ar is one act on a blank page, and it is the design**, from Ken after
+  the **fourth** report of one sentence (*I tried to put a picture on page 68
+  and it put it instead of on the left, it put it on the right on page 69 for
+  some reason… it just keeps going in circles and it never gets fixed. We need
+  to think about this in another way… every single page that's blank should
+  have the same ability to design it*) and then with the answer himself (*if we
+  just use the design a page function, it works fine… we'll just make sure that
+  the only way to do it is to design a page*). **He is right about both halves
+  and right about the circles**, and the mechanism under them is that
+  `pictureOffer` answered a blank page in **three branches** — a page of art as
+  a *part* in the front matter (§9ab), a *figure* anchored before an element in
+  the story (§9aa), a *backwards* reading at the end of the book (§9ap) — each
+  deciding where it landed **from the record it anchors to**, after which a
+  figure that is a page of its own carries `starts`, the rule for *which side
+  of the paper a plate falls on* (§9j): real, and with no business overruling
+  somebody who pointed at page 68. Three landing rules and the writer's own
+  press not among them, which is the whole of *for some reason*. **Both routes
+  were driven over every blank page of three book shapes before a line was
+  written**: designing landed on the sheet pointed at on **fourteen of
+  seventeen** with the book exactly as long, and the three that differ are the
+  **second page of a separating sheet**, one object of two pages whose note
+  already says it is taken away — so nothing ever moves *forward*, which is the
+  direction every report was in. A fourth measurement set the scope: across
+  four shapes with and without back matter and an ending sheet there is **no
+  blank page the design route cannot reach**, so his *every single page* and
+  his *the only way* are one sentence. `PICTURE_BY_DESIGNING` is that sentence,
+  read off `designOffer` itself so two screens cannot disagree about which act
+  a blank page takes, and the picture buttons then vanish from the panel and
+  grey on *+ Add* off machinery that was already there. **§9ab's page of art
+  and §9ap's backwards reading are deleted rather than left standing** — a
+  branch that cannot run is a second answer waiting for somebody to restore it
+  (§9ak's redraw), and these two *are* the second answers this removes; nothing
+  is lost, the page a design makes standing where the leaf stood with its own
+  screen offering the picture **and** the full-page art. *Design this page…*
+  joins the **+ Add menu** beside the picture it is the route to (§9y's finding,
+  addendum 10 §8's rule — a menu that greys the picture and names the design
+  has to be a menu the design is on), as **one act read by both screens** rather
+  than a second copy. **And driving the real room caught the fault of the day,
+  which is this whole run in miniature**: on a leaf the cutter left — nearly
+  every blank page in a book — the note was `sayBlankFreed`'s alone, so the word
+  **picture** appeared nowhere at all on the one panel a writer opens in order
+  to put a picture on the page; `BECOMES_YOUR_PAGE` is one copy of *a picture, a
+  few words, or both*, which the writer's own leaf had always said and every
+  blank page now says, with a test walking every one of them. It also caught a
+  page of your own prompting **For whom, and why.**, the *dedication's* question
+  asked of a page that is not one (§17e in a placeholder). **Twenty-four
+  assertions across eight files pinned the fault as a requirement** and are
+  rewritten rather than worked around — which is how four reports could not
+  shift it — and what replaces them is `every-blank-page.test.ts`, whose shape
+  is the point: each earlier section tested the page its own report named, and
+  **a test over one page cannot fail when the next shape is wrong**. No
+  migration.
   **§9aq is every blank page being one you can design, and the text box
   ranged**, from Ken in one message (*I saw where it said design this page. And
   I added another blank page. And it wouldn't have that same function… on all

@@ -359,19 +359,26 @@ describe('the room', () => {
   });
 
   /**
-   * **No blank page refuses a picture** (§9al, from Ken: *these blank pages
-   * are treated as special somehow, where they're not… every page should be
-   * formattable*).
+   * **Every blank page has the one act on it** (§9ar, from Ken after the
+   * fourth report of the same thing: *every single page that should, that's
+   * blank should have the same ability to design it or put something on
+   * there*, and then *we'll just make sure that it, the only way to do it is
+   * to design a page*).
    *
-   * The domain proves which rule each leaf is held by and what freeing it
-   * costs. What has to be proved here is the **gesture**, and in the shape
-   * §9x's own test took: it walks **every** page the room draws rather than
-   * the one the report came off, because a refusal that survives on a second
-   * kind of blank leaf reads to a writer exactly like the feature not being
-   * there. A new kind of blank page added later fails here rather than
-   * shipping silent.
+   * This walked every blank page asking for *Put a picture on this page…*,
+   * which is the control that went: the picture had **three** landing rules
+   * on a blank page — a part in the front matter, a figure in the story, a
+   * backwards reading at the end — and each decided where it landed from the
+   * record it anchored to rather than from the page the writer pointed at,
+   * which is how a picture asked for on page 68 came out on page 69.
+   *
+   * **The walk is the half worth keeping** and is why it is rewritten rather
+   * than deleted: it is §9x's shape, over every page the room draws rather
+   * than the one the report came off, so a kind of blank page added later
+   * with no act on it fails here rather than shipping silent. What it asks
+   * for now is the act that lands where it was asked.
    */
-  it('offers a picture on every blank page it draws, rather than refusing on any', () => {
+  it('offers a page of your own on every blank page it draws, and no second answer', () => {
     render(<Harness initial={novel()} />);
     const next = screen.getByRole('button', { name: 'Next spread' });
     let looked = 0;
@@ -385,9 +392,12 @@ describe('the room', () => {
         fireEvent.doubleClick(sheet);
         const panel = document.querySelector('.layout-page-dialog') as HTMLElement | null;
         if (!panel || !panel.hasAttribute('open')) continue;
-        const put = within(panel).queryByRole('button', { name: /^Put a picture on this page/ });
-        expect(put).not.toBeNull();
-        expect((put as HTMLButtonElement).disabled).toBe(false);
+        const design = within(panel).queryByRole('button', { name: /^Design this page/ });
+        expect(design, 'a blank page with no act on it').not.toBeNull();
+        expect((design as HTMLButtonElement).disabled).toBe(false);
+        // And the picture is gone rather than standing beside it offering a
+        // second answer about where a picture on this page would land.
+        expect(within(panel).queryByRole('button', { name: /^Put a picture on this page/ })).toBeNull();
         looked += 1;
       }
       fireEvent.click(next);
@@ -962,20 +972,30 @@ describe('the room', () => {
     fireEvent.doubleClick(leaf.querySelector('.layout-rail-name') as HTMLElement);
     const panel = document.querySelector('.layout-page-dialog') as HTMLElement;
     expect(panel.hasAttribute('open')).toBe(true);
-    expect(within(panel).getByRole('button', { name: 'Put a picture on this page…' })).toBeDefined();
+    /**
+     * **The act is the design and the picture is reached through it** (§9ar).
+     * The leaf carried *Put a picture on this page…*, and the picture decided
+     * where it landed from the record it anchored to — so on the page before
+     * a chapter that opens recto it came out on the chapter's own page. One
+     * act now, on the page pointed at, whose screen offers the picture.
+     */
+    expect(within(panel).getByRole('button', { name: 'Design this page…' })).toBeDefined();
     /**
      * And **only** that one. A box is cut into the words and a graphic is set
      * over them, so on a page with no words both would ride a block that is on
      * the page ahead and draw there — absent rather than greyed, the menu's
      * own idiom for what does not apply.
      */
+    expect(within(panel).queryByRole('button', { name: 'Put a picture on this page…' })).toBeNull();
     expect(within(panel).queryByRole('button', { name: 'Draw a box for a picture…' })).toBeNull();
     expect(within(panel).queryByRole('button', { name: 'Add a vector graphic…' })).toBeNull();
-    // **With the reason in their place** (§9ap, from Ken: *I want to be able
-    // to add a vector or a picture*): absence is the room's idiom for *this
-    // does not apply here* and on a blank page it read as nothing applying at
-    // all. One copy of the sentence, from the domain.
-    expect(within(panel).getByText(OWN_PAGE_ONLY_NOTE)).toBeDefined();
+    // **With the reason in its place** (§9ap, from Ken: *I want to be able to
+    // add a vector or a picture*): absence is the room's idiom for *this does
+    // not apply here* and on a blank page it read as nothing applying at all.
+    // The design note is that sentence now, one copy, from the domain.
+    expect(
+      within(panel).getByText(/becomes a page you set yourself|What you put here stands in it/),
+    ).toBeDefined();
     // And the route to the page that decides whether this leaf exists at all
     // (§9x's recto rule is set on the chapter's own page).
     expect(within(panel).getByRole('button', { name: 'Set the next chapter’s page…' })).toBeDefined();
@@ -995,7 +1015,7 @@ describe('the room', () => {
    * assertion the first report needed: a screen whose one button is missing
    * reads exactly like the feature not being there.
    */
-  it('offers a picture on a blank page at the very end of the book', () => {
+  it('offers a page of your own on a blank page at the very end of the book', () => {
     /**
      * **Ken's shape, which is a book the story ends** — a collection with no
      * back matter. It matters: where a *part* ends the book the last page is
@@ -1024,10 +1044,17 @@ describe('the room', () => {
     expect(panel.hasAttribute('open')).toBe(true);
     // The refusal Ken was reading is gone, and the act is here.
     expect(within(panel).queryByText(/nowhere for a picture to stand/)).toBeNull();
-    const put = within(panel).getByRole('button', { name: 'Put a picture on this page…' }) as HTMLButtonElement;
-    expect(put.disabled).toBe(false);
-    // And the other two still say why they are not here.
-    expect(within(panel).getByText(OWN_PAGE_ONLY_NOTE)).toBeDefined();
+    /**
+     * **§9ap's backwards reading is gone and what it was for is kept** (§9ar).
+     * It was the third of three landing rules for a blank page and the only
+     * one that read backwards; measured over four book shapes, every blank
+     * page the room draws is reachable by the one act, the last page of the
+     * book included — so what a writer standing on page 173 presses is this,
+     * and the page it makes offers the picture and the full-page art.
+     */
+    const design = within(panel).getByRole('button', { name: 'Design this page…' }) as HTMLButtonElement;
+    expect(design.disabled).toBe(false);
+    expect(within(panel).queryByRole('button', { name: 'Put a picture on this page…' })).toBeNull();
   });
 
   it('writes the trim and says what was worked out from it', () => {
@@ -2226,6 +2253,32 @@ describe('designing a blank page, from the rail', () => {
     const leaf = openPages().find((row) => /Blank/.test(row.textContent ?? ''))!;
     const panel = openPanel(leaf);
     fireEvent.click(within(panel).getByRole('button', { name: 'Design this page…' }));
+    expect(partsOf(latest as ProjectFile).some((one) => one.kind === 'leaf')).toBe(true);
+  });
+
+  /**
+   * **And from the + Add button, which is the other place a writer presses**
+   * (§9ar). It is §9y's own finding about the blank page — anything else that
+   * puts a page in is asked for there, and this had never been on it — and it
+   * matters more now than it did before, because a menu that greys the picture
+   * and names the design route has to be a menu the design route is on
+   * (addendum 10 §8: a route is only a route where it exists).
+   */
+  it('carries the same act on the + Add menu, which names it in the picture’s place', () => {
+    render(<Harness initial={withLeaf()} />);
+    const leaf = openPages().find((row) => /Blank/.test(row.textContent ?? ''))!;
+    fireEvent.click(leaf.querySelector('.layout-rail-name') as HTMLElement);
+    fireEvent.click(screen.getByRole('button', { name: /Add/ }));
+    const menu = document.querySelector('.context-menu') as HTMLElement;
+    expect(menu).toBeTruthy();
+    const design = within(menu).getByRole('menuitem', { name: 'Design this page…' }) as HTMLButtonElement;
+    expect(design.disabled).toBe(false);
+    // And the picture item is greyed with the route in its title rather than
+    // acting and landing somewhere else.
+    const picture = within(menu).getByRole('menuitem', { name: /Picture on a page of its own/ }) as HTMLButtonElement;
+    expect(picture.disabled).toBe(true);
+    expect(picture.title).toMatch(/Design this page/);
+    fireEvent.click(design);
     expect(partsOf(latest as ProjectFile).some((one) => one.kind === 'leaf')).toBe(true);
   });
 });

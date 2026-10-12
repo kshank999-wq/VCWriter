@@ -2952,6 +2952,135 @@ second blank is not later "fixed" as a fault.
 > copyright page takes the next page now, and the assertion was rewritten
 > rather than worked around.
 
+## 9ar. One act on a blank page, which is the design
+
+From Ken, after the fourth report of the same thing:
+
+> Still the same issue. Where it doesn't want me to put a picture on certain
+> pages. So I tried to put a picture on page 68 and it put it instead of on
+> the left, it put it on the right on page 69 for some reason. I don't know
+> how to solve this issue. Because it just keeps going in circles and it never
+> gets fixed. We need to think about this in another way or something. But
+> every single page that should, that's blank should have the same ability to
+> design it or put something on there or place a picture on the page. Putting
+> a page beforehand, putting a page Should be simple.
+
+and then, minutes later, with the answer:
+
+> If we just use the design a page function, it works fine. So instead of
+> trying to do it the other way, we'll just make sure that it, the only way to
+> do it is to design a page. And then you can add it and it works properly.
+
+**He is right about both halves, and he is right that the room was going in
+circles.** §9aa, §9ab, §9al and §9ap are four sections of this addendum about
+one sentence — *a picture asked for on a blank page must land on that page* —
+each of them answered on the page the report named, each of them tested, and
+each of them followed by the same report about the next kind of blank page.
+This is why.
+
+### The three landing rules
+
+`pictureOffer` answered a blank page in **three** branches, by what lay ahead
+of the leaf:
+
+- a leaf among the front or back pages took **a page of art as a part**,
+  positioned in front of the part it stood before (§9ab);
+- a leaf in the story took **a figure** anchored before an element (§9aa);
+- the last page of the book read **backwards**, after the story's last words
+  or after the last part (§9ap).
+
+Each of the three decides where it lands **from the record it anchors to**,
+and a figure that is a page of its own then carries `starts` — the rule that
+says which side of the paper a plate falls on (§9j). That rule is real and has
+no business overruling somebody who pointed at page 68. Three branches, three
+landing rules, and the writer's own press is not among them: that is the
+mechanism under *for some reason*, and under the circles.
+
+### Measured, both routes, every blank page
+
+Before a line was written, both routes were driven over every blank page of
+three book shapes — a novel whose chapters open recto, a collection with back
+matter and a sheet between the stories, a book ending in blank pages the
+writer asked for.
+
+**Designing landed on the sheet pointed at on fourteen of seventeen, with the
+book exactly the length it was.** The three that did not are the **second page
+of a separating sheet** between two whole works, which is one object of two
+pages: designing it takes the sheet away and stands the page where the sheet
+began, which `sayBlankFreed` says before the press. Nothing moves *forward* —
+a page asked for on 68 never arrives on 69 — which is the whole direction of
+the complaint.
+
+A fourth measurement settled the scope: over four shapes with and without back
+matter and an ending sheet, there is **no blank page anywhere that the design
+route cannot reach**. So Ken's *every single page that's blank* and his *the
+only way to do it is to design a page* are the same sentence, and one act can
+carry both.
+
+### The build
+
+`PICTURE_BY_DESIGNING` is one sentence and `pictureOffer` refuses with it on
+any blank page the design route can reach, which is all of them — read from
+`designOffer` itself, so the two screens cannot disagree about which act a
+blank page takes. The picture buttons then vanish from the page's own panel
+and the *+ Add* menu greys its picture item with that sentence in its title,
+both of which they already did off a refusal.
+
+Two branches are **deleted rather than left standing**: §9ab's page of art and
+§9ap's backwards reading. A branch that cannot run is a second answer waiting
+for somebody to restore it, which is what §9ak did with the redraw — and these
+two are not hypothetical second answers, they are the ones this section exists
+to remove. Nothing is lost by either: the page a design makes stands where the
+leaf stood and its own screen offers the picture *and* the full-page art,
+which is more than §9ab's art page gave and lands where §9ap's did not always.
+
+**The route is on the menu it is named from.** *Design this page…* joins the
+*+ Add* menu beside the picture it is now the route to — §9y's own finding
+about the blank page, and addendum 10 §8's rule that a route is only a route
+where it exists: a menu that greys the picture and names the design has to be
+a menu the design is on. It is **one act read by both screens** (`designHere`),
+not a second copy on the menu.
+
+### What looking caught
+
+Driving the real room on an imported collection — seven blank pages, every one
+of them carrying the act — caught the fault of the day, and it is this whole
+run of reports in miniature. On a leaf the **cutter** left, which is nearly
+every blank page in a book, the note was `sayBlankFreed`'s alone: *This page
+is the one the book leaves blank because of how the page after it opens. What
+you put here stands in it, so the book does not grow by it.* True, and **the
+word *picture* then appeared nowhere at all** on the one panel a writer opens
+in order to put a picture on the page. The act was there, the sentence was
+true, and it answered a question nobody was asking.
+
+`BECOMES_YOUR_PAGE` is one copy of what the page becomes — *a picture, a few
+words, or both* — which the writer's own leaf had always said and every other
+blank page now says too: what it costs first where there is a cost, then what
+it becomes. A test walks every blank page of every shape and fails if one of
+them does not say it.
+
+It also caught a borrowed placeholder: a page of your own prompted **For whom,
+and why.**, which is the *dedication's* question asked of a page that is not
+one (§17e's own finding, in a placeholder rather than in a tile).
+
+### The tests, and why four of them could not catch this
+
+Twenty-four assertions across eight files pinned *a picture may be asked for
+on a blank page*. Every one of them is **rewritten rather than worked around**,
+because every one of them pinned the fault as a requirement — which is how
+four reports could not shift it.
+
+What replaces them is `every-blank-page.test.ts`, and its shape is the point:
+each earlier section tested the page its report named, and **a test over one
+page cannot fail when the next shape is wrong**. This one walks every blank
+page of four book shapes and asserts, on each, that the act is offered, that
+it lands on that page with the book no longer, that the picture names it
+rather than offering a second answer, and that the note says what the page
+becomes. A kind of blank page added later with no act on it fails there rather
+than shipping silent.
+
+No migration.
+
 ## 9aq. Every blank page is a page you can design, and the words on it ranged
 
 From Ken, in one message:

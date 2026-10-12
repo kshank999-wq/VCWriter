@@ -14,6 +14,7 @@ import {
   layPages,
   pageRemoval,
   pagePlace,
+  designOffer,
   pictureOffer,
   removeBookPage,
   sayBlankReason,
@@ -234,11 +235,18 @@ describe('getting rid of one', () => {
    * is the offer, what it reaches, and that the cost is said before the
    * press.
    */
-  it('takes a picture, which frees the separation it holds', () => {
+  it('takes a page of your own, which frees the separation it holds', () => {
+    /**
+     * **Overturned twice and the rule survives both** (§9ar). §9al's *where a
+     * rule holds the page, the act frees the rule* is what this pins and is
+     * untouched; which act carries it changed, the picture having decided
+     * where it landed from the record it anchored to rather than from the
+     * page the writer pointed at.
+     */
     const file = book();
     const { blocks, laid, rows } = lay(file);
     const row = rows.find((one) => one.blankBetween !== null)!;
-    const offer = pictureOffer(pagePlace(laid.pages, blocks, row.sheet), rows, row.sheet, 'stories');
+    const offer = designOffer(pagePlace(laid.pages, blocks, row.sheet), rows, row.sheet, 'stories');
     expect(offer.refusal).toBeNull();
     expect(offer.frees).toEqual({ id: row.blankBetween, rule: 'sheet' });
     expect(offer.note).toContain('between stories');
