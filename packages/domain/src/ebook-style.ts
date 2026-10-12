@@ -205,6 +205,10 @@ figure img { max-width: 100%; height: auto; }
 figcaption { font-size: 0.85em; margin-top: 0.5em; }
 img.cover { max-width: 100%; max-height: 100%; margin: 0 auto; display: block; }
 .words p { text-align: center; text-indent: 0; margin: 0.3em 0; }
+/* **A blank line the writer typed takes a line** (addendum 20 §9as), by
+   generated content rather than by a character in their own words — the
+   printed page's rule, said in the reader's own units. */
+p.gap::before { content: "\\200B"; }
 .words { margin-top: 30%; }
 .copyright p { font-size: 0.85em; text-indent: 0; margin: 0.2em 0; }
 .u { text-decoration: underline; }

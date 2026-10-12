@@ -544,6 +544,19 @@ function Body({
   const showType = isTitle ? mode !== 'art' : mode === 'text';
   /** The elements, for the same reason: they print under a logotype. */
   const showElements = isTitle && mode !== 'art';
+  /**
+   * **The step numbers are counted rather than typed** (§9as).
+   *
+   * Driving a dedication caught two sections both numbered **3** — *3
+   * Typography* and *3 The leaves around this page* — because each card wrote
+   * its own number while two of the four are conditional, so every
+   * combination of `showPlacement` and `showType` had to be got right by hand
+   * in four places and one of them was wrong. `step` counts what is actually
+   * drawn, in the order it is drawn, so a card added or hidden later cannot
+   * make the list disagree with itself.
+   */
+  const steps = ['what', ...(showPlacement ? ['placement'] : []), ...(showType ? ['type'] : []), 'leaves'];
+  const step = (id: string): number => steps.indexOf(id) + 1;
 
   return (
     <>
@@ -590,7 +603,7 @@ function Body({
         <div className="dp-fields">
           <section className="dp-card">
             <h3>
-              <span className="dp-num">1</span> {isTitle ? 'What’s on the page' : 'What goes on the page'}
+              <span className="dp-num">{step('what')}</span> {isTitle ? 'What’s on the page' : 'What goes on the page'}
               {/* Its own class: `dp-says` names **what is in force** — the
                   arrangement, the template — and a tally is not that. Two
                   things under one name is a second answer waiting to be
@@ -764,7 +777,7 @@ function Body({
           {showPlacement ? (
             <section className="dp-card">
               <h3>
-                <span className="dp-num">2</span> Placement
+                <span className="dp-num">{step('placement')}</span> Placement
                 <span className="muted small dp-says">
                   {isTitle
                     ? arrangement
@@ -908,11 +921,12 @@ function Body({
           {showType ? (
             <section className="dp-card">
               <h3>
-                <span className="dp-num">3</span> Typography
+                <span className="dp-num">{step('type')}</span> Typography
               </h3>
-              {/* Which line everything under this sets — *the words* on a page
-                  that carries its own, *the title* elsewhere (§18). */}
-              <p className="dp-line-head">{ownWords ? 'The words' : 'The title'}</p>
+              {/* **The page's own face, above both groups** (§9as). It is the
+                  page's rather than either line's — a line that says nothing
+                  takes it — so it stood inside the first group only because
+                  that group was written first. */}
               <div className="dp-pair">
                 <label className="field">
                   <span>Typeface</span>
@@ -924,6 +938,63 @@ function Body({
                     ))}
                   </select>
                 </label>
+              </div>
+              {/**
+                * **Two lines of type, in one shape and one glance** (§9as,
+                * from Ken: *you should be able to size the text independently.
+                * So you can highlight it and make like something big and then
+                * have the rest small*).
+                *
+                * Both halves were built — the first line takes `title` and
+                * every line under it takes `line`, and §18 gave the second its
+                * controls — and **measured in the real room the two sizes
+                * stood 341 pixels apart**, at y=945 and y=1286 in a 900-pixel
+                * window, with a case, a style, a tracking, a rule and a switch
+                * between them. Neither was on the screen at once, so the pair
+                * read as one size for the whole page, which is the report.
+                *
+                * The first group was **hand-rolled while the second used
+                * `LineFields`** — two answers to *what is a line of type* on
+                * one card, and the reason they could drift apart. A page that
+                * carries its own words now draws both the same way, named,
+                * one after the other.
+                *
+                * The **title page keeps its own group**, and that is a real
+                * difference rather than a second answer: there the two lines
+                * are the *title* and the *author*, with a subtitle set from
+                * the first, so the controls name elements rather than lines
+                * (§16d).
+                */}
+              {ownWords ? (
+                <>
+                  <LineFields
+                    label="The first line"
+                    style={style.title}
+                    align
+                    fonts={fonts}
+                    onPatch={(patch) => write({ title: { ...style.title, ...patch } })}
+                  />
+                  <LineFields
+                    label="The lines under them"
+                    style={style.line}
+                    align
+                    fonts={fonts}
+                    onPatch={(patch) => write({ line: { ...style.line, ...patch } })}
+                  />
+                  {/* **Said once, where the pair is** (§9as). A page of your
+                      own sets two lines of type and nothing on the screen said
+                      so — which is how both of them being settable reads as
+                      neither. */}
+                  <p className="field-note">
+                    The first line and the lines under it are set separately — a heading and the words
+                    under it, as big or as small as you like.
+                  </p>
+                </>
+              ) : null}
+              {ownWords ? null : (
+                <>
+              <p className="dp-line-head">The title</p>
+              <div className="dp-pair">
                 {/* **The first group is named too** (§18). Looking at the real
                     card caught this room's own finding one room over
                     (addendum 28 §4c): with *the lines under them* labelled
@@ -1097,6 +1168,8 @@ function Body({
                   Italic subtitle
                 </button>
               ) : null}
+                </>
+              )}
               <button
                 type="button"
                 className="dp-switch"
@@ -1110,24 +1183,6 @@ function Body({
                 </span>
                 Rule under the title
               </button>
-              {/* **The lines under the words, which had no type at all**
-                  (§18, from Ken: *only the headings can be stylized, but the
-                  body text needs to be able to be stylized, centered,
-                  justified right, left, change the font, change the size*).
-                  Measured: on a dedication or an epigraph everything above
-                  writes `title` — the first line — and every line after it
-                  took the schema's defaults with nothing on this screen able
-                  to reach them. It is the same `LineFields` the chapter page
-                  sets its lines with, so the two cannot drift. */}
-              {ownWords ? (
-                <LineFields
-                  label="The lines under them"
-                  style={style.line}
-                  align
-                  fonts={fonts}
-                  onPatch={(patch) => write({ line: { ...style.line, ...patch } })}
-                />
-              ) : null}
             </section>
           ) : null}
 
@@ -1148,7 +1203,7 @@ function Body({
               single back to leave. */}
           <section className="dp-card">
             <h3>
-              <span className="dp-num">{isTitle ? 4 : 3}</span> The leaves around this page
+              <span className="dp-num">{step('leaves')}</span> The leaves around this page
             </h3>
             {/* **A count rather than a switch** (§9ac, from Ken: *you should
                 be able to just put as many pages in between as you want*).

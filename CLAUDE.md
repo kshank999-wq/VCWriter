@@ -3511,6 +3511,49 @@ push live; the build takes a minute or two.
   page, and switching it on would change the length of every collection already
   laid out, so the act is built and reachable while the default is its own
   decision.
+  **§9as is a blank line being a blank line, and the two sizes standing
+  together**, from Ken in one message (*when you skip a line, it doesn't skip a
+  line. Like if you hit enter and enter again, it should move the text down.
+  And you should be able to size the text independently. So you can highlight
+  it and make like something big and then have the rest small*). Two asks: a
+  plain fault, and a thing **built, correct, and off the bottom of the screen**.
+  **Driven in a browser on his own shape**, the markup was right and every empty
+  paragraph came back **nought pixels high** — `.bk-words p` is `margin: 0` with
+  no content to make a line box — so one Enter made a new line and two made
+  nothing at all; the **eBook had the same decision in the opposite shape** and
+  **dropped the blank line outright**, one intention lost two different ways. A
+  blank line is a paragraph of its own now, **named** (`bk-words-gap` in the
+  book, `gap` in the eBook) so the stylesheet and a reading system name one
+  thing, with **generated content rather than a character** giving it height — a
+  zero-width space in the markup would be in the writer's words, in a search and
+  in the eBook's text, for a line that is supposed to be nothing — measured 0 →
+  17 pixels and validating at **EPUBCheck 0/0**; a blank at the very top or foot
+  is still dropped, that being the edge of a page rather than a gap. **The two
+  sizes were there and 341 pixels apart**: a designed page sets two lines of
+  type (the first takes `title`, the rest take `line`, which the markup has done
+  since the page was built) and §18 gave the second its controls, so *big then
+  small* worked — driven, 32px and 12px — while the controls stood at y=945 and
+  y=1286 in a **900-pixel window**, with a case, a style, a tracking, a rule and
+  a switch between them, so neither was on the screen at once and the pair read
+  as one size for the page. The cause is that **the first group was hand-rolled
+  while the second used `LineFields`** — two answers to *what is a line of type*
+  on one card — so a page carrying its own words draws both the same way now,
+  named for the line each sets (**THE FIRST LINE**, **THE LINES UNDER THEM**),
+  **163 pixels** apart, with one sentence saying what the pair is for; the title
+  page keeps its own group, its two lines being the *title* and the *author*
+  with a subtitle set from the first (§16d). **A true highlight-a-word size is
+  deliberately not built and the reason is the box**: the words are a plain
+  `<textarea>`, so a size on a selection would be a **mark written into the text
+  the writer is looking at**, which is addendum 02 §19a's own settled answer —
+  *a mark is the selection's and the type is the line's*. Looking also caught
+  **two sections both numbered 3** (each card wrote its own number while two of
+  the four are conditional; they are **counted** now) and a page of your own
+  prompting **For whom, and why.**, the *dedication's* question asked of a page
+  that is not one (§17e in a placeholder). **Named rather than fixed**: the
+  Typography card still starts at y=815 in a 900-pixel window — `.dp-fields`
+  holds 1759 pixels in 653 — so a writer scrolls past two cards to reach any
+  type, and bringing it up means folding the cards (§9's inspector idiom, absent
+  from this dialog) or reordering §9n's four steps. No migration.
   **§9ar is one act on a blank page, and it is the design**, from Ken after
   the **fourth** report of one sentence (*I tried to put a picture on page 68
   and it put it instead of on the left, it put it on the right on page 69 for

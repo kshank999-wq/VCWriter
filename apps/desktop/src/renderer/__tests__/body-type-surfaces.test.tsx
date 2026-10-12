@@ -200,6 +200,53 @@ describe('the body text, on every screen that takes it', () => {
     expect(styleOf(partId).line.size).toBe(9);
   });
 
+  it('sets the two sizes of a page of your own, which is what “big, then small” is', () => {
+    /**
+     * **Both halves were built and the pair read as one size** (§9as, from
+     * Ken: *you should be able to size the text independently. So you can
+     * highlight it and make like something big and then have the rest
+     * small*).
+     *
+     * The first line takes `title` and every line under it takes `line`, and
+     * both have had controls since §18 — **measured in the real room the two
+     * sizes stood 341 pixels apart**, at y=945 and y=1286 in a 900-pixel
+     * window, with a case, a style, a tracking, a rule and a switch between
+     * them, so neither was on the screen at once. The first group was
+     * hand-rolled while the second used `LineFields`: two answers to *what is
+     * a line of type* on one card, and the reason they could sit that far
+     * apart. One shape now, named, one after the other — 163 pixels, measured
+     * again.
+     *
+     * What this pins is the **gesture**: a writer can set the two
+     * independently, from controls that name which line each one is.
+     */
+    const { file, partId } = withPart('dedication', 'A BIG TITLE\nand the rest, small.');
+    render(<Designed initial={file} partId={partId} />);
+    const dialog = document.querySelector('dialog') as HTMLElement;
+    fireEvent.change(within(dialog).getByLabelText('The first line size'), { target: { value: '24' } });
+    fireEvent.change(within(dialog).getByLabelText('The lines under them size'), { target: { value: '9' } });
+    expect(styleOf(partId).title.size).toBe(24);
+    expect(styleOf(partId).line.size).toBe(9);
+    // And each group is a whole line of type, named for the line it sets.
+    for (const name of ['The first line case', 'The first line italic', 'The lines under them case', 'The lines under them face']) {
+      expect(within(dialog).queryByLabelText(name), name).not.toBeNull();
+    }
+  });
+
+  it('numbers its sections by counting them, rather than four times by hand', () => {
+    /**
+     * Driving a dedication caught two sections both numbered **3** —
+     * *Typography* and *The leaves around this page* — because each card
+     * wrote its own number while two of the four are conditional (§9as).
+     */
+    const { file, partId } = withPart('dedication', 'For Mara.');
+    render(<Designed initial={file} partId={partId} />);
+    const dialog = document.querySelector('dialog') as HTMLElement;
+    const numbers = Array.from(dialog.querySelectorAll('.dp-num')).map((one) => one.textContent);
+    expect(numbers).toEqual(numbers.map((_, at) => String(at + 1)));
+    expect(numbers.length).toBeGreaterThan(2);
+  });
+
   it('ranges a chapter page’s epigraph, and leaves the number alone', () => {
     render(<Chapter initial={novel()} />);
     fireEvent.change(screen.getByLabelText('The lines under it alignment'), { target: { value: 'center' } });

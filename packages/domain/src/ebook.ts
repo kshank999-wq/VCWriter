@@ -176,13 +176,32 @@ const renderSpans = (spans: InlineSpan[], text: string): string => {
     .join('');
 };
 
-const lines = (text: string, style = ''): string =>
-  text
-    .split(/\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0)
-    .map((line) => `<p${style}>${escapeXml(line)}</p>`)
+/**
+ * **A line the writer left blank travels too** (addendum 20 §9as, from Ken:
+ * *when you skip a line, it doesn't skip a line*).
+ *
+ * The same decision as the printed page and in the opposite shape: there the
+ * blank paragraph was drawn at nought pixels, and here it was **dropped
+ * outright** — so a dedication set two lines apart in the book arrived in the
+ * eBook with the lines run together, which is one writer's intention lost two
+ * different ways. It keeps the gap now and names it, and the stylesheet gives
+ * it a line box the way the book does.
+ *
+ * A blank line at the **top or the foot** is still dropped: that is the edge
+ * of a page rather than a gap between two lines, and a reflowable book has no
+ * use for air above its first words.
+ */
+const lines = (text: string, style = ''): string => {
+  const all = text.split(/\n/).map((line) => line.trim());
+  let from = 0;
+  let to = all.length;
+  while (from < to && all[from]!.length === 0) from += 1;
+  while (to > from && all[to - 1]!.length === 0) to -= 1;
+  return all
+    .slice(from, to)
+    .map((line) => (line.length === 0 ? '<p class="gap"></p>' : `<p${style}>${escapeXml(line)}</p>`))
     .join('');
+};
 
 /** A file name a filesystem and a zip both take: letters, digits, dashes. */
 const LIGATURES: Record<string, string> = { æ: 'ae', Æ: 'AE', ø: 'o', Ø: 'O', œ: 'oe', Œ: 'OE', ß: 'ss', ð: 'd', Ð: 'D', þ: 'th', Þ: 'Th', ł: 'l', Ł: 'L', đ: 'd', Đ: 'D' };

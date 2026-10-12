@@ -2952,6 +2952,101 @@ second blank is not later "fixed" as a fault.
 > copyright page takes the next page now, and the assertion was rewritten
 > rather than worked around.
 
+## 9as. A blank line is a blank line, and the two sizes stand together
+
+From Ken, in one message:
+
+> Something else in the function of when you go to design a page or any pages
+> where you can add text, when you skip a line, it doesn't skip a line. Like if
+> you hit enter and enter again, it should move the text down. And you should
+> be able to size the text independently. So you can highlight it and make like
+> something big and then have the rest small.
+
+Two asks. The first is a plain fault; the second was **built, correct, and off
+the bottom of the screen**.
+
+### The blank line, measured in a browser
+
+Driven on his own shape — a line, two Enters, another line, then a wider gap —
+the markup was right and every empty paragraph came back **nought pixels
+high**: `.bk-words p` is `margin: 0` with no content to make a line box, so the
+lines sat seventeen pixels apart however many times he pressed Enter. One
+Enter already made a new line; two made nothing at all.
+
+The **eBook had the same decision in the opposite shape**: `lines()` filtered
+empty lines out entirely, so a dedication set two lines apart in the book
+arrived with its lines run together. One intention, lost two different ways.
+
+A blank line a writer typed is now a paragraph of its own, **named**
+(`bk-words-gap` in the book, `gap` in the eBook) so the stylesheet and a
+reading system are talking about the same thing, and what gives it height is
+**generated content rather than a character**: a zero-width space written into
+the markup would be in the writer's words, in a search and in the eBook's own
+text, for a line that is supposed to be nothing at all. Measured after: 0 → 17
+pixels, the same as a line of the text, and the eBook validates at EPUBCheck
+5.2.1 with **0 fatals / 0 errors / 0 warnings**.
+
+A blank line at the very **top or foot** is still dropped in the eBook: that is
+the edge of a page rather than a gap between two lines, and air above the first
+words of a reflowable section is the reading system's to decide.
+
+### The two sizes were there, 341 pixels apart
+
+A designed page sets **two** lines of type — the first line takes `title` and
+every line under it takes `line`, which the markup has done since the page was
+built — and §18 gave the second its own controls. So *something big and then
+the rest small* worked: driven, 32 pixels and 12.
+
+**And measured in the real room the two sizes stood 341 pixels apart**, at
+y=945 and y=1286 in a 900-pixel window, with a case, a style, a tracking, a
+rule and a switch between them. Neither was on the screen at once, so the pair
+read as one size for the whole page — which is the report, and is this week's
+finding a further time: the feature there, working, and reading from the
+writer's chair as though it had never been built.
+
+The cause is that **the first group was hand-rolled while the second used
+`LineFields`** — two answers to *what is a line of type* on one card, and the
+reason they could sit that far apart. A page that carries its own words now
+draws both the same way, named for the line each one sets, one after the other:
+**THE FIRST LINE** and **THE LINES UNDER THEM**, 163 pixels, measured again,
+with one sentence under them saying what the pair is for.
+
+The **title page keeps its own group**, and that is a real difference rather
+than a second answer: there the two lines are the *title* and the *author*,
+with a subtitle set from the first, so the controls name elements rather than
+lines (§16d).
+
+**A true highlight-a-word size is deliberately not built**, and the reason is
+the box: the words are a plain `<textarea>`, so a size on a selection would
+have to be a **mark written into the text the writer is looking at** — they
+would see the mark. Addendum 02 §19a settled the same question for the
+manuscript and for the same reason: *a mark is the selection's and the type is
+the line's*. Per line is what this page's structure is, and it covers the thing
+asked for — a heading and the words under it.
+
+### What else looking caught
+
+Two sections both numbered **3** — *Typography* and *The leaves around this
+page* — because each card wrote its own number while two of the four are
+conditional, so every combination had to be got right by hand in four places
+and one of them was wrong. The numbers are **counted** now, in the order the
+cards are drawn.
+
+And the words box on *a page of your own* prompted **For whom, and why.** — the
+**dedication's** question, asked of a page that is not one (§17e's finding, in
+a placeholder rather than in a tile).
+
+### Not done, and named
+
+The Typography card still **starts at y=815 in a 900-pixel window**: `.dp-fields`
+holds 1759 pixels in a 653-pixel box, so a writer scrolls past *What goes on the
+page* and *Placement* before reaching any type at all. Bringing it up means
+either folding the cards — which is this room's own idiom (§9's inspector) and
+is not in this dialog — or reordering §9n's four steps, and neither is a change
+to make on the way past.
+
+No migration.
+
 ## 9ar. One act on a blank page, which is the design
 
 From Ken, after the fourth report of the same thing:

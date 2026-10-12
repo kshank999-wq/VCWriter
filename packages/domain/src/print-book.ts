@@ -351,9 +351,31 @@ const displayInner = (block: BookBlock, context: BookRenderContext): string => {
       // title's style and the rest the lines-under-it style, which is the
       // title page's own rule — an epigraph's attribution and a dedication's
       // second line are what those lines are.
+      /**
+       * **A line the writer left blank is a blank line** (§9as, from Ken:
+       * *when you skip a line, it doesn't skip a line. Like if you hit enter
+       * and enter again, it should move the text down*).
+       *
+       * Measured in a browser on his own shape — a line, two Enters, another
+       * line: the markup was right and every empty paragraph came back
+       * **nought pixels high**, `.bk-words p` being `margin: 0` with no
+       * content to make a line box, so the lines sat seventeen pixels apart
+       * however many times he pressed Enter.
+       *
+       * The gap is **named rather than left to `:empty`** so the stylesheet
+       * and a reading system are talking about the same thing, and what gives
+       * it height is generated content rather than a character: a zero-width
+       * space written into the book's text would be in the writer's words,
+       * in a search, and in the eBook's text, for a line that is supposed to
+       * be nothing at all.
+       */
       const words = block.text
         .split(/\n/)
-        .map((line, index) => `<p${index === 0 ? '' : ' class="bk-words-under"'}>${escapeHtml(line)}</p>`)
+        .map((line, index) =>
+          line.trim().length === 0
+            ? '<p class="bk-words-gap"></p>'
+            : `<p${index === 0 ? '' : ' class="bk-words-under"'}>${escapeHtml(line)}</p>`,
+        )
         .join('');
       /**
        * **A picture standing with the words** (§19, Ken's *a graphic at the
@@ -1118,6 +1140,10 @@ ${CHAPTER_STYLES}
   .bk-barcode { align-self: flex-end; margin-top: 0.6em; }
   .bk-barcode img { display: block; width: 100%; height: auto; }
   .bk-words p { margin: 0; font-style: italic; }
+  /* **A blank line takes a line** (§9as). Generated content rather than a
+     character in the book's own text, so the paragraph gets a line box at its
+     own type and a writer's words carry nothing they did not type. */
+  .bk-words p.bk-words-gap::before { content: "\\200B"; }
   /* The contents and the index are designed pages that **flow** (§7a): the
      style sits on the wrapper, so the entries take the line style by
      inheritance and a sub-entry's 0.92em stays a share of the entry rather
