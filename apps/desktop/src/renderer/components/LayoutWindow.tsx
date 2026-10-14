@@ -108,6 +108,7 @@ import {
   INSET_SPAN,
   INSET_RULE,
   cutsIntoText,
+  sayPictureCost,
   droppedFigurePlace,
   MEASURE_SPAN,
   FREE_SPAN,
@@ -521,6 +522,16 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
    * field the file has to carry.
    */
   const [placing, setPlacing] = useState<string | null>(null);
+  /**
+   * **How long the book was when the picture in hand was taken up** (§9at).
+   *
+   * It is read at the act rather than from an effect on `placing`, because the
+   * laying is recomputed a beat later: an effect would read whichever of the
+   * two layings happened to be current and so would sometimes compare the book
+   * against itself. Captured before the update, it is always the length before
+   * this picture, which is the only thing the sentence claims.
+   */
+  const pagesAtPickup = useRef<number | null>(null);
   /** The chapter whose opening layout is being set (§14); OPEN_LAYOUT for the book's. */
   const [layoutDialogId, setLayoutDialogId] = useState<string | null>(null);
   /**
@@ -602,6 +613,22 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
   const divisions = useMemo(() => contentsDivisions(file), [file]);
 
   const pages = laying?.laid.pages ?? [];
+  /**
+   * **What the picture in hand has done to the book** (§9at), said on the
+   * handle beside its size. It is a reading over the laying in front of the
+   * writer, so letting the corner go re-says it with nothing run, and it
+   * disappears with the handle.
+   */
+  const placingNote = useMemo(() => {
+    if (!placing || !laying || pagesAtPickup.current === null) return '';
+    const held = bookFigures(file).find((one) => one.elementId === placing);
+    if (!held) return '';
+    return sayPictureCost({
+      place: held.placement.place,
+      pages: laying.laid.pages.length - pagesAtPickup.current,
+      runsRound: cutsIntoText(laying.blocks, placing),
+    });
+  }, [placing, laying, file]);
   /** Every page of the book with a word for what stands on it (§9h). */
   const pageRows = useMemo(() => (laying ? bookPageRows(laying.laid.pages, laying.blocks) : []), [laying]);
   /** What each division folds open on: a range of pages, so none is lost (§9m). */
@@ -893,6 +920,9 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
 
   /** Open the picker for a picture that will become this. */
   const importArt = (target: ArtTarget) => {
+    // **The length of the book before this picture** (§9at), read here because
+    // every route that puts one in comes through this door.
+    pagesAtPickup.current = laying?.laid.pages.length ?? null;
     artTarget.current = target;
     artPicker.current?.click();
   };
@@ -1211,13 +1241,21 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
       ? []
       : ([
           {
-            label: 'Picture…',
+            /**
+             * **Named the same thing the panel names it** (§9at). This act has
+             * been here since the menu was built and was called *Picture…*,
+             * while the page's own panel — where a writer standing on a page
+             * looks — did not offer it at all: the one route into *a picture in
+             * the words, chosen first* was on the surface nobody opens for it,
+             * which is §9u's lesson about a route only one surface can reach.
+             */
+            label: 'Place a picture…',
             disabled: pageOffer.refusal,
             onPick: () => importPicture('measure'),
           },
         ] as MenuEntry[])),
     {
-      label: 'Picture on a page of its own…',
+      label: 'Full page picture…',
       disabled: pageOffer.refusal,
       // Where it will really land, where that is not the page in hand (§9w).
       note: pageOffer.note,
@@ -1227,7 +1265,9 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
       ? []
       : ([
           {
-            label: 'Draw a box for a picture…',
+            // Named for the one thing only it can do (§9at): hold the space
+            // before there is a picture, which is why §9ak kept it.
+            label: 'Hold space for a picture…',
             disabled: laying ? null : 'The book is still being set',
             onPick: () => setDrawing(true),
           },
@@ -1497,6 +1537,14 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
       rows={pageRows}
       drawing={drawing}
       onPut={() => importPicture('page', on)}
+      /* **A picture in the words, chosen before it is placed** (§9at). The act
+         already existed; what it never had was a way in from the page a writer
+         is standing on. The dialog goes, because the picture is sized on the
+         spread it is covering — the same reason `onDraw` has always had. */
+      onPlacePicture={() => {
+        setPageDialogSheet(null);
+        importPicture('measure', on);
+      }}
       onDraw={() => {
         // The box is drawn on the spread, so the dialog covering it goes.
         setPageDialogSheet(null);
@@ -1630,6 +1678,9 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
         // standing in, and closing it either way made the control vanish
         // under its own second press.
         if (placing !== figure.elementId) setPageDialogSheet(null);
+        // Taking a picture already in the book up: the sentence then says what
+        // moving it costs, from where the book stands now (§9at).
+        if (placing !== figure.elementId) pagesAtPickup.current = laying?.laid.pages.length ?? null;
         setPlacing((current) => (current === figure.elementId ? null : figure.elementId));
       }}
       onFill={() => importArt({ kind: 'fill', elementId: figure.elementId })}
@@ -2257,6 +2308,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
               placing={placing}
               placingEmpty={placing !== null && bookFigures(file).find((one) => one.elementId === placing)?.assetId == null}
               placingFree={placing !== null && bookFigures(file).find((one) => one.elementId === placing)?.placement.place === 'free'}
+              placingNote={placingNote}
               onSpan={(span, ofPage, tall) => {
                 const what = placing;
                 if (!what) return;
@@ -2340,6 +2392,8 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
               onGaveUp={() => setDrawing(false)}
               onDrawn={(placement, sheet, anchor) => {
                 if (!drawing || !laying) return;
+                // The book as it stands before the box goes in (§9at).
+                pagesAtPickup.current = laying.laid.pages.length;
                 setDrawing(false);
                 setSelectedSheet(sheet);
                 const at = pagePlace(laying.laid.pages, laying.blocks, sheet);
@@ -2866,6 +2920,7 @@ function Spreads({
   placing,
   placingEmpty,
   placingFree,
+  placingNote,
   onSlide,
   onSpan,
   onPick,
@@ -2895,6 +2950,8 @@ function Spreads({
   placingEmpty: boolean;
   /** The figure in hand is set over the page, so its width is a share of it. */
   placingFree: boolean;
+  /** What it has done to the words and to the length of the book (§9at). */
+  placingNote: string;
   /** Slid to a side, and before the element it was let go over. */
   onSlide(place: 'left' | 'right', anchor: FigureAnchor | null, at: { x: number; y: number }): void;
   /**
@@ -3188,6 +3245,7 @@ function Spreads({
         <PlacingHandle
           at={handles[key] ?? null}
           empty={placingEmpty}
+          note={placingNote}
           size={sizeOf(sheets.current[key] ?? null, handles[key] ?? null)}
           onSlideTo={(clientX, clientY) => {
             const sheetEl = sheets.current[key];
@@ -4024,6 +4082,7 @@ function PlacingHandle({
   at,
   empty,
   size,
+  note,
   onSlideTo,
   onCorner,
   onPick,
@@ -4035,6 +4094,8 @@ function PlacingHandle({
   empty: boolean;
   /** What it measures, said on the box itself: *3.1 × 2.0 in · 62% of the measure*. */
   size: string;
+  /** What it has done to the words, said before ✓ keeps it (§9at). */
+  note: string;
   onSlideTo(clientX: number, clientY: number): void;
   /** A corner dragged: the new width and height in the sheet's own pixels (§9m, §9af). */
   onCorner(width: number, height: number): void;
@@ -4206,6 +4267,14 @@ function PlacingHandle({
           it*). Read off the laid page every time, so it is the size the book
           will print rather than the size of the drag. */}
       <span className="layout-placing-size">{size}</span>
+      {/* **What the page has just given up, before ✓ keeps it** (§9at, from
+          Ken: *show a preview before committing that says whether the text
+          will move*). §9d's live laying stays — it is his own *you can slide it
+          around and watch the text move around it* — and what stands beside it
+          now is the half a writer cannot see on the spread: whether the book
+          got longer. Read off the laying rather than estimated, so it cannot
+          claim a cost the page does not show. */}
+      {note ? <span className="layout-placing-note">{note}</span> : null}
       {/* **The act that takes it away is not the one under the first finger**
           (§9af). ✗ stood leftmost, which is where a hand reaching for the
           middle-left of a box lands — so the one destructive mark on the
@@ -4270,6 +4339,7 @@ function StoryPageSection({
   page,
   drawing,
   onPut,
+  onPlacePicture,
   onDraw,
   onVector,
   onBlank,
@@ -4316,6 +4386,8 @@ function StoryPageSection({
   onRemovePage(): void;
   drawing: boolean;
   onPut(): void;
+  /** A picture into the words, chosen first and sized afterwards (§9at). */
+  onPlacePicture(): void;
   onDraw(): void;
   onVector(): void;
   /** A blank leaf before this page, wherever it lands (§9r): an element, a part or a chapter. */
@@ -4463,7 +4535,7 @@ function StoryPageSection({
           {!offer.refusal ? (
             <>
               <button type="button" className="small" onClick={onPut}>
-                Put a picture on this page…
+                Full page picture…
               </button>
               {/* **A leaf takes a page of its own and nothing else** (§9aa).
                   A box is cut into the words and a graphic is set over them,
@@ -4479,8 +4551,33 @@ function StoryPageSection({
                 <p className="muted small">{OWN_PAGE_ONLY_NOTE}</p>
               ) : (
                 <>
+                  {/* **The picture is chosen first, and then it is sized**
+                      (§9at, from Ken: *maybe the best way is to insert a
+                      picture on the page and then resize that picture to where
+                      you want it to be… instead of trying to create a box
+                      first, which it seems to cause errors*).
+
+                      The act it runs is the one `importPicture` has had since
+                      it was written and **no control on this panel called**:
+                      the three here were a page of its own, an empty box and a
+                      graphic over the page, so the one a writer asks for most —
+                      a picture, in the words, chosen before anything is
+                      dragged — was reachable from nowhere. It lands at the head
+                      of the page with the handle already in hand, which is the
+                      *then you can resize it with the corner pins* half. */}
+                  <button type="button" className="small" onClick={onPlacePicture}>
+                    Place a picture…
+                  </button>
+                  {/* **Named for the one thing only it can do** (§9at). It made
+                      an empty box and was called *Draw a box for a picture…*,
+                      which reads as the way to put a picture in — so a writer
+                      took it, got a rectangle saying *Picture goes here*, and
+                      had to find the ＋ on the handle to finish an act whose
+                      label said it was already about a picture. §9ak kept this
+                      route deliberately, for holding space before there is a
+                      picture; its name says that now. */}
                   <button type="button" className={drawing ? 'small on' : 'small'} onClick={onDraw}>
-                    {drawing ? 'Drawing the box…' : 'Draw a box for a picture…'}
+                    {drawing ? 'Drawing the box…' : 'Hold space for a picture…'}
                   </button>
                   {/* A vector graphic (§8c, from Ken: *add a vector graphic …
                       anywhere on the page, and then they can resize that also.

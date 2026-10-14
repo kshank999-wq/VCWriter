@@ -9546,6 +9546,39 @@ a.talk-mark:hover {
 }
 
 /*
+ * What it has done to the words, under the box (§9at, from Ken: *show a
+ * preview before committing that says whether the text will move*).
+ *
+ * It stands **under** where the size stands over, so neither can cover the
+ * other on a box at the head or the foot of a page, and it **wraps** — a
+ * sentence is not a measurement, and `nowrap` on this one would run it off the
+ * paper on a narrow box, which is the fault §9af found on the marks.
+ */
+.layout-placing-note {
+  position: absolute;
+  /*
+   * **Under the box whatever it says** (§9at, measured on the real spread).
+   * `bottom: -2.9em` anchors the note's *bottom* edge, so a sentence that
+   * wrapped to three lines grew **upwards** and climbed back over the picture,
+   * covering the lower-left corner grip — the one control a writer reaches for
+   * next. `top: 100%` anchors the edge that matters: the note begins where the
+   * box ends, at any length.
+   */
+  top: 100%;
+  margin-top: 6px;
+  left: 0;
+  max-width: 260px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1.35;
+  pointer-events: none;
+}
+
+/*
  * The corners (§9m, from Ken: *draggable corners that maintain its
  * squareness*). Only the width is dragged and the picture's own proportions
  * give the height, which is what keeps it square-cornered and unsquashed.

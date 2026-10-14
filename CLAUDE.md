@@ -3511,6 +3511,60 @@ push live; the build takes a minute or two.
   page, and switching it on would change the length of every collection already
   laid out, so the act is built and reachable while the default is its own
   decision.
+  **§9at is the picture before the box, and what it costs said before it is
+  kept**, from Ken after four reports of pictures landing where nobody put them
+  (*maybe the best way is to insert a picture on the page and then resize that
+  picture to where you want it to be… instead of trying to create a box first,
+  which it seems to cause errors*), plus the two renames and *a preview before
+  committing that says whether the text will move*. **Measured first**, and the
+  measurement is most of the answer: the page's own screen offered a page of its
+  own, an empty box and a graphic over the page, and **the act he asks for
+  already existed** — `importPicture('measure', …)` has put a picture into the
+  words and armed the handle since it was written, and the **＋ Add menu** has
+  called it all along while the page's screen, where a writer standing on a page
+  looks, never did; §9u's own lesson one surface over, *a route only one surface
+  can reach is a feature nobody finds*. So **Place a picture…** stands on both
+  under one name and opens the picker first, with the sizing §9ak already built
+  (a corner keeps the proportions, a drop in the white leaves the text alone);
+  **Full page picture…** and **Hold space for a picture…** are named for what
+  each makes rather than for where it is pressed, the old *Draw a box for a
+  picture…* having claimed to be the way to put a picture in, which is why
+  somebody who wanted one got a rectangle reading *Picture goes here* (measured:
+  the page went 32 characters to 87 the instant the pointer went up, with no
+  file picker anywhere in the act). **The preview is a sentence rather than a
+  held-back act**: §9d settled that the book is laid **live** while a picture is
+  dragged — Ken's own *you can slide it around and watch the text move around
+  it* — and ✓ and ✗ have been approve and reject since §9af, so what was missing
+  is that the handle said *2.09 × 2.33 in · 50% of the measure* and nothing
+  whatever about the paragraphs that had just moved. `sayPictureCost` is that
+  sentence, **read rather than estimated** (the page count comes off the laying
+  in front of the writer, so it cannot claim a cost the page does not show) and
+  in **the length of the book**, deliberately, a paragraph pushed down being
+  visible on the spread and a leaf added four chapters on not; it says *nothing
+  moves* for a graphic over the page with **no length clause at all**, and it can
+  say **shorter**, which §9al measured. The length is captured **at the act
+  rather than from an effect on the placing state**, the laying being recomputed
+  a beat later so an effect would sometimes compare the book against itself.
+  **Looking at it caught the fault of the day**: the note was positioned with
+  `bottom`, which anchors its *bottom* edge, so a sentence wrapping to three
+  lines grew **upwards**, climbed back over the picture and covered the
+  lower-left corner grip — the one control a writer reaches for next — fixed with
+  `top: 100%`, which anchors the edge that matters. Driven at 1440×900: the
+  picture lands at 4.19 × 6.07 in · 100% of the measure with the note reading
+  *The words stand above it and below it, never beside it. The book is the length
+  it was*, and a corner drag takes it to 3.41 × 4.98 in · 81% with the
+  proportions kept to three decimals. Eight assertions named the old labels and
+  were **updated rather than worked around**; no migration. **Named rather than
+  built**, three clauses of the ask colliding with rules already written down: a
+  picture that **stretches** as it is dragged (§9aj settled that it *fits* and is
+  never stretched, §9ak that a corner keeps its proportions — what is visible is
+  it scaling), positions snapped to **four quadrants** (§8c places a free graphic
+  *anywhere on the page, margins included*, on purpose), and **constrained by the
+  margins** (already `INSET_RULE` for a picture the text runs round, and
+  deliberately not true of one set over the page) — plus one the driving turned
+  up, a full-measure picture placed on a page that **opens a chapter** landing on
+  the next page because it cannot fit under the opening, which is the cutter
+  being right about a page the writer pointed at and wants measuring on its own.
   **§9as is a blank line being a blank line, and the two sizes standing
   together**, from Ken in one message (*when you skip a line, it doesn't skip a
   line. Like if you hit enter and enter again, it should move the text down.

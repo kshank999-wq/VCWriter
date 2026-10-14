@@ -365,7 +365,7 @@ describe('the room', () => {
    * there*, and then *we'll just make sure that it, the only way to do it is
    * to design a page*).
    *
-   * This walked every blank page asking for *Put a picture on this page…*,
+   * This walked every blank page asking for *Full page picture…*,
    * which is the control that went: the picture had **three** landing rules
    * on a blank page — a part in the front matter, a figure in the story, a
    * backwards reading at the end — and each decided where it landed from the
@@ -397,7 +397,7 @@ describe('the room', () => {
         expect((design as HTMLButtonElement).disabled).toBe(false);
         // And the picture is gone rather than standing beside it offering a
         // second answer about where a picture on this page would land.
-        expect(within(panel).queryByRole('button', { name: /^Put a picture on this page/ })).toBeNull();
+        expect(within(panel).queryByRole('button', { name: /^Full page picture/ })).toBeNull();
         looked += 1;
       }
       fireEvent.click(next);
@@ -422,7 +422,7 @@ describe('the room', () => {
    * standing beside it.
    *
    * The box tool itself is untouched and has its own test, through the one
-   * route it keeps: *Draw a box for a picture…*, which is for holding space
+   * route it keeps: *Hold space for a picture…*, which is for holding space
    * before there is a picture to put in it.
    */
   it('takes hold of a picture already in the book, rather than offering to draw it again', () => {
@@ -503,7 +503,7 @@ describe('the room', () => {
     const chosen = chooseStoryPage();
     fireEvent.doubleClick(chosen);
     const panel = document.querySelector('.layout-page-dialog') as HTMLElement;
-    const draw = within(panel).getByRole('button', { name: 'Draw a box for a picture…' });
+    const draw = within(panel).getByRole('button', { name: 'Hold space for a picture…' });
     // **Taking the tool up closes the page's dialog** (§9d, §9u): the box is
     // drawn on the spread the dialog was covering, so it gets out of the way.
     fireEvent.click(draw);
@@ -528,6 +528,50 @@ describe('the room', () => {
     expect(placed.span).toBeGreaterThan(0.2);
     // The drawing is over, and the box is gone.
     expect(document.querySelector('.layout-draw-box')).toBeNull();
+  });
+
+  /**
+   * **The picture is chosen first** (§9at, from Ken: *maybe the best way is to
+   * insert a picture on the page and then resize that picture to where you
+   * want it to be… instead of trying to create a box first, which it seems to
+   * cause errors*).
+   *
+   * Driving the real room before a line was written found that the act he
+   * describes **already existed and no control on this panel called it**:
+   * `importPicture('measure', …)` has put a picture into the words and armed
+   * the handle since it was written, and the page's own screen offered a page
+   * of its own, an empty box and a graphic over the page — so the one route
+   * into *a picture in the text, chosen before anything is dragged* was on the
+   * Add menu and nowhere a writer standing on a page would look. §9u's own
+   * lesson: a route only one surface can reach is a feature nobody finds.
+   *
+   * What is pinned is the **gesture** (§15a): the button is on the page's
+   * screen, and pressing it asks for the file rather than arming the box tool.
+   */
+  it('asks for the picture first on the page’s own screen, and arms no box', () => {
+    render(<Harness initial={novel()} />);
+    const chosen = chooseStoryPage();
+    fireEvent.doubleClick(chosen);
+    const panel = document.querySelector('.layout-page-dialog') as HTMLElement;
+    const place = within(panel).getByRole('button', { name: 'Place a picture…' });
+    // The three acts are named for what each one does, so the box tool no
+    // longer reads as the way to put a picture in (§9at).
+    expect(within(panel).getByRole('button', { name: 'Hold space for a picture…' })).toBeDefined();
+    expect(within(panel).getByRole('button', { name: 'Full page picture…' })).toBeDefined();
+    // Pressing it opens the file picker — the picture comes before the drag.
+    const picker = document.querySelector('input[aria-label="Art page file"]') as HTMLInputElement;
+    let asked = 0;
+    picker.click = () => {
+      asked += 1;
+    };
+    fireEvent.click(place);
+    expect(asked).toBe(1);
+    // And the box tool stays down: nothing is drawn to get a picture in.
+    expect(chosen.classList.contains('layout-sheet-drawing')).toBe(false);
+    expect(document.querySelector('.layout-draw-box')).toBeNull();
+    // The dialog gets out of the way, because the picture is sized on the
+    // spread it was covering — the same reason the box tool has always had.
+    expect(panel.hasAttribute('open')).toBe(false);
   });
 
   /**
@@ -562,7 +606,7 @@ describe('the room', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Add to the book' }));
     const sheet = chooseStoryPage();
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Draw a box for a picture…' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Hold space for a picture…' }));
     const rect = { left: 0, top: 0, width: 400, height: 600, right: 400, bottom: 600, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
     sheet.getBoundingClientRect = () => rect;
     sheet.setPointerCapture = () => undefined;
@@ -732,7 +776,7 @@ describe('the room', () => {
     expect(panel.textContent).not.toMatch(/this page’s alone/);
     fireEvent.click(within(panel).getByLabelText(/^About page /));
     expect(panel.textContent).toMatch(/this page’s alone/);
-    expect(within(panel).getByRole('button', { name: 'Put a picture on this page…' })).toBeDefined();
+    expect(within(panel).getByRole('button', { name: 'Full page picture…' })).toBeDefined();
     // And **Done** is gone (§9m): it did nothing the × did not.
     expect(within(panel).queryByRole('button', { name: 'Done' })).toBeNull();
     // How the page is set is a **way through** rather than a second copy
@@ -764,7 +808,7 @@ describe('the room', () => {
     fireEvent.doubleClick(opens.querySelector('.layout-rail-name') as HTMLElement);
     const panel = document.querySelector('.layout-page-dialog') as HTMLElement;
     const route = within(panel).getByRole('button', { name: /’s page…$/ });
-    const picture = within(panel).getByRole('button', { name: 'Put a picture on this page…' });
+    const picture = within(panel).getByRole('button', { name: 'Full page picture…' });
     // Document order: the route stands before the first picture button.
     expect(route.compareDocumentPosition(picture) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
@@ -974,7 +1018,7 @@ describe('the room', () => {
     expect(panel.hasAttribute('open')).toBe(true);
     /**
      * **The act is the design and the picture is reached through it** (§9ar).
-     * The leaf carried *Put a picture on this page…*, and the picture decided
+     * The leaf carried *Full page picture…*, and the picture decided
      * where it landed from the record it anchored to — so on the page before
      * a chapter that opens recto it came out on the chapter's own page. One
      * act now, on the page pointed at, whose screen offers the picture.
@@ -986,8 +1030,8 @@ describe('the room', () => {
      * the page ahead and draw there — absent rather than greyed, the menu's
      * own idiom for what does not apply.
      */
-    expect(within(panel).queryByRole('button', { name: 'Put a picture on this page…' })).toBeNull();
-    expect(within(panel).queryByRole('button', { name: 'Draw a box for a picture…' })).toBeNull();
+    expect(within(panel).queryByRole('button', { name: 'Full page picture…' })).toBeNull();
+    expect(within(panel).queryByRole('button', { name: 'Hold space for a picture…' })).toBeNull();
     expect(within(panel).queryByRole('button', { name: 'Add a vector graphic…' })).toBeNull();
     // **With the reason in its place** (§9ap, from Ken: *I want to be able to
     // add a vector or a picture*): absence is the room's idiom for *this does
@@ -1054,7 +1098,7 @@ describe('the room', () => {
      */
     const design = within(panel).getByRole('button', { name: 'Design this page…' }) as HTMLButtonElement;
     expect(design.disabled).toBe(false);
-    expect(within(panel).queryByRole('button', { name: 'Put a picture on this page…' })).toBeNull();
+    expect(within(panel).queryByRole('button', { name: 'Full page picture…' })).toBeNull();
   });
 
   it('writes the trim and says what was worked out from it', () => {
@@ -1607,7 +1651,7 @@ describe('the room', () => {
     render(<Harness initial={novel()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Add to the book' }));
     const story = chooseStoryPage();
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Draw a box for a picture…' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Hold space for a picture…' }));
     expect(story.classList.contains('layout-sheet-drawing')).toBe(true);
     const rect = { left: 0, top: 0, width: 400, height: 600, right: 400, bottom: 600, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
     story.getBoundingClientRect = () => rect;
@@ -1630,6 +1674,12 @@ describe('the room', () => {
     expect(document.querySelector('.layout-placing-size')?.textContent).toMatch(/in/);
     expect(document.querySelectorAll('.layout-placing-grip')).toHaveLength(4);
     expect(document.querySelector('.layout-inspector')).toBeNull();
+    // **And what it has just done to the words** (§9at, from Ken: *show a
+    // preview before committing that says whether the text will move*). §9d's
+    // live laying is his own earlier ask and stays; what stands beside it now
+    // is the half the spread cannot show — whether the book got longer —
+    // where the handle used to carry a measurement and nothing else.
+    expect(document.querySelector('.layout-placing-note')?.textContent).toMatch(/The book is/);
 
     // And the picture goes in afterwards, which is the order Ken asked for.
     fireEvent.click(screen.getByLabelText('Put a picture in this box'));
@@ -1643,7 +1693,7 @@ describe('the room', () => {
   it('brings a picture page to face the chapter it is dropped on', async () => {
     render(<Harness initial={novel()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Add to the book' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Picture on a page of its own…' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Full page picture…' }));
     // Nothing was chosen, so the menu refuses rather than guessing a page.
     expect(partsOf(latest as ProjectFile).some((part) => part.kind === 'plate')).toBe(false);
 
@@ -1651,7 +1701,7 @@ describe('the room', () => {
     const sheet = document.querySelector('.layout-sheet:not(.layout-no-sheet)') as HTMLElement;
     fireEvent.click(sheet);
     fireEvent.click(screen.getByRole('button', { name: 'Add to the book' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Picture on a page of its own…' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Full page picture…' }));
     chooseArt('plate.png');
     await waitFor(() => expect(partsOf(latest as ProjectFile).some((part) => part.kind === 'plate')).toBe(true));
     expect(partsOf(latest as ProjectFile).find((part) => part.kind === 'plate')!.inFront).toBe(true);
@@ -2157,7 +2207,7 @@ describe('drawing a box that never happens', () => {
     // the whole spread's.
     const story = document.querySelector('.layout-sheet:not(.layout-no-sheet)') as HTMLElement;
     fireEvent.click(story);
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Draw a box for a picture…' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Hold space for a picture…' }));
     expect(story.classList.contains('layout-sheet-drawing')).toBe(true);
 
     const rect = { left: 0, top: 0, width: 400, height: 600, right: 400, bottom: 600, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
@@ -2275,7 +2325,7 @@ describe('designing a blank page, from the rail', () => {
     expect(design.disabled).toBe(false);
     // And the picture item is greyed with the route in its title rather than
     // acting and landing somewhere else.
-    const picture = within(menu).getByRole('menuitem', { name: /Picture on a page of its own/ }) as HTMLButtonElement;
+    const picture = within(menu).getByRole('menuitem', { name: /Full page picture/ }) as HTMLButtonElement;
     expect(picture.disabled).toBe(true);
     expect(picture.title).toMatch(/Design this page/);
     fireEvent.click(design);

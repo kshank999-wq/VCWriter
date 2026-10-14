@@ -1456,6 +1456,54 @@ export const MEASURE_SPAN = { min: 0.2, max: 1, default: 1 } as const;
 export const cutsIntoText = (blocks: readonly BookBlock[], elementId: string): boolean =>
   blocks.some((block) => block.inset?.figureId === elementId);
 
+/** What a picture standing where it stands has done to the book (§9at). */
+export interface PictureCost {
+  /** Where it stands, which is what decides whether the words give anything up. */
+  place: FigurePlace;
+  /** Pages the book has gained since this picture went in; negative if it lost any. */
+  pages: number;
+  /** Whether anything follows it on the page for the words to run round. */
+  runsRound: boolean;
+}
+
+/**
+ * **What this picture is doing to the words, said before it is kept** (§9at,
+ * from Ken: *show a preview before committing that says whether the text will
+ * move, which the writer approves or not*).
+ *
+ * §9d settled that the picture is **laid live** while it is dragged — his own
+ * *you can slide it around and watch the text move around it* — and that is
+ * right and stays: a gesture that showed a grey rectangle and applied
+ * something else afterwards would be a worse answer to the same question. What
+ * was missing is not a held-back act but a **statement**: the handle carried
+ * the size and said nothing at all about what the page had just given up, so a
+ * writer watching three paragraphs move could see *that* something happened and
+ * had to count pages to find out *what*. ✓ and ✗ were already approve and
+ * reject (§9af); this is the sentence they were missing.
+ *
+ * Two rules keep it honest. **It is read, never estimated** — the page count
+ * comes from the laying the writer is looking at, so it cannot claim a cost the
+ * page does not show. And **the length of the book is the unit**, because that
+ * is the one consequence a writer cannot see on the spread in front of them: a
+ * picture that pushes a paragraph down is visible and a picture that adds a
+ * leaf four chapters on is not.
+ */
+export const sayPictureCost = (cost: PictureCost): string => {
+  const length =
+    cost.pages === 0
+      ? 'The book is the length it was.'
+      : cost.pages > 0
+        ? `The book is ${cost.pages} page${cost.pages === 1 ? '' : 's'} longer.`
+        : `The book is ${-cost.pages} page${cost.pages === -1 ? '' : 's'} shorter.`;
+  if (cost.place === 'free') return 'Nothing moves: it stands over the page and the words are exactly where they were.';
+  if (cost.place === 'page') return `It is a page of its own, and the words go on after it. ${length}`;
+  if (cost.place === 'measure')
+    return `The words stand above it and below it, never beside it. ${length}`;
+  return cost.runsRound
+    ? `The words after it run round it. ${length}`
+    : `Nothing follows it for the words to run round, so it stands across the measure. ${length}`;
+};
+
 /**
  * A figure's placement, read off its element (§8). The manuscript prints
  * every figure across the measure and never looks at this; only the book
