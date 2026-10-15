@@ -1834,15 +1834,35 @@ button.tool:disabled {
   position: relative;
 }
 
+/*
+ * Which module you are in (addendum 35 §2), **in the flow** (addendum 26 §17).
+ *
+ * §2 centred it absolutely, on the argument that a bar's two sides are
+ * different widths in every room so a flex child lands wherever they leave it.
+ * That is true and it bought a worse thing, which only looking caught: **the
+ * middle of a bar is not always empty.** In the Note Sorter it drew straight
+ * across that room's progress rail, and giving it the bar's own ground to be
+ * legible on then hid the fourth tab — *Send to Outliner*, a control, behind a
+ * label. §2 measured that it was centred to the pixel and never asked what was
+ * underneath it, which is the whole of the fault: **being out of the flow is
+ * what let it cover something, and no amount of positioning fixes that.**
+ *
+ * So it stands in the bar as an ordinary child, beside the room's own name.
+ * Ken asked for the centre and what he asked it for is *just so you know what
+ * module you're in*; a label in the middle that hides a tab answers that worse
+ * than one an inch to the left. It keeps the chip's shape so it reads as a
+ * statement about the room rather than as a control.
+ */
 .room-format {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  max-width: 34%;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 30%;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+  padding: 2px 9px;
+  border-radius: 10px;
+  background: var(--panel-2);
   font-family: var(--display);
   font-size: 11px;
   letter-spacing: 0.08em;
@@ -18761,6 +18781,10 @@ dialog.designed-page-dialog[open] {
 }
 
 .ns-sitting {
+  /* It gives way before the format does (addendum 26 §17): §16b's order puts
+     the room's name first and the sitting's second, and which module you are
+     in is the one thing on this bar nothing else says. */
+  flex-shrink: 10;
   font-size: 13px;
   color: var(--text);
   white-space: nowrap;
@@ -19448,6 +19472,195 @@ dialog.designed-page-dialog[open] {
    a target that is not on the screen, and half the stacks were past the edge at
    1500px. With the chips above taking the unused categories, everything a
    passage can go to is in front of the writer. */
+/*
+ * The folders, stacked (addendum 26 §17, from Ken: *the categories also need
+ * to show up in a box stacked on top of each other… like it looks like the
+ * outline, but it's little folders*).
+ *
+ * A **column** where §8 had a wrapping row, which is the whole of the ask: a
+ * list is read down and a wrapped row is read as a paragraph of boxes. It
+ * scrolls, so a sitting of twenty folders costs nothing across — which is also
+ * why §8's chip could go, that having been a way of fitting many folders into a
+ * width this no longer spends.
+ */
+/* The two screens (addendum 26 §17): categories, and the outline. */
+.ns-where {
+  display: flex;
+  gap: 2px;
+}
+
+.ns-room .ns-where-tab,
+.ns-room .ns-where-tab:hover {
+  padding: 3px 11px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: transparent;
+  box-shadow: none;
+  font-family: var(--display);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ns-room .ns-where-tab.on {
+  border-color: var(--gold-deep);
+  background: var(--gold-deep);
+  color: var(--gold-bright);
+}
+
+/* The outline table. Rows read down and step in by depth, so it looks like the
+   outline — which is what it is a reading of. */
+.ns-outline {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-height: 0;
+}
+
+.ns-outline-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.ns-room .ns-outline-row,
+.ns-room .ns-outline-row:hover {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  width: 100%;
+  text-align: left;
+  padding: 5px 9px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: var(--panel-2);
+  box-shadow: none;
+  color: var(--text);
+  font-size: 12.5px;
+}
+
+.ns-room .ns-outline-row:hover {
+  background: var(--panel);
+}
+
+.ns-room .ns-outline-row.over {
+  border-color: var(--gold-bright);
+  background: var(--ink);
+}
+
+/* A chapter, a section under it, a subsection under that.
+ *
+ * **Indented by padding rather than by a margin**: the row is `width: 100%`,
+ * so a margin is added to that width and the row grows past the panel — driving
+ * it put the note count of every section off the right edge, behind a scrollbar
+ * that draws nothing (addendum 19 §10 again). Padding indents the words and
+ * leaves the row where it is. */
+.ns-outline-row.d1 { padding-left: 25px; }
+.ns-outline-row.d2 { padding-left: 41px; }
+
+/* Still a plan rather than a chapter the book has (addendum 28 §4c). */
+.ns-room .ns-outline-row.planned {
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--border);
+}
+
+.ns-outline-n {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.ns-outline-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ns-outline-plan {
+  flex: 0 0 auto;
+  padding: 1px 7px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ns-folders {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  padding-bottom: 6px;
+  flex: 1;
+  min-height: 0;
+}
+
+.ns-folder {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--ns-tint, var(--border));
+  border-radius: 4px;
+  background: var(--panel-2);
+  overflow: hidden;
+}
+
+/* All notes is a reading rather than a place, so it takes no tint and no drop. */
+.ns-folder.all {
+  border-left-color: var(--border);
+  background: transparent;
+}
+
+.ns-room .ns-folder.over {
+  border-color: var(--gold-bright);
+  background: var(--ink);
+}
+
+/* The row that names the folder. A press files what is in hand, or opens it. */
+.ns-room .ns-folder-head,
+.ns-room .ns-folder-head:hover {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  padding: 6px 9px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  font-family: var(--display);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--text);
+}
+
+.ns-room .ns-folder-head:hover {
+  background: var(--panel);
+}
+
+.ns-fold-arrow {
+  width: 10px;
+  flex: 0 0 auto;
+  color: var(--muted);
+}
+
+/* What is inside, once it is open. */
+.ns-folder-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 0 9px 8px 22px;
+}
+
 .ns-stack-row {
   display: flex;
   flex-wrap: wrap;

@@ -6875,7 +6875,78 @@ push live; the build takes a minute or two.
   writer is refining every card is filed and it would have nothing to say,
   while here approving a row greys the passage an inch to the left. The
   **switch is per machine and dismissing is about this minute**. Driving it
-  caught three of one kind: the **dismissal sentence lied** (*nothing here looks
+  **§17 is the batch, the folders, and the outline as a second screen**, from
+  Ken in one message and two refinements (*there's something that says plus
+  sitting. I'm not sure what that is. And when you go to sort, if you hit
+  sitting, it takes everything away… you can't see all your notes again* …
+  *the categories also need to show up in a box stacked on top of each other…
+  little folders. And then you can click in those folders and see the notes in
+  that folder* … *you'll have a categories tab, and then you'll have an outline
+  tab for sorting, which will give you two separate screens*), and **not one of
+  the four is a broken act** — every one is a writer unable to reach something
+  the room already does. **Measured first**: pressing *+ Sitting* on a book with
+  a source in it left the picker reading **`["Mathematics · notes",
+  "Mathematics · notes"]`** over a panel saying *Nothing in yet*, under a notice
+  carried over from the sitting just left — `beginSession` takes its name from
+  the room and the room passed `${title} · notes` every time, so the second
+  arrived under the first one's name and **the one control that leads back could
+  not say which way**. Nothing was lost and nothing could be found, which from
+  the writer's chair is the same thing and worse. Three things answer it and
+  none is a warning: `sittingName` names it for **the day it was started** (the
+  one fact true before anything is in it, numbered by `freeName` where two fall
+  on one day — addendum 34's rule pointed at a name), `sittingsStanding` makes
+  the picker say **what is in each** (pressing a row to find out being the one
+  act that takes a writer further from the work they are looking for), and the
+  press **says where the old one went**; the button is **+ New batch**, named
+  for what it makes where *+ Sitting* was this room's private word on a bar with
+  nothing to explain it. **§17.2 is every note in one place**, said twice and so
+  read as a requirement: every list here is **a list of one thing** — one
+  source's text, one folder's cards — so *Everything*, a display mode over **one
+  source**, answered a question about that page rather than about the notes
+  (*when you go into a note and you hit everything, it just shows everything in
+  the note*). `everyNote` is the reading and **All notes** the folder at the head
+  that draws it, **a reading rather than a place** so it takes no drop, with a
+  note referenced into a second folder listed **once** (§10 — a reference is a
+  second place to find one card). **§17.3 is the folders stacked and openable**:
+  a **column** where §8 had a wrapping row, §8's **chip gone rather than kept
+  beside them** (that decision having been made so fifteen categories would fit
+  *across* a row, which a column does by being a column), and **a press with
+  nothing in hand opens a folder rather than refusing** — addendum 28 §4c's own
+  rule in the room it came from, `file_` having refused with *Highlight some
+  words first* so the only thing a writer could do to a folder was file into it.
+  **§17.4 is the outline, and the audit paid**: addendum 28 built every part of
+  it next door — `contentsShelf` already lists the book's chapters and sections
+  **and then the Outliner's rows that are still plans**, `filingOffer` says what
+  a drop would do, `fileNoteUnder` refuses the same things again and `placeNow`
+  reads through the binding — so **nothing about the outline is copied here** and
+  a chapter renamed in the Outliner is renamed on this table with nothing run,
+  which is his *it will continually update with new sections*. What is new is
+  **one act rather than two**: `extractToOutline` is `captureFromScript`'s rule,
+  **filed and placed in one act and keeping nothing at all if the placing
+  fails**, with **the folder the pile deliberately** — which shelf a note sits on
+  and where it belongs in the book are two questions (addendum 28 §3) and a drop
+  onto a chapter answers only the second. **Two screens rather than two tables**
+  is Ken's own correction and the right one, stacking them having made a writer
+  scroll past one to reach the other, with the switch **absent where there is no
+  outline to show**. **§17.6 is a fault that shipped yesterday**: addendum 35 §2
+  centred the format label absolutely, and driving this room found INSTRUCTIONAL
+  BOOK across the progress rail — then, given the bar's own ground to be legible
+  on, **hiding the fourth tab**, *Send to Outliner*, a control, behind a label.
+  **§2 measured that it was centred to the pixel and never asked what was
+  underneath**, which is the whole of it: *being out of the flow is what let it
+  cover something, and no amount of positioning fixes that*. It is an ordinary
+  child of the bar now, with the sitting's name giving way before it (§16b's
+  order with the format inserted where it belongs — the tabs say which room and
+  nothing else says which format). And the outline rows **ran off the right
+  edge**, `width: 100%` indented with a `margin-left` that is added to that
+  width, so every section's count sat past the panel behind a scrollbar that
+  draws nothing (addendum 19 §10 again); padding indents the words and leaves the
+  row where it is. **Named rather than built**: **subsections**, `contentsShelf`
+  being depth 0 for a chapter and 1 for a section while a subsection is a beat,
+  and listing beats would put a hundred rows under a book's worth of sections.
+  Two assertions pinned the behaviour this replaces — the cards drawn on every
+  closed stack, and the chip — and are **rewritten rather than worked around**.
+  Driving it also caught three of one kind: the **dismissal sentence lied** (*nothing here looks
   enough like any of your categories*, said to somebody who had just dismissed
   four things that did — `describeSuggestions` is told how many were put aside
   and there is a way back), **Approve was below the panel's own scroll**

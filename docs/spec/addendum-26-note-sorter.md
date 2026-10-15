@@ -662,3 +662,188 @@ is read twice — once for what the screen must do and once for what it must loo
 like**, and doing the first alone produces a room that passes every test, keeps
 every promise, and reads to the person who asked for it as though the mockups
 were never opened.
+
+---
+
+## §17 The batch, the folders, and the outline as a second screen
+
+From Ken, in one message and then two refinements:
+
+> So you'll have a categories tab, and then you'll have an outline tab for
+> sorting, which will give you two separate screens.
+
+and before it:
+
+> there's something that says plus sitting. I'm not sure what that is. And when
+> you go to sort, if you hit sitting, it takes everything away. And then you've
+> got to add all, you can't see all your notes again, unless there's a function
+> that does that. So you need to have a way to get back to see all the notes…
+> when you add chapters and sections to your outline, you need to have the
+> ability when you're sorting to drop it in those research sections… The
+> categories also need to show up in a box stacked on top of each other… like
+> it looks like the outline, but it's little folders. And then you can click in
+> those folders and see the notes in that folder. **Definitely need a way to
+> see all notes.**
+
+Four complaints and **none of them is a broken act**. Every one is a writer
+unable to reach something the room already does, which is this project's
+commonest finding and the reason the measurement comes first.
+
+---
+
+### §17.1 The batch, measured
+
+Driven in the real preview on a fresh instructional book, one source typed in,
+then *+ Sitting* pressed:
+
+| | |
+| --- | --- |
+| the picker before | *absent* — one sitting, so nothing to choose between |
+| the picker after | `["Mathematics · notes", "Mathematics · notes"]` |
+| the sources panel | **Nothing in yet** |
+| the notice bar | *Typed notes is in. Go to Sort and start highlighting.* |
+
+**Two identical rows.** `beginSession` is handed a name by the room and the
+room passed `${project.title} · notes` every time, so the second sitting
+arrived under the first one's name and the one control that leads back could
+not say which way. Nothing was lost; it could not be found, which from the
+writer's chair is the same thing and worse — the screen had just gone blank and
+the notice over it was a sentence from the sitting he had left.
+
+Three things answer it, and none is a warning.
+
+**It is named for the day it was started.** `sittingName` is that reading —
+`Notes · 15 October` — the one fact about a batch that is true before anything
+is in it and the one a writer recognises afterwards; two on one day are
+numbered by `freeName`, addendum 34's *nothing already there is replaced*
+pointed at a name rather than a file.
+
+**The picker says what is in each.** `sittingsStanding` gives
+`Notes · 15 October — 3 sources · 12 notes`, because **what is in a batch is
+what tells it from another** and pressing a row to find out is the one act that
+takes a writer further from the work they are looking for.
+
+**The press says what happened and where the old one went** — *“Mathematics ·
+notes” is still here — pick it from the list at the top left* — a screen going
+blank with nothing said being the whole of the report.
+
+And the button is named for what it makes: **+ New batch**, where *+ Sitting*
+was this room's private word on a bar with nothing to explain it, which is what
+*I'm not sure what that is* says exactly.
+
+### §17.2 Every note, in one place
+
+Said twice in one message, which is how this project reads a requirement.
+
+Every list in this room is **a list of one thing** — one source's text, one
+folder's cards — and between them a writer could see each part of their notes
+and never the whole. *Everything* is a display mode over **one source**, so
+pressing it answers a question about that page rather than about the notes,
+which is his *when you go into a note and you hit everything, it just shows
+everything in the note*.
+
+`everyNote` is the reading and **All notes** is the folder at the head of the
+column that draws it: every note of the batch with the folder it is in. It is a
+**reading rather than a place**, so it takes no drop and carries no colour, and
+a note referenced into a second folder (§10) is listed **once** — a reference is
+a second place to find one card, and a list that counted it twice would be
+answering a different question.
+
+### §17.3 Folders, stacked, that open
+
+Two things change and both are his.
+
+**A column where §8 had a wrapping row.** A dozen folders in a wrapped row read
+as a paragraph of boxes; a list is read down. §8's **chip** — a folder with
+nothing in it drawn small — is **gone rather than kept beside them**, that
+decision having been made so fifteen categories would fit *across* a row, which
+a column does by being a column.
+
+**And a press opens one.** It could not before: `file_` refuses with *Highlight
+some words first* where nothing is in hand, so the only thing a writer could do
+to a folder was file into it, and what was inside could be read only from
+another tab. **With nothing in hand the press opens it rather than refusing** —
+addendum 28 §4c's own rule, in the room it came from — so the drag still files,
+the press still files while a passage is held, and the gesture that was a
+refusal is now the way in.
+
+### §17.4 The outline, as a second screen
+
+The audit paid: **addendum 28 built every part of this for the room next door.**
+
+| What this needed | What was already there |
+| --- | --- |
+| the chapters and sections to aim at | `contentsShelf` — the book's, **and then the Outliner's rows that are still plans** (§4c) |
+| what a drop would do | `filingOffer` |
+| the act | `fileNoteUnder`, which refuses the same things again |
+| a planned row that gets promoted | `placeNow`, which reads through the binding |
+
+So **nothing about the outline is copied into this room**: a chapter renamed in
+the Outliner is renamed on this table with nothing run, and a section added
+there appears here, which is his *it will continually update with new sections*.
+The count on each row is the notes already filed under it — his *it'll show what
+notes are sorted into those categories*.
+
+What is new is **one act rather than two**. A passage dropped on a chapter has
+to become a note before it can be filed under one, so `extractToOutline` is
+`captureFromScript`'s rule (addendum 08 stage 4): **filed and placed in one act,
+and it keeps nothing at all if the placing fails**, a card left in a pile after
+a drop onto a chapter being the one confusing outcome.
+
+**The folder is the pile, deliberately.** Which shelf a note sits on and where
+it belongs in the book are two questions (addendum 28 §3), and a drop onto a
+chapter answers only the second — so it goes to Unsorted, which says truthfully
+that nobody has filed it yet, and the folders screen goes on showing it as work
+still to do. The offer says so before the press.
+
+**Two screens rather than two tables**, which is Ken's own correction and the
+right one: both answer *where does this passage go* and they answer it about
+different things, so stacking them in one column made a writer scroll past one
+to reach the other and read as one long list of places. The switch is **absent
+where there is no outline to show**, a tab that can only be empty being one that
+lies.
+
+### §17.5 Driven
+
+At 1440×900 on an instructional book with a chapter and two sections planned in
+the Outliner:
+
+- the picker reads `Mathematics · notes — 1 source · 0 notes` and
+  `Notes · 15 October — nothing in it yet`, with the notice naming the way back;
+- the folders are **nine boxes in a column**, each opening on a press;
+- the switch reads **CATEGORIES | OUTLINE**, and the outline screen draws
+  `1 Light`, `1.1 Untitled`, `1.2 Refraction`, `1.3 Lenses`, each marked **plan**
+  and stepped in by depth.
+
+### §17.6 Faults only looking caught
+
+**One of them shipped yesterday.** Addendum 35 §2 centred the room's format
+label absolutely, and driving this room found `INSTRUCTIONAL BOOK` drawn
+straight across the progress rail. Giving it the bar's own ground to be legible
+on then **hid the fourth tab** — *Send to Outliner*, a control, behind a label.
+§2 measured that it was centred to the pixel and never asked what was
+underneath, which is the whole of the fault: **being out of the flow is what let
+it cover something, and no amount of positioning fixes that.** It is an ordinary
+child of the bar now, beside the room's own name. Ken asked for the centre and
+what he asked it for is *just so you know what module you're in*; a label in the
+middle that hides a tab answers that worse than one an inch to the left. The
+sitting's name gives way before it does, §16b's order of giving way with the
+format inserted where it belongs — the tabs already say which room and nothing
+else says which format.
+
+**And the outline rows ran off the right edge.** They are `width: 100%` and were
+indented with a `margin-left`, which is added to that width, so the note count of
+every section sat past the panel behind a scrollbar that draws nothing until the
+pointer is in it — addendum 19 §10 and 25 §4g a further time. Padding indents the
+words and leaves the row where it is.
+
+### §17.7 Named rather than built
+
+**Subsections.** `contentsShelf` is depth 0 for a chapter and 1 for a section,
+which on an instructional book is Chapter and Section; a Subsection is a beat,
+and listing beats here would put a hundred rows under a book's worth of
+sections. Ken named them, and the honest answer is that the table lists what the
+shelf lists until somebody decides a beat is a thing research is aimed at.
+
+**Two assertions pinned the behaviour this replaces** — the cards drawn on every
+closed stack, and the chip — and are **rewritten rather than worked around**.

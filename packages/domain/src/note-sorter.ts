@@ -5,6 +5,9 @@ import { isInstructional, nounsFor } from './formats.js';
 import { onlyLiving } from './graveyard.js';
 import { newId } from './ids.js';
 import { orderKeyBetween, orderKeyForIndex } from './ordering.js';
+import { freeName } from './saving.js';
+import { fileNoteUnder } from './chapter-notes.js';
+import type { NotePlace } from './chapter-notes.js';
 import type { NoteSessionId, NoteSourceId, ResearchCategoryId, ResearchItemId } from './ids.js';
 import type { ProjectFormat } from './entities/project.js';
 import type { ProjectFile } from './project-file.js';
@@ -118,6 +121,62 @@ export const sortingSessions = (file: ProjectFile): NoteSession[] =>
     .filter((one) => !one.archived)
     .sort((a, b) => (a.orderKey < b.orderKey ? -1 : 1));
 
+/**
+ * **What to call a sitting, so one can be told from another** (§17, from Ken:
+ * *there's something that says plus sitting… if you hit sitting, it takes
+ * everything away. And then you've got to add all, you can't see all your
+ * notes again*).
+ *
+ * The room named every sitting `<project> · notes`, so a second one arrived
+ * under **the same name as the first** and the picker offered two identical
+ * rows — measured in the real room, `["Mathematics · notes", "Mathematics ·
+ * notes"]`. Nothing was lost and nothing could be found, which from the
+ * writer's chair is the same thing and worse, because the screen had just gone
+ * blank and the only control that leads back could not say which way.
+ *
+ * So a sitting is named for **the day it was started**, which is the one fact
+ * about it that is true before anything is in it and the one a writer
+ * recognises afterwards; where two begin on one day `freeName` numbers the
+ * second, which is addendum 34's rule (*nothing already there is replaced*)
+ * pointed at a name rather than a file.
+ */
+export const sittingName = (file: ProjectFile, at: string = nowIso()): string => {
+  const day = new Date(at);
+  const stem = Number.isNaN(day.getTime())
+    ? 'Notes'
+    : `Notes · ${day.getDate()} ${day.toLocaleString('en-GB', { month: 'long' })}`;
+  const taken = new Set(sortingSessions(file).map((one) => one.name));
+  return freeName(stem, (candidate) => taken.has(candidate));
+};
+
+/** What a sitting holds, for a list that has to tell one from another. */
+export interface SittingStanding {
+  session: NoteSession;
+  sources: number;
+  cards: number;
+  /** The name with what is in it after it, which is what a picker shows. */
+  says: string;
+}
+
+/**
+ * Every sitting with what is in it (§17).
+ *
+ * The picker carried names alone, and two sittings started a minute apart are
+ * then two rows a writer must press to tell apart — pressing being the one act
+ * that takes them away from the work they are looking for. **What is in it is
+ * what identifies it**, so the count is said rather than found by looking.
+ */
+export const sittingsStanding = (file: ProjectFile): SittingStanding[] =>
+  sortingSessions(file).map((session) => {
+    const sources = sourcesOf(file, session.id).length;
+    const cards = sessionCards(file, session.id).length;
+    const held =
+      sources === 0 && cards === 0
+        ? 'nothing in it yet'
+        : `${sources} source${sources === 1 ? '' : 's'} · ${cards} note${cards === 1 ? '' : 's'}`;
+    return { session, sources, cards, says: `${session.name} — ${held}` };
+  });
+
 /** The sources of one sitting, in the order they were added. */
 export const sourcesOf = (file: ProjectFile, sessionId: NoteSessionId): NoteSource[] =>
   file.noteSources
@@ -148,6 +207,42 @@ export const cardsIn = (file: ProjectFile, categoryId: ResearchCategoryId): Rese
         one.alsoIn.some((ref) => (ref as string) === (categoryId as string)),
     )
     .sort((a, b) => (a.orderKey < b.orderKey ? -1 : 1));
+
+/** A note with the folder it is filed in. */
+export interface FiledNote {
+  card: ResearchItem;
+  /** Its home folder, which every card has — the pile counts. */
+  category: ResearchCategory | null;
+  /** What that folder is called, for a list that shows every note at once. */
+  where: string;
+}
+
+/**
+ * **Every note in the sitting, with where it is filed** (§17, from Ken said
+ * twice: *you need to have a way to get back to see all the notes* …
+ * *Definitely need a way to see all notes*).
+ *
+ * Every list in this room is **a list of one thing** — one source's text, one
+ * folder's cards — and between them a writer could see each part of their
+ * notes and never the whole. *Everything* is a display mode over **one
+ * source**, so pressing it answered a question about that page rather than
+ * about the notes, which is exactly what he reports (*when you go into a note
+ * and you hit everything, it just shows everything in the note*).
+ *
+ * It is a **reading**, so a note filed a second ago is on it with nothing run,
+ * and a note is listed **once** wherever it has also been referenced — a
+ * reference is a second place to find one card (§10) and a list of everything
+ * that counted it twice would be answering a different question.
+ */
+export const everyNote = (file: ProjectFile, sessionId: NoteSessionId): FiledNote[] => {
+  // `sessionCategories` already carries the pile, last, so there is one list
+  // of folders rather than the writer's plus a special case.
+  const folders = new Map(sessionCategories(file, sessionId).map((one) => [one.id as string, one] as const));
+  return sessionCards(file, sessionId).map((card) => {
+    const category = folders.get(card.categoryId as string) ?? null;
+    return { card, category, where: category ? category.name : 'Unsorted' };
+  });
+};
 
 // ----------------------------------------------------------- what is sorted
 
@@ -577,6 +672,67 @@ export const extractToCategory = (
     updatedAt: at,
   });
   return { file: { ...file, researchItems: [...file.researchItems, card] }, card };
+};
+
+/**
+ * **Sort a passage straight into the outline** (§17, from Ken: *when you add
+ * chapters and sections to your outline, you need to have the ability when
+ * you're sorting to drop it in those research sections* … *make a second table
+ * for the outline in the sorting area that just shows outline chapters
+ * sections and subsections*).
+ *
+ * The audit paid: addendum 28 built every part of this for the room next door.
+ * `contentsShelf` already lists **the book's chapters and sections and then the
+ * Outliner's own rows**, `filingOffer` already says what a drop would do and
+ * `fileNoteUnder` already refuses the same things again, and `placeNow` already
+ * reads through the binding so a note sorted under a planned chapter follows
+ * that chapter when it is promoted. So there is no second idea of what a
+ * chapter is here, and nothing about the outline is copied into this room.
+ *
+ * What is new is **one act rather than two**. A passage dropped on a chapter
+ * has to become a note before it can be filed under one, and a writer who did
+ * that by hand would make a card, hunt for it and place it; so this is
+ * `captureFromScript`'s rule (addendum 08 stage 4) — **filed and placed in one
+ * act, and it keeps nothing at all if the placing fails**, since a card left in
+ * a pile after a drop onto a chapter is the one confusing outcome.
+ *
+ * **The folder is the pile, deliberately.** Which shelf a note sits on and
+ * where it belongs in the book are two questions (addendum 28 §3), and a drop
+ * onto a chapter answers only the second — so it goes to Unsorted, which says
+ * truthfully that nobody has filed it yet, and the folders table goes on
+ * showing it as work still to do.
+ */
+export const extractToOutline = (
+  file: ProjectFile,
+  input: { sessionId: NoteSessionId; sourceId: NoteSourceId; from: number; to: number; place: NotePlace },
+): { file: ProjectFile; card: ResearchItem | null } => {
+  const pile = unsortedOf(file, input.sessionId);
+  if (!pile) return { file, card: null };
+  const made = extractToCategory(file, { ...input, categoryId: pile.id });
+  if (!made.card) return { file, card: null };
+  const placed = fileNoteUnder(made.file, made.card.id, input.place);
+  // Nothing is kept where the place refused: `fileNoteUnder` hands back the
+  // file unchanged, and a card made for a drop that did not land is litter.
+  if (placed === made.file) return { file, card: null };
+  return { file: placed, card: made.card };
+};
+
+/**
+ * What a drop onto an outline row would do, before it can be asked for.
+ *
+ * `trackRemoval`'s shape, and it is the **passage's** sentence rather than a
+ * note's: `filingOffer` answers about a note that already exists, and here
+ * there is none until the drop lands.
+ */
+export const outlineDropOffer = (
+  file: ProjectFile,
+  input: { sessionId: NoteSessionId; sourceId: NoteSourceId; from: number; to: number; where: string },
+): { can: boolean; says: string } => {
+  const pile = unsortedOf(file, input.sessionId);
+  if (!pile) return { can: false, says: 'This batch has nowhere to put a note yet.' };
+  const offer = extractOffer(file, { ...input, categoryId: pile.id });
+  if (!offer.can) return { can: false, says: offer.says };
+  return { can: true, says: `File it under ${input.where}. It waits in Unsorted until you give it a folder.` };
 };
 
 /** Move a card to another category, keeping its lineage (§10). */

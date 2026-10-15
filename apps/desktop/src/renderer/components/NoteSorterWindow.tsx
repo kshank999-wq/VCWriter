@@ -34,6 +34,15 @@ import {
   shelfOffer,
   sortCategories,
   sortingSessions,
+  sittingName,
+  sittingsStanding,
+  everyNote,
+  extractToOutline,
+  outlineDropOffer,
+  contentsShelf,
+  describeContentsRow,
+  placeKey,
+  type ContentsRow,
   sourcesOf,
   mergeIdeas,
   suggestCategories,
@@ -173,6 +182,9 @@ const COLOURS = ['#C9A45C', '#D9607A', '#E08A5A', '#4FA39A', '#8FA8C4', '#9A7FC0
 const PASSAGE = 'application/x-vcwriter-passage';
 const CARD = 'application/x-vcwriter-sortcard';
 
+/** The folder that is a reading rather than a place (§17). */
+const ALL_NOTES = 'all-notes';
+
 const percent = (share: number): string => `${Math.round(share * 100)}%`;
 
 /**
@@ -256,6 +268,8 @@ export function NoteSorterWindow({
   canUndo,
 }: NoteSorterWindowProps) {
   const sessions = sortingSessions(file);
+  /** Each sitting with what is in it, which is what tells one from another (§17). */
+  const standing = sittingsStanding(file);
   const [tab, setTab] = useState<Tab>('gather');
   const [sessionId, setSessionId] = useState<NoteSessionId | null>(null);
   const [sourceId, setSourceId] = useState<NoteSourceId | null>(null);
@@ -325,7 +339,13 @@ export function NoteSorterWindow({
             using it. */}
         <span className="ns-brand">Note Sorter</span>
         <RoomFormat format={file.project.format} />
-        {sessions.length > 1 ? (
+        {/* **The picker says what is in each one** (§17). It carried names
+            alone, and the room named every sitting `<project> · notes`, so a
+            writer who pressed *+ Sitting* was offered two identical rows over
+            a screen reading *Nothing in yet* — measured, exactly Ken's *you
+            can't see all your notes again*. `sittingsStanding` is the one
+            reading, and what is in a sitting is what tells it from another. */}
+        {standing.length > 1 ? (
           <select
             aria-label="Which sitting"
             value={(chosen?.id as string) ?? ''}
@@ -335,9 +355,9 @@ export function NoteSorterWindow({
               setCardId(null);
             }}
           >
-            {sessions.map((one) => (
-              <option key={one.id as string} value={one.id as string}>
-                {one.name}
+            {standing.map((one) => (
+              <option key={one.session.id as string} value={one.session.id as string}>
+                {one.says}
               </option>
             ))}
           </select>
@@ -382,25 +402,44 @@ export function NoteSorterWindow({
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
+        {/* **A sitting is a batch of notes, and the button says so** (§17,
+            from Ken: *there's something that says plus sitting. I'm not sure
+            what that is*). It read *+ Sitting*, this room's own private word
+            on a bar with nothing to explain it, and what it does — put the
+            work in front of you away and open an empty screen — is the one act
+            here a writer must not press by accident.
+
+            Three things answer him and none of them is a warning: it is named
+            for **what it makes**, it is named for the **day** so the one left
+            behind can be found again (`sittingName`), and the press **says
+            what just happened and where the old one went**, a screen going
+            blank with nothing said being the whole of the report. */}
         <button
           type="button"
           className="tool"
-          title="Start another sitting, with its own sources and categories"
+          title="Start a separate batch of notes, with its own sources and folders. What is here now is kept and stays on the list at the top left."
           onClick={() => {
             let made: NoteSessionId | null = null;
+            let leaving: string | null = chosen?.name ?? null;
             onUpdate((current) => {
-              const begun = beginSession(current, `${current.project.title} · notes`);
+              const begun = beginSession(current, sittingName(current));
               made = begun.session.id;
               return begun.file;
             });
             if (made) {
               setSessionId(made);
               setSourceId(null);
+              setCardId(null);
               setTab('gather');
+              say(
+                leaving
+                  ? `A separate batch of notes. “${leaving}” is still here — pick it from the list at the top left.`
+                  : 'A separate batch of notes.',
+              );
             }
           }}
         >
-          + Sitting
+          + New batch
         </button>
         {/* Undo, which the handoff puts on this bar (spec §13).
             **Absent rather than dead in a window of its own**: the history is
@@ -491,6 +530,8 @@ export function NoteSorterWindow({
           onUpdate={onUpdate}
           onSay={say}
           onGather={() => setTab('gather')}
+          onCard={setCardId}
+          onRefine={() => setTab('refine')}
         />
       ) : null}
 
@@ -1010,6 +1051,8 @@ function SortTab({
   onUpdate,
   onSay,
   onGather,
+  onCard,
+  onRefine,
 }: {
   file: ProjectFile;
   session: NoteSession | null;
@@ -1023,11 +1066,36 @@ function SortTab({
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
   onSay(text: string): void;
   onGather(): void;
+  onCard(id: ResearchItemId): void;
+  onRefine(): void;
 }) {
   const page = useRef<HTMLDivElement | null>(null);
   const [range, setRange] = useState<{ from: number; to: number } | null>(null);
   const [over, setOver] = useState<string | null>(null);
   const [naming, setNaming] = useState(false);
+  /**
+   * Which folder is open. **Nothing is stored** — which drawer you have in
+   * front of you is about this minute, addendum 20 §9h's rail — and only one
+   * is open at a time, the panel being a column a writer scans.
+   */
+  const [openFolder, setOpenFolder] = useState<string | null>(null);
+  /** Every note of the sitting, for the folder that is a reading (§17). */
+  const notes = useMemo(() => (session ? everyNote(file, session.id) : []), [file, session]);
+  /** Which outline row a passage is being dragged over. */
+  const [overRow, setOverRow] = useState<string | null>(null);
+  /**
+   * Which of the two screens is showing (§17). **Nothing is stored** — which
+   * one you are sorting into is about this minute, and a writer who left it on
+   * Outline a fortnight ago opening on a screen they did not choose is the
+   * fault addendum 02 §6d names about a moved window.
+   */
+  const [where, setWhere] = useState<'folders' | 'outline'>('folders');
+  /**
+   * The outline as a table (§17): addendum 28's own reading, so the book's
+   * chapters and the Outliner's planned rows are one list and neither is
+   * copied here.
+   */
+  const outline = useMemo(() => contentsShelf(file), [file]);
 
   const pieces = useMemo(() => (source ? piecesOf(file, source) : []), [file, source]);
   /**
@@ -1066,6 +1134,37 @@ function SortTab({
       return;
     }
     onUpdate((current) => extractToCategory(current, { sourceId: source.id, ...where, categoryId: into }).file);
+    onSay(offer.says);
+    setRange(null);
+    window.getSelection?.()?.removeAllRanges();
+  };
+
+  /** File the highlighted passage straight under a chapter or section (§17). */
+  const intoOutline = (row: ContentsRow, asked: { from: number; to: number } | null): void => {
+    const where = asked ?? range;
+    if (!where || !session || !source) {
+      onSay('Highlight some words first.');
+      return;
+    }
+    const offer = outlineDropOffer(file, {
+      sessionId: session.id,
+      sourceId: source.id,
+      ...where,
+      where: describeContentsRow(row, file),
+    });
+    if (!offer.can) {
+      onSay(offer.says);
+      return;
+    }
+    onUpdate(
+      (current) =>
+        extractToOutline(current, {
+          sessionId: session.id,
+          sourceId: source.id,
+          ...where,
+          place: row.place,
+        }).file,
+    );
     onSay(offer.says);
     setRange(null);
     window.getSelection?.()?.removeAllRanges();
@@ -1224,7 +1323,39 @@ function SortTab({
 
       <section className="ns-panel ns-stacks">
         <div className="ns-stacks-head">
-          <h3>Categories</h3>
+          {/* **Two screens rather than two tables** (§17, from Ken: *you'll
+              have a categories tab, and then you'll have an outline tab for
+              sorting, which will give you two separate screens*). Both answer
+              *where does this passage go* and they answer it about different
+              things — which shelf a note sits on, and where it belongs in the
+              book (addendum 28 §3) — so stacking them in one column made a
+              writer scroll past one to reach the other and read as one long
+              list of places. The switch is **absent where there is no outline
+              to show**, a tab that can only be empty being one that lies. */}
+          {outline.length > 0 ? (
+            <div className="ns-where" role="tablist" aria-label="Sort into">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={where === 'folders'}
+                className={where === 'folders' ? 'ns-where-tab on' : 'ns-where-tab'}
+                onClick={() => setWhere('folders')}
+              >
+                Categories
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={where === 'outline'}
+                className={where === 'outline' ? 'ns-where-tab on' : 'ns-where-tab'}
+                onClick={() => setWhere('outline')}
+              >
+                Outline
+              </button>
+            </div>
+          ) : (
+            <h3>Categories</h3>
+          )}
           {naming ? (
             <input
               autoFocus
@@ -1242,123 +1373,251 @@ function SortTab({
               }}
             />
           ) : (
-            <button type="button" className="tool" onClick={() => setNaming(true)}>
-              + Category
-            </button>
+            where === 'folders' ? (
+              <button type="button" className="tool" onClick={() => setNaming(true)}>
+                + Category
+              </button>
+            ) : null
           )}
         </div>
 
-        {categories.length === 0 ? (
+        {where === 'folders' && categories.length === 0 ? (
           <p className="muted small">
             No categories yet. Make one and the passages you highlight have somewhere to go — you can rename and
             rearrange them afterwards.
           </p>
-        ) : (
+        ) : where === 'folders' ? (
           <>
-            {/* **A category with nothing in it is a chip** (§8). The handoff
-                asks for chips so a sitting of fifteen categories still fits,
-                and which ones are chips is a *reading* rather than a
-                measurement: one you have not used yet is a chip and becomes a
-                stack the moment something lands in it. A chip takes a press and
-                a drop exactly as a stack does, because a target a writer cannot
-                drop on is not a target. */}
-            {categories.some((one) => cardsIn(file, one.id).length === 0) ? (
-              <div className="ns-chip-row">
-                {categories
-                  .filter((one) => cardsIn(file, one.id).length === 0)
-                  .map((one) => (
+            {/* **Folders, stacked, and you can look inside one** (§17, from
+                Ken: *the categories also need to show up in a box stacked on
+                top of each other… like it looks like the outline, but it's
+                little folders. And then you can click in those folders and see
+                the notes in that folder*).
+
+                Two things change and both are his. They were a **row that
+                wrapped**, so a dozen folders read as a paragraph of boxes
+                rather than a list; and §8's **chip** — a folder with nothing in
+                it drawn small — is **gone rather than kept beside them**, that
+                decision having been made so fifteen categories would fit across
+                a row, which a column does by being a column. A folder is a
+                folder whether or not anything is in it.
+
+                And a press opens one. It could not before: `file_` refuses
+                with *Highlight some words first* where nothing is in hand, so
+                the only thing a writer could do to a folder was file into it,
+                and what was inside could be read only from another tab.
+                **With nothing in hand the press opens it rather than
+                refusing** — addendum 28 §4c's own rule, in the room it came
+                from — so the drag still files, the press still files while a
+                passage is held, and the gesture that was a refusal is now the
+                way in. */}
+            <div className="ns-folders">
+              {/* **All notes**, which is the ask said twice (*Definitely need
+                  a way to see all notes*). It is a **reading and not a place**,
+                  so it takes no drop and carries no colour: every note of the
+                  sitting with the folder it is in, which is the one list this
+                  room never had. */}
+              <div className={openFolder === ALL_NOTES ? 'ns-folder all open' : 'ns-folder all'}>
+                <button
+                  type="button"
+                  className="ns-folder-head"
+                  aria-expanded={openFolder === ALL_NOTES}
+                  onClick={() => setOpenFolder(openFolder === ALL_NOTES ? null : ALL_NOTES)}
+                >
+                  <span className="ns-fold-arrow" aria-hidden="true">
+                    {openFolder === ALL_NOTES ? '▾' : '▸'}
+                  </span>
+                  All notes
+                  <span className="muted small">{notes.length}</span>
+                </button>
+                {openFolder === ALL_NOTES ? (
+                  <div className="ns-folder-cards">
+                    {notes.length === 0 ? (
+                      <p className="muted small">
+                        Nothing yet. Highlight a passage on the left and drop it into a folder.
+                      </p>
+                    ) : (
+                      notes.map((one) => (
+                        <button
+                          key={one.card.id as string}
+                          type="button"
+                          className="ns-card mini"
+                          onClick={() => {
+                            onCard(one.card.id);
+                            onRefine();
+                          }}
+                        >
+                          <span className="ns-card-title">{one.card.title}</span>
+                          <span className="ns-card-body">{one.card.body}</span>
+                          <span className="ns-card-from mono">
+                            {one.where} · {whereFrom(file, one.card)}
+                          </span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                ) : null}
+              </div>
+
+              {categories.map((one) => {
+                const held = cardsIn(file, one.id);
+                const open = openFolder === (one.id as string);
+                return (
+                  <div
+                    key={one.id as string}
+                    className={
+                      (over === (one.id as string) ? 'ns-folder over' : 'ns-folder') + (open ? ' open' : '')
+                    }
+                    style={one.color ? ({ '--ns-tint': one.color } as React.CSSProperties) : undefined}
+                    onDragOver={(event) => {
+                      if (!event.dataTransfer.types.includes(PASSAGE)) return;
+                      event.preventDefault();
+                      setOver(one.id as string);
+                    }}
+                    onDragLeave={() => setOver(null)}
+                    onDrop={(event) => {
+                      setOver(null);
+                      const raw = event.dataTransfer.getData(PASSAGE);
+                      if (!raw) return;
+                      event.preventDefault();
+                      try {
+                        file_(one.id, JSON.parse(raw) as { from: number; to: number });
+                      } catch {
+                        onSay('That drop could not be read.');
+                      }
+                    }}
+                  >
                     <button
-                      key={one.id as string}
                       type="button"
-                      className={over === (one.id as string) ? 'ns-chip over' : 'ns-chip'}
+                      className="ns-folder-head"
                       title={offerFor(one)}
-                      style={one.color ? ({ '--ns-tint': one.color } as React.CSSProperties) : undefined}
-                      onClick={() => file_(one.id, null)}
-                      onDragOver={(event) => {
-                        if (!event.dataTransfer.types.includes(PASSAGE)) return;
-                        event.preventDefault();
-                        setOver(one.id as string);
-                      }}
-                      onDragLeave={() => setOver(null)}
-                      onDrop={(event) => {
-                        setOver(null);
-                        const raw = event.dataTransfer.getData(PASSAGE);
-                        if (!raw) return;
-                        event.preventDefault();
-                        try {
-                          file_(one.id, JSON.parse(raw) as { from: number; to: number });
-                        } catch {
-                          onSay('That drop could not be read.');
-                        }
+                      aria-expanded={open}
+                      onClick={() => {
+                        // The press files what is in hand, and where nothing
+                        // is held it opens the folder rather than refusing.
+                        if (range) file_(one.id, null);
+                        else setOpenFolder(open ? null : (one.id as string));
                       }}
                     >
+                      <span className="ns-fold-arrow" aria-hidden="true">
+                        {open ? '▾' : '▸'}
+                      </span>
                       <span className="ns-dot" />
                       {one.name}
-                      <span className="ns-chip-n mono">0</span>
+                      <span className="muted small">{held.length}</span>
                     </button>
-                  ))}
-                <button type="button" className="ns-chip new" onClick={() => setNaming(true)}>
-                  + New
-                </button>
-              </div>
-            ) : null}
-            <div className="ns-stack-row">
-            {categories.filter((one) => cardsIn(file, one.id).length > 0).map((one) => {
-              const held = cardsIn(file, one.id);
-              return (
-                <button
-                  key={one.id as string}
-                  type="button"
-                  className={over === (one.id as string) ? 'ns-stack over' : 'ns-stack'}
-                  title={offerFor(one)}
-                  style={one.color ? ({ '--ns-tint': one.color } as React.CSSProperties) : undefined}
-                  onClick={() => file_(one.id, null)}
-                  onDragOver={(event) => {
-                    if (!event.dataTransfer.types.includes(PASSAGE)) return;
-                    event.preventDefault();
-                    setOver(one.id as string);
-                  }}
-                  onDragLeave={() => setOver(null)}
-                  onDrop={(event) => {
-                    setOver(null);
-                    const raw = event.dataTransfer.getData(PASSAGE);
-                    if (!raw) return;
-                    event.preventDefault();
-                    try {
-                      file_(one.id, JSON.parse(raw) as { from: number; to: number });
-                    } catch {
-                      onSay('That drop could not be read.');
-                    }
-                  }}
-                >
-                  <span className="ns-stack-head">
-                    <span className="ns-dot" />
-                    {one.name}
-                    <span className="muted small">{held.length}</span>
-                  </span>
-                  <span className="ns-stack-cards">
-                    {held.slice(0, 4).map((held_) => (
-                      <span key={held_.id as string} className="ns-card mini">
-                        <span className="ns-card-title">{held_.title}</span>
-                        <span className="ns-card-body">{held_.body}</span>
-                        {/* The lineage on the face of the card, which is what
-                            makes it an index card rather than a coloured box:
-                            *Brainstorm ¶3*, read by `whereFrom` and stored
-                            nowhere, so cutting the source says so here. */}
-                        <span className="ns-card-from mono">{whereFrom(file, held_)}</span>
-                      </span>
-                    ))}
-                    {over === (one.id as string) ? <span className="ns-card slot">Drop to add a card</span> : null}
-                    {held.length > 4 ? (
-                      <span className="muted small">and {held.length - 4} more</span>
+                    {open ? (
+                      <div className="ns-folder-cards">
+                        {held.length === 0 ? (
+                          <p className="muted small">Nothing filed here yet.</p>
+                        ) : (
+                          held.map((held_) => (
+                            <button
+                              key={held_.id as string}
+                              type="button"
+                              className="ns-card mini"
+                              onClick={() => {
+                                onCard(held_.id);
+                                onRefine();
+                              }}
+                            >
+                              <span className="ns-card-title">{held_.title}</span>
+                              <span className="ns-card-body">{held_.body}</span>
+                              {/* The lineage on the face of the card, which is
+                                  what makes it an index card rather than a
+                                  coloured box: *Brainstorm \u00b63*, read by
+                                  `whereFrom` and stored nowhere, so cutting the
+                                  source says so here. */}
+                              <span className="ns-card-from mono">{whereFrom(file, held_)}</span>
+                            </button>
+                          ))
+                        )}
+                      </div>
                     ) : null}
-                  </span>
-                </button>
-              );
-            })}
+                    {over === (one.id as string) ? <span className="ns-card slot">Drop to add a note</span> : null}
+                  </div>
+                );
+              })}
             </div>
           </>
-        )}
+        ) : null}
+
+        {/* **The outline, as a second table** (§17, from Ken: *make a second
+            table for the outline in the sorting area that just shows outline
+            chapters sections and subsections*).
+
+            It is `contentsShelf` — addendum 28's own reading, which already
+            lists the book's chapters and sections and then the Outliner's rows
+            that are still plans — so **nothing about the outline is copied
+            here**: a chapter renamed in the Outliner is renamed on this table
+            with nothing run, and a section added there appears here, which is
+            his *it will continually update with new sections*. The count is the
+            notes already filed under that row, his *it'll show what notes are
+            sorted into those categories*.
+
+            **Absent where there is nothing to drop onto** rather than an empty
+            table, and the folders above are untouched: a folder says which
+            shelf a note is on and a row here says where it belongs in the book,
+            which are two questions (addendum 28 §3). */}
+        {where === 'outline' && session && outline.length > 0 ? (
+          <div className="ns-outline">
+            <p className="field-note">
+              Drop a passage on a chapter or section to file it there. It waits in Unsorted until you give it a
+              folder.
+            </p>
+            <div className="ns-outline-rows">
+              {outline.map((row) => {
+                const key = placeKey(row.place);
+                const says = range
+                  ? outlineDropOffer(file, {
+                      sessionId: session.id,
+                      sourceId: source.id,
+                      ...range,
+                      where: describeContentsRow(row, file),
+                    }).says
+                  : `Highlight a passage on the left, then press ${row.title || row.number}.`;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    className={
+                      (overRow === key ? 'ns-outline-row over' : 'ns-outline-row') +
+                      (row.planned ? ' planned' : '') +
+                      ` d${row.depth}`
+                    }
+                    title={says}
+                    onClick={() => intoOutline(row, null)}
+                    onDragOver={(event) => {
+                      if (!event.dataTransfer.types.includes(PASSAGE)) return;
+                      event.preventDefault();
+                      setOverRow(key);
+                    }}
+                    onDragLeave={() => setOverRow(null)}
+                    onDrop={(event) => {
+                      setOverRow(null);
+                      const raw = event.dataTransfer.getData(PASSAGE);
+                      if (!raw) return;
+                      event.preventDefault();
+                      try {
+                        intoOutline(row, JSON.parse(raw) as { from: number; to: number });
+                      } catch {
+                        onSay('That drop could not be read.');
+                      }
+                    }}
+                  >
+                    <span className="ns-outline-n mono">{row.number}</span>
+                    <span className="ns-outline-name">{row.title || 'Untitled'}</span>
+                    {/* Said rather than hidden: a chapter the book has and one
+                        that is still a plan are two different things to aim
+                        research at (addendum 28 §4c). */}
+                    {row.planned ? <span className="ns-outline-plan">plan</span> : null}
+                    <span className="muted small">{row.notes.length}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
 
         {/* Auto-sort suggestions (§14). **Under the stacks rather than in
             Refine**, where the handoff draws them: they are about the material

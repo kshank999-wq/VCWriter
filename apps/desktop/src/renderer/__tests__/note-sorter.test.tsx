@@ -162,13 +162,21 @@ describe('the Note Sorter room', () => {
     render(<Harness initial={sorting()} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Sort' }));
 
-    const stack = [...document.querySelectorAll('.ns-stack, .ns-chip')].find((one) =>
+    // **A folder, stacked** (§17): the chips and the wrapping row of stacks are
+    // gone, so what carries the sentence is the folder's own head.
+    const folder = [...document.querySelectorAll('.ns-folder-head')].find((one) =>
       one.textContent?.includes('Dialogue'),
     ) as HTMLElement;
-    expect(stack.getAttribute('title')).toContain('Highlight a passage');
+    expect(folder.getAttribute('title')).toContain('Highlight a passage');
 
-    fireEvent.click(stack);
-    expect(screen.getByText('Highlight some words first.')).toBeTruthy();
+    // **And a press with nothing in hand opens it rather than refusing**
+    // (addendum 28 §4c's rule, in the room it came from): the refusal was the
+    // only thing a writer could get out of a folder, and what was inside could
+    // be read only from another tab.
+    fireEvent.click(folder);
+    expect(folder.closest('.ns-folder')!.classList.contains('open')).toBe(true);
+    expect(screen.queryByText('Highlight some words first.')).toBeNull();
+    // Nothing is filed by looking inside one.
     expect(cardsIn(latest!, sortCategories(latest!, sortingSessions(latest!)[0]!.id)[1]!.id)).toHaveLength(0);
   });
 
@@ -392,12 +400,18 @@ describe('the Note Sorter room', () => {
     expect(screen.getByRole('button', { name: 'Start sorting' })).toBeTruthy();
 
     // Sort: the card carries its lineage on its face — *Brainstorm ¶1* — which
-    // is what makes it an index card rather than a coloured box.
+    // is what makes it an index card rather than a coloured box. **It is read
+    // by opening the folder now** (§17): the folders are a column and one is
+    // open at a time, where §8 drew every stack's first four cards at once.
     fireEvent.click(screen.getByRole('tab', { name: 'Sort' }));
+    const character_ = [...document.querySelectorAll('.ns-folder-head')].find((one) =>
+      one.textContent?.includes('Character'),
+    ) as HTMLElement;
+    fireEvent.click(character_);
     expect(screen.getAllByText('Brainstorm ¶1').length).toBeGreaterThan(0);
-    // An untouched category is a chip with its count, and there is a way to
-    // make another beside them.
-    expect(screen.getByRole('button', { name: '+ New' })).toBeTruthy();
+    // And every note of the sitting is reachable in one place, which is the
+    // list the room never had (*Definitely need a way to see all notes*).
+    expect(screen.getByRole('button', { name: /All notes/ })).toBeTruthy();
 
     // Refine: the four acts on one row, and the card's own three fields.
     fireEvent.click(screen.getByRole('tab', { name: 'Refine' }));
@@ -417,5 +431,81 @@ describe('the Note Sorter room', () => {
     const card = latest!.researchItems.find((one) => one.title.startsWith('Rule one'))!;
     expect(card.comment).toBe('Pair with the opening?');
     expect(card.body).toBe(FIRST);
+  });
+});
+
+/**
+ * **The sitting, the folders and the outline** (addendum 26 §17, from Ken in
+ * one message: *there's something that says plus sitting. I'm not sure what
+ * that is. And when you go to sort, if you hit sitting, it takes everything
+ * away… you need to have a way to get back to see all the notes* … *you'll
+ * have a categories tab, and then you'll have an outline tab for sorting,
+ * which will give you two separate screens*).
+ *
+ * What these pin is the **gesture**, which is the half every one of these
+ * reports has been about: the acts all worked, and a writer could not get back
+ * to their notes, could not look inside a folder and could not aim a passage at
+ * a chapter.
+ */
+describe('the sitting, the folders and the outline', () => {
+  it('names a second batch so the picker can tell it from the first', () => {
+    render(<Harness initial={sorting()} />);
+    // One sitting, so there is no picker to read — the name stands.
+    expect(screen.queryByLabelText('Which sitting')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /\+ New batch/ }));
+
+    // **Two rows that differ**, which is the whole report: they were both
+    // `<project> · notes` and the one holding the work could not be found.
+    const picker = screen.getByLabelText('Which sitting') as HTMLSelectElement;
+    const rows = [...picker.options].map((one) => one.textContent ?? '');
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).not.toBe(rows[1]);
+    // And what is in each is said, so neither has to be opened to be told apart.
+    expect(rows[0]).toContain('1 source');
+    expect(rows[1]).toContain('nothing in it yet');
+    // The press says where the one left behind went.
+    expect(screen.getByText(/is still here — pick it from the list at the top left/)).toBeTruthy();
+  });
+
+  it('gets back to the batch that holds the work', () => {
+    render(<Harness initial={sorting()} />);
+    fireEvent.click(screen.getByRole('button', { name: /\+ New batch/ }));
+    expect(sourcesOf(latest!, sortingSessions(latest!)[1]!.id)).toHaveLength(0);
+
+    const picker = screen.getByLabelText('Which sitting') as HTMLSelectElement;
+    fireEvent.change(picker, { target: { value: sortingSessions(latest!)[0]!.id as string } });
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Sort' }));
+    // The source is in front of the writer again.
+    expect(screen.getAllByText(/Rule one: the villain/).length).toBeGreaterThan(0);
+  });
+
+  it('shows every note of the batch in one place', () => {
+    let file = sorting();
+    const session = sortingSessions(file)[0]!;
+    const character = sortCategories(file, session.id).find((one) => one.name === 'Character')!;
+    file = extractToCategory(file, {
+      sourceId: sourcesOf(file, session.id)[0]!.id,
+      from: 0,
+      to: FIRST.length,
+      categoryId: character.id,
+    }).file;
+
+    render(<Harness initial={file} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Sort' }));
+    const all = screen.getByRole('button', { name: /All notes/ });
+    fireEvent.click(all);
+    // The note, and the folder it is in, without going to another tab.
+    expect(screen.getAllByText(/Rule one: the villain/).length).toBeGreaterThan(0);
+    expect(all.closest('.ns-folder')!.textContent).toContain('Character');
+  });
+
+  it('gives the outline a screen of its own, and only where there is one', () => {
+    // A novel with no chapters planned has nothing to aim a passage at, so the
+    // switch is absent rather than offering a tab that can only be empty.
+    render(<Harness initial={sorting()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Sort' }));
+    expect(screen.queryByRole('tab', { name: 'Outline' })).toBeNull();
   });
 });
