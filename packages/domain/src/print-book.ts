@@ -454,11 +454,15 @@ const slotMarkup = (
     case 'summary':
       return chapter && chapter.summary.trim() ? `<p class="bk-chapter-summary">${escapeHtml(chapter.summary)}</p>` : '';
     // What the chapter covers (addendum 36). The slot decides nothing: the
-    // list is already empty where the book asks for none, so this draws
-    // whatever `chapterLeafContent` put there and nothing else. **No heading
-    // over it** — a line reading *In this chapter* would be words this
-    // program wrote into somebody's book, which the epigraph and the summary
-    // are there for; the list is set apart by its type instead.
+    // list is already empty where the book asks for none, and the heading is
+    // already resolved, so this draws what `chapterLeafContent` put there and
+    // nothing else.
+    //
+    // **The heading and the list are one block** (§10): the list is
+    // shrink-to-fit and centred on the page while its entries are ranged
+    // within it, so a heading standing as its sibling would be centred on the
+    // page rather than over the list. Inside the block they take the same
+    // edge, which is what makes them read as one thing.
     case 'contents': {
       const lines = chapter?.contents ?? [];
       if (lines.length === 0) return '';
@@ -469,7 +473,9 @@ const slotMarkup = (
             `<span class="bk-chapter-contents-name">${escapeHtml(line.title)}</span></li>`,
         )
         .join('');
-      return `<ul class="bk-chapter-contents">${rows}</ul>`;
+      const words = (chapter?.contentsHeading ?? '').trim();
+      const head = words.length > 0 ? `<p class="bk-chapter-contents-head">${escapeHtml(words)}</p>` : '';
+      return `<div class="bk-chapter-contents-block">${head}<ul class="bk-chapter-contents">${rows}</ul></div>`;
     }
     // The sink is the leaf's own padding and the body is the manuscript that
     // follows this block; both are slots so a layout can say where they fall
@@ -988,7 +994,9 @@ export const CHAPTER_STYLES = `
   .bk-chapter-art { display: block; width: 100%; height: 100%; object-fit: cover; }
   .bk-chapter-epigraph { margin: 2em 0 0; white-space: pre-wrap; font-size: var(--chapter-epigraph-size); font-style: var(--chapter-epigraph-style); text-transform: var(--chapter-epigraph-case, none); font-variant-caps: var(--chapter-epigraph-variant, normal); font-weight: var(--chapter-epigraph-weight, 400); letter-spacing: var(--chapter-epigraph-tracking, 0); font-family: var(--chapter-epigraph-face, inherit); text-align: var(--chapter-epigraph-align, inherit); }
   .bk-chapter-summary { margin: 2em auto 0; max-width: 34em; white-space: pre-wrap; text-align: var(--chapter-summary-align, left); font-family: var(--chapter-summary-face, var(--bk-face)); font-size: var(--chapter-summary-size); text-transform: var(--chapter-summary-case, none); font-variant-caps: var(--chapter-summary-variant, normal); font-weight: var(--chapter-summary-weight, 400); font-style: var(--chapter-summary-style, normal); letter-spacing: var(--chapter-summary-tracking, 0); line-height: 1.5; }
-  .bk-chapter-contents { margin: 2em auto 0; max-width: 34em; padding: 0; list-style: none; text-align: var(--chapter-contents-align, left); font-family: var(--chapter-contents-face, var(--bk-face)); font-size: var(--chapter-contents-size); text-transform: var(--chapter-contents-case, none); font-variant-caps: var(--chapter-contents-variant, normal); font-weight: var(--chapter-contents-weight, 400); font-style: var(--chapter-contents-style, normal); letter-spacing: var(--chapter-contents-tracking, 0); line-height: 1.6; }
+  .bk-chapter-contents-block { margin: 2em auto 0; max-width: 34em; }
+  .bk-chapter-contents-head { margin: 0 0 0.7em; text-align: var(--chapter-contentsHead-align, left); font-family: var(--chapter-contentsHead-face, var(--bk-face)); font-size: var(--chapter-contentsHead-size); text-transform: var(--chapter-contentsHead-case, none); font-variant-caps: var(--chapter-contentsHead-variant, normal); font-weight: var(--chapter-contentsHead-weight, 400); font-style: var(--chapter-contentsHead-style, normal); letter-spacing: var(--chapter-contentsHead-tracking, 0); }
+  .bk-chapter-contents { margin: 0; padding: 0; list-style: none; text-align: var(--chapter-contents-align, left); font-family: var(--chapter-contents-face, var(--bk-face)); font-size: var(--chapter-contents-size); text-transform: var(--chapter-contents-case, none); font-variant-caps: var(--chapter-contents-variant, normal); font-weight: var(--chapter-contents-weight, 400); font-style: var(--chapter-contents-style, normal); letter-spacing: var(--chapter-contents-tracking, 0); line-height: 1.6; }
   .bk-chapter-contents li { display: flex; gap: 0.8em; }
   .bk-chapter-contents-no { flex: 0 0 3.2em; }
   .bk-chapter-contents-name { flex: 1 1 auto; }

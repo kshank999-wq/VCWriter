@@ -75,12 +75,11 @@ table of contents said over again at the head of every chapter.
 **Sections and never subsections.** One level down is what a chapter opening
 lists; two is the whole table of contents, printed nine times.
 
-**No heading over it.** A line reading *In this chapter* would be words this
-program wrote into somebody's book, which is the one thing the chapter page
-has never done — the number is derived and the heading, the epigraph and the
-summary are the writer's. The epigraph and the summary are both there for
-anybody who wants to say it in their own words. The list is set apart by its
-type instead.
+**No heading over it** — *overruled by Ken the same day; see §10.* The
+argument was that a line reading *In this chapter* would be words this program
+wrote into somebody's book, which is the one thing the chapter page has never
+done. It was right about the words and wrong to conclude there should be no
+line.
 
 ## 4. Whose decision it is
 
@@ -167,7 +166,62 @@ chapter *Light* over 1.1 *What light is*, 1.2 *Reflection* and 1.3
   list would be clipped — which is exactly as true of a very long summary, and
   has been since addendum 19 §7. It is the chapter leaf's behaviour rather
   than this list's, and the sheet beside the control shows it.
-- **A heading over the list.** Covered in §3: the epigraph and the summary are
-  where a writer says *In this chapter* in their own words.
 - **Page numbers against each line.** Covered in §3, and they would be a
   second table of contents besides.
+- **The list with no heading at all.** Clearing the box gives the format's own
+  words back, which is `settings.titlePage`'s shape and avoids two states that
+  look alike — an empty box that printed nothing and an empty box that printed
+  *In this chapter* are indistinguishable to look at. Nobody has asked for the
+  list bare; if it is wanted, that is a tick and a line to say.
+
+---
+
+## 10. The heading, after all
+
+From Ken, the same day §1–§9 shipped:
+
+> add the "In this chapter" heading
+
+**§3 was right about the words and wrong about the line.** Its argument — that
+*In this chapter* would be words this program wrote into somebody's book — is
+the rule this room keeps everywhere else (addendum 20 §17a: *it never writes a
+definition*). What it did not ask is whether the words have to be the
+program's. They do not.
+
+**So the line is the writer's.** `contentsWords` on `ChapterPageStyle` is a box
+they type in, and **empty means the format's own** — `settings.titlePage`'s
+shape, so a book that lists gets *In this chapter* without anybody typing it,
+and a writer who wants *What you will cover* types that. The objection stops
+being an objection the moment the sentence is theirs rather than ours, which is
+a better outcome than either the refusal or a fixed string would have been.
+
+Three things follow.
+
+**Nothing names a unit itself** (addendum 16 §6c): `defaultContentsHeading`
+reads `nounsFor`, so it is *In this chapter* where the division is a chapter.
+
+**It is a reading, not a value in a field.** `chapterContentsHeading` is the
+one function the print, the sheet and the eBook ask, and the **placeholder** is
+where the default is shown on the screen — a box that handed the default back
+as its `value` would read as something somebody typed, append to it on the
+first keystroke, and give it straight back when cleared (addendum 20 §16e).
+
+**A list is two lines of type**, which is §18's own pair said of the contents
+page one room over: `contentsHead` is a `LineStyle` beside `contents`, in small
+caps by default because that is what books set this line in. Not a second
+vocabulary, and not furniture the writer cannot reach.
+
+**The heading and the list are one block.** The list is shrink-to-fit and
+centred on the page while its entries range left inside it, so a heading
+standing as its sibling would centre on the *page* rather than over the *list*.
+`.bk-chapter-contents-block` holds both, which is also what lets the pair widen
+together: driven, *In this chapter* gives a block of 82 px and *What you will
+cover in this chapter* gives 154 px, both one line, both with the heading's
+left edge exactly on the numbers'.
+
+In the eBook it is a **paragraph rather than an `<h2>`**: a reading system
+builds its navigation from the headings, and *In this chapter* is not a
+division of the book.
+
+Driven on the laid page: `IN THIS CHAPTER` in small caps at 10 pt with 8/100 em
+of tracking, 20 px over the list, its left edge on the numbers'.

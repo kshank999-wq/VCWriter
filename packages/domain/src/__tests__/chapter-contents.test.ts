@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
   addUnit,
   chapterContents,
+  chapterContentsHeading,
   chapterLeafContent,
   chapterPageStyleOf,
   createProjectFile,
+  defaultContentsHeading,
   describeChapterContents,
   moveUnit,
   placedMarkers,
@@ -118,6 +120,34 @@ describe('what goes on the page', () => {
     const page = file.markers[0]!.page as unknown as Record<string, unknown>;
     expect(page).not.toHaveProperty('showContents');
     expect(page).not.toHaveProperty('contents');
+  });
+});
+
+describe('the words over the list', () => {
+  it('are the format’s own where nobody has typed any', () => {
+    // §3 refused a heading because *In this chapter* would be words this
+    // program wrote into somebody's book. Ken overruled it, and the words are
+    // his: a box he types in, with the format's own as the default rather
+    // than as the only answer. Nothing names a unit itself.
+    const { file } = book();
+    expect(defaultContentsHeading('instructional')).toBe('In this chapter');
+    expect(chapterContentsHeading(file)).toBe('In this chapter');
+  });
+
+  it('are the writer’s the moment they type any', () => {
+    const { file } = book();
+    const typed = setChapterPageStyle(file, { contentsWords: 'What you will cover' });
+    expect(chapterContentsHeading(typed)).toBe('What you will cover');
+    // And clearing the box gives the default back rather than a blank line:
+    // `settings.titlePage`'s shape, so there are not two ways to say nothing.
+    expect(chapterContentsHeading(setChapterPageStyle(typed, { contentsWords: '   ' }))).toBe('In this chapter');
+  });
+
+  it('ride on the page with the list', () => {
+    const { file, chapter } = book();
+    const asked = setChapterPageStyle(file, { showContents: true, contentsWords: 'What you will cover' });
+    const placed = placedMarkers(asked).find((one) => one.marker.id === chapter)!;
+    expect(chapterLeafContent(asked, placed).contentsHeading).toBe('What you will cover');
   });
 });
 

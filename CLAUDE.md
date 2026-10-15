@@ -8099,8 +8099,38 @@ push live; the build takes a minute or two.
   before, and the Layout room's laid page reads CHAPTER 1 · *Light* · the
   summary · the list. **Named rather than built**: a chapter with more sections
   than fit the page (the leaf is a `display` block not measured against the
-  page, as true of a long summary since addendum 19 §7), a heading over the
-  list, and page numbers against each line.
+  page, as true of a long summary since addendum 19 §7), page numbers against
+  each line, and the list with **no** heading at all — clearing the box gives
+  the format's own words back (`settings.titlePage`'s shape), two empty boxes
+  that printed different things being two states that look alike.
+  **§10 is the heading, after all**, from Ken the same day (*add the "In this
+  chapter" heading*), and the correction is that **§3 was right about the words
+  and wrong about the line**: its argument — that *In this chapter* would be
+  words this program wrote into somebody's book, which is addendum 20 §17a's
+  own rule — never asked whether the words have to be the **program's**. They
+  do not. `contentsWords` on `ChapterPageStyle` is a box the writer types in
+  and **empty means the format's own**, so a book that lists gets the heading
+  without anybody typing it and one who wants *What you will cover* types that
+  — the objection stops being an objection the moment the sentence is theirs,
+  which is a better answer than either the refusal or a fixed string. Three
+  things follow. **Nothing names a unit itself** (addendum 16 §6c), so
+  `defaultContentsHeading` reads `nounsFor`. **It is a reading rather than a
+  value in a field**: `chapterContentsHeading` is the one function the print,
+  the sheet and the eBook ask, and the default is shown as the **placeholder**,
+  a box handing it back as its `value` reading as something somebody typed,
+  appending to it on the first keystroke and giving it straight back when
+  cleared (addendum 20 §16e). And **a list is two lines of type**, §18's own
+  pair said of the contents page one room over — `contentsHead` is a
+  `LineStyle` beside `contents`, small caps by default because that is what
+  books set this line in, rather than furniture the writer cannot reach.
+  **The heading and the list are one block**, the list being shrink-to-fit and
+  centred on the page while its entries range left inside it, so a heading
+  standing as its sibling would centre on the *page* rather than over the
+  *list*; driven, *In this chapter* gives a block of 82px and *What you will
+  cover in this chapter* 154px, both one line with the heading's left edge
+  exactly on the numbers'. In the eBook it is **a paragraph rather than an
+  `<h2>`**, a reading system building its navigation from the headings and
+  *In this chapter* not being a division of the book.
 
 ## Before pushing
 

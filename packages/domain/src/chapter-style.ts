@@ -4,6 +4,7 @@ import { bookSettingsOf, estimatedPages, faceStackOf, fontOf, geometryOf } from 
 // keeps this module and `chapter-layouts.ts` from forming a cycle (§14).
 import { layoutOf } from './chapter-layouts.js';
 import { nounsFor } from './formats.js';
+import type { ProjectFormat } from './entities/project.js';
 import { numbersDivisions, structureNumbers } from './numbering.js';
 import { divisionSpan } from './outline-binding.js';
 import { projectStats } from './selectors.js';
@@ -225,6 +226,31 @@ export const chapterPageStyleSchema = z.object({
    * than the summary, a list being furniture under prose.
    */
   contents: lineStyleSchema.default({ size: 10 }),
+  /**
+   * **The words over the list** (addendum 36 §10, from Ken: *add the "In this
+   * chapter" heading*).
+   *
+   * §3 refused one, on the ground that *In this chapter* would be words this
+   * program wrote into somebody's book. Ken overruled it, and the way to keep
+   * the argument rather than merely drop it is to make the line **his**: it is
+   * a box he types in, not a sentence the printer supplies. The reason stops
+   * being a reason the moment the words are the writer's.
+   *
+   * **Empty means the format's own words**, which is `settings.titlePage`'s
+   * shape — so a book that lists gets the heading without anybody typing it,
+   * and a writer who wants another one types it. `contentsHeading` is the one
+   * reading, and nothing names a unit itself (addendum 16 §6c): it is *In this
+   * chapter* where the division is a chapter.
+   */
+  contentsWords: z.string().default(''),
+  /**
+   * How that heading is set. A list has **two lines of type** — the heading
+   * and the entries — which is §18's own pair said of the contents page one
+   * room over, rather than a second vocabulary. Small caps by default, which
+   * is what books set this line in, and `contents`' own size so the pair reads
+   * as one block.
+   */
+  contentsHead: lineStyleSchema.default({ size: 10, case: 'small_caps', tracking: 8 }),
   /** A rule under the heading, which is a thing books do and a thing they do not. */
   rule: z.boolean().default(false),
   /**
@@ -288,7 +314,7 @@ export const setChapterPageStyle = (
 /** Patch one line of the style without restating the other two. */
 export const setChapterLineStyle = (
   file: ProjectFile,
-  line: 'number' | 'title' | 'epigraph' | 'summary' | 'contents',
+  line: 'number' | 'title' | 'epigraph' | 'summary' | 'contents' | 'contentsHead',
   patch: Partial<LineStyle>,
 ): ProjectFile =>
   setChapterPageStyle(file, { [line]: { ...chapterPageStyleOf(file)[line], ...patch } } as Partial<ChapterPageStyle>);
@@ -373,11 +399,13 @@ export const chapterStyleVars = (
     // for the summary's own reason rather than the display face the heading
     // wears — a list of section names is read, not looked at.
     '--chapter-contents-face': bookFace ?? FACE_STACKS.manuscript,
+    '--chapter-contentsHead-face': bookFace ?? FACE_STACKS.manuscript,
     ...line('number', style.number),
     ...line('title', style.title),
     ...line('epigraph', style.epigraph),
     ...line('summary', style.summary),
     ...line('contents', style.contents),
+    ...line('contentsHead', style.contentsHead),
   };
 };
 
@@ -540,6 +568,26 @@ export const chapterContents = (file: ProjectFile, markerId: StoryMarkerId): Cha
 };
 
 /**
+ * **The words over the list** (addendum 36 §10) — the writer's, or the
+ * format's own where they have typed none.
+ *
+ * One reading, so the print, the sheet, the eBook and the box in the dialog
+ * cannot disagree about what the page will say; and **nothing names a unit
+ * itself** (addendum 16 §6c), so it is *In this chapter* where the division
+ * is a chapter and takes the format's own noun anywhere else.
+ */
+export const chapterContentsHeading = (file: ProjectFile): string =>
+  chapterPageStyleOf(file).contentsWords.trim() || defaultContentsHeading(file.project.format);
+
+/**
+ * The format's own words, where the writer has typed none — and the screen's
+ * placeholder, so the box says what the page will print without pretending to
+ * be anybody's typing (addendum 20 §16e's rule about a reading in a field).
+ */
+export const defaultContentsHeading = (format: ProjectFormat): string =>
+  `In this ${nounsFor(format).division.toLowerCase()}`;
+
+/**
  * The same list in one sentence, for the screen to say before the press.
  *
  * `trackRemoval`'s shape: what a tick would put on the page, named rather
@@ -583,6 +631,7 @@ export const chapterLeafContent = (file: ProjectFile, placed: PlacedMarker): Cha
     // the book has not asked a list of carries none, and the print, the
     // preview and the eBook cannot disagree about which pages have one.
     contents: chapterPageStyleOf(file).showContents ? chapterContents(file, placed.marker.id) : [],
+    contentsHeading: chapterContentsHeading(file),
   };
 };
 

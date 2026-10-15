@@ -293,6 +293,13 @@ export interface ChapterPageContent {
    * moving a section renumbers this list with nothing run.
    */
   contents?: ChapterContentsLine[];
+  /**
+   * The words over that list (addendum 36 §10) — the writer's, or the
+   * format's own. Resolved by `chapterLeafContent` like everything else here;
+   * a page read alone carries none and draws none, so nothing a caller built
+   * before this moves.
+   */
+  contentsHeading?: string;
 }
 
 /**

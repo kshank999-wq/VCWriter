@@ -107,6 +107,23 @@ describe('ticking it', () => {
     expect(chapterPageStyleOf(latest as unknown as ProjectFile).showContents).toBe(true);
   });
 
+  it('heads the list, in the format’s own words until the writer types theirs', () => {
+    render(<Harness start={book()} />);
+    fireEvent.click(screen.getByRole('checkbox', { name: /Open this chapter with a page of its own/i }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /List what each chapter covers/i }));
+
+    expect(document.querySelector('.chapter-leaf-contents-head')?.textContent).toBe('In this chapter');
+
+    // The box is empty and says so in its placeholder, rather than handing
+    // the default back as though somebody had typed it (§16e).
+    const box = screen.getByLabelText(/The words over the list/i) as HTMLInputElement;
+    expect(box.value).toBe('');
+    expect(box.placeholder).toBe('In this chapter');
+
+    fireEvent.change(box, { target: { value: 'What you will cover' } });
+    expect(document.querySelector('.chapter-leaf-contents-head')?.textContent).toBe('What you will cover');
+  });
+
   it('gives the list its own type, a contents line being a line of type', () => {
     render(<Harness start={book()} />);
     fireEvent.click(screen.getByRole('checkbox', { name: /List what each chapter covers/i }));

@@ -301,14 +301,19 @@ export function ChapterLeaf({
       // question from the one the writer asked.
       case 'contents':
         return chapter.contents && chapter.contents.length > 0 ? (
-          <ul className="chapter-leaf-contents" key="contents">
-            {chapter.contents.map((line, at) => (
-              <li key={`${line.number}-${at}`}>
-                <span className="chapter-leaf-contents-no">{line.number}</span>
-                <span>{line.title}</span>
-              </li>
-            ))}
-          </ul>
+          <div className="chapter-leaf-contents-block" key="contents">
+            {(chapter.contentsHeading ?? '').trim().length > 0 ? (
+              <p className="chapter-leaf-contents-head">{chapter.contentsHeading}</p>
+            ) : null}
+            <ul className="chapter-leaf-contents">
+              {chapter.contents.map((line, at) => (
+                <li key={`${line.number}-${at}`}>
+                  <span className="chapter-leaf-contents-no">{line.number}</span>
+                  <span>{line.title}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         ) : null;
       default:
         return null;

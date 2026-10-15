@@ -11,6 +11,7 @@ import {
   chapterChoices,
   chapterLeafContent,
   chapterPageStyleOf,
+  defaultContentsHeading,
   describeChapterContents,
   numbersDivisions,
   pagePlace,
@@ -575,6 +576,27 @@ function Body({
                     {describeChapterContents(file, marker.id)} Every {nouns.division.toLowerCase()} opening lists
                     them, not this one alone.
                   </p>
+                  {/* **The words over the list are the writer's** (§10, from
+                      Ken: *add the "In this chapter" heading*). §3 refused one
+                      because *In this chapter* would be words this program
+                      wrote into somebody's book; a box he types in is not,
+                      which is how the argument is kept rather than dropped.
+                      Empty means the format's own, said in the placeholder
+                      — `settings.titlePage`'s shape. */}
+                  {style.showContents ? (
+                    <label className="field">
+                      <span>The words over it</span>
+                      <input
+                        type="text"
+                        aria-label="The words over the list"
+                        placeholder={defaultContentsHeading(file.project.format)}
+                        value={style.contentsWords}
+                        onChange={(event) =>
+                          onUpdate((current) => setChapterPageStyle(current, { contentsWords: event.target.value }))
+                        }
+                      />
+                    </label>
+                  ) : null}
                 </>
               ) : null}
 
@@ -836,14 +858,25 @@ export function ChapterStyleFields({
           Shown only once the book lists them, a size for something the book
           does not print being a control that lies. */}
       {numbersDivisions(file) && style.showContents ? (
-        <Line
-          label="The contents"
-          style={style.contents}
-          tracking={false}
-          align
-          fonts={fonts}
-          onPatch={(patch) => onUpdate((current) => setChapterLineStyle(current, 'contents', patch))}
-        />
+        <>
+          {/* A list is **two lines of type** — the heading and the entries
+              (§18's own pair, said of the contents page one room over). */}
+          <Line
+            label="The words over it"
+            style={style.contentsHead}
+            align
+            fonts={fonts}
+            onPatch={(patch) => onUpdate((current) => setChapterLineStyle(current, 'contentsHead', patch))}
+          />
+          <Line
+            label="The contents"
+            style={style.contents}
+            tracking={false}
+            align
+            fonts={fonts}
+            onPatch={(patch) => onUpdate((current) => setChapterLineStyle(current, 'contents', patch))}
+          />
+        </>
       ) : null}
 
       {/* Where the page's own settings are (§9c) — said only where the writer

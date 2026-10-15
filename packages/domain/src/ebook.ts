@@ -729,6 +729,11 @@ export const ebookOf = (file: ProjectFile, options: { modified?: string; target?
         // as to the eye, and its numbers are the book's own — so they are
         // written rather than counted by the list.
         if (leaf?.contents?.length) {
+          const words = (leaf.contentsHeading ?? '').trim();
+          // The heading is a paragraph rather than an `<h2>`: a reading
+          // system builds its navigation from the headings, and *In this
+          // chapter* is not a division of the book.
+          if (words) draft.html.push(`<p class="chapter-contents-head">${escapeXml(words)}</p>`);
           const rows = leaf.contents
             .map((line) => `<li>${escapeXml([line.number, line.title.trim()].filter(Boolean).join('  '))}</li>`)
             .join('');

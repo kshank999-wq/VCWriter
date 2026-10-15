@@ -4007,9 +4007,27 @@ dialog.marker-dialog {
 /* What the chapter covers (addendum 36) — the same custom properties the
    printed page carries, so the sheet beside the controls and the page in the
    book are set from one place. */
-.chapter-leaf-contents {
+.chapter-leaf-contents-block {
   margin: 2em auto 0;
   max-width: 34em;
+}
+
+/* The heading over the list (addendum 36 §10), inside the block so it takes
+   the list's own edge rather than the page's centre. */
+.chapter-leaf-contents-head {
+  margin: 0 0 0.7em;
+  text-align: var(--chapter-contentsHead-align, left);
+  font-family: var(--chapter-contentsHead-face, inherit);
+  font-size: var(--chapter-contentsHead-size, inherit);
+  font-weight: var(--chapter-contentsHead-weight, 400);
+  font-style: var(--chapter-contentsHead-style, normal);
+  text-transform: var(--chapter-contentsHead-case, none);
+  font-variant-caps: var(--chapter-contentsHead-variant, normal);
+  letter-spacing: var(--chapter-contentsHead-tracking, 0);
+}
+
+.chapter-leaf-contents {
+  margin: 0;
   padding: 0;
   list-style: none;
   text-align: var(--chapter-contents-align, left);
