@@ -57,7 +57,23 @@ import type { StoryMarkerId } from './ids.js';
  * A piece of a chapter opening, in the order it is met down the page. The
  * print walks this list, so a new layout is an entry here and nothing else.
  */
-export const CHAPTER_SLOTS = ['sink', 'graphic', 'number', 'rule', 'title', 'epigraph', 'summary', 'body'] as const;
+export const CHAPTER_SLOTS = [
+  'sink',
+  'graphic',
+  'number',
+  'rule',
+  'title',
+  'epigraph',
+  'summary',
+  // What the chapter covers, as a list of its sections (addendum 36). It
+  // stands **under the summary and above the body** in every layout that has
+  // a body, for the epigraph slot's own reason: it is part of what a chapter
+  // opening is, so a layout that dropped it would withhold the page's point
+  // for a reason nobody asked for. `art` carries it no more than it carries
+  // the heading — the picture is the page.
+  'contents',
+  'body',
+] as const;
 export type ChapterSlot = (typeof CHAPTER_SLOTS)[number];
 
 export { CHAPTER_LAYOUT_IDS, FIRST_LINE_KINDS, type ChapterLayoutId, type FirstLine };
@@ -141,35 +157,36 @@ export const CHAPTER_LAYOUTS: readonly ChapterLayout[] = [
     'title',
     'epigraph',
     'summary',
+    'contents',
     'body',
   ]),
-  one('top', 'Graphic above', 'A device over the heading', ['sink', 'graphic', 'number', 'title', 'epigraph', 'summary', 'body'], {
+  one('top', 'Graphic above', 'A device over the heading', ['sink', 'graphic', 'number', 'title', 'epigraph', 'summary', 'contents', 'body'], {
     graphic: 'top',
   }),
-  one('mid', 'Graphic between', 'A device under the heading', ['sink', 'number', 'title', 'graphic', 'epigraph', 'summary', 'body'], {
+  one('mid', 'Graphic between', 'A device under the heading', ['sink', 'number', 'title', 'graphic', 'epigraph', 'summary', 'contents', 'body'], {
     graphic: 'middle',
   }),
   one(
     'bottom',
     'Graphic at foot',
     'A device at the bottom margin',
-    ['sink', 'number', 'title', 'epigraph', 'summary', 'body', 'graphic'],
+    ['sink', 'number', 'title', 'epigraph', 'summary', 'contents', 'body', 'graphic'],
     { graphic: 'foot' },
   ),
-  one('full', 'Bleeding header', 'A band of picture across the top', ['graphic', 'number', 'title', 'epigraph', 'summary', 'body'], {
+  one('full', 'Bleeding header', 'A band of picture across the top', ['graphic', 'number', 'title', 'epigraph', 'summary', 'contents', 'body'], {
     graphic: 'bleed',
     ignoresSink: true,
     ignoresGraphicSize: true,
   }),
-  one('left', 'Flush left', 'A large number at the left margin', ['sink', 'number', 'rule', 'title', 'epigraph', 'summary', 'body'], {
+  one('left', 'Flush left', 'A large number at the left margin', ['sink', 'number', 'rule', 'title', 'epigraph', 'summary', 'contents', 'body'], {
     align: 'left',
     numberScale: 'large',
     rule: true,
   }),
-  one('epi', 'With epigraph', 'A quotation given its own measure', ['sink', 'number', 'title', 'epigraph', 'summary', 'body'], {
+  one('epi', 'With epigraph', 'A quotation given its own measure', ['sink', 'number', 'title', 'epigraph', 'summary', 'contents', 'body'], {
     epigraphApart: true,
   }),
-  one('bignum', 'Numeral only', 'The number alone, very large', ['sink', 'number', 'epigraph', 'summary', 'body'], {
+  one('bignum', 'Numeral only', 'The number alone, very large', ['sink', 'number', 'epigraph', 'summary', 'contents', 'body'], {
     numberScale: 'display',
     hideTitle: true,
   }),

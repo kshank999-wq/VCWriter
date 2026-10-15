@@ -284,6 +284,31 @@ export interface ChapterPageContent {
    * none falls back to the template exactly as it always did.
    */
   layout?: ChapterLayoutId;
+  /**
+   * What the chapter covers, as a list of its own sections (addendum 36).
+   *
+   * A **reading**, filled by `chapterLeafContent` and only where the book
+   * asks for one — so a page read alone carries none and draws none, which
+   * is `placement`'s and `layout`'s own shape. Nothing about it is stored:
+   * moving a section renumbers this list with nothing run.
+   */
+  contents?: ChapterContentsLine[];
+}
+
+/**
+ * One line of a chapter opening's own contents — *1.2  Refraction*.
+ *
+ * It is `ContentsSection` **without the page**, and the absence is the
+ * decision: a chapter leaf is a block that goes *into* the laying, so what
+ * page section 1.2 falls on is not known when it is built — and a chapter
+ * opening that printed page numbers would be the table of contents said over
+ * again at the front of every chapter.
+ */
+export interface ChapterContentsLine {
+  /** "1.1", "1.2" — read from `structureNumbers`, never typed. */
+  number: string;
+  /** What the writer named the section. May be empty, as it may on the contents page. */
+  title: string;
 }
 
 /** The three things a page places for itself (addendum 20 §9c). */

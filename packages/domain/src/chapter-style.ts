@@ -3,6 +3,9 @@ import { bookSettingsOf, estimatedPages, faceStackOf, fontOf, geometryOf } from 
 // One function, and it takes the style rather than the file — which is what
 // keeps this module and `chapter-layouts.ts` from forming a cycle (§14).
 import { layoutOf } from './chapter-layouts.js';
+import { nounsFor } from './formats.js';
+import { numbersDivisions, structureNumbers } from './numbering.js';
+import { divisionSpan } from './outline-binding.js';
 import { projectStats } from './selectors.js';
 import type { BookFont } from './entities/book.js';
 import type { ProjectFile } from './project-file.js';
@@ -19,6 +22,7 @@ import {
   contentsDivisions,
   hasChapterPages,
   placedMarkers,
+  type ChapterContentsLine,
   type ChapterPageContent,
   type ChapterPlacement,
   type PlacedMarker,
@@ -198,6 +202,29 @@ export const chapterPageStyleSchema = z.object({
    * the manuscript's — whatever display face the heading wears.
    */
   summary: lineStyleSchema.default({ size: 11 }),
+  /**
+   * **Whether a chapter opening lists the sections under it** (addendum 36,
+   * from Ken: *for each chapter a title page that allows you to outline
+   * what's in the chapter*).
+   *
+   * The **book's** and never a chapter's, which is `firstLine`'s own reason
+   * two fields down: it is a convention rather than a decision about one
+   * page, and a book where chapter four alone lists what it covers has a
+   * mistake in it rather than a design. One tick reaches a thirty-chapter
+   * textbook, which is what makes it usable at book scale.
+   *
+   * Off by default, because a chapter page that already prints is one
+   * somebody asked for before there was a list to put on it — §7a's rule, so
+   * no book already set moves.
+   */
+  showContents: z.boolean().default(false),
+  /**
+   * How those lines are set. A contents line is **a line of type**, so it is
+   * a `LineStyle` beside the number, the name and the summary rather than a
+   * vocabulary of its own (§7a's running heads, a fourth time) — and smaller
+   * than the summary, a list being furniture under prose.
+   */
+  contents: lineStyleSchema.default({ size: 10 }),
   /** A rule under the heading, which is a thing books do and a thing they do not. */
   rule: z.boolean().default(false),
   /**
@@ -261,7 +288,7 @@ export const setChapterPageStyle = (
 /** Patch one line of the style without restating the other two. */
 export const setChapterLineStyle = (
   file: ProjectFile,
-  line: 'number' | 'title' | 'epigraph' | 'summary',
+  line: 'number' | 'title' | 'epigraph' | 'summary' | 'contents',
   patch: Partial<LineStyle>,
 ): ProjectFile =>
   setChapterPageStyle(file, { [line]: { ...chapterPageStyleOf(file)[line], ...patch } } as Partial<ChapterPageStyle>);
@@ -342,10 +369,15 @@ export const chapterStyleVars = (
     // was Courier either way, so the dialog's preview drew a typeset book's
     // summary in a typewriter face the printed book never uses (§9g).
     '--chapter-summary-face': bookFace ?? FACE_STACKS.manuscript,
+    // The contents list is reading matter too, so it takes the reading face
+    // for the summary's own reason rather than the display face the heading
+    // wears — a list of section names is read, not looked at.
+    '--chapter-contents-face': bookFace ?? FACE_STACKS.manuscript,
     ...line('number', style.number),
     ...line('title', style.title),
     ...line('epigraph', style.epigraph),
     ...line('summary', style.summary),
+    ...line('contents', style.contents),
   };
 };
 
@@ -471,6 +503,62 @@ export const chapterStyleWith = (style: ChapterPageStyle, placement?: ChapterPla
   placement ? { ...style, ...placement } : style;
 
 /**
+ * **What a chapter covers, read off the book** (addendum 36, from Ken: *for
+ * the instructional book, there can be for each chapter a title page that
+ * allows you to outline what's in the chapter*).
+ *
+ * The sections under this chapter, in the book's order, with the number each
+ * one prints. **Nothing is stored and there is nowhere to type one**: the
+ * units come from `divisionSpan` and the numbers from `structureNumbers`, so
+ * dragging a section out of chapter two takes it off chapter two's opening
+ * with nothing run, and renaming it renames the line.
+ *
+ * Three rules.
+ *
+ * **It is the contents page's own list, narrowed to one chapter.** The same
+ * units and the same numbers, read from the same place, because a reader who
+ * finds the front of the book and the front of the chapter disagreeing about
+ * what is in it has found a fault. What it does *not* carry is the page
+ * number, for the reason `ChapterContentsLine` gives: a leaf is a block that
+ * goes into the laying, so no page is known yet.
+ *
+ * **Sections and never subsections.** One level down is what a chapter
+ * opening lists; two is the table of contents printed again at the head of
+ * every chapter.
+ *
+ * **It numbers nothing of its own.** Where the book does not number its
+ * sections, `structureNumbers` is empty and so is this — which is the same
+ * answer the contents page gives, and is why the switch is offered only
+ * where `numbersDivisions` holds.
+ */
+export const chapterContents = (file: ProjectFile, markerId: StoryMarkerId): ChapterContentsLine[] => {
+  const numbers = structureNumbers(file).units;
+  if (numbers.size === 0) return [];
+  return divisionSpan(file, markerId)
+    .filter((unit) => numbers.has(unit.id as string))
+    .map((unit) => ({ number: numbers.get(unit.id as string) as string, title: unit.title }));
+};
+
+/**
+ * The same list in one sentence, for the screen to say before the press.
+ *
+ * `trackRemoval`'s shape: what a tick would put on the page, named rather
+ * than counted, because *lists 3 sections* says nothing about whether they
+ * are the three the writer meant.
+ */
+export const describeChapterContents = (file: ProjectFile, markerId: StoryMarkerId | null): string => {
+  const nouns = nounsFor(file.project.format);
+  const plural = nouns.unitPlural.toLowerCase();
+  if (!numbersDivisions(file)) return `This book does not number its ${plural}, so there is nothing to list.`;
+  const lines = markerId ? chapterContents(file, markerId) : [];
+  if (lines.length === 0) {
+    return `Each ${nouns.division.toLowerCase()} opening lists the ${plural} under it, with the number each one prints.`;
+  }
+  const said = lines.map((line) => [line.number, line.title.trim()].filter(Boolean).join(' ')).join(', ');
+  return `This page would list ${lines.length} ${lines.length === 1 ? nouns.unit.toLowerCase() : plural}: ${said}.`;
+};
+
+/**
  * The leaf as it will draw, with everything resolved that the marker alone
  * cannot resolve: the template, which may be the book's, and the picture,
  * which on a book comes from the library by id (addendum 19 §7).
@@ -491,6 +579,10 @@ export const chapterLeafContent = (file: ProjectFile, placed: PlacedMarker): Cha
     placement: chapterPlacementOf(file, placed.marker),
     layout: layoutOf(chapterPageStyleOf(file), placed.marker),
     image: asset ? { dataUrl: asset.data, name: asset.altText || asset.name, width: page.graphicWidth } : content.image,
+    // Asked once, here, so the slot that draws it decides nothing: a page
+    // the book has not asked a list of carries none, and the print, the
+    // preview and the eBook cannot disagree about which pages have one.
+    contents: chapterPageStyleOf(file).showContents ? chapterContents(file, placed.marker.id) : [],
   };
 };
 

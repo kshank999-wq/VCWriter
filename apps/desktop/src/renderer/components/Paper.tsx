@@ -295,6 +295,21 @@ export function ChapterLeaf({
             {chapter.summary}
           </p>
         ) : null;
+      // What the chapter covers (addendum 36). It is drawn here as well as in
+      // the print for `ChapterLeaf`'s own stated reason: a preview that
+      // worked the page out its own way would be answering a different
+      // question from the one the writer asked.
+      case 'contents':
+        return chapter.contents && chapter.contents.length > 0 ? (
+          <ul className="chapter-leaf-contents" key="contents">
+            {chapter.contents.map((line, at) => (
+              <li key={`${line.number}-${at}`}>
+                <span className="chapter-leaf-contents-no">{line.number}</span>
+                <span>{line.title}</span>
+              </li>
+            ))}
+          </ul>
+        ) : null;
       default:
         return null;
     }

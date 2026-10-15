@@ -4004,6 +4004,34 @@ dialog.marker-dialog {
   line-height: 1.5;
 }
 
+/* What the chapter covers (addendum 36) — the same custom properties the
+   printed page carries, so the sheet beside the controls and the page in the
+   book are set from one place. */
+.chapter-leaf-contents {
+  margin: 2em auto 0;
+  max-width: 34em;
+  padding: 0;
+  list-style: none;
+  text-align: var(--chapter-contents-align, left);
+  font-family: var(--chapter-contents-face, inherit);
+  font-size: var(--chapter-contents-size, inherit);
+  font-weight: var(--chapter-contents-weight, 400);
+  font-style: var(--chapter-contents-style, normal);
+  text-transform: var(--chapter-contents-case, none);
+  font-variant-caps: var(--chapter-contents-variant, normal);
+  letter-spacing: var(--chapter-contents-tracking, 0);
+  line-height: 1.6;
+}
+
+.chapter-leaf-contents li {
+  display: flex;
+  gap: 0.8em;
+}
+
+.chapter-leaf-contents-no {
+  flex: 0 0 3.2em;
+}
+
 .chapter-leaf-epigraph {
   margin: 2.5em 0 0;
   white-space: pre-wrap;

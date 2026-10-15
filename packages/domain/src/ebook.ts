@@ -724,6 +724,16 @@ export const ebookOf = (file: ProjectFile, options: { modified?: string; target?
         }
         if (leaf?.epigraph.trim()) draft.html.push(`<blockquote class="epigraph">${lines(leaf.epigraph)}</blockquote>`);
         if (leaf?.summary.trim()) draft.html.push(`<p class="summary">${escapeXml(leaf.summary.trim())}</p>`);
+        // What the chapter covers (addendum 36). A real `<ol>` rather than
+        // lines of text, because this is a list to a reading system as well
+        // as to the eye, and its numbers are the book's own — so they are
+        // written rather than counted by the list.
+        if (leaf?.contents?.length) {
+          const rows = leaf.contents
+            .map((line) => `<li>${escapeXml([line.number, line.title.trim()].filter(Boolean).join('  '))}</li>`)
+            .join('');
+          draft.html.push(`<ul class="chapter-contents">${rows}</ul>`);
+        }
         opening = openingClass;
         break;
       }

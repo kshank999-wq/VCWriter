@@ -8043,6 +8043,64 @@ push live; the build takes a minute or two.
   name is **not** repeated in the middle, and **nothing is stored** about which
   page a project opens on, a remembered one putting somebody back on a screen
   they left a fortnight ago.
+  `addendum-36-chapter-opening.md` is **what the chapter covers**, from Ken
+  (*for the instructional book, there can be for each chapter a title page that
+  allows you to outline what's in the chapter and add text such as what you'll
+  be covering*), and **measuring split his sentence in two**: *add text* was
+  **built** — *What this chapter covers* is `page.summary`, addendum 19 §7, a
+  box on that very dialog with its own type and a suggested summary beside it —
+  while *outline what's in the chapter* had no control, no field and nothing in
+  `ChapterPageContent` that could carry one, so this is a half-built thing
+  rather than the route fault the week before. **The audit paid a thirty-second
+  time, in three places at once**: the numbers are `structureNumbers`' (nothing
+  stored since addendum 16 §15), the list is **the contents page's own** (it has
+  listed each chapter's sections since addendum 19 §2, off that same reading —
+  so *what is in chapter one* already had an answer in this program and could
+  not be asked from the chapter's own page), and the place to put it is addendum
+  20 §14's **slot list**, whose stated promise is that adding a piece is an entry
+  and nothing else: `'contents'` joins `CHAPTER_SLOTS` and nine layouts took it
+  untouched, `art` rightly excepted, the picture being the page. **Nothing is
+  stored and there is nowhere to type one** — renaming a section renames the
+  line, dragging section four above two renumbers it, and dragging one out of
+  the chapter takes it off, each with nothing run, which is the whole feature
+  and what a stored list would get wrong from the first edit. Three rules:
+  **it is the contents page's list narrowed to one chapter** (same units, same
+  numbers, because the front of the book and the front of the chapter
+  disagreeing is a fault) and so carries **no page number**, a leaf being a
+  block that goes *into* the laying, with a chapter opening that printed them
+  being the contents page said over at every chapter; **sections and never
+  subsections**; and **no heading over it**, *In this chapter* being words this
+  program would write into somebody's book, which the epigraph and the summary
+  are both there for. **The book's and never one chapter's** is `firstLine`'s
+  own argument (*a convention rather than a decision about one page*) with the
+  practical half beside it — a thirty-chapter textbook needs one press — so
+  `showContents` is on `ChapterPageStyle` with **no per-chapter field**, **off
+  by default** (§7a; the proof is the whole domain suite passing with no
+  assertion edited) and **absent where `numbersDivisions` fails**, which covers
+  a format with no numbered sections and a book whose numbering is switched off
+  in one predicate. Its type is a **`LineStyle`** beside the number, the name,
+  the epigraph and the summary (§7a's running heads a fourth time) at 10 pt in
+  the **reading face**, a list of section names being read rather than looked
+  at. **Driving corrected where the control stands**: the first draft put it
+  among the book's other settings and measured at **y=2104 in a dialog 2,662px
+  tall**, a thousand pixels below the fold behind a scroll nothing announces
+  (§15c and §7b, in the one dialog the ask is about) — it is in the page's own
+  fields now at **y=650**, in **the order the page prints** (number, name,
+  epigraph, summary, then this), with its value still the book's said in one
+  clause and only the *type* left among the type, which is the dialog's own
+  split. The note **names the sections rather than counting them**
+  (`trackRemoval`'s shape), *3 sections* saying nothing about whether they are
+  the three the writer meant. And it is **the leaf's rather than every
+  opening's** with nothing written to make it so, the slot walk running on
+  `block.leaf`: a chapter that runs straight on from the last one has no page to
+  put a list on, and Ken asked for a *title page*. Driven at 1440×900 on an
+  instructional book with 1.1, 1.2 and 1.3 under *Light*: the tick draws the
+  three lines on the sheet at once, six type controls appear with it and not
+  before, and the Layout room's laid page reads CHAPTER 1 · *Light* · the
+  summary · the list. **Named rather than built**: a chapter with more sections
+  than fit the page (the leaf is a `display` block not measured against the
+  page, as true of a long summary since addendum 19 §7), a heading over the
+  list, and page numbers against each line.
 
 ## Before pushing
 

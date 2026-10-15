@@ -11,6 +11,8 @@ import {
   chapterChoices,
   chapterLeafContent,
   chapterPageStyleOf,
+  describeChapterContents,
+  numbersDivisions,
   pagePlace,
   type BookBlock,
   type BookPage,
@@ -182,6 +184,8 @@ function Body({
     [file, chosen],
   );
   const style = chapterPageStyleOf(file);
+  /** Nothing names a unit itself (addendum 16 §6c) — Chapter here, Story on a collection. */
+  const nouns = nounsFor(file.project.format);
   /**
    * The preview sheet, at the book's own trim, margins and face (§9g) — it was
    * a letter page in Courier whatever the book was set to, which made the drop
@@ -541,6 +545,39 @@ function Body({
                 </div>
               ) : null}
 
+              {/* **What the chapter covers, listed** (addendum 36, from Ken:
+                  *a title page that allows you to outline what's in the
+                  chapter and add text such as what you'll be covering*).
+
+                  It stands here, in the order the page prints — the number,
+                  the name, the epigraph, the summary, then the list — rather
+                  than among the type eighteen hundred pixels down, where it
+                  was behind a scroll nothing announces (§15c, §7b). Its
+                  **value is the book's**, which the note says: a book where
+                  chapter four alone lists what it covers has a mistake in it,
+                  and one press has to reach a thirty-chapter textbook.
+
+                  Absent where the book does not number its sections, with
+                  the reason in its place. */}
+              {numbersDivisions(file) ? (
+                <>
+                  <label className="check">
+                    <input
+                      type="checkbox"
+                      checked={style.showContents}
+                      onChange={(event) =>
+                        onUpdate((current) => setChapterPageStyle(current, { showContents: event.target.checked }))
+                      }
+                    />
+                    <span>List what each {nouns.division.toLowerCase()} covers</span>
+                  </label>
+                  <p className="field-note">
+                    {describeChapterContents(file, marker.id)} Every {nouns.division.toLowerCase()} opening lists
+                    them, not this one alone.
+                  </p>
+                </>
+              ) : null}
+
               {/* Where the picture sits is set by the tiles under *This page*
                   (addendum 20 §9c). The select that used to stand here is
                   gone: two controls for one act on one screen are two answers
@@ -787,6 +824,25 @@ export function ChapterStyleFields({
           align
           fonts={fonts}
           onPatch={(patch) => onUpdate((current) => setChapterLineStyle(current, 'summary', patch))}
+        />
+      ) : null}
+
+      {/* **How the list of what a {unit} covers is set** (addendum 36). The
+          *whether* is on the page's own fields, in the order the page prints;
+          what stands here is the type, beside the other lines of type — the
+          dialog's own split, which is §7a's: a contents line is a line of
+          type and not a vocabulary of its own.
+
+          Shown only once the book lists them, a size for something the book
+          does not print being a control that lies. */}
+      {numbersDivisions(file) && style.showContents ? (
+        <Line
+          label="The contents"
+          style={style.contents}
+          tracking={false}
+          align
+          fonts={fonts}
+          onPatch={(patch) => onUpdate((current) => setChapterLineStyle(current, 'contents', patch))}
         />
       ) : null}
 
