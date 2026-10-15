@@ -5,6 +5,7 @@ import {
   chapterContentsHeading,
   chapterLeafContent,
   chapterPageStyleOf,
+  chapterStyleVars,
   createProjectFile,
   defaultContentsHeading,
   describeChapterContents,
@@ -18,6 +19,7 @@ import {
   type StoryMarkerId,
 } from '../index.js';
 import { CHAPTER_LAYOUTS, CHAPTER_SLOTS } from '../chapter-layouts.js';
+import { CHAPTER_STYLES } from '../print-book.js';
 
 /**
  * **What the chapter covers, read off the book** (addendum 36, from Ken: *for
@@ -141,6 +143,22 @@ describe('the words over the list', () => {
     // And clearing the box gives the default back rather than a blank line:
     // `settings.titlePage`'s shape, so there are not two ways to say nothing.
     expect(chapterContentsHeading(setChapterPageStyle(typed, { contentsWords: '   ' }))).toBe('In this chapter');
+  });
+
+  it('take the page’s alignment, which is the chapter title’s', () => {
+    // From Ken: *make the heading alignment match the chapter title*. A
+    // heading is a label like the title above it, where the summary below it
+    // is reading matter and a centred paragraph is wrong — so the line
+    // carries no alignment of its own and the stylesheet falls back to the
+    // page's rather than to a direction it chose.
+    const { file } = book();
+    expect(chapterPageStyleOf(file).contentsHead.align).toBeNull();
+    const vars = chapterStyleVars(chapterPageStyleOf(file));
+    expect(vars['--chapter-contentsHead-align']).toBeUndefined();
+    expect(CHAPTER_STYLES).toContain('var(--chapter-contentsHead-align, inherit)');
+    // And the entries keep their own left, a list of numbered rows being a
+    // list rather than a line of type over one.
+    expect(CHAPTER_STYLES).toContain('var(--chapter-contents-align, left)');
   });
 
   it('ride on the page with the list', () => {

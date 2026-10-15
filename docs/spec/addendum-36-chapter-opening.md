@@ -224,4 +224,44 @@ builds its navigation from the headings, and *In this chapter* is not a
 division of the book.
 
 Driven on the laid page: `IN THIS CHAPTER` in small caps at 10 pt with 8/100 em
-of tracking, 20 px over the list, its left edge on the numbers'.
+of tracking, 20 px over the list.
+
+---
+
+## 11. The heading follows the title
+
+From Ken, straight after §10:
+
+> make the heading alignment match the chapter title
+
+**§10 ranged it left, and that made it the odd line out.** The epigraph has
+inherited the page's alignment since it was written, and the page's alignment
+*is* the chapter title's — so the heading was the one line on the leaf that
+chose a direction of its own. The rule it should have followed was already
+there: a heading is **a label like the title above it**, where the **summary**
+below it is reading matter and a centred paragraph is wrong. The entries keep
+their own left, a list of numbered rows being a list rather than a line of type
+over one.
+
+The fix is one word in two stylesheets — the fallback under
+`--chapter-contentsHead-align` is `inherit` rather than `left` — because
+`lineStyleVars` emits nothing where a line has no alignment of its own (§18),
+so what the stylesheet falls back to *is* what null means. The writer's own
+override is untouched and its first option still reads *The page's*.
+
+### What driving it caught
+
+**The sheet and the printed page disagreed about where the list sits**, which
+is the one thing `ChapterLeaf` exists not to do. The printed leaf is a centred
+flex column and the dialog's sheet is an ordinary block, so a block left to
+find its own width came out shrink-to-fit in the book and full measure on the
+sheet. `width: max-content` is said on the block now, so neither depends on its
+parent's layout mode.
+
+**And `max-content` overflows rather than wrapping.** With long section names
+the block ran past the narrow sheet, and an overflowing box cannot be centred
+by `auto` margins: measured, the title's centre was 1153 and the heading's
+1186 — **33 px out on the sheet while the printed page was exact**, which is
+precisely the shape of fault a preview is supposed to make visible rather than
+commit. `max-width: min(34em, 100%)` clamps it to the room there is, after
+which both surfaces measure the same: sheet 1153 and 1153, page 1133 and 1133.

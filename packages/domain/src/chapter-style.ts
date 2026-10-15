@@ -249,6 +249,14 @@ export const chapterPageStyleSchema = z.object({
    * room over, rather than a second vocabulary. Small caps by default, which
    * is what books set this line in, and `contents`' own size so the pair reads
    * as one block.
+   *
+   * **Its alignment is null, which is the page's — the chapter title's**
+   * (addendum 36 §11, from Ken: *make the heading alignment match the chapter
+   * title*). The epigraph has inherited the page's since it was written and
+   * this ranged left, which made it the odd line out: a heading is a label
+   * like the title above it, where the **summary** below it is reading matter
+   * and a centred paragraph is wrong. The entries keep their own left, a list
+   * of numbered rows being a list.
    */
   contentsHead: lineStyleSchema.default({ size: 10, case: 'small_caps', tracking: 8 }),
   /** A rule under the heading, which is a thing books do and a thing they do not. */

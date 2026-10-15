@@ -8131,6 +8131,31 @@ push live; the build takes a minute or two.
   exactly on the numbers'. In the eBook it is **a paragraph rather than an
   `<h2>`**, a reading system building its navigation from the headings and
   *In this chapter* not being a division of the book.
+  **§11 is the heading following the title**, from Ken straight after (*make
+  the heading alignment match the chapter title*), and §10 had made it **the
+  odd line out**: the epigraph has inherited the page's alignment since it was
+  written and the page's *is* the chapter title's, so this was the one line on
+  the leaf choosing a direction of its own. The rule was already there — **a
+  heading is a label like the title above it**, where the **summary** below it
+  is reading matter and a centred paragraph is wrong, and the entries keep
+  their own left, a list of numbered rows being a list rather than a line of
+  type over one. It is one word in two stylesheets (the fallback under
+  `--chapter-contentsHead-align` is `inherit` rather than `left`), because
+  `lineStyleVars` emits nothing where a line has no alignment of its own
+  (§18), so **what the stylesheet falls back to is what null means**. Driving
+  it caught two. **The sheet and the printed page disagreed about where the
+  list sits** — the printed leaf is a centred flex column and the dialog's
+  sheet an ordinary block, so a block left to find its own width came out
+  shrink-to-fit in the book and full measure on the sheet, which is the one
+  thing `ChapterLeaf` exists not to do; `width: max-content` is said on the
+  block now so neither depends on its parent's layout mode. And **`max-content`
+  overflows rather than wrapping**, so with long section names the block ran
+  past the narrow sheet and **an overflowing box cannot be centred by `auto`
+  margins** — measured, the title's centre 1153 against the heading's 1186,
+  33px out on the sheet while the printed page was exact, which is the shape of
+  fault a preview is meant to make visible rather than commit; `max-width:
+  min(34em, 100%)` clamps it, after which both surfaces measure the same (sheet
+  1153 and 1153, page 1133 and 1133).
 
 ## Before pushing
 
