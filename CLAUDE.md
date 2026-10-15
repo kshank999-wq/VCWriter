@@ -8100,9 +8100,7 @@ push live; the build takes a minute or two.
   summary · the list. **Named rather than built**: a chapter with more sections
   than fit the page (the leaf is a `display` block not measured against the
   page, as true of a long summary since addendum 19 §7), page numbers against
-  each line, and the list with **no** heading at all — clearing the box gives
-  the format's own words back (`settings.titlePage`'s shape), two empty boxes
-  that printed different things being two states that look alike.
+  each line.
   **§10 is the heading, after all**, from Ken the same day (*add the "In this
   chapter" heading*), and the correction is that **§3 was right about the words
   and wrong about the line**: its argument — that *In this chapter* would be
@@ -8156,6 +8154,31 @@ push live; the build takes a minute or two.
   fault a preview is meant to make visible rather than commit; `max-width:
   min(34em, 100%)` clamps it, after which both surfaces measure the same (sheet
   1153 and 1153, page 1133 and 1133).
+  **§12 is the list bare**, from Ken (*make the list bare, no heading
+  option*), and it is **§9's own sentence cashed in rather than a reversal**:
+  §9 named a bare list as deliberately absent and the reason it gave was about
+  **the box** — clearing it gives the format's own words back, so an empty box
+  that printed nothing and one that printed *In this chapter* would be two
+  states that look alike — which is an argument against making emptiness mean
+  two things and not against the want, §9 ending *if it is wanted, that is a
+  tick and a line to say*. A tick is not two states that look alike (it is
+  visible, it says which state the page is in, and it leaves the words where
+  they are), so the reason is **answered rather than overruled**.
+  `showContentsHead` on `ChapterPageStyle`, **on by default** so no page §10
+  produced moves. Three decisions. **One place answers it, so nothing
+  downstream learns the switch exists** — `chapterContentsHeading` returns `''`
+  where the heading is off and the print, the sheet and the eBook each already
+  drew one only where there were words, so there is **no new branch in any of
+  the three**, a switch read in three drawers being three answers waiting to
+  disagree. **The words and their type are absent rather than greyed**, a box
+  whose contents cannot reach the page being a control that lies and a size for
+  something the book does not print the same fault one line down. And
+  **switching it off keeps what was typed**, putting the heading back being one
+  press rather than a retype (§15's *an element switched off is not an element
+  left empty*, pointed at a line of type). Driven: unticking it leaves the
+  three entries where they were, takes the box and all seven type controls off
+  the screen, prints a bare list with its centre still on the title's (1132
+  against 1133), and ticking it back brings *What you will cover* with it.
 
 ## Before pushing
 

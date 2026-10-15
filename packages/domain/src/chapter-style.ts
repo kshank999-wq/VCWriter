@@ -244,6 +244,22 @@ export const chapterPageStyleSchema = z.object({
    */
   contentsWords: z.string().default(''),
   /**
+   * **Whether the list carries a heading at all** (addendum 36 §12, from Ken:
+   * *make the list bare, no heading option*).
+   *
+   * §9 named this as deliberately absent and gave a reason rather than a
+   * refusal: clearing the box gives the format's own words back, so an empty
+   * box that printed nothing and an empty box that printed *In this chapter*
+   * would be **two states that look alike**. A tick is not that — it is
+   * visible, it says which state the page is in, and it leaves the words
+   * where they are. So the reason is answered rather than overruled, which is
+   * why §9 said *that is a tick and a line to say*.
+   *
+   * On by default, so §10's pages are unchanged: this adds a way to take the
+   * heading off and never a change to a book already set.
+   */
+  showContentsHead: z.boolean().default(true),
+  /**
    * How that heading is set. A list has **two lines of type** — the heading
    * and the entries — which is §18's own pair said of the contents page one
    * room over, rather than a second vocabulary. Small caps by default, which
@@ -584,8 +600,15 @@ export const chapterContents = (file: ProjectFile, markerId: StoryMarkerId): Cha
  * itself** (addendum 16 §6c), so it is *In this chapter* where the division
  * is a chapter and takes the format's own noun anywhere else.
  */
-export const chapterContentsHeading = (file: ProjectFile): string =>
-  chapterPageStyleOf(file).contentsWords.trim() || defaultContentsHeading(file.project.format);
+export const chapterContentsHeading = (file: ProjectFile): string => {
+  const style = chapterPageStyleOf(file);
+  // **The one place that answers it, so nothing downstream learns the
+  // switch exists** (§12): the print, the sheet and the eBook each already
+  // draw a heading only where there are words, so a bare list is this
+  // function saying there are none. Three drawers, no new branch in any.
+  if (!style.showContentsHead) return '';
+  return style.contentsWords.trim() || defaultContentsHeading(file.project.format);
+};
 
 /**
  * The format's own words, where the writer has typed none — and the screen's

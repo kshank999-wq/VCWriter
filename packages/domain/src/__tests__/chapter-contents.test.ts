@@ -161,6 +161,35 @@ describe('the words over the list', () => {
     expect(CHAPTER_STYLES).toContain('var(--chapter-contents-align, left)');
   });
 
+  it('come off altogether at a tick, and the typing survives it', () => {
+    // §9 named a bare list as deliberately absent because an empty box that
+    // printed nothing and an empty box that printed *In this chapter* are two
+    // states that look alike. A tick is not that, so the reason is answered
+    // rather than overruled.
+    const { file, chapter } = book();
+    const typed = setChapterPageStyle(file, {
+      showContents: true,
+      contentsWords: 'What you will cover',
+    });
+    const bare = setChapterPageStyle(typed, { showContentsHead: false });
+    expect(chapterContentsHeading(bare)).toBe('');
+
+    // The list is untouched: it is the heading that goes, not the contents.
+    const placed = placedMarkers(bare).find((one) => one.marker.id === chapter)!;
+    expect(chapterLeafContent(bare, placed).contents).toHaveLength(3);
+    expect(chapterLeafContent(bare, placed).contentsHeading).toBe('');
+
+    // Switching it back is one press rather than a retype.
+    expect(chapterContentsHeading(setChapterPageStyle(bare, { showContentsHead: true }))).toBe(
+      'What you will cover',
+    );
+  });
+
+  it('are on by default, so no page already set moves', () => {
+    const { file } = book();
+    expect(chapterPageStyleOf(file).showContentsHead).toBe(true);
+  });
+
   it('ride on the page with the list', () => {
     const { file, chapter } = book();
     const asked = setChapterPageStyle(file, { showContents: true, contentsWords: 'What you will cover' });

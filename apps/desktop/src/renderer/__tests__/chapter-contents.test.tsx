@@ -124,6 +124,32 @@ describe('ticking it', () => {
     expect(document.querySelector('.chapter-leaf-contents-head')?.textContent).toBe('What you will cover');
   });
 
+  it('takes the heading off at a tick, leaving the list bare', () => {
+    render(<Harness start={book()} />);
+    fireEvent.click(screen.getByRole('checkbox', { name: /Open this chapter with a page of its own/i }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /List what each chapter covers/i }));
+
+    const box = screen.getByLabelText(/The words over the list/i) as HTMLInputElement;
+    fireEvent.change(box, { target: { value: 'What you will cover' } });
+    expect(document.querySelector('.chapter-leaf-contents-head')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /A heading over it/i }));
+
+    // The heading goes and the list stays — it is the heading that is bare,
+    // not the page.
+    expect(document.querySelector('.chapter-leaf-contents-head')).toBeNull();
+    expect(document.querySelectorAll('.chapter-leaf-contents li')).toHaveLength(3);
+
+    // The box and its type go with it: a control whose value cannot reach the
+    // page is one that lies.
+    expect(screen.queryByLabelText(/The words over the list/i)).toBeNull();
+    expect(screen.queryByLabelText(/The words over it size/i)).toBeNull();
+
+    // And the typing survives, so putting it back is one press.
+    fireEvent.click(screen.getByRole('checkbox', { name: /A heading over it/i }));
+    expect(document.querySelector('.chapter-leaf-contents-head')?.textContent).toBe('What you will cover');
+  });
+
   it('gives the list its own type, a contents line being a line of type', () => {
     render(<Harness start={book()} />);
     fireEvent.click(screen.getByRole('checkbox', { name: /List what each chapter covers/i }));

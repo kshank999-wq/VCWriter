@@ -168,11 +168,12 @@ chapter *Light* over 1.1 *What light is*, 1.2 *Reflection* and 1.3
   than this list's, and the sheet beside the control shows it.
 - **Page numbers against each line.** Covered in §3, and they would be a
   second table of contents besides.
-- **The list with no heading at all.** Clearing the box gives the format's own
-  words back, which is `settings.titlePage`'s shape and avoids two states that
-  look alike — an empty box that printed nothing and an empty box that printed
-  *In this chapter* are indistinguishable to look at. Nobody has asked for the
-  list bare; if it is wanted, that is a tick and a line to say.
+- **The list with no heading at all** — *asked for and built; see §12.* The
+  reason given here was that clearing the box gives the format's own words
+  back (`settings.titlePage`'s shape), so an empty box that printed nothing and
+  an empty box that printed *In this chapter* would be two states that look
+  alike. That reason is about **the box** and not about the want, which is why
+  this ended *if it is wanted, that is a tick and a line to say*.
 
 ---
 
@@ -265,3 +266,53 @@ by `auto` margins: measured, the title's centre was 1153 and the heading's
 precisely the shape of fault a preview is supposed to make visible rather than
 commit. `max-width: min(34em, 100%)` clamps it to the room there is, after
 which both surfaces measure the same: sheet 1153 and 1153, page 1133 and 1133.
+
+---
+
+## 12. The list bare
+
+From Ken:
+
+> make the list bare, no heading option
+
+**This is §9's own sentence cashed in, not a reversal.** §9 named a bare list
+as deliberately absent and the reason it gave was about **the box**: clearing
+it gives the format's own words back, so an empty box that printed nothing and
+an empty box that printed *In this chapter* would be two states that look
+alike. That is an argument against making emptiness mean two things — it is
+not an argument against the want, which is why §9 ended *if it is wanted, that
+is a tick and a line to say*.
+
+A tick is not two states that look alike. It is visible, it says which state
+the page is in, and it leaves the words where they are. So the reason is
+**answered rather than overruled**.
+
+`showContentsHead` on `ChapterPageStyle`, **on by default** so no page §10
+produced moves: this adds a way to take the heading off and never a change to
+a book already set.
+
+Three decisions.
+
+**One place answers it, so nothing downstream learns the switch exists.**
+`chapterContentsHeading` returns `''` where the heading is off, and the print,
+the sheet and the eBook each already drew a heading only where there were
+words — so there is **no new branch in any of the three**. A switch read in
+three drawers is three answers waiting to disagree.
+
+**The words and their type are absent rather than greyed**, a box whose
+contents cannot reach the page being a control that lies, and a size for
+something the book does not print being the same fault one line down (§12's
+own rule, stated when the type controls were first gated on the list).
+
+**Switching it off keeps what was typed.** Putting the heading back is one
+press rather than a retype — the copyright page's rule (§15: *an element
+switched off is not an element left empty*), pointed at a line of type.
+
+### Driven
+
+On an instructional book with 1.1, 1.2 and 1.3 under *Light*, the heading
+typed as *What you will cover*: unticking **A heading over it** leaves the
+three entries exactly where they were, takes the words box and all seven of
+its type controls off the screen, and prints a bare list on the laid page with
+its centre still on the title's (1132 against 1133). Ticking it back brings
+*What you will cover* with it.

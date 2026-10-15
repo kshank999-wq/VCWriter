@@ -584,6 +584,26 @@ function Body({
                       Empty means the format's own, said in the placeholder
                       — `settings.titlePage`'s shape. */}
                   {style.showContents ? (
+                    <label className="check">
+                      <input
+                        type="checkbox"
+                        checked={style.showContentsHead}
+                        onChange={(event) =>
+                          onUpdate((current) =>
+                            setChapterPageStyle(current, { showContentsHead: event.target.checked }),
+                          )
+                        }
+                      />
+                      <span>A heading over it</span>
+                    </label>
+                  ) : null}
+                  {/* **The words are absent rather than greyed where there is
+                      no heading** (§12) — a box whose contents cannot reach
+                      the page is a control that lies — and switching it off
+                      **keeps what was typed**, so putting the heading back is
+                      one press rather than a retype (§15's own rule on the
+                      copyright page). */}
+                  {style.showContents && style.showContentsHead ? (
                     <label className="field">
                       <span>The words over it</span>
                       <input
@@ -860,14 +880,18 @@ export function ChapterStyleFields({
       {numbersDivisions(file) && style.showContents ? (
         <>
           {/* A list is **two lines of type** — the heading and the entries
-              (§18's own pair, said of the contents page one room over). */}
-          <Line
-            label="The words over it"
-            style={style.contentsHead}
-            align
-            fonts={fonts}
-            onPatch={(patch) => onUpdate((current) => setChapterLineStyle(current, 'contentsHead', patch))}
-          />
+              (§18's own pair, said of the contents page one room over) — and
+              the heading's goes with the heading: a size for something the
+              book does not print is a control that lies (§12). */}
+          {style.showContentsHead ? (
+            <Line
+              label="The words over it"
+              style={style.contentsHead}
+              align
+              fonts={fonts}
+              onPatch={(patch) => onUpdate((current) => setChapterLineStyle(current, 'contentsHead', patch))}
+            />
+          ) : null}
           <Line
             label="The contents"
             style={style.contents}
