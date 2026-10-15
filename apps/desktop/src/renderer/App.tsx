@@ -13,6 +13,7 @@ import {
   isInstructional,
   describeSavedTo,
   isProseFormat,
+  LANE_DEFAULT,
   isInteractive,
   setParagraphStyle,
   setScriptFormat,
@@ -57,7 +58,7 @@ import { TitleBar } from './components/TitleBar';
 import { StaleBuildNotice } from './components/StaleBuildNotice';
 import { WritingNotice } from './components/WritingNotice';
 import { Welcome } from './components/Welcome';
-import { MasterTimeline, DEFAULT_BEATS_PER_COLUMN } from './components/MasterTimeline';
+import { MasterTimeline } from './components/MasterTimeline';
 import { MasterPanel } from './components/MasterPanel';
 import { Inspector } from './components/Inspector';
 import { TimelineViewer } from './components/TimelineViewer';
@@ -180,7 +181,13 @@ export default function App() {
   const [timelineOpen, setTimelineOpen] = usePreference('timeline', true);
   const [pixelsPerPage, setPixelsPerPage] = usePreference('zoom', 160);
   // How many beats stack in a scene before the next column starts (§4).
-  const [beatsPerColumn, setBeatsPerColumn] = usePreference('beatsPerColumn', DEFAULT_BEATS_PER_COLUMN);
+  /**
+   * **The vertical zoom** (addendum 02 §4e). It replaces `beatsPerColumn`,
+   * which said how many beats to stack before wrapping into a second column —
+   * a count that was paid for in width. A new key for `panes2`' reason: the
+   * old one holds a number that meant something else.
+   */
+  const [laneHeight, setLaneHeight] = usePreference('laneHeight', LANE_DEFAULT);
   // The Timeline & Viewer screen: its own zoom, and whose thread is isolated.
   const [viewerZoom, setViewerZoom] = usePreference('viewerZoom', 180);
   const [isolatedCharacter, setIsolatedCharacter] = useState('');
@@ -277,11 +284,26 @@ export default function App() {
    * work in, which is the point of the whole change.
    */
   const rows = useSplit({
-    key: shortForm ? 'sheetHeight' : 'tracksHeight',
+    /**
+     * **A new key, for §8a's own reason.** The split is per machine, so every
+     * machine that has opened the workspace has `tracksHeight` written with
+     * 0.58 in it — and for nearly all of them that was not a choice but what
+     * they were handed, which is exactly the argument §8a made when it minted
+     * `tracksHeight` over `viewportHeight` and `panes2` over `panes`. Changing
+     * the default alone would have reached nobody who had already opened the
+     * program, which is the fault this project keeps finding in itself.
+     */
+    key: shortForm ? 'sheetHeight' : 'stageSplit',
     // Enough for the board and the segments under it without a scrollbar,
     // and every pixel above that to the sheet. On a script the tracks open
-    // with rather more than half, being the surface rather than the summary.
-    initial: shortForm ? 0.68 : 0.58,
+    // **It opens on the middle** (§4e, from Ken: *I would like by default it
+    // to start in the center, not pushed up towards the top, just to give it
+    // room to make it look a little bit more appealing and easy on the eyes
+    // when you open it up*). §8a put it at 0.58 to say the tracks are the
+    // surface and the viewer the summary, which is true and is not worth a
+    // screen that opens lopsided — and on a book there is no viewer under it
+    // at all now, so the number only ever spoke about a script.
+    initial: shortForm ? 0.68 : 0.5,
     min: shortForm ? 240 : 200,
     // The strip under the sheet has two tracks to show — the board and the
     // segments — so it is never squeezed below the height of both.
@@ -1019,11 +1041,34 @@ export default function App() {
   const withRail = (file.project.format === 'series' || isCollection(file.project.format)) && !roomOpen;
   // A section in a window of its own leaves no gap here: its place is not
   // drawn and the rest of the workspace takes the room (§8).
+  /**
+   * **A book has no timeline viewer** (addendum 02 §4e, from Ken: *in the main
+   * timeline view, under the novels, you don't need the timeline in viewer…
+   * since we won't have the timeline in viewer, we'll have the room*).
+   *
+   * The viewer is the overview of a *script* — where a scene is a page or two
+   * and forty of them are a shape worth standing back from. A novel's spans
+   * are chapters, and the plot tracks already draw the book in order, so it was
+   * a second drawing of the same axis taking **295 pixels of an 824-pixel
+   * stage** — over a third of the room, measured.
+   *
+   * **It is read off the format rather than stored**, which is what makes it
+   * reach everybody: the arrangement is per machine (`panes2`), so changing a
+   * default would have reached nobody who had already opened the program —
+   * §8a's own fault, which that section had to mint a new key to escape. And
+   * it names the **pane** rather than a slot, so a writer who has swapped the
+   * sections still loses the viewer and keeps their tracks.
+   */
+  const noViewer = isProseFormat(file.project.format);
   const here = (slot: SlotId) =>
     // Short form has two sections, not four: the sheet, full size, and the
     // timeline docked under it (addendum 05 §3e). There is no side column and
     // nothing above the sheet — a commercial has no viewer to look at.
-    shortForm && slot === 'left' ? false : !away.has(arrangement[slot]);
+    shortForm && slot === 'left'
+      ? false
+      : noViewer && arrangement[slot] === 'viewer'
+        ? false
+        : !away.has(arrangement[slot]);
   const display = { ...DEFAULT_SCRIPT_DISPLAY, ...scriptDisplay };
   // A novel's finished pages are its manuscript, not its script (§6.4).
   const paneNames = paneNamesFor(file.project.format);
@@ -1082,7 +1127,8 @@ export default function App() {
           setSelectedTrackId(trackId);
         }}
         onSelectTrack={setSelectedTrackId}
-        beatsPerColumn={beatsPerColumn}
+        laneHeight={laneHeight}
+        onLane={setLaneHeight}
         onUpdate={project.update}
         pixelsPerPage={pixelsPerPage}
         onZoom={setPixelsPerPage}
@@ -1220,8 +1266,6 @@ export default function App() {
         onScheme={setScheme}
         paper={paper}
         onPaper={setPaper}
-        beatsPerColumn={beatsPerColumn}
-        onBeatsPerColumn={setBeatsPerColumn}
       />
 
       {/* A lapsed subscription (addendum 32 §8). Above the project's own

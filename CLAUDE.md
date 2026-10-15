@@ -344,6 +344,60 @@ push live; the build takes a minute or two.
   twice**. Driven after: 2,128px a chapter at 240 with a **143 × 26** chip,
   352px at 40 with the same chip, and at Fit **773px — the whole story,
   exactly the window**.
+  **§4e is two axes, and the viewer a book does not have**, from Ken in four
+  messages over one sitting at the board (*under the novels, you don't need the
+  timeline in viewer… the zoom zooms it to very, very small. But doesn't zoom it
+  out at all… it should zoom fat and also zoom flat… since we won't have the
+  timeline in viewer, we'll have the room* … *we need a vertical zoom for the
+  chapter lanes… it'll just keep building the beats, the sections, the
+  subsections down for each chapter. **It won't wrap*** … *the Zoom feature
+  needs to be corrected in all of them. I just tech checked the stage play* …
+  *the divider… I would like by default it to start in the center*). **The zoom
+  measured first and the measurement is the report**: the board carried **two
+  sliders of 4–240 sitting at 160 and 180**, so the left ran forty times smaller
+  and the right barely half as big again — *zooms it to very very small but
+  doesn't zoom it out at all*, exactly, and **a range is not a range when one
+  end is where you already are**. §4d's 240 was **protecting the wrong thing**:
+  its argument was that past there *the block is stretched beyond what its beats
+  need*, which is about **beats**, and a beat already has `BEAT_CHIP_MAX` — the
+  cap §4d itself added after measuring one at 2,089 pixels — so the cap on the
+  whole axis was belt and braces and what it cost is the only end a writer reads
+  words at. `ZOOM_CEILING` is **600**, **one constant in the domain so every
+  module is corrected together**, which is what *check all the modules* asks for
+  and §4d's own reason for one control rather than a slider per board. **§4e.2
+  is the axis that did not exist**: beats stacked five deep and then started a
+  second column **beside** the first, paid for in **width** (`beatsWidth` added
+  132 pixels a column), so a chapter of twelve beats drew three times wider than
+  its pages and pushed every track under it out to match — **a lane grows down,
+  never across**, wrapping **gone rather than made optional** because a block's
+  width being its pages is what lines the tracks up by story position at all.
+  `clampLane` is the vertical twin of `pixelsPerPage` and `laneCarriesWords`
+  asks of the height what `beatsAreChips` asks of the width, **read off the
+  drawn size rather than off the slider** — what a beat can say is a fact about
+  the box it is in — and the two together are Ken's *zoom fat and zoom flat*.
+  The **preference goes with it**, *Cards before a new column* having set a
+  number the board no longer reads (`columns` on a part's style, addendum 20
+  §17), and how tall a lane is drawn being a **zoom** that belongs on the board
+  beside the one saying how wide. **§4e.3 is the viewer**: measured at **295 of
+  an 824-pixel stage** on a novel, over a third of the room spent drawing a
+  second picture of an axis the plot tracks already draw — the viewer being the
+  overview of a *script*, where a scene is a page or two, while a novel's spans
+  are chapters. It is **read off the format rather than stored**, which is what
+  makes it reach anybody (the arrangement is per machine, so a changed default
+  reaches nobody who has opened the program — §8a's own fault, which minted
+  `panes2` to escape), and it names the **pane** rather than a slot so a writer
+  who has swapped the sections still loses the viewer and keeps their tracks.
+  **§4e.4 is the stage opening on the middle**, 0.58 → **0.5** under a **new
+  key** (`stageSplit`) for §8a's stated reason, 0.58 having been what every
+  machine was handed rather than anything anybody chose. Driven at 1440×900: a
+  novel's stage top is **1073 × 824 with the viewer absent**, a stage play's is
+  450 over 367, both zooms read 4–600, and beats draw one column at 22px a row.
+  `timeline-axes.test.tsx` reads the **source** (`late-module`'s idiom) because
+  **both rules fail by something being absent** — a wrapped column that comes
+  back, a viewer drawn on a book — which looks exactly like the change never
+  having been made; one assertion pinned §4d's ceiling and is **rewritten rather
+  than worked around**, asserting the **shape of the range** rather than a
+  number so the next correction need not edit a test about something else.
   **§19a is the toolbar on the writing screen**, from Ken (*I imported some
   text that was italicized and I realized that there's no way to adjust the
   style of the text in the beats. So you need to be able to bold, italicize,

@@ -46,13 +46,31 @@ import { spanWidth } from './story-layout.js';
 export const ZOOM_FLOOR = 4;
 
 /**
- * **The expanded end stops where the beats are read.** A beat column is 132
- * pixels, a scene of a novel runs two or three pages, so around 240 a page
- * every beat of an ordinary scene stands at its full width — past that the
- * block is stretched beyond what its beats need and the extra is white.
- * Ken's *you just need to be able to read them*.
+ * **The expanded end, corrected** (§4e, from Ken after tech-checking the stage
+ * play: *the Zoom feature needs to be corrected in all of them… you can zoom
+ * out and make it wide, or you can zoom in and make it to where it's flat, to
+ * where you can barely see it*).
+ *
+ * §4d put this at 240 and the measurement says why that read as a zoom that
+ * only shrinks: **the default sits at 160–180**, so dragging left ran forty
+ * times smaller and dragging right moved barely half as big again. A range is
+ * not a range if one end is where you already are.
+ *
+ * And §4d's reason for 240 was **protecting the wrong thing**. Its argument
+ * was that past there *the block is stretched beyond what its beats need and
+ * the extra is white* — which is about **beats**, and a beat is already held
+ * by `BEAT_CHIP_MAX`: a chip is a chip whatever room the block has, measured
+ * at 2,089 pixels across before that cap existed. So the cap on the whole axis
+ * was belt and braces, and what it cost is the only end a writer reads words
+ * at. The block may be as wide as the writer wants it; the chips in it stay
+ * the size they can be read at.
+ *
+ * It is one number in the domain, so **every module is corrected at once** —
+ * the screenplay, the stage play, the series, the novel and the book all read
+ * this, which is what *check all the modules* asks for and the reason there is
+ * one constant rather than a slider per board (§4d's own argument).
  */
-export const ZOOM_CEILING = 240;
+export const ZOOM_CEILING = 600;
 
 export const clampZoom = (zoom: number): number =>
   Math.min(ZOOM_CEILING, Math.max(ZOOM_FLOOR, Math.round(zoom)));
@@ -179,3 +197,60 @@ export const describeSpanAt = (file: ProjectFile, unitId: string, keys?: string)
 
 /** How wide a scene is drawn at a zoom, before the tracks' own beat floor. */
 export const spanAt = (span: StorySpan, zoom: number): number => spanWidth(span, zoom);
+
+// ---------------------------------------------------------------------------
+// Down the lane
+// ---------------------------------------------------------------------------
+
+/**
+ * **The vertical zoom** (addendum 02 §4e, from Ken: *we need a vertical zoom
+ * for the chapter lanes. basically it'll just keep building the beats, the
+ * sections, the subsections down for each chapter. It won't wrap*).
+ *
+ * The horizontal zoom says how many pixels a **page** is worth, and until now
+ * that was the only axis there was: a scene's beats stacked five deep and then
+ * **wrapped into a second column**, which widened the block
+ * (`DEFAULT_BEATS_PER_COLUMN`, and `beatsWidth` added 132 pixels for each
+ * column past the first). So a chapter with twelve beats was drawn three times
+ * wider than its pages, every track below it was pushed out to match, and the
+ * one thing a writer could not do was read the beats down.
+ *
+ * **A lane grows down, never across.** Wrapping is gone rather than made
+ * optional — a block's width is its pages and nothing else, which is what
+ * makes the tracks line up by story position at all — and this is the number
+ * that says how tall each beat is drawn. It is the vertical twin of
+ * `pixelsPerPage`, and the two together are Ken's *zoom fat and zoom flat*.
+ *
+ * The floor is a **tick you can still count** and the ceiling is a row with
+ * room for a line of type under its name; past that a beat is not more
+ * readable, it is only taller, which is `BEAT_CHIP_MAX`'s own argument turned
+ * on its side.
+ */
+export const LANE_FLOOR = 6;
+export const LANE_CEILING = 44;
+export const LANE_DEFAULT = 22;
+
+export const clampLane = (height: number): number =>
+  Math.min(LANE_CEILING, Math.max(LANE_FLOOR, Math.round(height)));
+
+/**
+ * Whether a beat drawn this tall can carry its name.
+ *
+ * `beatsAreChips` asks the same question of the width, and both are read off
+ * the drawn size rather than off the slider for its reason: what a beat can
+ * say is a fact about the box it is in.
+ */
+export const LANE_READABLE = 14;
+
+export const laneCarriesWords = (height: number): boolean => clampLane(height) >= LANE_READABLE;
+
+/**
+ * How tall a scene's block stands, given its beats.
+ *
+ * **The lane is as tall as what is in it**, so a chapter of twenty beats is a
+ * tall lane and a two-beat scene beside it is short — which is the truth about
+ * the two of them, and the same argument §4d made about width. Nothing is
+ * stored: adding a beat makes the lane taller with nothing run.
+ */
+export const laneHeight = (beats: number, height: number, floor = 0): number =>
+  Math.max(floor, beats * clampLane(height));

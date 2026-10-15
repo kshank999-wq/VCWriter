@@ -1596,14 +1596,17 @@ dialog.scene-dialog > header.off {
   list-style: none;
   margin: 0;
   padding: 3px 4px 4px;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 1px;
-  /* Beats stack down the column, and past the set number a second column
-     starts beside the first — the scene grows wider rather than taller, and
-     rather than growing a scrollbar (addendum 02 §4). */
-  grid-template-rows: repeat(var(--beat-rows, 5), auto);
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(0, 1fr);
+  /* **Beats build down and never wrap** (addendum 02 §4e, from Ken: *it'll
+     just keep building the beats, the sections, the subsections down for each
+     chapter. It won't wrap*). They stacked five deep and started a second
+     column beside the first, which the scene paid for in **width** — so a
+     chapter of twelve beats drew three times wider than its pages and pushed
+     every track under it out to match. One column, as tall as what is in it,
+     and `--beat-h` is the vertical zoom that says how much of a beat can be
+     read. */
   align-content: start;
   /* **A block scales with its pages and a chip is a chip** (addendum 02 §4d,
      from Ken: *right now, you can make the beats stretch way out, which is not
@@ -1611,7 +1614,7 @@ dialog.scene-dialog > header.off {
      the slider, one beat ran 2,089 pixels across a chapter. Past a couple of
      hundred there is nothing more of a chip to read, so the list stops and the
      rest of the block is the block. */
-  max-width: calc(var(--beat-cols, 1) * 180px);
+  max-width: 180px;
 }
 
 .block-beats li {
@@ -1619,6 +1622,10 @@ dialog.scene-dialog > header.off {
   align-items: center;
   gap: 1px;
   min-width: 0;
+  /* The vertical zoom (§4e): the twin of the pixels-per-page across. */
+  height: var(--beat-h, 22px);
+  min-height: var(--beat-h, 22px);
+  overflow: hidden;
 }
 
 .beat-row {

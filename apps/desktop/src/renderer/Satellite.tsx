@@ -23,6 +23,7 @@ import { useWritingAccess } from './use-writing-access';
 import { StaleBuildNotice } from './components/StaleBuildNotice';
 import { WritingNotice } from './components/WritingNotice';
 import { usePreference } from './use-split';
+import { LANE_DEFAULT } from '@vcwriter/domain';
 import { addBeatAfter, addSceneAfter } from './structure';
 import { beatIdOf, paneTitle, type PaneKey } from './panes';
 import { applyScheme, DEFAULT_SCHEME, type SchemeId } from './themes';
@@ -39,7 +40,7 @@ import { NarrativeMapWindow } from './components/NarrativeMapWindow';
 import { OutlinerWindow } from './components/OutlinerWindow';
 import { EditorPanel } from './components/EditorPanel';
 import { TimelineViewer } from './components/TimelineViewer';
-import { MasterTimeline, DEFAULT_BEATS_PER_COLUMN } from './components/MasterTimeline';
+import { MasterTimeline } from './components/MasterTimeline';
 import { Inspector } from './components/Inspector';
 import { BeatWriter } from './components/BeatWriter';
 import { BeatDialog } from './components/BeatDialog';
@@ -200,7 +201,8 @@ function Section({
    */
   const [printSetup] = usePreference<PrintSetup>('printSetup', DEFAULT_PRINT_SETUP);
   const printing = usePrinting({ file, setup: printSetup });
-  const [beatsPerColumn] = usePreference('beatsPerColumn', DEFAULT_BEATS_PER_COLUMN);
+  // The vertical zoom is the machine's, like the horizontal one (§4e).
+  const [lane, setLane] = usePreference('laneHeight', LANE_DEFAULT);
   const [viewerZoom, setViewerZoom] = usePreference('viewerZoom', 180);
   const [isolatedCharacter, setIsolatedCharacter] = useState('');
 
@@ -449,7 +451,8 @@ function Section({
           setSelectedTrackId(trackId);
         }}
         onSelectTrack={setSelectedTrackId}
-        beatsPerColumn={beatsPerColumn}
+        laneHeight={lane}
+        onLane={setLane}
         onUpdate={onUpdate}
         pixelsPerPage={pixelsPerPage}
         onZoom={setPixelsPerPage}

@@ -8,8 +8,6 @@ interface PreferencesProps {
   onScheme(id: SchemeId): void;
   paper: boolean;
   onPaper(on: boolean): void;
-  beatsPerColumn: number;
-  onBeatsPerColumn(count: number): void;
 }
 
 /**
@@ -25,8 +23,6 @@ export function Preferences({
   onScheme,
   paper,
   onPaper,
-  beatsPerColumn,
-  onBeatsPerColumn,
 }: PreferencesProps) {
   const dialog = useRef<HTMLDialogElement>(null);
 
@@ -86,33 +82,13 @@ export function Preferences({
         </label>
       </section>
 
-      <section>
-        <h3>Tracks</h3>
-        <label className="field">
-          <span>Cards before a new column</span>
-          <input
-            type="number"
-            min={1}
-            max={20}
-            value={beatsPerColumn}
-            aria-label="Cards before a new column"
-            onChange={(event) => {
-              const count = Number(event.target.value);
-              if (Number.isFinite(count)) onBeatsPerColumn(Math.min(20, Math.max(1, Math.round(count))));
-            }}
-          />
-        </label>
-        <p className="muted small">
-          {/* Preferences belong to the machine rather than to a project, so
-              there is no format here to read a noun table from — and the board
-              draws cards whatever the project calls the things behind them
-              (addendum 16 §14). */}
-          Cards stack down a column until this many, then the next one starts a column beside them and the
-          group grows wider. Twelve cards read as three short columns rather than one you cannot see the end
-          of.
-        </p>
-      </section>
-
+      {/* **The Tracks section is gone** (addendum 02 §4e). It set *Cards
+          before a new column*, and beats no longer wrap into a second column
+          at all — so it was a control storing a number the board never read,
+          which is the fault `columns` on a part's style was taken out for
+          (addendum 20 §17). How tall a lane is drawn is a **zoom**, and it
+          belongs on the board beside the one that says how wide, not in a
+          dialog on another screen. */}
       <footer className="muted">Preferences are kept on this computer, not in the project.</footer>
     </dialog>
   );

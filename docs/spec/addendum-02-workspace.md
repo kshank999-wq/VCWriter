@@ -2674,3 +2674,118 @@ Named so that nobody mistakes their absence for an oversight:
   an act under an eighth or over half of the pages is queried.
 - Renderer and domain tests cover the above; a screenshot of the fixture at
   1440×900 and at 1100×700 is reviewed before the change ships.
+
+---
+
+## §4e Two axes, and the viewer a book does not have
+
+From Ken, in four messages over one sitting at the board:
+
+> In the main timeline view, under the novels, you don't need the timeline in
+> viewer. But also the zoom zooms it to very, very small. But doesn't zoom it
+> out at all. So you can't read any of the text… it should zoom fat and also
+> zoom flat… since we won't have the timeline in viewer, we'll have the room.
+
+> we need a vertical zoom for the chapter lanes. basically it'll just keep
+> building the beats, the sections, the subsections down for each chapter. **It
+> won't wrap**
+
+> The Zoom feature needs to be corrected in all of them. I just tech checked
+> the stage play, and it does the same thing.
+
+> The divider between the top and the bottom section… I would like by default
+> it to start in the center, not pushed up towards the top.
+
+### §4e.1 The zoom, measured
+
+Driven on a fresh novel at 1440×900, the board carried **two sliders of
+`4–240`, sitting at `160` and `180`**.
+
+That is the whole report. From 160 the left of the slider runs **forty times
+smaller** and the right **barely half as big again** — *zooms it to very, very
+small, but doesn't zoom it out at all*, exactly. **A range is not a range when
+one end is where you already are.**
+
+And §4d's reason for 240 was **protecting the wrong thing**. Its argument was
+that past there *the block is stretched beyond what its beats need and the
+extra is white* — which is about **beats**, and a beat already has its own
+guard: `BEAT_CHIP_MAX` caps a chip at 180 pixels however wide the block is,
+which §4d itself added after measuring a single beat at 2,089 pixels across. So
+the cap on the whole axis was belt and braces, and what it cost is the only end
+a writer reads words at.
+
+`ZOOM_CEILING` is **600**. It is one constant in the domain, so the screenplay,
+the stage play, the series, the novel and the book are corrected together —
+which is what *check all the modules* asks for, and the reason §4d gave for
+having one control rather than a slider per board.
+
+### §4e.2 Beats build down, and never wrap
+
+The second axis is the one that did not exist. Beats stacked
+`DEFAULT_BEATS_PER_COLUMN` deep — five — and then **started a second column
+beside the first**, and the column was paid for in **width**: `beatsWidth` added
+132 pixels for each column past the first, so a chapter of twelve beats drew
+three times wider than its pages and pushed every track under it out to match.
+
+**A lane grows down, never across.** Wrapping is **gone rather than made
+optional**: a block's width is its pages and nothing else, which is what lines
+the tracks up by story position at all. `LANE_FLOOR`, `LANE_CEILING` and
+`clampLane` are the vertical twin of `pixelsPerPage` — how tall a beat is
+drawn — and `laneCarriesWords` asks of the height what `beatsAreChips` asks of
+the width, **read off the drawn size rather than off the slider**, because what
+a beat can say is a fact about the box it is in.
+
+The two together are Ken's *zoom fat and zoom flat*.
+
+**The preference goes with it.** *Preferences ▸ Tracks ▸ Cards before a new
+column* set a number the board no longer reads, which is the fault `columns` on
+a part's style was taken out for (addendum 20 §17). How tall a lane is drawn is
+a **zoom**, and it belongs on the board beside the one that says how wide, not
+in a dialog on another screen.
+
+### §4e.3 A book has no timeline viewer
+
+Measured: on a novel the viewer took **295 pixels of an 824-pixel stage**, over
+a third of the room, to draw a second picture of an axis the plot tracks already
+draw. The viewer is the overview of a **script** — where a scene is a page or
+two and forty of them are a shape worth standing back from; a novel's spans are
+chapters.
+
+**It is read off the format rather than stored**, and that is what makes it
+reach anybody: the arrangement is per machine, so changing a default would have
+reached nobody who had already opened the program — §8a's own fault, which that
+section had to mint `panes2` to escape. And it names the **pane** rather than a
+slot, so a writer who has swapped the sections still loses the viewer and keeps
+their tracks.
+
+### §4e.4 The stage opens on the middle
+
+`0.58` was §8a saying the tracks are the surface and the viewer the summary.
+That is true and is not worth a screen that opens lopsided — and on a book there
+is no viewer under it at all now, so the number only ever spoke about a script.
+It is **0.5**, under a **new key** (`stageSplit`) for §8a's own stated reason:
+every machine that has opened the workspace has `tracksHeight` written with the
+old number, and for nearly all of them that was not a choice but what they were
+handed.
+
+### §4e.5 Driven
+
+At 1440×900:
+
+| | novel | stage play |
+| --- | --- | --- |
+| stage top | **1073 × 824** | 1073 × 450 |
+| the viewer under it | **absent** | 1073 × 367 |
+| zoom | 4–600 | 4–600 |
+| lane zoom | 6–44 at 22 | 6–44 at 22 |
+| beats | one column, 22px a row | one column, 22px a row |
+
+### §4e.6 What is pinned, and how
+
+`timeline-axes.test.tsx` reads the **source**, which is `late-module`'s idiom
+and the right one here because **both rules fail by something being absent** — a
+wrapped column that comes back, a viewer drawn on a book — and absence looks
+exactly like the change never having been made. One assertion pinned §4d's
+ceiling and is **rewritten rather than worked around**; what it asserts now is
+the **shape of the range** rather than a number, so the next correction to it
+does not have to edit a test about something else.

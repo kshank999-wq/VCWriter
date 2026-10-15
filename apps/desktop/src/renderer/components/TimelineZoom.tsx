@@ -1,4 +1,14 @@
-import { ZOOM_CEILING, ZOOM_FLOOR, clampZoom, fitZoom, fitsAt, type StorySpan } from '@vcwriter/domain';
+import {
+  LANE_CEILING,
+  LANE_FLOOR,
+  ZOOM_CEILING,
+  ZOOM_FLOOR,
+  clampLane,
+  clampZoom,
+  fitZoom,
+  fitsAt,
+  type StorySpan,
+} from '@vcwriter/domain';
 
 /**
  * **The zoom, and the press that fits the whole story** (addendum 02 §4d,
@@ -34,9 +44,16 @@ export interface TimelineZoomProps {
   /** Pixels per second rather than per page, on a short-form board. */
   perSecond?: boolean;
   onZoom(zoom: number): void;
+  /**
+   * **The other axis** (§4e): how tall a beat is drawn. Beats build down a
+   * lane and never wrap, so this says how much of one can be read — Ken's
+   * *zoom fat and zoom flat*. Absent where a board has no lanes to grow.
+   */
+  lane?: number;
+  onLane?(height: number): void;
 }
 
-export function TimelineZoom({ zoom, spans, across, perSecond = false, onZoom }: TimelineZoomProps) {
+export function TimelineZoom({ zoom, spans, across, perSecond = false, onZoom, lane, onLane }: TimelineZoomProps) {
   const room = Math.max(120, across);
   const fits = fitsAt(zoom, spans, room);
 
@@ -61,6 +78,24 @@ export function TimelineZoom({ zoom, spans, across, perSecond = false, onZoom }:
           Fit
         </button>
       )}
+      {/* The vertical zoom, beside the one it is the twin of rather than in a
+          dialog on another screen. **Absent rather than greyed** where the
+          host hands nothing down, which is this program's idiom for *this
+          board has no lanes*. */}
+      {lane !== undefined && onLane ? (
+        <>
+          <span className="muted zoom-down">Down</span>
+          <input
+            type="range"
+            min={LANE_FLOOR}
+            max={LANE_CEILING}
+            step={1}
+            value={clampLane(lane)}
+            aria-label="Lane zoom, how tall a beat is drawn"
+            onChange={(event) => onLane(clampLane(Number(event.target.value)))}
+          />
+        </>
+      ) : null}
     </label>
   );
 }

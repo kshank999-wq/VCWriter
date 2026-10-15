@@ -2,6 +2,13 @@ import { describe, expect, it } from 'vitest';
 import {
   BEAT_CHIP_MIN,
   MIN_SPAN_PAGES,
+  BEAT_CHIP_MAX,
+  LANE_CEILING,
+  LANE_DEFAULT,
+  LANE_FLOOR,
+  clampLane,
+  laneCarriesWords,
+  laneHeight,
   ZOOM_CEILING,
   ZOOM_FLOOR,
   addMarker,
@@ -72,10 +79,27 @@ describe('how far it goes', () => {
     }
   });
 
-  it('stops where the beats are read rather than running on', () => {
-    expect(ZOOM_CEILING).toBeLessThan(600);
-    expect(clampZoom(600)).toBe(ZOOM_CEILING);
+  it('has room to expand as well as to compress (§4e)', () => {
+    /**
+     * **Rewritten rather than worked around.** This pinned §4d's ceiling of
+     * 240, which Ken's tech-check of the stage play found to be the fault: the
+     * default sits at 160–180, so dragging left ran forty times smaller and
+     * dragging right moved barely half as big again — *you can zoom in and
+     * make it to where it's flat, to where you can barely see it*, and not the
+     * other way. §4d capped the axis to stop **beats** stretching, and a beat
+     * is already held by `BEAT_CHIP_MAX`, so the cap was protecting something
+     * that had its own guard and cost the only end words are read at.
+     *
+     * What is asserted now is the **shape of the range** rather than a number:
+     * the default has real room on both sides of it.
+     */
+    expect(clampZoom(10_000)).toBe(ZOOM_CEILING);
     expect(clampZoom(1)).toBe(ZOOM_FLOOR);
+    // Room to expand that is worth dragging for: at least as much again as
+    // the board opens with.
+    expect(ZOOM_CEILING).toBeGreaterThanOrEqual(180 * 2);
+    // And a chip is still a chip however wide the block is allowed to be.
+    expect(BEAT_CHIP_MAX).toBeLessThan(ZOOM_CEILING);
   });
 });
 
@@ -168,5 +192,52 @@ describe('the layout the board is drawn from', () => {
   it('still gives a span per scene, which nothing here changed', () => {
     const file = novel();
     expect(storyLayout(file).spans).toHaveLength(unitsInStoryOrder(file).length);
+  });
+});
+
+/**
+ * **The vertical zoom** (addendum 02 §4e, from Ken: *we need a vertical zoom
+ * for the chapter lanes. basically it'll just keep building the beats, the
+ * sections, the subsections down for each chapter. It won't wrap*).
+ */
+describe('the lane, down', () => {
+  it('clamps to a tick you can count and a row you can read', () => {
+    expect(clampLane(1)).toBe(LANE_FLOOR);
+    expect(clampLane(10_000)).toBe(LANE_CEILING);
+    expect(clampLane(LANE_DEFAULT)).toBe(LANE_DEFAULT);
+  });
+
+  it('says whether a beat drawn this tall can carry its name', () => {
+    // Read off the drawn size rather than off the slider, which is
+    // `beatsAreChips`' own rule for the other axis: what a beat can say is a
+    // fact about the box it is in.
+    expect(laneCarriesWords(LANE_FLOOR)).toBe(false);
+    expect(laneCarriesWords(LANE_CEILING)).toBe(true);
+    expect(laneCarriesWords(LANE_DEFAULT)).toBe(true);
+  });
+
+  it('makes a lane as tall as what is in it, and stores nothing', () => {
+    // A chapter of twenty beats is a tall lane and a two-beat scene beside it
+    // is short, which is the truth about the two of them — the same argument
+    // §4d made about width, on the other axis.
+    expect(laneHeight(20, 22)).toBe(440);
+    expect(laneHeight(2, 22)).toBe(44);
+    // Adding a beat makes it taller with nothing run.
+    expect(laneHeight(3, 22)).toBeGreaterThan(laneHeight(2, 22));
+    // And the floor is honoured where a row has to hold something anyway.
+    expect(laneHeight(0, 22, 18)).toBe(18);
+  });
+
+  it('is a second axis rather than a count of columns', () => {
+    /**
+     * The whole of the change: beats used to stack `DEFAULT_BEATS_PER_COLUMN`
+     * deep and then start a column **beside** them, so a chapter of twelve
+     * beats drew three times wider than its pages and pushed every track under
+     * it out to match. There is no such number any more — the width of a block
+     * is its pages, and this is how tall the beats in it are drawn.
+     */
+    for (const beats of [1, 5, 6, 12, 40]) {
+      expect(laneHeight(beats, LANE_DEFAULT)).toBe(beats * LANE_DEFAULT);
+    }
   });
 });

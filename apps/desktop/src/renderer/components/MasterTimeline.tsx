@@ -23,6 +23,8 @@ import {
   spanWidth,
   describeSpanAt,
   beatsAreChips,
+  clampLane,
+  LANE_DEFAULT,
   storyLayout,
   threadLayout,
   timecode,
@@ -86,8 +88,14 @@ interface MasterTimelineProps {
   onSelectUnit?(unitId: StructuralUnitId, trackId: TrackId): void;
   /** Clicking a track's header makes it the one a new scene lands in. */
   onSelectTrack?(trackId: TrackId): void;
-  /** How many beats stack before the next column starts (addendum 02 §4). */
-  beatsPerColumn?: number;
+  /**
+   * **How tall a beat is drawn** (addendum 02 §4e). The vertical twin of
+   * `pixelsPerPage`: beats build down a lane and never wrap, so this is the
+   * axis that says how much of one you can read.
+   */
+  laneHeight?: number;
+  /** Set by the host where the board has lanes to grow (§4e). */
+  onLane?(height: number): void;
   /** Null in a window that holds only the tracks: there is no inspector there. */
   inspectorOpen: boolean | null;
   onToggleInspector(): void;
@@ -113,23 +121,19 @@ const SETUP_HEIGHT = 20;
 const THEMATIC_HEIGHT = 18;
 
 /**
- * How many beats stack in a scene before the next column starts.
+ * **Beats never wrap** (addendum 02 §4e).
  *
- * Five is a working default rather than a rule — it is the preference a
- * writer sets once, and a scene of twelve beats then reads as three short
- * columns instead of one column you cannot see the end of.
+ * The beats-per-column default, the column width and the width it added are
+ * gone rather than left as a second way to lay a scene out: they stacked beats
+ * five deep and started a new column, paid for in **width**, so
+ * a chapter of twelve beats drew three times wider than its pages and pushed
+ * every track under it out to match. Ken's *it'll just keep building the
+ * beats, the sections, the subsections down for each chapter. It won't wrap.*
+ *
+ * What replaces it is an axis rather than a count: `laneHeight` says how tall
+ * a beat is drawn, and the lane is as tall as what is in it.
  */
-export const DEFAULT_BEATS_PER_COLUMN = 5;
-
-/** A column of beats, and the padding a block draws around them. */
-const BEAT_COLUMN_WIDTH = 132;
 const BLOCK_PADDING = 12;
-
-/** How wide a scene has to be for its beats, once they run past one column. */
-const beatsWidth = (beatCount: number, rows: number): number => {
-  const columns = Math.ceil(beatCount / rows);
-  return columns <= 1 ? 0 : columns * BEAT_COLUMN_WIDTH + BLOCK_PADDING;
-};
 
 /**
  * The master timeline (addendum 02 §4): the story in order across the top
@@ -153,7 +157,8 @@ export function MasterTimeline({
   selectedUnitId: givenSelectedUnitId,
   onSelectUnit,
   onSelectTrack,
-  beatsPerColumn = DEFAULT_BEATS_PER_COLUMN,
+  laneHeight: lane = LANE_DEFAULT,
+  onLane,
   onUpdate,
   pixelsPerPage,
   onZoom,
@@ -221,7 +226,15 @@ export function MasterTimeline({
     watch.observe(node);
   }, []);
 
-  const rows = Math.max(1, Math.round(beatsPerColumn));
+  /**
+   * **Beats build down and never wrap** (§4e, Ken's own words). They stacked
+   * five deep and then started a second column, which widened the block —
+   * so a chapter of twelve beats was drawn three times wider than its pages
+   * and every track below it was pushed out to match. A block's width is its
+   * pages now and nothing else, which is what lines the tracks up by story
+   * position at all, and the lane grows down to hold what is in it.
+   */
+  const laneAt = clampLane(lane);
   /**
    * **A beat is a chip while there is room for one and a tick when there is
    * not** (addendum 02 §4d) — read off the block's own page width, so a long
@@ -262,7 +275,10 @@ export function MasterTimeline({
       const perSecond = pixelsPerPage / 6;
       return Math.round(Math.max(pixelsPerPage * 0.5, secondsOf(span.unit.id) * perSecond));
     }
-    return chipsFor(span) ? Math.max(spanWidth(span, pixelsPerPage), beatsWidth(beats.length, rows)) : spanWidth(span, pixelsPerPage);
+    // No second column, so no second answer about how wide a scene is: its
+    // pages decide, at every zoom.
+    void beats;
+    return spanWidth(span, pixelsPerPage);
   });
   const columns = `${HEAD_WIDTH}px ${widths.map((width) => `${width}px`).join(' ')} minmax(96px, 1fr)`;
 
@@ -556,7 +572,7 @@ export function MasterTimeline({
               rowsFor={(unitId) => sheet?.segments.find((segment) => segment.unitId === unitId)?.rows ?? []}
               selectedBeatId={selectedBeatId}
               selectedUnitId={selectedUnitId}
-              beatRows={rows}
+              laneAt={laneAt}
               chipsFor={chipsFor}
               onSelectUnit={onSelectUnit}
               onSelectTrack={onSelectTrack}
@@ -630,7 +646,14 @@ export function MasterTimeline({
             )}
           </>
         )}
-        <TimelineZoom zoom={pixelsPerPage} spans={spans} across={across} perSecond={shortForm} onZoom={onZoom} />
+        <TimelineZoom
+          zoom={pixelsPerPage}
+          spans={spans}
+          across={across}
+          perSecond={shortForm}
+          onZoom={onZoom}
+          {...(onLane ? { lane: laneAt, onLane } : {})}
+        />
         <span className="toolbar-spacer" />
         {inspectorOpen === null ? null : (
           <button
@@ -789,7 +812,7 @@ interface TrackRowProps {
   rowsFor(unitId: StructuralUnitId): AvRow[];
   selectedBeatId: BeatId | null;
   selectedUnitId: string | null;
-  beatRows: number;
+  laneAt: number;
   /**
    * Whether a beat is drawn as a chip or as a tick (addendum 02 §4d). It is
    * the board's answer rather than each block's: a row where some scenes drew
@@ -826,7 +849,7 @@ function TrackRow({
   rowsFor,
   selectedBeatId,
   selectedUnitId,
-  beatRows,
+  laneAt,
   chipsFor,
   onSelectUnit,
   onSelectTrack,
@@ -1295,8 +1318,8 @@ function TrackRow({
                    was 2,089 pixels across. */
                 style={
                   {
-                    '--beat-rows': beatRows,
-                    '--beat-cols': Math.max(1, Math.ceil(beats.length / Math.max(1, beatRows))),
+                    // One column, as tall as the beats in it (§4e).
+                    '--beat-h': `${laneAt}px`,
                   } as React.CSSProperties
                 }
                 onDragOver={(event) => {

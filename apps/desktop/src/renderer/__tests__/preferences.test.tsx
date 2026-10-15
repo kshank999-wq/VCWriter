@@ -81,9 +81,7 @@ describe('preferences panel', () => {
   it('offers every scheme and the paper toggle, and reports choices', () => {
     const onScheme = vi.fn();
     const onPaper = vi.fn();
-    render(<Preferences open onClose={() => undefined} scheme="gold" onScheme={onScheme} paper onPaper={onPaper}
-          beatsPerColumn={5}
-          onBeatsPerColumn={() => {}} />);
+    render(<Preferences open onClose={() => undefined} scheme="gold" onScheme={onScheme} paper onPaper={onPaper} />);
 
     // Every scheme, read off the list rather than counted here — the literal
     // 4 was what made adding one an edit to a test about something else.
