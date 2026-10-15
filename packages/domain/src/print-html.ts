@@ -1,4 +1,4 @@
-import { layoutFor, paginateProject, type ManuscriptOptions, type Page, type PageLine } from './pagination.js';
+import { layoutFor, layoutForFile, paginateProject, type ManuscriptOptions, type Page, type PageLine } from './pagination.js';
 import { isProseFormat } from './editing.js';
 import { titlePageOf } from './entities/title-page.js';
 import type { TitlePage } from './entities/title-page.js';
@@ -135,7 +135,11 @@ const renderPage = (
         ? `<span class="scene-number left">${escapeHtml(line.mark)}</span>` +
           `<span class="scene-number right">${escapeHtml(line.mark)}</span>`
         : '';
-      return `<div class="line ${line.type}" style="padding-left:${line.indent}ch">${mark}${renderSpans(line)}</div>`;
+      // A centred element is set at its own indent and width like any other —
+      // so the wrapping, and the page count with it, is unchanged — and only
+      // where the words sit inside that block differs (addendum 37).
+      const centred = line.centred ? `;width:${line.width}ch;text-align:center` : '';
+      return `<div class="line ${line.type}" style="padding-left:${line.indent}ch${centred}">${mark}${renderSpans(line)}</div>`;
     })
     .join('\n');
   return `<section class="page${isProse ? ' prose' : ''}">${stampOf(page, options)}${pageNumber(page, options)}${printedAt(options)}\n${lines}\n</section>`;
@@ -464,13 +468,20 @@ export const TITLE_PAGE_STYLES = `
   .author { margin: 0; }
 `;
 
-const STYLES = `
+const stylesFor = (paper: 'letter' | 'a4' = 'letter'): string => {
+  // **The paper is the layout's** (addendum 37). `@page` cannot read a custom
+  // property, so the size is written into the sheet — and the `.page` box
+  // follows it, or the preview would draw a Letter sheet round an A4 page.
+  const size = paper === 'a4' ? 'A4' : 'letter';
+  const wide = paper === 'a4' ? '8.27in' : '8.5in';
+  const tall = paper === 'a4' ? '11.69in' : '11in';
+  return `
   /* Zero, deliberately. The page's own padding is the manuscript's margin,
      and the @page margin is the only place a browser can draw its own
      furniture — the date, the time, the file's name, its own page numbers.
      With no band to draw in, none of it appears, and what prints is the
      document. */
-  @page { size: letter; margin: 0; }
+  @page { size: ${size}; margin: 0; }
   * { box-sizing: border-box; }
   body {
     margin: 0;
@@ -482,8 +493,8 @@ const STYLES = `
   }
   .page {
     position: relative;
-    width: 8.5in;
-    min-height: 11in;
+    width: ${wide};
+    min-height: ${tall};
     padding: 1in 1in 1in 1.5in;
     margin: 0 auto 24px;
     background: #fff;
@@ -624,9 +635,9 @@ const STYLES = `
          zeroing it here would print the manuscript against the paper's edge.
          Only the screen's furniture — the drop shadow, the gap between
          sheets — comes off. */
-      width: 8.5in;
+      width: ${wide};
       min-height: 0;
-      height: 11in;
+      height: ${tall};
       margin: 0;
       box-shadow: none;
       break-after: page;
@@ -635,6 +646,7 @@ const STYLES = `
     .page:last-child { break-after: auto; }
   }
 `;
+};
 
 export const renderPrintDocumentHtml = (file: ProjectFile, options: PrintOptions = {}): string => {
   const pages = paginateProject(file, options);
@@ -661,7 +673,7 @@ export const renderPrintDocumentHtml = (file: ProjectFile, options: PrintOptions
 <head>
 <meta charset="utf-8" />
 <title>${escapeHtml(file.project.title || 'Untitled')}</title>
-<style>${STYLES}</style>
+<style>${stylesFor(layoutForFile(file).paper)}</style>
 </head>
 <body>
 ${watermark}

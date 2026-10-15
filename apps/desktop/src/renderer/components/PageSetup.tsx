@@ -12,6 +12,8 @@ import {
   isProseFormat,
   nounsFor,
   numbersDivisions,
+  scriptFormatOf,
+  scriptFormatsFor,
 } from '@vcwriter/domain';
 import { useModal } from '../use-modal';
 
@@ -137,7 +139,10 @@ export function PageSetup({
   // absent rather than greyed, everywhere.
   const numberable = isInstructional(file.project.format);
   const paragraphStyle = file.settings.paragraphStyle;
-  const scriptFormat = file.settings.scriptFormat ?? 'us';
+  // **The resolved reading, not the stored value** (addendum 37): a play
+  // carrying `us` was never offered a stage preset, so what is lit is the
+  // one the page is actually set in.
+  const scriptFormat = scriptFormatOf(file.project.format, file.settings.scriptFormat);
   const set = (patch: Partial<PrintSetup>) => onSetup({ ...setup, ...patch });
 
   return (
@@ -253,47 +258,29 @@ export function PageSetup({
             {prose ? null : (
               <>
                 <h4>Script format</h4>
+                {/* **The list is the format's and the copy is the screen's**
+                    (addendum 37, from Ken: *when you select stage play, you
+                    need a dropdown or some type of preference that can select
+                    the proper formatting for you*). `scriptFormatsFor` says
+                    which house styles this format is set in — the six stage
+                    presets on a play, the four screen ones elsewhere, absent
+                    rather than renamed — and `SCRIPT_FORMAT_WORDS` says what
+                    each is called and shows the page it makes. A second list
+                    of ids written out here would be a second answer about
+                    what a play may be set in. */}
                 <div className="paragraph-style" role="radiogroup" aria-label="Script format">
-                  <Style
-                    group="script-format"
-                    label="US single-camera"
-                    on={scriptFormat !== 'bbc'}
-                    onChange={() => onScriptFormat('us')}
-                    sample={['INT. DINER - DAY', '', 'The bell rings.', '', '       SARAH', '    (whispering)', '  You came.']}
-                  >
-                    US Letter, and what Final Draft opens on: the cue out at 3.7", the speech a narrow
-                    column down the middle. Laid out for reading, and for the page-a-minute rule.
-                  </Style>
-                  <Style
-                    group="script-format"
-                    label="US multi-camera"
-                    on={scriptFormat === 'us_multi'}
-                    onChange={() => onScriptFormat('us_multi')}
-                    sample={['INT. DINER - DAY', '', 'THE BELL RINGS.', '', '     SARAH', '  You came.', '', '  I did not think you would.']}
-                  >
-                    The traditional sitcom, shot on a stage: the speech double spaced so the cast can write
-                    between the lines, and everything not spoken in capitals. Half an hour runs forty-odd pages.
-                  </Style>
-                  <Style
-                    group="script-format"
-                    label="BBC drama"
-                    on={scriptFormat === 'bbc'}
-                    onChange={() => onScriptFormat('bbc')}
-                    sample={['INT. DINER - DAY', '', 'The bell rings.', '', '', '  SARAH', '  You came, and I did not', '  think you would.']}
-                  >
-                    A4, the cue in at 2.5" with the speech a wide block directly under it, and a double
-                    blank line at every change of setting.
-                  </Style>
-                  <Style
-                    group="script-format"
-                    label="BBC taped"
-                    on={scriptFormat === 'bbc_taped'}
-                    onChange={() => onScriptFormat('bbc_taped')}
-                    sample={['INT. DINER - DAY', '', 'The bell rings.', '', '', 'SARAH   You came, and I', '        did not think you', '        would.']}
-                  >
-                    The studio layout: the cue out in the left margin beside the speech rather than above
-                    it, leaving the whole right of the page clear for the crew’s camera cues.
-                  </Style>
+                  {scriptFormatsFor(file.project.format).map((id) => (
+                    <Style
+                      key={id}
+                      group="script-format"
+                      label={SCRIPT_FORMAT_WORDS[id].label}
+                      on={scriptFormat === id}
+                      onChange={() => onScriptFormat(id)}
+                      sample={SCRIPT_FORMAT_WORDS[id].sample}
+                    >
+                      {SCRIPT_FORMAT_WORDS[id].says}
+                    </Style>
+                  ))}
                 </div>
 
                 {/* §6.5: a network episode breaks for the commercials; a
@@ -437,6 +424,73 @@ function Check({
  * type set the way this choice sets them. A writer picking between an indent
  * and a space is picking a look, so the look is what is on the button.
  */
+/**
+ * What each house style is called, and the page it makes (addendum 37).
+ *
+ * **Copy rather than a reading**: which formats a project may be set in is a
+ * rule and lives in the domain (`scriptFormatsFor`); what they are *called*
+ * is this screen's, and a sample is a picture of a page rather than a fact
+ * about one — the samples are hand-set to read at a glance, as the four screen
+ * ones have been since they were written.
+ *
+ * The stage presets' wording keeps Ken's spec's own caveats rather than
+ * paraphrasing them away: they are recommendations, a theatre's or
+ * publisher's own instructions override them, the BBC sample is dated, and
+ * there is no Europe-wide convention.
+ */
+const SCRIPT_FORMAT_WORDS: Record<ScriptFormat, { label: string; says: string; sample: readonly string[] }> = {
+  us: {
+    label: 'US single-camera',
+    says: 'US Letter, and what Final Draft opens on: the cue out at 3.7", the speech a narrow column down the middle. Laid out for reading, and for the page-a-minute rule.',
+    sample: ['INT. DINER - DAY', '', 'The bell rings.', '', '       SARAH', '    (whispering)', '  You came.'],
+  },
+  us_multi: {
+    label: 'US multi-camera',
+    says: 'The traditional sitcom, shot on a stage: the speech double spaced so the cast can write between the lines, and everything not spoken in capitals. Half an hour runs forty-odd pages.',
+    sample: ['INT. DINER - DAY', '', 'THE BELL RINGS.', '', '     SARAH', '  You came.', '', '  I did not think you would.'],
+  },
+  bbc: {
+    label: 'BBC drama',
+    says: 'A4, the cue in at 2.5" with the speech a wide block directly under it, and a double blank line at every change of setting.',
+    sample: ['INT. DINER - DAY', '', 'The bell rings.', '', '', '  SARAH', '  You came, and I did not', '  think you would.'],
+  },
+  bbc_taped: {
+    label: 'BBC taped',
+    says: 'The studio layout: the cue out in the left margin beside the speech rather than above it, leaving the whole right of the page clear for the crew’s camera cues.',
+    sample: ['INT. DINER - DAY', '', 'The bell rings.', '', '', 'SARAH   You came, and I', '        did not think you', '        would.'],
+  },
+  stage_us_modern: {
+    label: 'US modern play',
+    says: 'The Dramatists Guild’s modern sample. The cue centred over the speech, the speech across the full column, and the stage directions in a narrower region to the right.',
+    sample: ['ACT ONE', '', '      SARAH', 'You came, and I did not think', 'you would.', '', '        She does not move.'],
+  },
+  stage_us_traditional: {
+    label: 'US traditional play',
+    says: 'The older American arrangement: the same centred cue over a narrower speech, with the stage directions set apart as their own indented block.',
+    sample: ['ACT ONE', '', '      SARAH', '  You came, and I did not', '  think you would.', '', '    She does not move.'],
+  },
+  stage_us_publisher: {
+    label: 'US publisher reading copy',
+    says: 'A Samuel French-inspired reading copy: compact, the cue set in from the left rather than centred. A house style and not an acceptance rule — a publisher’s own instructions come first.',
+    sample: ['ACT ONE', '', '          SARAH', 'You came, and I did not think', 'you would.', '', '   She does not move.'],
+  },
+  stage_uk_bbc: {
+    label: 'UK BBC stage',
+    says: 'A4, from the BBC Writersroom stage sample of 2004 — an older sample rather than current UK submission rules. The cue at the left with the speech beginning on the same line, and the directions in capitals to the right.',
+    sample: ['ACT I SCENE 1', '', 'THE BELL RINGS.', '', 'SARAH   You came, and I did', '        not think you would.', '', '            SHE DOES NOT MOVE.'],
+  },
+  stage_uk_contemporary: {
+    label: 'UK contemporary play',
+    says: 'A4, the common side-by-side arrangement rather than the only one: the name at the left with the spoken text in a column beside it, and the speech in ordinary case.',
+    sample: ['Scene One', '', 'The bell rings.', '', 'SARAH You came, and I did', '      not think you would.', '', '      She does not move.'],
+  },
+  stage_eu_continental: {
+    label: 'Continental reading copy',
+    says: 'A4. There is no single Europe-wide convention, so this is a configurable reading copy and nothing more: the role label at the left with the speech as a block beside it.',
+    sample: ['Scene One', '', 'The bell rings.', '', 'SARAH', '  You came, and I did not', '  think you would.', '', '  She does not move.'],
+  },
+};
+
 function Style({
   group = 'paragraph-style',
   label,

@@ -57,6 +57,28 @@ export interface PageLayoutSpec {
   width: Record<string, number>;
   /** Element types rendered in capitals. */
   uppercase: ReadonlySet<string>;
+  /**
+   * Element types **centred in the text column** (addendum 37).
+   *
+   * A stage play's cue is centred, and a fixed indent is not centring: it is
+   * right for one length of name and wrong for every other, which on a page
+   * of six characters is visible. The block is set at its `indent` and
+   * `width` as usual — so the wrapping, and therefore the page count, is
+   * unchanged — and only where the words sit inside it differs.
+   *
+   * Absent on every screen format, where a cue really is at a fixed column.
+   */
+  centred?: ReadonlySet<string>;
+  /**
+   * The paper this is set on (addendum 37).
+   *
+   * `linesPerPage` and `columns` have always carried the *geometry*, and the
+   * print stylesheet carried `@page { size: letter }` whatever the layout
+   * said — so the BBC layouts, which have claimed A4 since they were written,
+   * printed their 58 lines onto US Letter. A layout that knows how tall its
+   * page is and not what paper it is cut from is half a layout.
+   */
+  paper?: 'letter' | 'a4';
   /** Prose is double spaced; screenplays are not. */
   doubleSpaced: boolean;
   /**
@@ -241,6 +263,7 @@ export const US_MULTI_LAYOUT: PageLayoutSpec = {
 export const BBC_LAYOUT: PageLayoutSpec = {
   linesPerPage: 58,
   columns: 57,
+  paper: 'a4',
   doubleSpaced: false,
   indent: {
     scene_heading: 0,
@@ -294,6 +317,7 @@ export const BBC_LAYOUT: PageLayoutSpec = {
  */
 export const BBC_TAPED_LAYOUT: PageLayoutSpec = {
   ...BBC_LAYOUT,
+  paper: 'a4',
   cueBeside: true,
   indent: {
     ...BBC_LAYOUT.indent,
@@ -311,6 +335,282 @@ export const BBC_TAPED_LAYOUT: PageLayoutSpec = {
   // Two columns of this would leave no margin to write in, which is the whole
   // reason for the layout; two speeches at once print one after the other.
   dual: undefined as unknown as PageLayoutSpec['dual'],
+};
+
+/* ------------------------------------------------------------------ stage
+ *
+ * **The six a stage play is set in** (addendum 37, from Ken's own *Stage Play
+ * Formatting Engine* spec). A play was set in `SCREENPLAY_LAYOUT` until now —
+ * the cue out at 3.7 inches, the speech a narrow column — which is a film
+ * page, and nothing in the menu offered anything else.
+ *
+ * Every one of them is this record and nothing new: the spec's §6 asks for a
+ * configuration contract of margins, cue placement and casing, dialogue
+ * column, direction indent and heading alignment, and `PageLayoutSpec` has
+ * carried all of it since the screen formats were written. What it did not
+ * carry is a **centred** cue and the **paper**, which are the two fields
+ * above.
+ *
+ * Geometry is the engine's: twelve-point Courier at ten characters to the
+ * inch and six lines to the inch. **Letter** with the spec's 1.5" binding
+ * edge and 1" elsewhere is 60 characters and 55 lines; **A4** with its 1" all
+ * round (the spec's own VC DEFAULT) is 62 characters and 58 lines.
+ *
+ * The spec's own caveat is kept rather than paraphrased: these are
+ * recommendations, not acceptance rules, and a theatre's or publisher's own
+ * instructions override them. Nothing here claims a certification.
+ */
+
+/** Letter, the spec's 1.5" binding edge: 60 characters, 55 lines. */
+const STAGE_LETTER = { linesPerPage: 55, columns: 60, paper: 'letter' } as const;
+/** A4, the spec's 1" all round: 62 characters, 58 lines. */
+const STAGE_A4 = { linesPerPage: 58, columns: 62, paper: 'a4' } as const;
+
+/** A speech is one block wherever it is set: cue, wryly and words, no gaps. */
+const SPEECH_RUNS_ON = {
+  parenthetical: new Set(['character', 'dialogue', 'parenthetical']),
+  dialogue: new Set(['character', 'parenthetical', 'dialogue']),
+};
+
+/**
+ * **US — Modern Play** (`us_modern`; spec §2, §4.1).
+ *
+ * The Dramatists Guild's modern sample. The cue is uppercase and **centred**
+ * over the speech, the speech runs the full text column — 1.5" from the left
+ * edge to 1" from the right, which is the whole 60 characters — and the stage
+ * directions sit in a narrower region on the right, beginning 3" from the
+ * paper's edge, which is column 15 of the text area.
+ */
+export const STAGE_US_MODERN_LAYOUT: PageLayoutSpec = {
+  ...STAGE_LETTER,
+  doubleSpaced: false,
+  indent: {
+    scene_heading: 0,
+    // The direction's own region, out to the right of the speech.
+    action: 15,
+    shot: 15,
+    general: 15,
+    character: 0,
+    parenthetical: 10,
+    dialogue: 0,
+    transition: 45,
+  },
+  width: {
+    scene_heading: 60,
+    action: 45,
+    shot: 45,
+    general: 45,
+    character: 60,
+    parenthetical: 40,
+    dialogue: 60,
+    transition: 15,
+  },
+  uppercase: new Set(['scene_heading', 'character', 'transition', 'shot']),
+  // The heading and the cue are centred; the speech and the directions are not.
+  centred: new Set(['scene_heading', 'character']),
+  follows: SPEECH_RUNS_ON,
+};
+
+/**
+ * **US — Traditional Play** (`us_traditional`; spec §2, §4.2).
+ *
+ * The same centred cue over a **narrower** speech, with the stage directions
+ * a separate indented block rather than a right-hand region — the spec's
+ * starting layout: dialogue edges 1.5"/1", standalone direction edges
+ * 2.5"/1", which is the speech at the full column and the directions inset a
+ * further inch.
+ *
+ * The spec asks for the two indents to be **separate and configurable rather
+ * than hard-coded spaces**, which is what this record is: nothing anywhere
+ * pads a line with spaces.
+ */
+export const STAGE_US_TRADITIONAL_LAYOUT: PageLayoutSpec = {
+  ...STAGE_LETTER,
+  doubleSpaced: false,
+  indent: {
+    scene_heading: 0,
+    action: 10,
+    shot: 10,
+    general: 10,
+    character: 0,
+    parenthetical: 10,
+    dialogue: 5,
+    transition: 45,
+  },
+  width: {
+    scene_heading: 60,
+    action: 45,
+    shot: 45,
+    general: 45,
+    character: 60,
+    parenthetical: 40,
+    dialogue: 50,
+    transition: 15,
+  },
+  uppercase: new Set(['scene_heading', 'character', 'transition', 'shot']),
+  centred: new Set(['scene_heading', 'character']),
+  follows: SPEECH_RUNS_ON,
+};
+
+/**
+ * **US — Samuel French-inspired** (`us_publisher`; spec §2, §4.3).
+ *
+ * A publisher-style reading copy: the cue over the speech, set compactly, the
+ * directions clearly apart from what is spoken. The spec is explicit that
+ * this **implies no acceptance and no endorsement** — it is a house-style
+ * starting point, and a publisher's own instructions override it.
+ *
+ * It is the one preset whose cue is **not centred**: a reading copy sets it
+ * in from the left, which is what keeps the page compact.
+ */
+export const STAGE_US_PUBLISHER_LAYOUT: PageLayoutSpec = {
+  ...STAGE_LETTER,
+  doubleSpaced: false,
+  indent: {
+    scene_heading: 0,
+    action: 5,
+    shot: 5,
+    general: 5,
+    character: 20,
+    parenthetical: 10,
+    dialogue: 0,
+    transition: 45,
+  },
+  width: {
+    scene_heading: 60,
+    action: 50,
+    shot: 50,
+    general: 50,
+    character: 40,
+    parenthetical: 45,
+    dialogue: 60,
+    transition: 15,
+  },
+  uppercase: new Set(['scene_heading', 'character', 'transition', 'shot']),
+  follows: SPEECH_RUNS_ON,
+};
+
+/**
+ * **UK — BBC Stage** (`uk_bbc`; spec §2, §4.4).
+ *
+ * The BBC Writersroom stage sample, Matt Carless, 6 February 2004 — an older
+ * sample rather than a statement of current UK submission rules, which is the
+ * spec's own caveat and worth keeping on the screen.
+ *
+ * The cue is uppercase at the left margin and **the speech begins on the same
+ * line**, at a fixed column — which is `cueBeside`, built for BBC taped
+ * television and the same shape here. Directions are **uppercase** and shifted
+ * right, which is this layout's difference from the taped one and why it is
+ * its own entry rather than a reuse.
+ *
+ * The spec forbids space-padding to achieve the column, which is what
+ * `cueBeside` is: the cue is laid in the margin, not written into the line.
+ */
+export const STAGE_UK_BBC_LAYOUT: PageLayoutSpec = {
+  ...STAGE_A4,
+  doubleSpaced: false,
+  cueBeside: true,
+  indent: {
+    scene_heading: 0,
+    // Uppercase and visibly shifted right of the speech column.
+    action: 20,
+    shot: 20,
+    general: 20,
+    character: 0,
+    parenthetical: 16,
+    dialogue: 16,
+    transition: 45,
+  },
+  width: {
+    scene_heading: 62,
+    action: 42,
+    shot: 42,
+    general: 42,
+    character: 15,
+    parenthetical: 46,
+    dialogue: 46,
+    transition: 15,
+  },
+  // The directions are in capitals too, which is what this sample does.
+  uppercase: new Set(['scene_heading', 'character', 'transition', 'shot', 'action', 'general', 'parenthetical']),
+  follows: SPEECH_RUNS_ON,
+  // A change of setting is blocked out, as on the BBC's screen pages.
+  blanksBeforeHeading: 2,
+};
+
+/**
+ * **UK — Contemporary Play** (`uk_contemporary`; spec §2, §4.5).
+ *
+ * The common UK side-by-side convention — the spec is careful that it is not
+ * the single mandatory rule. The name is at the left with the spoken text in
+ * a column to its right, and the speech is **mixed case**: the cue is
+ * uppercase and nothing else is, which is where this parts from the BBC
+ * sample above.
+ */
+export const STAGE_UK_CONTEMPORARY_LAYOUT: PageLayoutSpec = {
+  ...STAGE_A4,
+  doubleSpaced: false,
+  cueBeside: true,
+  indent: {
+    scene_heading: 0,
+    action: 14,
+    shot: 14,
+    general: 14,
+    character: 0,
+    parenthetical: 14,
+    dialogue: 14,
+    transition: 45,
+  },
+  width: {
+    scene_heading: 62,
+    action: 48,
+    shot: 48,
+    general: 48,
+    character: 13,
+    parenthetical: 48,
+    dialogue: 48,
+    transition: 15,
+  },
+  uppercase: new Set(['scene_heading', 'character', 'transition', 'shot']),
+  follows: SPEECH_RUNS_ON,
+};
+
+/**
+ * **Europe — Continental Reading Copy** (`eu_continental`; spec §2, §4.5).
+ *
+ * The spec says this in so many words and it is the half that must not be
+ * lost: **there is no single Europe-wide convention**, so this is a
+ * configurable reading-copy starting point and is labelled as one. It is not
+ * called a European standard, and no preset here is named for a country whose
+ * house style this has not been checked against.
+ *
+ * The role label stands at the left and the speech is a block to its right.
+ */
+export const STAGE_EU_CONTINENTAL_LAYOUT: PageLayoutSpec = {
+  ...STAGE_A4,
+  doubleSpaced: false,
+  indent: {
+    scene_heading: 0,
+    action: 8,
+    shot: 8,
+    general: 8,
+    character: 0,
+    parenthetical: 8,
+    dialogue: 8,
+    transition: 45,
+  },
+  width: {
+    scene_heading: 62,
+    action: 54,
+    shot: 54,
+    general: 54,
+    character: 62,
+    parenthetical: 54,
+    dialogue: 54,
+    transition: 15,
+  },
+  uppercase: new Set(['scene_heading', 'character', 'transition', 'shot']),
+  follows: SPEECH_RUNS_ON,
 };
 
 /**
@@ -346,18 +646,79 @@ export const PROSE_BLOCK_LAYOUT: PageLayoutSpec = {
  * same geometry, the same elements, the same two keys. What differs is how
  * they are divided (§14), not how a page is set.
  */
+const STAGE_LAYOUTS: Record<string, PageLayoutSpec> = {
+  stage_us_modern: STAGE_US_MODERN_LAYOUT,
+  stage_us_traditional: STAGE_US_TRADITIONAL_LAYOUT,
+  stage_us_publisher: STAGE_US_PUBLISHER_LAYOUT,
+  stage_uk_bbc: STAGE_UK_BBC_LAYOUT,
+  stage_uk_contemporary: STAGE_UK_CONTEMPORARY_LAYOUT,
+  stage_eu_continental: STAGE_EU_CONTINENTAL_LAYOUT,
+};
+
 export const layoutFor = (
   format: ProjectFormat,
   paragraphStyle?: ParagraphStyle,
   scriptFormat?: ScriptFormat,
 ): PageLayoutSpec => {
   if (!isProseFormat(format)) {
-    if (scriptFormat === 'bbc') return BBC_LAYOUT;
-    if (scriptFormat === 'bbc_taped') return BBC_TAPED_LAYOUT;
-    if (scriptFormat === 'us_multi') return US_MULTI_LAYOUT;
+    // A stage play is set in a stage house style and never in a screen one
+    // (addendum 37). `scriptFormatOf` has already resolved what was stored,
+    // so a play carrying `us` — which is every play written before there was
+    // anything else to carry, and was the fallthrough rather than anybody's
+    // choice — is set as a modern play rather than as a film.
+    const asked = scriptFormatOf(format, scriptFormat);
+    const stage = STAGE_LAYOUTS[asked];
+    if (stage) return stage;
+    if (asked === 'bbc') return BBC_LAYOUT;
+    if (asked === 'bbc_taped') return BBC_TAPED_LAYOUT;
+    if (asked === 'us_multi') return US_MULTI_LAYOUT;
     return SCREENPLAY_LAYOUT;
   }
   return paragraphStyle === 'blocked' ? PROSE_BLOCK_LAYOUT : PROSE_LAYOUT;
+};
+
+/**
+ * **The house styles this format offers** (addendum 37, from Ken: *when you
+ * select stage play, you need a dropdown or some type of preference that can
+ * select the proper formatting for you*).
+ *
+ * A stage play is offered the six stage presets and a screen script the four
+ * screen ones — **absent rather than renamed**, which is `kindsFor`'s rule
+ * (addendum 16 §6c): a multi-camera sitcom layout is not a thing a play can
+ * be set in, and offering it is offering to format a play wrongly.
+ *
+ * The list is the domain's because it is a rule about the format; what each
+ * one is *called* is the screen's, copy not being a reading.
+ */
+export const scriptFormatsFor = (format: ProjectFormat): ScriptFormat[] => {
+  if (isProseFormat(format)) return [];
+  if (format === 'stage_play') {
+    return [
+      'stage_us_modern',
+      'stage_us_traditional',
+      'stage_us_publisher',
+      'stage_uk_bbc',
+      'stage_uk_contemporary',
+      'stage_eu_continental',
+    ];
+  }
+  return ['us', 'us_multi', 'bbc', 'bbc_taped'];
+};
+
+/**
+ * The house style in force — what was stored where this format offers it, and
+ * the format's own first otherwise.
+ *
+ * **One reading, so the menu and the printed page cannot disagree.** A play
+ * holding `us` is not a writer who chose a screenplay: until now the menu had
+ * no stage preset in it at all, so `us` is what every play was handed. It
+ * reads as the modern play, which is the whole of *select the proper
+ * formatting for you*.
+ */
+export const scriptFormatOf = (format: ProjectFormat, stored?: ScriptFormat): ScriptFormat => {
+  const offered = scriptFormatsFor(format);
+  if (offered.length === 0) return 'us';
+  return stored && offered.includes(stored) ? stored : (offered[0] as ScriptFormat);
 };
 
 /**
@@ -424,6 +785,14 @@ export interface PageLine {
    * take room from the 60 characters the text is set in.
    */
   mark?: string;
+  /**
+   * Set centred in the column rather than flush at `indent` (addendum 37) —
+   * a stage play's cue, and nothing on a screen page. `width` comes with it,
+   * because centring needs the box the words are centred in.
+   */
+  centred?: boolean;
+  /** The column's width in characters, carried only where `centred` is. */
+  width?: number;
 }
 
 export interface Page {
@@ -834,7 +1203,20 @@ export const paginateElements = (
   ) => {
     if (lines.length >= layout.linesPerPage) startNewPage();
     if (pageStart === null) pageStart = currentId;
-    lines.push({ text, type, indent, spans, ...(mark ? { mark } : {}), ...(figure ? { figure } : {}) });
+    // Centred elements carry the column they are centred in (addendum 37);
+    // everything else carries nothing new, which is why no screen page moves.
+    const middle = layout.centred?.has(type)
+      ? { centred: true as const, width: layout.width[type] ?? layout.columns }
+      : {};
+    lines.push({
+      text,
+      type,
+      indent,
+      spans,
+      ...middle,
+      ...(mark ? { mark } : {}),
+      ...(figure ? { figure } : {}),
+    });
     const doubled = layout.doubleSpaced || (layout.doubleSpacedTypes?.has(type) ?? false);
     if (doubled && lines.length < layout.linesPerPage) {
       lines.push({ text: '', type: 'blank', indent: 0, spans: [] });

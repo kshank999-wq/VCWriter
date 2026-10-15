@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { isProseFormat, nounsFor, type ProjectFormat } from '@vcwriter/domain';
 import { SCHEMES, type SchemeId } from '../themes';
 
 interface PreferencesProps {
@@ -8,6 +9,15 @@ interface PreferencesProps {
   onScheme(id: SchemeId): void;
   paper: boolean;
   onPaper(on: boolean): void;
+  /**
+   * The open project's format, where one is open (addendum 37).
+   *
+   * Only so this screen can say **where** a script's house style is set. It
+   * is not one of these: a format is a fact about the document that travels
+   * in the project, and two people opening one play must not print two
+   * different page counts — which is what this dialog's own footer says.
+   */
+  format?: ProjectFormat | null;
 }
 
 /**
@@ -23,6 +33,7 @@ export function Preferences({
   onScheme,
   paper,
   onPaper,
+  format = null,
 }: PreferencesProps) {
   const dialog = useRef<HTMLDialogElement>(null);
 
@@ -89,6 +100,22 @@ export function Preferences({
           (addendum 20 §17). How tall a lane is drawn is a **zoom**, and it
           belongs on the board beside the one that says how wide, not in a
           dialog on another screen. */}
+      {/* **A route, and only where the route exists** (addendum 10 §8).
+          Ken looked for the stage play's formatting here (addendum 37), which
+          is the right instinct and the wrong record: this dialog's own footer
+          says why. So it says where instead — on a script alone, a prose
+          project having no house style to set. */}
+      {format && !isProseFormat(format) ? (
+        <section>
+          <h3>Script format</h3>
+          <p className="field-note">
+            How this {nounsFor(format).work.toLowerCase()} is set on the page — the cue, the speech and the
+            stage directions — is the project’s rather than this computer’s, so it is in{' '}
+            <strong>File ▸ Page setup</strong> under <em>Script format</em>.
+          </p>
+        </section>
+      ) : null}
+
       <footer className="muted">Preferences are kept on this computer, not in the project.</footer>
     </dialog>
   );

@@ -8180,6 +8180,75 @@ push live; the build takes a minute or two.
   the screen, prints a bare list with its centre still on the title's (1132
   against 1133), and ticking it back brings *What you will cover* with it.
 
+  `addendum-37-stage-formats.md` is **the six a stage play is set in**, from
+  Ken with his own *Stage Play Formatting Engine* spec attached (*when you
+  select stage play, you need a dropdown or some type of preference that can
+  select the proper formatting for you… enter it into the preferences section
+  as a drop-down or selectable menu*). **Measured first**: a stage play
+  printed as `SCREENPLAY_LAYOUT` — the cue out at 3.7 inches, the speech a
+  narrow column, US Letter, which is a **film page** — and *File ▸ Page setup
+  ▸ Script format* offered four **screen** house styles with no way to ask for
+  a stage page at all. **The audit paid a thirty-third time and paid nearly
+  all of it**: the spec's §6 configuration contract (margins, cue placement
+  and casing, the dialogue column, the direction indent, heading alignment) is
+  **`PageLayoutSpec`**, which has carried every field of it since the screen
+  formats were written along with `cueBeside`, `blanksBeforeHeading` and
+  per-element uppercase; `settings.scriptFormat` is already the stored
+  per-project choice; `layoutFor`/`layoutForFile` is already the one chooser
+  the preview, the print, the PDF and the Final Editor read; the menu already
+  exists and already draws **a sample page** per option; and *format change
+  must never alter dialogue text* is true **by construction**, a layout being
+  read at print time and written into nothing. Two fields were missing and
+  both are real. **`centred`** — the spec says the US cue is centred and **a
+  fixed indent is not centring**, being right for one length of name and wrong
+  for every other; the block keeps its own `indent` and `width` so the
+  wrapping and the page count are unchanged and only where the words sit
+  differs. **`paper`** — `linesPerPage` and `columns` carried the geometry
+  while the stylesheet carried `@page { size: letter }` whatever the layout
+  said, so **the BBC layouts, which have claimed A4 in their own prose since
+  they were written, printed onto US Letter**: a pre-existing fault fixed
+  along the way. The six are `stage_` prefixed rather than taking the spec's
+  bare ids (`uk_bbc` beside the screen list's `bbc` being two values a reader
+  must hold apart), **the same field as the four screen ones and not a second
+  one**, at Letter 60×55 and A4 62×58 from the spec's own matrix. **UK BBC
+  stage is `cueBeside`** — built for taped television and the same shape here,
+  which is also the spec's *prohibit manual space-padding* kept, the cue being
+  laid in the margin rather than typed into the line — and is **its own entry
+  rather than a reuse of BBC taped**, its directions being in capitals. **The
+  spec's caveats are on the screen rather than paraphrased away**:
+  recommendations and not acceptance rules, a theatre's or publisher's own
+  instructions first, the BBC sample **dated 2004**, and **no single
+  Europe-wide convention** so the continental preset is a configurable reading
+  copy labelled as one. **A play carrying `us` is not a writer who chose a
+  screenplay** — the menu had no stage preset in it, so `scriptFormatOf`
+  resolves it to the modern play, which is the whole of *select the proper
+  formatting for you*, and it is **one reading** asked by `layoutFor` and the
+  menu alike so what is lit and what prints cannot disagree; the screen
+  formats are **absent rather than renamed** on a play (`scriptFormatsFor`,
+  `kindsFor`'s rule), with the whole domain suite passing **unedited** as the
+  proof no screen script moved. **It is not in Preferences and the reason is
+  that dialog's own footer**: `Preferences` takes no project at all and says
+  *preferences are kept on this computer, not in the project*, while a house
+  style changes the geometry and so the page count, two people opening one
+  play not being allowed to see two different things — so it stays in **File ▸
+  Page setup**, and because Ken looked in Preferences, **Preferences says
+  where it is** (a route and only where the route exists, addendum 10 §8, with
+  no second control in it). **The list is the format's and the copy is the
+  screen's**, so a seventh preset is an entry in one place. Driven: six tiles
+  with US modern lit on a new play, a screenplay's four unchanged, and the
+  printed document giving `size: letter` with the cue `text-align:center` over
+  a 60ch column for US modern and `size: A4` on an 8.27×11.69in sheet with the
+  cue beside the speech and the directions in capitals for UK BBC. **Named
+  rather than built**: the **musical** preset (§4.6, optional in the spec's
+  own v1 — it needs Song Title, Lyric and Music Cue as *element types*, and a
+  preset promising lyrics over a manuscript with no lyric element is a control
+  that lies), the **cast page and title-page builder** (§5 — both readings
+  exist; what it asks beyond them is the Character Creator's record widened),
+  a **dynamic width fallback for a long cue** (§9's own test: nothing
+  overlaps, a long name merely pushes its first line right, and the fallback
+  that drops it to its own line is `cueBeside`'s and would reach BBC taped),
+  **DOCX export** (§8), and **Save as Custom Template** (§1).
+
 ## Before pushing
 
     cd packages/domain && pnpm typecheck && pnpm test && pnpm build

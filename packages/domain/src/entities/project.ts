@@ -77,7 +77,30 @@ export type ParagraphStyle = z.infer<typeof paragraphStyleSchema>;
  * is a fact about the script, and two people opening the same file must not
  * get two different ones.
  */
-export const scriptFormatSchema = z.enum(['us', 'us_multi', 'bbc', 'bbc_taped']);
+export const scriptFormatSchema = z.enum([
+  // The four a screen script is set in.
+  'us',
+  'us_multi',
+  'bbc',
+  'bbc_taped',
+  /**
+   * **The six a stage play is set in** (addendum 37, from Ken's own *Stage
+   * Play Formatting Engine* spec §2). Prefixed `stage_` rather than taking
+   * that spec's bare ids, because `uk_bbc` beside the screen list's `bbc`
+   * would be two values a reader has to hold apart; each layout's doc names
+   * the spec's own id.
+   *
+   * They are the same field as the four above and not a second one: a script
+   * is set in one house style, and the format decides which houses are on
+   * offer (`scriptFormatsFor`).
+   */
+  'stage_us_modern',
+  'stage_us_traditional',
+  'stage_us_publisher',
+  'stage_uk_bbc',
+  'stage_uk_contemporary',
+  'stage_eu_continental',
+]);
 export type ScriptFormat = z.infer<typeof scriptFormatSchema>;
 
 /**

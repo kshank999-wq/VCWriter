@@ -1266,6 +1266,7 @@ export default function App() {
         onScheme={setScheme}
         paper={paper}
         onPaper={setPaper}
+        format={file?.project.format ?? null}
       />
 
       {/* A lapsed subscription (addendum 32 §8). Above the project's own
