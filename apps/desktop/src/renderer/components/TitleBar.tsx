@@ -1,5 +1,6 @@
 import { beatIdOf, paneTitle } from '../panes';
 import { Wordmark } from './Brand';
+import { RoomFormat } from './RoomFormat';
 import { avSheet, formatRt, nounsFor, type ProjectFile, type ProjectFormat } from '@vcwriter/domain';
 import type { AccountStatus } from '../../preload/index';
 
@@ -93,10 +94,16 @@ export function TitleBar({
       <div className="titlebar-left">
         <Wordmark compact />
         {menu}
-        <strong className="project-title" title={`${file.project.title} · ${file.project.format.replace(/_/g, ' ')}`}>
+        {/* **The format is on the bar now, not in this hover** (addendum 35
+            §2). It said `short story` and `instructional` — the schema's own
+            spelling rather than the name the writer chose the project by — to
+            whoever happened to rest a pointer on the title, which is the one
+            place a fact that decides every noun on the screen may not live. */}
+        <strong className="project-title" title={file.project.title}>
           {file.project.title}
         </strong>
       </div>
+      <RoomFormat format={file.project.format} />
       <div className="titlebar-right">
         <span className="muted">
           {/* A commercial has no pages. It has a running time, and shots

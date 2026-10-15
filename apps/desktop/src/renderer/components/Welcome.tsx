@@ -6,6 +6,7 @@ import {
   startsHere,
   type ProjectFormat,
   type ProjectFolder,
+  formatName,
 } from '@vcwriter/domain';
 // The stacked lockup (docs/brand.md), cut for this screen by
 // brand/logo/derive.mjs. Bundled by Vite, so it ships inside the app and the
@@ -47,22 +48,29 @@ interface WelcomeProps {
  * in the program calls them passages (addendum 16 §1). What stays written down
  * is the part a noun table cannot know: what the format is *for*.
  */
-const FORMATS: ReadonlyArray<{ value: ProjectFormat; label: string; about: string }> = [
-  { value: 'screenplay', label: 'Screenplay', about: 'industry formatting' },
-  { value: 'series', label: 'Series or episodic', about: 'episodes across a series' },
-  { value: 'novel', label: 'Novel', about: 'manuscript formatting' },
-  { value: 'instructional', label: 'Instructional book', about: 'academic, reference and nonfiction' },
+/**
+ * **The order and the `about` are this screen's; the name is not** (addendum
+ * 35 §1). The label was written out here and again in the importer, and the
+ * two had drifted — *Instructional book* on the grid a writer chooses from,
+ * *Instructional or textbook* on the screen that brings one in. What a format
+ * is *for* stays written down, a table of nouns having no way to know it.
+ */
+const FORMATS: ReadonlyArray<{ value: ProjectFormat; about: string }> = [
+  { value: 'screenplay', about: 'industry formatting' },
+  { value: 'series', about: 'episodes across a series' },
+  { value: 'novel', about: 'manuscript formatting' },
+  { value: 'instructional', about: 'academic, reference and nonfiction' },
   // **Kept, and no longer a choice** (addendum 30): a game is built in VC Game
   // Studio, so this card is the door to it. It stays in its place rather than
   // coming off the grid, because a writer who comes here to write a game and
   // finds nothing concludes the answer is nothing — which is the fault
   // addendum 08 §8b names. What it says is read from `builtElsewhere`.
-  { value: 'game', label: 'Video game', about: 'branching, choices and consequences' },
-  { value: 'stage_play', label: 'Stage play', about: '' },
+  { value: 'game', about: 'branching, choices and consequences' },
+  { value: 'stage_play', about: '' },
   // One story or many: each is a marker over its sections, and the Layout
   // room sets the collection as a book (addendum 22).
-  { value: 'short_story', label: 'Short stories and collections', about: 'one story, or a collection set as a book' },
-  { value: 'short_form', label: 'Short form', about: 'commercials, web video, social' },
+  { value: 'short_story', about: 'one story, or a collection set as a book' },
+  { value: 'short_form', about: 'commercials, web video, social' },
 ];
 
 const detailFor = (option: { value: ProjectFormat; about: string }): string => {
@@ -170,7 +178,7 @@ export function Welcome({
                 aria-pressed={format === option.value}
                 onClick={() => setFormat(option.value)}
               >
-                <strong>{option.label}</strong>
+                <strong>{formatName(option.value)}</strong>
                 <span>{detailFor(option)}</span>
               </button>
             ))}

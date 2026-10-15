@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { RoomSave } from './RoomSave';
+import { RoomFormat } from './RoomFormat';
 import { SheetInk } from './SheetInk';
 import { ContextMenu, type MenuEntry } from './ContextMenu';
 import { EbookExportDialog } from './EbookExportDialog';
@@ -2021,6 +2022,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
 
       <header className="sculptor-bar">
         <h2>Layout</h2>
+        <RoomFormat format={file.project.format} />
         <span className="muted small">{bookNames(file).title}</span>
         <span className="toolbar-spacer" />
         {laying ? (

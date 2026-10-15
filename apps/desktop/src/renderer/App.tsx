@@ -920,18 +920,27 @@ export default function App() {
   }, [file, project]);
 
   /**
-   * A book opens on its outline (addendum 19 §5): a textbook is planned
-   * before it is written, and the plan is the numbering, the contents and
-   * the shape of the whole thing. Everything else opens on the writing, as
-   * it always has. Keyed on the project rather than the file, so switching
-   * pages afterwards is the writer's and only opening another project
+   * **Every project opens on the writing** (addendum 35 §3, from Ken: *when
+   * you open the novel writing, it starts in the outliner. I'd like it to
+   * start on the main page so it's not confusing*).
+   *
+   * This **reverses addendum 19 §5's default at his ask**, and the argument it
+   * reverses is still a good one — a textbook is planned before it is written,
+   * and the plan is the numbering, the contents and the shape of the whole
+   * thing. What that argument is about is **where the work starts**, and this
+   * is about **where the program opens**, which are not the same question: a
+   * writer who comes back to a book they have been writing for a fortnight is
+   * put on a planning screen they were not asking for, and the Outline page is
+   * one press away on the bar either way.
+   *
+   * The page is still **the writer's the moment they press one** — this is
+   * keyed on the project rather than the file, so only opening another project
    * decides again.
    */
   const openedId = file?.project.id ?? null;
-  const openedBook = file ? isInstructional(file.project.format) : false;
   useEffect(() => {
-    if (openedId) setView(openedBook ? 'outline' : 'write');
-  }, [openedId, openedBook]);
+    if (openedId) setView('write');
+  }, [openedId]);
 
   if (!file || startingNew) {
     return (

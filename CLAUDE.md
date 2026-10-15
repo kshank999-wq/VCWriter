@@ -7838,6 +7838,86 @@ push live; the build takes a minute or two.
   deliberately absent: **no cloud account and no second kind of location**, the
   day this program grows its own idea of a cloud drive being the day there are
   two answers to where a book is.
+  `addendum-35-which-module.md` is **which module you are in**, from Ken in one
+  message with four asks in it (*whenever you enter a module, whether it be
+  screenwriting, episodic, short form, in the center, I want it to be titled…
+  just so you know what module you're in* … *when you open the novel writing, it
+  starts in the outliner. I'd like it to start on the main page* … *where it
+  says drop files anywhere on this page, that needs to be at the top* … *on each
+  file, there's a zero percent, and I'm not sure what that means*), and the
+  first two are both about **a writer not knowing where they are**, one in space
+  and one in sequence. **The whole program is built on the format and no screen
+  printed it**: `nounsFor` has decided since addendum 16 §1 whether a unit is a
+  Scene, a Chapter or a Section, `isProseFormat` decides the keyboard and the
+  page geometry, and `hasChapterPages`, `isCollection`, `holdsWholeWorks` and
+  `isInteractive` each turn a screen into a different screen — so one fact
+  decides what every noun on the screen means, and what carried it was **the
+  hover on the project's name**, reading `short story` and `instructional`, the
+  schema's own spelling with the underscore turned into a space, said to whoever
+  happened to rest a pointer there. **A fact that decides every noun on the
+  screen may not live in a tooltip**, and the spelling in it was not a name any
+  screen had ever shown a writer. `formatName` is the one table and the audit's
+  finding is that **the two screens that print it on the desktop had already
+  drifted** — *Instructional book* on the grid a writer chooses from,
+  *Instructional or textbook* on the screen that brings one in: the same
+  project, two names, neither of them wrong and neither of them the program's,
+  with the **grid's** winning because that is where a writer learns what their
+  project is called. **The name is the program's and the list is the screen's**
+  — which formats a screen offers and in what order is that screen's own
+  business, the importer showing four for a script and three for a book and the
+  grid having a layout and a line per card saying what the format is *for* — so
+  it is a **record rather than an array** and nobody reads an order out of it;
+  Welcome keeps its order and its `about` and loses only its own spelling. And
+  every private list had stopped at **eight** where the schema has nine, so a
+  project carrying `other` (none can be made, and nothing stops one arriving)
+  would have found no name at all; it reads as *Other* rather than falling back
+  to *Screenplay*, which would be a label naming the wrong thing. **§1a is that
+  the phone's name is a different question and stays**: `formatSpokenName` is
+  what somebody *says* on a walk and hears read back, nobody saying *Series or
+  episodic* and Ken's own word for a textbook out loud being *educational book*
+  — two questions, two tables, and the rule that **a surface reads one of them
+  rather than keeping a third**, which the phone's own project list was doing
+  under a comment claiming to be *the same list `SPOKEN_FORMATS` offers out
+  loud*, **a claim rather than a reading** that had already cost that screen two
+  formats once; `spokenFormatChoices()` is the list with addendum 30's
+  `startsHere` filter in the domain, **what may be named not being what may be
+  made**. **§2 is where it is said**, and the half worth recording is addendum
+  29 §2's finding — **a room covers the menu bar** — so a name standing only on
+  the title bar is invisible from exactly the places a writer goes to do the
+  work, which is Ken's *whenever you enter a module* and the three he names;
+  `RoomFormat` is one component on the title bar and in all six rooms, saying
+  the **format rather than the room** (every bar already names itself at the
+  left, and a bar repeating its own name in the middle would be the fact said
+  twice), **absolutely centred rather than laid between the controls** because a
+  bar's two sides are different widths in every room and a flex child lands
+  wherever they leave it, taking **no pointer events** and truncating at a third
+  of the width rather than pushing a control off the edge. The test is
+  `room-save-surfaces`' shape and for its reason: **a seventh room added without
+  one fails there rather than shipping silent**. **§3 is every project opening
+  on the writing**, which **reverses addendum 19 §5's default at Ken's ask**,
+  and the argument it reverses is still a good one — a textbook is planned
+  before it is written, which is why the Outline page exists on a book at all —
+  the correction being that **that argument is about where the work starts and
+  this is about where the program opens**, two different questions: somebody
+  coming back to a book they have been writing for a fortnight is put on a
+  planning screen they did not ask for, and the Outline page is one press away
+  either way. Nothing else about §5 changes, and the page is still **the
+  writer's the moment they press one**, the effect being keyed on the project so
+  only opening another decides again. **§4 is the Note Sorter's two.** The drop
+  line stood at the **foot** of *Add material*, under the four ways in and the
+  loud dictation tile, so the cheapest way of all to get material in was the
+  last thing a writer read, after they had already picked one of the others — it
+  says what the whole panel can do, which is a heading's place rather than a
+  footnote's. And **a bare number is a reading whose subject the writer has to
+  guess**: `0%` on every file and tab could as easily have been how much is
+  left, how sure the suggestions are or how far a file had uploaded, so it is
+  *0% **sorted***, the word the room already uses for this exact state in *Grey
+  sorted*, *Hide sorted* and *Unsorted only* — one `sorted(share)` and one
+  `COVERAGE_IS` sentence in a hover, ending with what addendum 26 §11 settled,
+  **nothing follows from the figure**. §6 names the two refusals: a room's own
+  name is **not** repeated in the middle, and **nothing is stored** about which
+  page a project opens on, a remembered one putting somebody back on a screen
+  they left a fortnight ago.
 
 ## Before pushing
 

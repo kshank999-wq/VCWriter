@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { RoomSave } from './RoomSave';
+import { RoomFormat } from './RoomFormat';
 import {
   addSortCategory,
   addSource,
@@ -175,6 +176,27 @@ const CARD = 'application/x-vcwriter-sortcard';
 const percent = (share: number): string => `${Math.round(share * 100)}%`;
 
 /**
+ * **What the figure means, said beside it** (addendum 35 §4, from Ken: *on
+ * each file, there's a zero percent, and I'm not sure what that means*).
+ *
+ * It is `coverageOf` — the share of a source that has become cards — and it
+ * stood as a bare number on every file and every tab, where a percentage with
+ * no noun could as easily have been how much is left, how sure the suggestions
+ * are, or how far a file had uploaded. **A number on its own is a reading the
+ * writer has to guess the subject of.**
+ *
+ * The word is **`sorted`**, which the room already uses for this exact state
+ * in *Grey sorted*, *Hide sorted* and *Unsorted only* — so the three places
+ * that show the figure say what the display modes say, rather than the
+ * sitting's bar having a sentence of its own and the files having none.
+ */
+const sorted = (share: number): string => `${percent(share)} sorted`;
+
+/** Said in full where there is room for it, and in a hover where there is not. */
+const COVERAGE_IS =
+  'How much of this has been through your hands: the share of it that has become cards. Nothing follows from the figure.';
+
+/**
  * Where in the source a point in the drawn text is.
  *
  * Every piece is one span carrying its own `data-from`, and its only child is a
@@ -302,6 +324,7 @@ export function NoteSorterWindow({
             copy inside a room would be branding the program to somebody who is
             using it. */}
         <span className="ns-brand">Note Sorter</span>
+        <RoomFormat format={file.project.format} />
         {sessions.length > 1 ? (
           <select
             aria-label="Which sitting"
@@ -347,7 +370,7 @@ export function NoteSorterWindow({
             </span>
             {/* Progress, never a score (§11): what it answers is *have I been
                 through all of this*, and nothing follows from the figure. */}
-            <span className="small">{percent(progress.share)} dealt with</span>
+            <span className="small">{sorted(progress.share)}</span>
           </span>
         ) : null}
 
@@ -616,7 +639,9 @@ function GatherTab({
                         <strong>{one.name}</strong>
                       </>
                     )}
-                    <span className="ns-src-pc mono">{percent(done.share)}</span>
+                    <span className="ns-src-pc mono" title={COVERAGE_IS}>
+                      {sorted(done.share)}
+                    </span>
                   </div>
                   <span className="ns-src-bar" aria-hidden>
                     <span className="ns-src-run" style={{ width: percent(done.share) }} />
@@ -669,6 +694,16 @@ function GatherTab({
 
       <section className="ns-panel ns-material">
         <h3>Add material</h3>
+        {/* **At the top of the page** (addendum 35 §4, from Ken: *where it says
+            drop files anywhere on this page, that needs to be at the top of the
+            page*). It stood at the **foot**, under the four ways in and the
+            loud fifth — so the cheapest way of all to get material in was the
+            last thing a writer read, after they had already picked one of the
+            others. It says what the whole panel can do, which is a heading's
+            place rather than a footnote's. */}
+        <div className="ns-drop" aria-hidden="true">
+          Drop files anywhere on this page
+        </div>
         {/* The handoff's four ways in, as tiles rather than as four boxes all
             open at once (§16b). **Paste text and Type directly are one
             control** — a box you put words in — reached through two doors,
@@ -754,9 +789,6 @@ function GatherTab({
           </span>
         </button>
 
-        <div className="ns-drop" aria-hidden="true">
-          Drop files anywhere on this page
-        </div>
       </section>
 
       <Dictation
@@ -1066,7 +1098,10 @@ function SortTab({
               className={(one.id as string) === (source.id as string) ? 'ns-src-tab on' : 'ns-src-tab'}
               onClick={() => onSource(one.id)}
             >
-              {one.name} <span className="muted small">{percent(progressOf(file, one).share)}</span>
+              {one.name}{' '}
+              <span className="muted small" title={COVERAGE_IS}>
+                {sorted(progressOf(file, one).share)}
+              </span>
             </button>
           ))}
           <button type="button" className="ns-src-tab add" onClick={onGather}>

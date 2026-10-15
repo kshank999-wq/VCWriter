@@ -229,9 +229,24 @@ const SPOKEN_FORMATS: ReadonlyArray<{ format: ProjectFormat; name: string; spoke
 export const formatSpokenName = (format: ProjectFormat): string =>
   SPOKEN_FORMATS.find((one) => one.format === format)?.name ?? format;
 
+/**
+ * **Every format a writer may start from a pocket, and what it is called
+ * there** (addendum 35 §1a).
+ *
+ * The phone's own project list wrote these eight out again — in a table whose
+ * comment said *the same list `SPOKEN_FORMATS` offers out loud*, which is a
+ * claim rather than a reading and so the second answer this project removes
+ * everywhere else. It had already cost that screen two formats once. So the
+ * list is here, where the words are, and the filter is `startsHere`'s for
+ * addendum 30's reason: what may be **named** is not what may be **made**, a
+ * game being built elsewhere, and a project already in that format still
+ * needing a word through `formatSpokenName`.
+ */
+export const spokenFormatChoices = (): ReadonlyArray<{ format: ProjectFormat; name: string }> =>
+  SPOKEN_FORMATS.filter((one) => startsHere(one.format)).map((one) => ({ format: one.format, name: one.name }));
+
 /** Every format a writer can name, for the sentence that lists the choices. */
-export const spokenFormatNames = (): string[] =>
-  SPOKEN_FORMATS.filter((one) => startsHere(one.format)).map((one) => one.name);
+export const spokenFormatNames = (): string[] => spokenFormatChoices().map((one) => one.name);
 
 /**
  * The format somebody named, or null.

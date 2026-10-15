@@ -1811,6 +1811,46 @@ button.tool:disabled {
   flex: 1;
 }
 
+/*
+ * Which module you are in (addendum 35 §2, from Ken: *in the center, I want it
+ * to be titled… just so you know what module you're in*).
+ *
+ * **Absolutely centred rather than laid between the controls**: a bar's two
+ * sides are different widths in every room — Layout carries a page count,
+ * the Sculptor a board name, the Note Sorter a sitting picker — so a flex
+ * child between them lands wherever those widths leave it, which is not the
+ * middle and moves as a count changes beside it. The bars are all
+ * `position: relative` already or are made so here.
+ *
+ * It takes **no pointer events**, so it is a label on the bar rather than
+ * something standing in front of a control, and it truncates rather than
+ * pushing anything aside.
+ */
+.titlebar,
+.sculptor-bar,
+.ns-bar,
+.outliner-bar,
+.research-head {
+  position: relative;
+}
+
+.room-format {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 34%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: var(--display);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  pointer-events: none;
+}
+
 /* ------------------------------------------------------------- master panel */
 
 .master {

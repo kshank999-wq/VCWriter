@@ -5,12 +5,13 @@ import {
   describePhoneShelf,
   describeShelf,
   emptyShelf,
+  formatSpokenName,
   phoneShelfOffer,
   readShelf,
   setOnPhone,
   shelfRows,
   shownOnPhone,
-  startsHere,
+  spokenFormatChoices,
   type PhoneShelf,
   type ProjectFormat,
 } from '@vcwriter/domain';
@@ -53,22 +54,16 @@ export interface ProjectSummary {
 /**
  * How a format reads to somebody who is not looking at a settings screen.
  *
- * **All eight of them**, which is the same list `SPOKEN_FORMATS` offers out
- * loud (addendum 09 §11): this table had six, so an educational book — the one
- * Ken named by name — could be made on the phone by voice and not by hand, and
- * a game made on the desktop drew its raw column value in this list. A picker
- * shorter than what the program can make is a question with answers missing.
+ * **Read rather than written out** (addendum 35 §1a). This was a table of
+ * eight whose own comment said it was *the same list `SPOKEN_FORMATS` offers
+ * out loud* — a claim, which is what a second copy always is, and one that
+ * had already cost this screen two formats once: it held six, so an
+ * educational book could be made here by voice and not by hand, and a game
+ * made on the desktop drew its raw column value. `formatSpokenName` is the
+ * one place those words live, and `spokenFormatChoices` is what may be
+ * started from a pocket, already filtered by `startsHere` (addendum 30).
  */
-const FORMAT_WORDS: Record<string, string> = {
-  screenplay: 'Screenplay',
-  series: 'Series',
-  short_form: 'Short form',
-  stage_play: 'Stage play',
-  novel: 'Novel',
-  short_story: 'Short stories and collections',
-  instructional: 'Educational book',
-  game: 'Game',
-};
+const formatWords = (format: string): string => formatSpokenName(format as ProjectFormat);
 
 export function ProjectPage({
   chosenId,
@@ -177,7 +172,7 @@ export function ProjectPage({
                     />
                     <span>
                       <span className="notes-project-title">{row.title || 'Untitled'}</span>
-                      <span className="muted small">{FORMAT_WORDS[row.format] ?? row.format}</span>
+                      <span className="muted small">{formatWords(row.format)}</span>
                     </span>
                   </label>
                 </li>
@@ -211,7 +206,7 @@ export function ProjectPage({
                   >
                     <span className="notes-project-title">{project.title || 'Untitled'}</span>
                     <span className="muted small">
-                      {FORMAT_WORDS[project.format] ?? project.format}
+                      {formatWords(project.format)}
                       {project.id === chosenId ? ' · last used' : ''}
                     </span>
                   </button>
@@ -240,21 +235,18 @@ export function ProjectPage({
               </label>
               <label className="field">
                 <span>Format</span>
-                {/* The same table the list reads, rather than a second copy of
-                    it: two lists of formats is how one of them came to be
-                    missing two. */}
+                {/* The same words the list reads, rather than a second copy of
+                    them: two lists of formats is how one of them came to be
+                    missing two. What may be **started** here is not what may
+                    be named — a game is built in VC Game Studio (addendum 30),
+                    and the rows above still read *Game* for a project made
+                    before that — so the filtering is `spokenFormatChoices`'. */}
                 <select value={format} onChange={(event) => setFormat(event.target.value)}>
-                  {Object.entries(FORMAT_WORDS)
-                    // What may be **started** here, which is not the same list
-                    // as what may be named: a game is built in VC Game Studio
-                    // (addendum 30), and the rows above still read *Game* off
-                    // this same table for a project made before that.
-                    .filter(([value]) => startsHere(value as ProjectFormat))
-                    .map(([value, words]) => (
-                      <option key={value} value={value}>
-                        {words}
-                      </option>
-                    ))}
+                  {spokenFormatChoices().map((one) => (
+                    <option key={one.format} value={one.format}>
+                      {one.name}
+                    </option>
+                  ))}
                 </select>
               </label>
               <div className="notes-item-actions">

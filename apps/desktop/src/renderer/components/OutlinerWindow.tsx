@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { RoomSave } from './RoomSave';
+import { RoomFormat } from './RoomFormat';
 import { scrollNudge, zoneFor, type OutlineZone } from '../drag';
 import { ResearchShelf, type ShelfCarry } from './ResearchShelf';
 import { usePhoneNotes } from '../phone-notes';
@@ -576,6 +577,7 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
     <div className={page ? 'outliner as-page' : 'outliner'} role={page ? 'region' : 'dialog'} aria-label="Outliner">
       <header className="outliner-bar">
         <h2>Outliner</h2>
+        <RoomFormat format={file.project.format} />
         {outline ? <span className="muted small">{outline.name}</span> : null}
 
         <span className="toolbar-spacer" />

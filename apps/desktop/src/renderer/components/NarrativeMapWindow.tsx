@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { PopOutButton } from './PopOutButton';
+import { RoomFormat } from './RoomFormat';
 import { ConditionGroupEditor, ContributorList, EffectList, RuleSentence } from './RuleBuilder';
 import { NarrativeWorldPanel } from './NarrativeWorldPanel';
 import { NarrativePlayPanel } from './NarrativePlayPanel';
@@ -213,6 +214,7 @@ export function NarrativeMapWindow({
     <div className="narrmap" role="dialog" aria-label="Narrative map">
       <header className="sculptor-bar">
         <h2>Narrative map</h2>
+        <RoomFormat format={file.project.format} />
         <span className="muted small">{describeGraph(file, map)}</span>
 
         <span className="toolbar-spacer" />

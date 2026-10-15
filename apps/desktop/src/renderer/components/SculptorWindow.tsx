@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { RoomSave } from './RoomSave';
+import { RoomFormat } from './RoomFormat';
 import { ResearchShelf, type ShelfCarry } from './ResearchShelf';
 import { usePhoneNotes } from '../phone-notes';
 import { PopOutButton } from './PopOutButton';
@@ -434,6 +435,7 @@ export function SculptorWindow({ file, open, onClose, onUpdate, onPopOut, onSave
     <div className="sculptor" role="dialog" aria-label="Story Sculptor">
       <header className="sculptor-bar">
         <h2>Story Sculptor</h2>
+        <RoomFormat format={file.project.format} />
         {board ? <span className="muted small">{board.name}</span> : null}
 
         {/* The shelf is a place, not a strip: it opens from the left and moves

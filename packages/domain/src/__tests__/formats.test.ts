@@ -6,10 +6,14 @@ import {
   defaultMarkerKind,
   defaultUnitKind,
   elementTypesFor,
+  formatName,
+  formatSpokenName,
   hasBookIndex,
   hasChapterPages,
   builtElsewhere,
   isInstructional,
+  spokenFormatChoices,
+  spokenFormatNames,
   isInteractive,
   isProseFormat,
   startsHere,
@@ -160,5 +164,65 @@ describe('a format built in another program', () => {
     expect(file.project.format).toBe('game');
     expect(nounsFor('game').unit).toBe('Scene');
     expect(file.units).toHaveLength(1);
+  });
+});
+
+/**
+ * **What the format is called** (addendum 35 §1).
+ *
+ * `EVERY_FORMAT`'s own lesson pointed at a name rather than at a predicate:
+ * each screen that printed one wrote the list out, and the two on the desktop
+ * had drifted — *Instructional book* on the grid a writer chooses from,
+ * *Instructional or textbook* on the screen that brings one in.
+ */
+describe('what a format is called', () => {
+  it('names every one of them, the ninth included', () => {
+    // The four private lists all stopped at eight, so a project carrying
+    // `other` — none can be made, and nothing stops one arriving — would have
+    // found no name at all.
+    for (const format of EVERY_FORMAT) {
+      expect(formatName(format)).not.toBe('');
+      expect(formatName(format)).not.toBe(format);
+    }
+    expect(formatName('other')).toBe('Other');
+  });
+
+  it('keeps the name a writer chose the project by', () => {
+    expect(formatName('instructional')).toBe('Instructional book');
+    expect(formatName('short_story')).toBe('Short stories and collections');
+    expect(formatName('series')).toBe('Series or episodic');
+  });
+
+  it('never prints the column value, which is what a hover used to show', () => {
+    // The title bar carried `short story` and `instructional` in a tooltip:
+    // the schema's spelling, said to whoever rested a pointer on the title.
+    for (const format of EVERY_FORMAT) {
+      expect(formatName(format)).not.toMatch(/_/);
+      expect(formatName(format)[0]).toBe(formatName(format)[0]!.toUpperCase());
+    }
+  });
+
+  /**
+   * **The phone's name is a different question** (§1a). Nobody says *Series or
+   * episodic* on a walk, and Ken's own word for a textbook out loud is
+   * *educational book* — so there are two vocabularies, and the rule is that a
+   * surface reads one of them rather than keeping a third.
+   */
+  it('is deliberately not the spoken name, and the phone reads that one', () => {
+    expect(formatSpokenName('series')).toBe('Series');
+    expect(formatSpokenName('instructional')).toBe('Educational book');
+    expect(formatName('series')).not.toBe(formatSpokenName('series'));
+  });
+
+  it('offers from a pocket only what may be started here', () => {
+    const offered = spokenFormatChoices().map((one) => one.format);
+    expect(offered).not.toContain('game');
+    expect(offered.every(startsHere)).toBe(true);
+    // The sentence that lists the choices is the same reading, so the list and
+    // the words said aloud cannot disagree.
+    expect(spokenFormatNames()).toEqual(spokenFormatChoices().map((one) => one.name));
+    // A project already in that format still has a word, the row otherwise
+    // drawing the raw column value (addendum 30).
+    expect(formatSpokenName('game')).toBe('Game');
   });
 });

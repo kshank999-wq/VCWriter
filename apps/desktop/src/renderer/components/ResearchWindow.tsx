@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type DragEvent } from 'react';
 import { RoomSave } from './RoomSave';
+import { RoomFormat } from './RoomFormat';
 import {
   deleteResearchItem,
   describeDeleting,
@@ -605,6 +606,7 @@ export function ResearchBody({
     <>
       <header className="research-head">
         <span className="research-name">Research</span>
+        <RoomFormat format={file.project.format} />
         <input
           className="research-search"
           type="search"

@@ -115,6 +115,57 @@ export const builtElsewhere = (format: ProjectFormat): OtherProgram | null =>
 export const startsHere = (format: ProjectFormat): boolean => builtElsewhere(format) === null;
 
 /**
+ * **What the format is called, in the writer's own words** (addendum 35 §1,
+ * from Ken: *whenever you enter a module… in the center, I want it to be
+ * titled, and it'll say novel, short story collection, etc., just so you know
+ * what module you're in*).
+ *
+ * `nounsFor` says what a format calls its *parts* and has done since addendum
+ * 16 §1; nothing said what the format itself is called, so each screen that
+ * printed one wrote the list out — and the **two that print it on the desktop
+ * had already drifted**, the New project grid offering *Instructional book*
+ * where the importer offered *Instructional or textbook*: the same project,
+ * two names, neither of them wrong and neither of them the program's.
+ *
+ * **The name is the program's and the list is the screen's.** Which formats a
+ * screen offers, and in what order, is that screen's own business — the
+ * importer shows four for a script and three for a book, and the grid has a
+ * layout — so this is a record rather than an array, and nobody reads an
+ * order out of it.
+ *
+ * Where the two spellings differed the **grid's** wins, that being where a
+ * writer learns what their project is called: a name chosen on one screen and
+ * contradicted on the next is the fault this removes.
+ *
+ * **It is deliberately not the phone's name**, which is `formatSpokenName`
+ * and answers a different question: a word somebody *says* on a walk and
+ * hears read back, where nobody says *Series or episodic* and Ken's own word
+ * for a textbook out loud is *educational book*. Two vocabularies, one each
+ * for printing and for speaking, and the rule is that a surface prints one of
+ * them rather than keeping a third.
+ */
+const FORMAT_NAMES: Record<ProjectFormat, string> = {
+  screenplay: 'Screenplay',
+  series: 'Series or episodic',
+  novel: 'Novel',
+  instructional: 'Instructional book',
+  game: 'Video game',
+  stage_play: 'Stage play',
+  short_story: 'Short stories and collections',
+  short_form: 'Short form',
+  /**
+   * **The ninth, which no screen offers and the record allows.** Every one of
+   * the four private lists stopped at eight, so a project carrying this —
+   * none can be made, and nothing stops one arriving — would have found no
+   * name at all. It reads as what it is rather than falling back to
+   * *Screenplay*, which would be a label naming the wrong thing.
+   */
+  other: 'Other',
+};
+
+export const formatName = (format: ProjectFormat): string => FORMAT_NAMES[format] ?? FORMAT_NAMES.screenplay;
+
+/**
  * What a format calls its parts.
  *
  * §14 of the spec asks that a writer in Book Mode never be forced to work

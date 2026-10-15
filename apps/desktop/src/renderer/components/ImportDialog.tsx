@@ -31,6 +31,7 @@ import {
   type ImportedScript,
   type ProjectFile,
   type ProjectFormat,
+  formatName,
 } from '@vcwriter/domain';
 import { useModal } from '../use-modal';
 import { late } from '../late-module';
@@ -113,18 +114,20 @@ type Stage =
   | { kind: 'read'; parts: Part[]; failed: string[] }
   | { kind: 'failed'; message: string };
 
-const FORMATS: ReadonlyArray<{ value: ProjectFormat; label: string }> = [
-  { value: 'screenplay', label: 'Screenplay' },
-  { value: 'series', label: 'Series or episodic' },
-  { value: 'stage_play', label: 'Stage play' },
-  { value: 'short_form', label: 'Short form' },
+/** Which four a script may come in as; the names are the program's (addendum 35 §1). */
+const FORMATS: ReadonlyArray<ProjectFormat> = [
+  'screenplay',
+  'series',
+  'stage_play',
+  'short_form',
 ];
 
 /** Only a Word document can come in as a book: a PDF's lines say where, not what. */
-const PROSE_FORMATS: ReadonlyArray<{ value: ProjectFormat; label: string }> = [
-  { value: 'novel', label: 'Novel' },
-  { value: 'short_story', label: 'Short stories and collections' },
-  { value: 'instructional', label: 'Instructional or textbook' },
+/** And which three a book may. */
+const PROSE_FORMATS: ReadonlyArray<ProjectFormat> = [
+  'novel',
+  'short_story',
+  'instructional',
 ];
 
 /**
@@ -600,9 +603,9 @@ export function ImportDialog({ open, kind, file, landed, onClose, onImported, on
                         setSplit(defaultSplit(next));
                       }}
                     >
-                      {formats.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
+                      {formats.map((one) => (
+                        <option key={one} value={one}>
+                          {formatName(one)}
                         </option>
                       ))}
                     </select>
