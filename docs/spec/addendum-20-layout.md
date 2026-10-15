@@ -2952,6 +2952,94 @@ second blank is not later "fixed" as a fault.
 > copyright page takes the next page now, and the assertion was rewritten
 > rather than worked around.
 
+## 9au. Which page it came out on
+
+From Ken, after §9at named this as the thing left to measure: *measure the
+chapter opening one*.
+
+### 1. The measurement
+
+Driven in the real room on an imported novel at 1440×900. The page is drawn
+449 × 694 px, 20 px to the line — **34 lines**.
+
+| | |
+| --- | --- |
+| The opening block — number, rule, title, the drop above it | **221 px, 11 lines, a third of the page** |
+| The chapter's first words on that page | 17 px |
+| Left for anything else | **~350 px, about 17 lines** |
+
+A picture across the measure wants **495 px** (`4.19 × 6.07 in`). It is 140 px
+taller than the room the page has.
+
+Walked width by width, with the rail reporting the printed page each time:
+
+```
+100% → 495px   printed page 2   (not the page pressed)
+ 90% → 448px   printed page 2
+ 85% → 424px   printed page 2
+ 80% → 400px   printed page 2
+ 75% → 376px   printed page 2
+ 70% → 346px   printed page 1   ← lands where it was pointed at
+ 65% → 328px   printed page 1
+ 40% → 208px   printed page 1
+```
+
+**The book never grew**: three pages before and after, at every width. The
+picture moved onto a page that was already blank.
+
+### 2. Nothing is wrong, and the sentence was
+
+The cutter is right — a block that does not fit goes on the next page — and the
+writer is right, having pressed on page 1 and been given page 2. What was
+missing is the sentence between them. §9at measured **the length of the book**,
+which is the half the spread cannot show, and had **no word for which page**,
+which is the half Ken has now reported four times in four different shapes.
+
+So `sayPictureCost` gains a landing clause, and it **replaces** the placement
+clause rather than standing beside it: a writer looking at a page they did not
+press is asking one question, and restating that the words stand above and
+below a picture they cannot see answers a different one. The length clause is
+kept either way.
+
+> It stands on page 2, not page 1: it takes 30 lines and 21 are left there.
+> **Narrow it to about 70% and it comes back.** The book is the length it was.
+
+### 3. The way out is a number rather than advice
+
+The height follows the width, so the width that fits is the width it has now
+times the room over what it wants — arithmetic the room can hand over, where
+*try making it smaller* is a writer guessing against a page they cannot
+measure. It scales off the **current** span, so a picture already at 80% is
+told 54% rather than 68%, and it is floored at the band's own narrowest so the
+sentence never names a width the control cannot be dragged to.
+
+Two cases name no number, deliberately: a page with **no room at all** (where
+the answer would be 0%, which is not a width and not a way out) and a room that
+cannot count the lines, which says where it stands and stops there. A graphic
+**over** the page gets no landing clause at all — it takes no room in the flow,
+so the cutter cannot move it and a sentence about it would describe something
+that cannot happen.
+
+### 4. Read, not estimated
+
+Both numbers come off the laid page the writer is looking at: a piece is a run
+of a block's lines, so what a page has spent is the sum of its pieces and what
+is free is the rest. They are captured **at the act**, beside §9at's page
+count and for the same reason — once the picture is in, the chosen page has
+refilled with whatever came after it, so asking afterwards answers about a page
+that no longer has the question in front of it. Taking hold of a picture
+already standing there measures the page **without** it, which is the room it
+would be coming back to.
+
+### 5. Driven
+
+At 1440×900 on an imported novel, pointing at chapter one's own page and
+placing a picture at the measure: the handle reads *4.19 × 6.07 in · 100% of
+the measure* over the sentence above, the picture is drawn on the page printing
+**2**, and setting the width to exactly the **70%** the sentence names puts it
+back on page **1** with the book still three pages. The sentence is checkable
+against the room, which is the whole of why it carries a number.
+
 ## 9at. The picture before the box, and what it costs said before it is kept
 
 From Ken, after four reports about pictures landing where nobody put them:

@@ -532,6 +532,14 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
    * this picture, which is the only thing the sentence claims.
    */
   const pagesAtPickup = useRef<number | null>(null);
+  /**
+   * **The page that was pressed, and what it had free** (§9au), captured at
+   * the same moment and for the same reason: once the picture is in, the page
+   * has refilled with whatever came after it, so asking afterwards answers
+   * about a page that no longer has the question in front of it.
+   */
+  const chosenAtPickup = useRef<string | null>(null);
+  const roomAtPickup = useRef<number | null>(null);
   /** The chapter whose opening layout is being set (§14); OPEN_LAYOUT for the book's. */
   const [layoutDialogId, setLayoutDialogId] = useState<string | null>(null);
   /**
@@ -614,6 +622,35 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
 
   const pages = laying?.laid.pages ?? [];
   /**
+   * **A page as the book prints it** (§9au), for a sentence that points at
+   * one: roman in the front matter, arabic in the story, and nothing at all
+   * where the page carries no number, since naming a number it does not print
+   * would send a writer looking for it.
+   */
+  const pageLabel = (page: BookPage | undefined | null): string | null =>
+    !page || page.numbering === 'none' ? null : page.numbering === 'roman' ? roman(page.number) : String(page.number);
+  /**
+   * **How many lines a page has left** (§9au), counted off the laid page
+   * rather than estimated: a piece is a run of a block's lines, so what the
+   * page has spent is the sum of its pieces and what is free is the rest.
+   * `except` drops a picture already standing there, so taking hold of one
+   * asks what room the page would have without it.
+   */
+  const freeLinesOn = (page: BookPage | undefined | null, except: string | null): number | null => {
+    if (!laying || !page) return null;
+    const used = page.pieces.reduce(
+      (sum, piece) => (piece.blockId === except ? sum : sum + (piece.to - piece.from)),
+      0,
+    );
+    return Math.max(0, laying.geometry.linesPerPage - used);
+  };
+  /** What the page a picture was asked for is called, and what it had free (§9au). */
+  const noteWhereFrom = (sheet: number | null, except: string | null = null) => {
+    const at = laying?.laid.pages.find((one) => one.sheet === sheet);
+    chosenAtPickup.current = pageLabel(at);
+    roomAtPickup.current = freeLinesOn(at, except);
+  };
+  /**
    * **What the picture in hand has done to the book** (§9at), said on the
    * handle beside its size. It is a reading over the laying in front of the
    * writer, so letting the corner go re-says it with nothing run, and it
@@ -623,10 +660,17 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
     if (!placing || !laying || pagesAtPickup.current === null) return '';
     const held = bookFigures(file).find((one) => one.elementId === placing);
     if (!held) return '';
+    // Where it actually came out, read off the laid pages (§9au).
+    const on = laying.laid.pages.find((one) => one.pieces.some((piece) => piece.blockId === placing));
     return sayPictureCost({
       place: held.placement.place,
       pages: laying.laid.pages.length - pagesAtPickup.current,
       runsRound: cutsIntoText(laying.blocks, placing),
+      chosen: chosenAtPickup.current,
+      landed: pageLabel(on),
+      room: roomAtPickup.current ?? undefined,
+      wants: laying.measured.get(placing),
+      span: held.placement.span,
     });
   }, [placing, laying, file]);
   /** Every page of the book with a word for what stands on it (§9h). */
@@ -923,6 +967,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
     // **The length of the book before this picture** (§9at), read here because
     // every route that puts one in comes through this door.
     pagesAtPickup.current = laying?.laid.pages.length ?? null;
+    noteWhereFrom(selectedSheet);
     artTarget.current = target;
     artPicker.current?.click();
   };
@@ -1679,8 +1724,14 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
         // under its own second press.
         if (placing !== figure.elementId) setPageDialogSheet(null);
         // Taking a picture already in the book up: the sentence then says what
-        // moving it costs, from where the book stands now (§9at).
-        if (placing !== figure.elementId) pagesAtPickup.current = laying?.laid.pages.length ?? null;
+        // moving it costs, from where the book stands now (§9at) — and the page
+        // it is standing on is the one it is asked to come back to (§9au),
+        // measured without itself on it.
+        if (placing !== figure.elementId) {
+          pagesAtPickup.current = laying?.laid.pages.length ?? null;
+          const on = laying?.laid.pages.find((one) => one.pieces.some((piece) => piece.blockId === figure.elementId));
+          noteWhereFrom(on?.sheet ?? null, figure.elementId);
+        }
         setPlacing((current) => (current === figure.elementId ? null : figure.elementId));
       }}
       onFill={() => importArt({ kind: 'fill', elementId: figure.elementId })}
@@ -2392,8 +2443,10 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
               onGaveUp={() => setDrawing(false)}
               onDrawn={(placement, sheet, anchor) => {
                 if (!drawing || !laying) return;
-                // The book as it stands before the box goes in (§9at).
+                // The book as it stands before the box goes in (§9at), and the
+                // page it was drawn on with what that page had free (§9au).
                 pagesAtPickup.current = laying.laid.pages.length;
+                noteWhereFrom(sheet);
                 setDrawing(false);
                 setSelectedSheet(sheet);
                 const at = pagePlace(laying.laid.pages, laying.blocks, sheet);

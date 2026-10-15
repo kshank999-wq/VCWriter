@@ -1464,7 +1464,53 @@ export interface PictureCost {
   pages: number;
   /** Whether anything follows it on the page for the words to run round. */
   runsRound: boolean;
+  /**
+   * **The page pointed at and the page it is on** (§9au), each as the book
+   * prints it — roman in the front matter, arabic in the story — so the
+   * sentence names what the writer can read off the spread. Null where the
+   * room cannot say, and equal where nothing moved, which is the ordinary
+   * case and says nothing.
+   */
+  chosen?: string | null;
+  landed?: string | null;
+  /** Lines the chosen page had free for it, and lines it takes at its width. */
+  room?: number;
+  wants?: number;
+  /** Its width now, as a share of whatever it measures against. */
+  span?: number;
 }
+
+/**
+ * **Why it is not on the page that was pressed** (§9au, measured in the real
+ * room: a chapter's opening spends **221 px of a 694 px page** — a third of it
+ * — before a word is set, and a portrait picture across the measure wants
+ * **495 px** where about 350 are left, so the cutter moves it to the next
+ * page and the book does not change length).
+ *
+ * The cutter is right and so is the writer: a block that does not fit goes on
+ * the next page, and somebody who pressed on page 1 is looking at page 2. What
+ * was missing is the sentence between them — §9at measured **the length of the
+ * book**, which is the half that cannot be seen, and had no word for *which
+ * page*, which is the half Ken has now reported four times.
+ *
+ * **The way out is a number rather than advice**: the picture's height scales
+ * with its width, so the width that fits is the width it has now times the
+ * room over what it wants — arithmetic the room can hand over, where *try
+ * making it smaller* is a writer guessing against a page they cannot measure.
+ */
+const landingClause = (cost: PictureCost): string | null => {
+  const { chosen, landed, room, wants, span } = cost;
+  if (!chosen || !landed || chosen === landed) return null;
+  const where = `It stands on page ${landed}, not page ${chosen}`;
+  if (room === undefined || wants === undefined || wants <= 0) return `${where}: it does not fit in the room left there.`;
+  if (room <= 0) return `${where}: there is no room left on that page.`;
+  const why = `it takes ${wants} line${wants === 1 ? '' : 's'} and ${room} ${room === 1 ? 'is' : 'are'} left there`;
+  // Narrower by the same proportion as the lines it must give up, floored at
+  // the band's own narrowest so the sentence never names a width the control
+  // cannot be dragged to.
+  const fits = Math.max(MEASURE_SPAN.min, (span ?? 1) * (room / wants));
+  return `${where}: ${why}. Narrow it to about ${Math.floor(fits * 100)}% and it comes back.`;
+};
 
 /**
  * **What this picture is doing to the words, said before it is kept** (§9at,
@@ -1496,6 +1542,15 @@ export const sayPictureCost = (cost: PictureCost): string => {
         ? `The book is ${cost.pages} page${cost.pages === 1 ? '' : 's'} longer.`
         : `The book is ${-cost.pages} page${cost.pages === -1 ? '' : 's'} shorter.`;
   if (cost.place === 'free') return 'Nothing moves: it stands over the page and the words are exactly where they were.';
+  /**
+   * **Where it is comes before what it does to the words** (§9au), and
+   * **instead of it**: a writer looking at a page they did not press is asking
+   * one question, and restating that the words stand above and below a picture
+   * they cannot see answers a different one. The length clause is kept either
+   * way, being the half the spread cannot show.
+   */
+  const moved = landingClause(cost);
+  if (moved) return `${moved} ${length}`;
   if (cost.place === 'page') return `It is a page of its own, and the words go on after it. ${length}`;
   if (cost.place === 'measure')
     return `The words stand above it and below it, never beside it. ${length}`;

@@ -3511,6 +3511,43 @@ push live; the build takes a minute or two.
   page, and switching it on would change the length of every collection already
   laid out, so the act is built and reachable while the default is its own
   decision.
+  **§9au is which page it came out on**, from Ken (*measure the chapter opening
+  one*) — §9at's own named leftover, and **the measurement is the section**:
+  driven at 1440×900 on an imported novel, a chapter's opening spends **221 px
+  of a 694 px page, 11 lines of 34, a third of it** before a word is set, which
+  leaves about **350 px**, while a picture across the measure wants **495** — so
+  the cutter moves it to the next page, and walking the width down the crossing
+  is **between 70% and 75%** with the book **three pages at every width**,
+  nothing added and nothing lost. **Nothing is wrong and the sentence was**: the
+  cutter is right (a block that does not fit goes on the next page) and the
+  writer is right (they pressed page 1 and got page 2), and §9at measured **the
+  length of the book**, which is the half the spread cannot show, with **no word
+  for which page**, which is the half reported four times in four shapes. So the
+  landing clause **replaces** the placement clause rather than standing beside
+  it — somebody looking at a page they did not press is asking one question, and
+  restating that the words stand above and below a picture they cannot see
+  answers another — keeping the length clause either way: *It stands on page 2,
+  not page 1: it takes 30 lines and 21 are left there. **Narrow it to about 70%
+  and it comes back.** The book is the length it was.* **The way out is a number
+  rather than advice** (the height follows the width, so the width that fits is
+  the width it has now times the room over what it wants — *try making it
+  smaller* being a writer guessing against a page they cannot measure), scaled
+  off the **current** span so one already at 80% is told 54% rather than 68%,
+  and floored at the band's narrowest so no named width is one the control
+  cannot reach. **Three say no number on purpose**: a page with no room at all
+  (0% is not a width and not a way out), a room that cannot count the lines, and
+  a graphic **over** the page, which takes no room in the flow so the cutter
+  cannot move it and the clause would describe something that cannot happen.
+  **Both numbers are read rather than estimated** — a piece is a run of a
+  block's lines, so what a page has spent is the sum of its pieces — and
+  captured **at the act** beside §9at's page count and for its reason, the
+  chosen page having refilled by the time anything could ask it afterwards;
+  taking hold of a picture already there measures the page **without** it, which
+  is the room it would be coming back to. Driven: the handle reads *4.19 × 6.07
+  in · 100% of the measure* over that sentence with the picture on the page
+  printing **2**, and setting the width to exactly the **70%** it names puts it
+  back on page **1**, the book still three pages — **the sentence is checkable
+  against the room**, which is the whole of why it carries a number.
   **§9at is the picture before the box, and what it costs said before it is
   kept**, from Ken after four reports of pictures landing where nobody put them
   (*maybe the best way is to insert a picture on the page and then resize that

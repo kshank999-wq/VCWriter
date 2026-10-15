@@ -56,6 +56,56 @@ describe('what a picture costs, said on the handle', () => {
     expect(sayPictureCost({ place: 'page', pages: -1, runsRound: false })).toMatch(/The book is 1 page shorter\./);
   });
 
+  it('says which page it came out on when that is not the page pressed', () => {
+    /**
+     * **Measured in the real room** (§9au): a chapter's opening spends 221 px
+     * of a 694 px page before a word is set, and a picture across the measure
+     * wants 495 px where about 350 are left — so the cutter moves it to the
+     * next page and the book does not change length. Both of §9at's clauses
+     * were true of that and neither said the one thing the writer could see.
+     */
+    expect(
+      sayPictureCost({ place: 'measure', pages: 0, runsRound: false, chosen: '1', landed: '2', room: 17, wants: 25, span: 1 }),
+    ).toBe('It stands on page 2, not page 1: it takes 25 lines and 17 are left there. Narrow it to about 68% and it comes back. The book is the length it was.');
+  });
+
+  it('says nothing about where it stands when it stands where it was put', () => {
+    // The ordinary case, and the one that must stay quiet: a sentence about
+    // the page would be noise on every picture that landed correctly.
+    const put = sayPictureCost({ place: 'measure', pages: 0, runsRound: false, chosen: '4', landed: '4', room: 30, wants: 6, span: 1 });
+    expect(put).toBe('The words stand above it and below it, never beside it. The book is the length it was.');
+    expect(put).not.toMatch(/stands on page/);
+  });
+
+  it('scales the way out by the width it has now, not by the whole measure', () => {
+    // The height follows the width, so a picture already at 80% that must
+    // give up a third of its lines wants about 53% — not 68%.
+    expect(
+      sayPictureCost({ place: 'left', pages: 0, runsRound: true, chosen: '3', landed: '4', room: 17, wants: 25, span: 0.8 }),
+    ).toMatch(/Narrow it to about 54% and it comes back\./);
+  });
+
+  it('names no width where the page has no room at all', () => {
+    // A number here would be *narrow it to 0%*, which is not a width and not
+    // a way out; what a writer can do is move it, and the sentence says why.
+    const full = sayPictureCost({ place: 'measure', pages: 1, runsRound: false, chosen: '9', landed: '10', room: 0, wants: 20, span: 1 });
+    expect(full).toBe('It stands on page 10, not page 9: there is no room left on that page. The book is 1 page longer.');
+  });
+
+  it('says where it stands without the numbers where the room cannot count them', () => {
+    expect(sayPictureCost({ place: 'measure', pages: 0, runsRound: false, chosen: 'ii', landed: 'iii' })).toBe(
+      'It stands on page iii, not page ii: it does not fit in the room left there. The book is the length it was.',
+    );
+  });
+
+  it('leaves a graphic over the page alone, which moves nothing and lands nowhere else', () => {
+    // It takes no room in the flow, so it cannot be moved by the cutter and a
+    // landing clause about it would be about something that cannot happen.
+    expect(
+      sayPictureCost({ place: 'free', pages: 0, runsRound: false, chosen: '1', landed: '2', room: 3, wants: 9, span: 1 }),
+    ).toBe('Nothing moves: it stands over the page and the words are exactly where they were.');
+  });
+
   it('tells a picture the words run round from one with nothing left to run round it', () => {
     /**
      * §8's rule is that an inset with no paragraph after it stands across the
