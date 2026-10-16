@@ -34,6 +34,28 @@ export const titlePageSchema = z.object({
   /** "Episode 4 — The Lamp". Under the title, where a series puts it. */
   episode: z.string().default(''),
   /**
+   * What the work is, under the title: *A Play in Two Acts*, *A Musical in
+   * One Act* (addendum 38 §5). A play's title page says it where a
+   * screenplay's says nothing, and `titleDescriptors` offers it built from
+   * the play's own acts.
+   */
+  descriptor: z.string().default(''),
+  /**
+   * The words over the author's name. Empty is the format's own: *Written
+   * by* on a screen script, *by* on a play, which is how each is credited
+   * (addendum 38 §5). The last word sits on a line of its own, as *by* always
+   * has on this page.
+   */
+  byline: z.string().default(''),
+  /**
+   * Credits after the author's: *Music by*, *Lyrics by*, *Story by* — a
+   * musical's title page names three writers and the page had room for one
+   * (addendum 38 §5). In order; each prints its words over its name.
+   */
+  credits: z
+    .array(z.object({ role: z.string().default(''), name: z.string().default('') }))
+    .default([]),
+  /**
    * Who wrote it. The page sets the words **Written** and **by** on their own
    * lines above this, so the field holds the *name* and nothing else — which
    * is why there is no separate credit field to fill in the same thing twice.
@@ -77,7 +99,30 @@ export const withoutBy = (text: string): string => text.trim().replace(/\s+by$/i
  * series' credit, contact and logotype without them being typed again.
  */
 const prunedEmpty = (page: TitlePage): Partial<TitlePage> =>
-  Object.fromEntries(Object.entries(page).filter(([, value]) => String(value).trim().length > 0));
+  Object.fromEntries(
+    Object.entries(page).filter(([, value]) =>
+      Array.isArray(value) ? value.length > 0 : String(value).trim().length > 0,
+    ),
+  );
+
+/**
+ * The words over the author when none were typed: a play is *by* its author
+ * and a screen script is *Written by* (addendum 38 §5).
+ */
+export const defaultByline = (format: Project['format']): string =>
+  format === 'stage_play' ? 'by' : 'Written by';
+
+/**
+ * A credit's words split for the page: everything before a closing *by* on
+ * one line and *by* on the next — *Written* / *by*, *Music* / *by* — which is
+ * how the page has always set the author's. Words without a *by* stay whole.
+ */
+export const splitByline = (words: string): { lead: string; by: string } => {
+  const trimmed = words.trim();
+  const match = /^(.*?)\s*\bby$/i.exec(trimmed);
+  if (!match) return { lead: trimmed, by: '' };
+  return { lead: (match[1] ?? '').trim(), by: trimmed.slice(trimmed.length - 2) };
+};
 
 /**
  * The page as it will print: the writer's own words where they gave them, the
@@ -99,6 +144,11 @@ export const titlePageOf = (
     title: page.title.trim() || project.title,
     titleImage: page.titleImage,
     episode: page.episode.trim(),
+    descriptor: page.descriptor.trim(),
+    byline: page.byline.trim() || defaultByline(project.format),
+    credits: page.credits
+      .map((credit) => ({ role: credit.role.trim(), name: credit.name.trim() }))
+      .filter((credit) => credit.name.length > 0),
     author: page.author.trim() || project.author,
     source: withoutBy(page.source),
     sourceAuthor: page.sourceAuthor.trim(),

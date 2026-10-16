@@ -91,6 +91,7 @@ export * from './book-rail.js';
 export * from './part-style.js';
 export * from './title-page.js';
 export * from './cast-page.js';
+export * from './title-builder.js';
 export * from './beat-peek.js';
 export * from './back-matter.js';
 export * from './back-matter-pages.js';

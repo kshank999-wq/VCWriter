@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   MAX_TITLE_IMAGE_BYTES,
+  MUSICAL_CREDIT_ROLES,
+  defaultByline,
+  isMusical,
+  titleDescriptors,
   episodeNumberClash,
   setEpisodeTitlePage,
   setTitlePage,
@@ -84,6 +88,20 @@ export function TitlePageDialog({ file, open, episode, onClose, onUpdate }: Titl
    * not something that throws when Update page is pressed.
    */
   const clash = episode ? episodeNumberClash(file, episode.marker.id, stored.episode) : null;
+
+  /**
+   * **The builder** (addendum 38 §5): what a play's front page carries that a
+   * screenplay's does not — what the work is, the words over the author, and
+   * a musical's other writers. On a play alone, so a screen script's page and
+   * its screen are exactly what they were.
+   */
+  const play = file.project.format === 'stage_play';
+  const credits = stored.credits ?? [];
+  const writeCredit = (at: number, patch: Partial<TitlePage['credits'][number]>) =>
+    write({ credits: credits.map((one, index) => (index === at ? { ...one, ...patch } : one)) });
+  const missingMusicalRoles = MUSICAL_CREDIT_ROLES.filter(
+    (role) => !credits.some((one) => one.role.trim().toLowerCase() === role.toLowerCase()),
+  );
 
   const cancel = () => {
     setStored(saved);
@@ -195,14 +213,92 @@ export function TitlePageDialog({ file, open, episode, onClose, onUpdate }: Titl
                 onChange={(episode) => write({ episode })}
                 problem={clash ? `${clash.label} already carries that number.` : null}
               />
-              {/* The page sets the words "Written" and "by" above this, so
-                  the field holds the name and nothing else. */}
+              {play ? (
+                <>
+                  <Field
+                    label="What it is"
+                    value={stored.descriptor ?? ''}
+                    placeholder={titleDescriptors(file)[0] ?? 'A Play in Two Acts'}
+                    onChange={(descriptor) => write({ descriptor })}
+                  />
+                  {/* Offered from the play itself — its acts, and whether
+                      the musical preset sets it — and never imposed. */}
+                  <div className="title-builder-chips" aria-label="Suggestions for what it is">
+                    {titleDescriptors(file).map((one) => (
+                      <button
+                        key={one}
+                        type="button"
+                        className={stored.descriptor === one ? 'chip on' : 'chip'}
+                        onClick={() => write({ descriptor: one })}
+                      >
+                        {one}
+                      </button>
+                    ))}
+                  </div>
+                  <Field
+                    label="Credit words"
+                    value={stored.byline ?? ''}
+                    placeholder={defaultByline(file.project.format)}
+                    onChange={(byline) => write({ byline })}
+                  />
+                </>
+              ) : null}
+              {/* The page sets the credit's words on their own lines above
+                  this, so the field holds the name and nothing else. */}
               <Field
-                label="Written by"
+                label={play ? 'Author' : 'Written by'}
                 value={stored.author}
                 placeholder={page.author || 'Your name'}
                 onChange={(author) => write({ author })}
               />
+              {play ? (
+                <div className="title-credits" aria-label="Other credits">
+                  {credits.map((one, at) => (
+                    <div key={at} className="title-credit-row">
+                      <input
+                        aria-label={`Credit ${at + 1} words`}
+                        value={one.role}
+                        placeholder="Music by"
+                        onChange={(event) => writeCredit(at, { role: event.target.value })}
+                      />
+                      <input
+                        aria-label={`Credit ${at + 1} name`}
+                        value={one.name}
+                        placeholder="Name"
+                        onChange={(event) => writeCredit(at, { name: event.target.value })}
+                      />
+                      <button
+                        type="button"
+                        className="ghost small"
+                        aria-label={`Remove credit ${at + 1}`}
+                        onClick={() => write({ credits: credits.filter((_, index) => index !== at) })}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  <div className="title-builder-chips">
+                    <button
+                      type="button"
+                      className="ghost small"
+                      onClick={() => write({ credits: [...credits, { role: '', name: '' }] })}
+                    >
+                      Add a credit
+                    </button>
+                    {isMusical(file) && missingMusicalRoles.length > 0 ? (
+                      <button
+                        type="button"
+                        className="ghost small"
+                        onClick={() =>
+                          write({ credits: [...credits, ...missingMusicalRoles.map((role) => ({ role, name: '' }))] })
+                        }
+                      >
+                        Add book, music and lyrics
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
               <Field
                 label="Source"
                 value={stored.source}

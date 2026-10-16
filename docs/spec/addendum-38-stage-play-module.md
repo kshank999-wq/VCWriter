@@ -117,3 +117,29 @@ page** beside the title page's tick, on a play only. The page prints after
 the title page and is counted in the export's page total. A play with nobody
 in its cast prints no cast page, rather than a page headed *Characters* with
 nothing under it.
+
+## 5. The title page and its builder
+
+A play's front page says three things a screenplay's does not. The title page
+record gains a field for each:
+
+- **`descriptor`**, what the work is, set under the title: *A Play in Two
+  Acts*, *A Musical in One Act*.
+- **`byline`**, the words over the author's name. Left empty it is the
+  format's own: **by** on a play and **Written by** on a screen script.
+  `splitByline` puts the last *by* on a line of its own, as the page has
+  always set *Written* / *by*.
+- **`credits`**, the writers after the author. A musical's page names three:
+  *Book by*, *Music by*, *Lyrics by*. A credit with no name is not printed.
+
+**The builder is suggestions, not a form.** `titleDescriptors` offers the
+play's own description first, built from what it already is: its act markers
+counted and its preset read, so a play with two acts set as a musical is
+offered *A Musical in Two Acts*. A play with no act marked is offered *in One
+Act*, which is a play without an interval. The usual alternatives follow. On
+a musical, **Add book, music and lyrics** adds whichever of the three rows
+are missing. The field stays free text, so *A Comedy in Two Acts* is
+available to anyone who types it.
+
+All of this appears **on a play only**. A screenplay's title-page dialog and
+its printed page are exactly as they were, and a test pins it.

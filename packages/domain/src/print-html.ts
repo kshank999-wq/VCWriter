@@ -1,6 +1,6 @@
 import { layoutFor, layoutForFile, paginateProject, type ManuscriptOptions, type Page, type PageLine } from './pagination.js';
 import { isProseFormat } from './editing.js';
-import { titlePageOf } from './entities/title-page.js';
+import { splitByline, titlePageOf } from './entities/title-page.js';
 import type { TitlePage } from './entities/title-page.js';
 import type { ContentsPage } from './markers.js';
 import { castPageOf, castRoleLine, printsCastPage, type CastPageContent } from './cast-page.js';
@@ -402,14 +402,27 @@ export const renderTitleSheet = (page: TitlePage): string => {
     box, and two of them pushed the byline a third of an inch below the
     halfway mark it is supposed to sit on.
   */
-  const block = [heading, page.episode.length > 0 ? `<p class="episode">${lines(page.episode)}</p>` : ''].filter(
-    Boolean,
-  );
+  const block = [
+    heading,
+    page.episode.length > 0 ? `<p class="episode">${lines(page.episode)}</p>` : '',
+    // What the work is, under the title (addendum 38 §5).
+    (page.descriptor ?? '').length > 0 ? `<p class="descriptor">${lines(page.descriptor)}</p>` : '',
+  ].filter(Boolean);
+
+  /** Words over a name, *Written* / *by* — the last *by* on a line of its own. */
+  const creditOf = (words: string, name: string, nameClass: string): string => {
+    const { lead, by } = splitByline(words);
+    return (
+      (lead.length > 0 ? `<p class="byline">${escapeHtml(lead)}</p>` : '') +
+      (by.length > 0 ? `<p class="by">${escapeHtml(by)}</p>` : '') +
+      `<p class="${nameClass}">${escapeHtml(name)}</p>`
+    );
+  };
 
   const credit = [
-    page.author.length > 0
-      ? `<p class="byline">Written</p><p class="by">by</p><p class="author">${escapeHtml(page.author)}</p>`
-      : '',
+    page.author.length > 0 ? creditOf(page.byline || 'Written by', page.author, 'author') : '',
+    // A musical's other writers, each under its own words (addendum 38 §5).
+    ...(page.credits ?? []).map((one) => `<div class="credit">${creditOf(one.role, one.name, 'author')}</div>`),
     page.source.length > 0 ? `<p class="based-on">${lines(page.source)}</p>` : '',
     page.sourceAuthor.length > 0
       ? `<p class="by">by</p><p class="source-author">${escapeHtml(page.sourceAuthor)}</p>`
@@ -510,6 +523,8 @@ export const TITLE_PAGE_STYLES = `
   .title-page .title-credit { width: 100%; }
   .title-page .based-on { margin-top: 0.5in; }
   .title-page .episode { margin-top: 0.25in; }
+  .title-page .descriptor { margin-top: 0.25in; }
+  .title-page .credit { margin-top: 0.25in; }
   /* "by" sits on a line of its own between the credit and the name. */
   .title-page .by { margin: 0; }
   .title-page .byline, .title-page .author, .title-page .source-author { margin: 0; }

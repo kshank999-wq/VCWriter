@@ -21379,3 +21379,38 @@ dialog.note-dialog > header {
   text-align: center;
   color: #888;
 }
+
+/* The title-page builder (addendum 38 §5): suggestions beside the box, and a
+   musical's other writers as rows of words and a name. */
+.title-builder-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: 88px;
+}
+
+.title-builder-chips .chip {
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.title-builder-chips .chip.on {
+  border-color: var(--gold);
+  color: var(--text, inherit);
+}
+
+.title-credits {
+  display: grid;
+  gap: 6px;
+}
+
+.title-credit-row {
+  display: grid;
+  grid-template-columns: 120px 1fr auto;
+  gap: 6px;
+  margin-left: 88px;
+}
