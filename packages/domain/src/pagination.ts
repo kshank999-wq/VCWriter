@@ -1192,6 +1192,42 @@ export const paginateElements = (
   let currentSpeaker: string | null = null;
   /** A cue waiting to be written beside the line it introduces. */
   let pendingCue: string | null = null;
+  /** The cue element it came from, so a page opening on it names it. */
+  let pendingCueId = '';
+
+  /**
+   * Set the waiting cue beside the block it introduces — or, **where the name
+   * will not fit in the margin**, on a line of its own above it (addendum 38
+   * §6, the spec's §9 acceptance test).
+   *
+   * The margin is the speech's indent, and a cue needs at least one space
+   * after it to be read as a name rather than as the first word of the
+   * speech. A name that leaves no room — *THE SECOND GRAVEDIGGER* in a
+   * fifteen-column margin — used to push its first line right, so nothing
+   * collided but the line was out of its column. It drops to its own line
+   * instead, and the speech under it runs on with no blank, which is the
+   * speech-is-one-block rule doing the rest.
+   */
+  const attachCue = (block: Block) => {
+    if (pendingCue === null) return;
+    const cue = pendingCue;
+    pendingCue = null;
+    if (cue.length < block.indent) {
+      block.cue = cue;
+      return;
+    }
+    blocks.push({
+      id: pendingCueId || block.id,
+      type: 'character',
+      lines: [cue],
+      spans: [[{ text: cue }]],
+      indent: 0,
+      firstIndent: 0,
+      keepWithNext: true,
+      splittable: false,
+      speaker: null,
+    });
+  };
 
   // Dual speeches are laid out as one two-column block; everything else is
   // an element on its own.
@@ -1210,6 +1246,7 @@ export const paginateElements = (
         if (element.type === 'character') currentSpeaker = element.text.toUpperCase();
         if (layout.cueBeside && element.type === 'character') {
           pendingCue = layoutText(element.text, layout.columns, layout.uppercase.has('character')).lines[0] ?? '';
+          pendingCueId = element.id;
           continue;
         }
         const made = toBlock(
@@ -1217,10 +1254,7 @@ export const paginateElements = (
           layout,
           isSpoken(element.type) ? (speakerFor(element) ?? currentSpeaker) : null,
         );
-        if (pendingCue !== null) {
-          made.cue = pendingCue;
-          pendingCue = null;
-        }
+        attachCue(made);
         blocks.push(made);
       }
       continue;
@@ -1235,13 +1269,11 @@ export const paginateElements = (
     // first line of whatever it introduces, rather than being a line itself.
     if (layout.cueBeside && element.type === 'character') {
       pendingCue = layoutText(element.text, layout.columns, layout.uppercase.has('character')).lines[0] ?? '';
+      pendingCueId = element.id;
       continue;
     }
     const block = toBlock(element, layout, isSpoken(element.type) ? speaker : null);
-    if (pendingCue !== null) {
-      block.cue = pendingCue;
-      pendingCue = null;
-    }
+    attachCue(block);
     blocks.push(block);
   }
 

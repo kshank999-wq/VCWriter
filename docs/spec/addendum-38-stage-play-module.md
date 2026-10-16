@@ -143,3 +143,25 @@ available to anyone who types it.
 
 All of this appears **on a play only**. A screenplay's title-page dialog and
 its printed page are exactly as they were, and a test pins it.
+
+## 6. The long cue
+
+The spec's §9 acceptance test: on a layout that sets the cue in the margin
+beside its speech (`cueBeside`, used by UK BBC stage, UK contemporary and BBC
+taped), a long name must not overlap the speech.
+
+Before this change it did not overlap, but it did something else wrong. The
+cue was padded out to the speech's indent, and a name longer than the margin
+pushed the first line of the speech right, out of its column.
+
+**The fallback.** A cue needs at least one space after it to be read as a
+name rather than as the first word of the speech. Where the margin leaves no
+room for that space, the cue drops onto **a line of its own** above the
+speech (`attachCue`). The speech then runs on straight under it with no blank
+line, because the speech-is-one-block rule already treats a dialogue after a
+character line that way. The dropped cue keeps with its speech at the foot of
+a page, as any cue does. A name exactly as wide as the margin drops; one
+character shorter stays beside the speech.
+
+It is `cueBeside`'s, so it applies to BBC taped as well, which addendum 37
+said it would.
