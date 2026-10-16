@@ -22,6 +22,7 @@ export const printOptionsFrom = (setup: PrintSetup, stamp?: PageStamp | null): P
   includeBeatTitles: setup.includeBeatTitles,
   includeChapterPages: setup.includeChapterPages,
   includeTitlePage: setup.includeTitlePage,
+  includeCastPage: setup.includeCastPage,
   includeSceneHeadings: setup.includeSceneHeadings,
   includeSceneNumbers: setup.includeSceneNumbers,
   includePageNumbers: setup.includePageNumbers,

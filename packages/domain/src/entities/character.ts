@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { id, orderKey, timestamps } from './common.js';
 import { voiceAssignmentSchema } from './project.js';
+import { castingSchema } from './cast-page.js';
 import type { CharacterCategoryId, CharacterId, ProjectId, ResearchItemId } from '../ids.js';
 
 /**
@@ -112,6 +113,13 @@ export const characterSchema = z.object({
       }),
     )
     .default([]),
+  /**
+   * What they are on a play's cast page (addendum 38 §4): listed or not, the
+   * line under their name, a playing age, a vocal range, and who they are
+   * doubled with. Empty on every character until somebody fills it in, and
+   * read only where a format prints a cast page.
+   */
+  casting: castingSchema.default({}),
   /** Optional backing research card, when the writer keeps one. */
   researchItemId: id<ResearchItemId>().nullable().default(null),
   /** Which heading they are filed under; null until the writer files them. */

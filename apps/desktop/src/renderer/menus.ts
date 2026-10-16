@@ -13,7 +13,7 @@
  * that is all it should ever know.
  */
 
-import { hasBookIndex, hasChapterPages, isCollection, isInteractive, isProseFormat, type ProjectFormat } from '@vcwriter/domain';
+import { hasBookIndex, hasCastPage, hasChapterPages, isCollection, isInteractive, isProseFormat, type ProjectFormat } from '@vcwriter/domain';
 import { paneNamesFor } from './panes';
 
 export type CommandId =
@@ -35,6 +35,7 @@ export type CommandId =
   | 'file.saveAs'
   | 'file.saveCopy'
   | 'file.titlePage'
+  | 'file.castPage'
   | 'file.chapterPage'
   | 'file.pageSetup'
   | 'file.print'
@@ -140,6 +141,10 @@ export const menusFor = (format: ProjectFormat | null): readonly Menu[] => {
       { command: 'file.saveCopy', label: 'Save a copy…', accelerator: 'CmdOrCtrl+Alt+S' },
       null,
       { command: 'file.titlePage', label: 'Title page…' },
+      // A play's cast page (addendum 38 §4), beside the title page it follows.
+      ...(format !== null && hasCastPage(format)
+        ? [{ command: 'file.castPage' as CommandId, label: 'Cast page…' }]
+        : []),
       // The leaf a chapter opens with (addendum 02 §12a). Beside the title
       // page because it is the same kind of thing — a page of the book that
       // is not a page of the manuscript — and absent in a format that prints

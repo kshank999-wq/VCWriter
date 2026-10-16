@@ -40,6 +40,7 @@ import {
 import type { ManuscriptSegment } from './entities/manuscript.js';
 import { titlePageSchema } from './entities/title-page.js';
 import type { TitlePage } from './entities/title-page.js';
+import { castPageSchema, castingSchema, type CastPageSettings, type Casting } from './entities/cast-page.js';
 import type { ParagraphStyle, ScriptFormat, VoiceAssignment } from './entities/project.js';
 import type { Character, CharacterCategory } from './entities/character.js';
 import type { SceneGrid, SceneRead } from './entities/structure.js';
@@ -927,6 +928,45 @@ export const setTitlePage = (file: ProjectFile, patch: Partial<TitlePage>): Proj
       titlePage: titlePageSchema.parse({ ...file.settings.titlePage, ...patch }),
     },
   });
+
+/**
+ * The cast page's own words (addendum 38 §4): heading, order, time, place.
+ */
+export const setCastPage = (file: ProjectFile, patch: Partial<CastPageSettings>): ProjectFile =>
+  touchProject({
+    ...file,
+    settings: {
+      ...file.settings,
+      castPage: castPageSchema.parse({ ...file.settings.castPage, ...patch }),
+    },
+  });
+
+/**
+ * One role's line on the cast page (addendum 38 §4).
+ *
+ * A role cannot be doubled with itself, and one doubled with somebody who is
+ * not in the project is a link to nothing — both are refused here rather than
+ * left for the page to step round.
+ */
+export const setCasting = (file: ProjectFile, characterId: CharacterId, patch: Partial<Casting>): ProjectFile => {
+  if (!file.characters.some((character) => character.id === characterId)) {
+    throw new DomainError(`Character ${characterId} does not exist`);
+  }
+  if (patch.doubles != null) {
+    if (patch.doubles === characterId) throw new DomainError('A role cannot be doubled with itself');
+    if (!file.characters.some((character) => character.id === patch.doubles)) {
+      throw new DomainError(`Character ${patch.doubles} does not exist`);
+    }
+  }
+  return touchProject({
+    ...file,
+    characters: file.characters.map((character) =>
+      character.id === characterId
+        ? touch({ ...character, casting: castingSchema.parse({ ...character.casting, ...patch }) })
+        : character,
+    ),
+  });
+};
 
 /**
  * An episode's own title page (addendum 02 §17).

@@ -3,6 +3,7 @@ import { isProseFormat } from './editing.js';
 import { titlePageOf } from './entities/title-page.js';
 import type { TitlePage } from './entities/title-page.js';
 import type { ContentsPage } from './markers.js';
+import { castPageOf, castRoleLine, printsCastPage, type CastPageContent } from './cast-page.js';
 import { runsText, type IndexHeading, type IndexPage } from './book-index.js';
 import {
   chapterPageStyleOf,
@@ -29,6 +30,12 @@ import type { ProjectFile } from './project-file.js';
 export interface PrintOptions extends ManuscriptOptions {
   /** A title page precedes the manuscript unless this is explicitly false. */
   includeTitlePage?: boolean;
+  /**
+   * A play's cast page follows the title page unless this is explicitly false
+   * (addendum 38 §4). A format with no cast page, or a play with nobody in
+   * its cast, prints none whatever this says.
+   */
+  includeCastPage?: boolean;
   // `includeChapterPages` comes from ManuscriptOptions: the paginator decides
   // whether the leaves are there at all, and this renderer draws what it gets.
   /**
@@ -427,6 +434,59 @@ export const renderTitleSheet = (page: TitlePage): string => {
 };
 
 /**
+ * **A play's cast page** (addendum 38 §4): the heading, each role with the
+ * line under it, the doubling, then the time and the place.
+ *
+ * The page the Dramatists Guild's sample sets: the name in capitals, a comma,
+ * and the line about them — *SARAH, her brother, a schoolteacher (40s)* —
+ * flush left under a centred heading, and TIME and PLACE as labelled lines
+ * under the list. What is empty is not printed, the title page's rule.
+ */
+export const renderCastSheet = (page: CastPageContent): string => {
+  const lines = (text: string): string =>
+    escapeHtml(text)
+      .split(/\r?\n/)
+      .filter((line) => line.trim().length > 0)
+      .join('<br />');
+  const roles = page.roles
+    .map((role) => {
+      const line = castRoleLine(role);
+      return `<li><span class="cast-name">${escapeHtml(role.name)}</span>${line ? `, ${escapeHtml(line)}` : ''}</li>`;
+    })
+    .join('');
+  const doubling =
+    page.doubling.length > 0
+      ? '<div class="cast-doubling"><p class="cast-label">Doubling</p>' +
+        page.doubling.map((chain) => `<p>${chain.map(escapeHtml).join(' / ')}</p>`).join('') +
+        '</div>'
+      : '';
+  const labelled = (label: string, text: string): string =>
+    text.length > 0 ? `<p class="cast-setting"><span class="cast-label">${label}:</span> ${lines(text)}</p>` : '';
+  return (
+    '<section class="page cast-page">' +
+    `<h2 class="cast-heading">${escapeHtml(page.heading)}</h2>` +
+    `<ul class="cast-roles">${roles}</ul>` +
+    doubling +
+    labelled('Time', page.time) +
+    labelled('Place', page.place) +
+    (page.notes.length > 0 ? `<p class="cast-notes">${lines(page.notes)}</p>` : '') +
+    '</section>'
+  );
+};
+
+/** The cast page's rules (addendum 38 §4), in the manuscript's own Courier. */
+export const CAST_PAGE_STYLES = `
+  .cast-heading { text-align: center; text-transform: uppercase; text-decoration: underline; font-size: 12pt; font-weight: normal; margin: 0 0 2em; }
+  .cast-roles { list-style: none; margin: 0; padding: 0; }
+  .cast-roles li { margin: 0 0 1em; padding-left: 3ch; text-indent: -3ch; }
+  .cast-label { text-transform: uppercase; }
+  .cast-doubling { margin: 2em 0 0; }
+  .cast-doubling p { margin: 0; }
+  .cast-setting { margin: 1em 0 0; }
+  .cast-notes { margin: 2em 0 0; white-space: pre-wrap; }
+`;
+
+/**
  * The front page's own rules, shared by every document that opens with one
  * — the script, and the AV sheet and board beside it (addendum 05 §8).
  */
@@ -559,6 +619,7 @@ const stylesFor = (paper: 'letter' | 'a4' = 'letter'): string => {
   .index-run.principal { font-weight: 700; }
   .index-see, .index-see-also { font-style: italic; }
   ${TITLE_PAGE_STYLES}
+  ${CAST_PAGE_STYLES}
   .watermark {
     position: fixed;
     inset: 0;
@@ -659,6 +720,7 @@ export const renderPrintDocumentHtml = (file: ProjectFile, options: PrintOptions
   );
   const body = [
     opensWithItsOwn(pages, options) ? '' : renderTitlePage(file),
+    castPageWanted(file, options) ? renderCastSheet(castPageOf(file)) : '',
     ...pages.map((page) => renderPage(page, isProse, withStyle, pictures)),
   ]
     .filter((section) => section.length > 0)
@@ -698,10 +760,14 @@ const opensWithItsOwn = (pages: Page[], options: PrintOptions): boolean =>
   // the front of the document with nothing needed in front of it (§17).
   pages[0]?.contents !== undefined;
 
+/** Whether this printing carries the play's cast page (addendum 38 §4). */
+const castPageWanted = (file: ProjectFile, options: PrintOptions): boolean =>
+  options.includeCastPage !== false && printsCastPage(file);
+
 /** Page count for the export, every front page in it included. */
 export const printedPageCount = (file: ProjectFile, options: PrintOptions = {}): number => {
   const pages = paginateProject(file, options);
-  return pages.length + (opensWithItsOwn(pages, options) ? 0 : 1);
+  return pages.length + (opensWithItsOwn(pages, options) ? 0 : 1) + (castPageWanted(file, options) ? 1 : 0);
 };
 
 export const suggestedExportFileName = (file: ProjectFile): string => {

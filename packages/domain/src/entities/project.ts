@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { id, isoDateTime, timestamps } from './common.js';
 import { titlePageSchema } from './title-page.js';
+import { castPageSchema } from './cast-page.js';
 import { mooringSchema } from '../standing.js';
 import type { AssetId, ProjectId, UserId } from '../ids.js';
 
@@ -226,6 +227,12 @@ export const projectSettingsSchema = z.object({
    * wants when the script is titled one thing and the file another.
    */
   titlePage: titlePageSchema.default({}),
+  /**
+   * The cast page's own words (addendum 38 §4): its heading, the order the
+   * roles are in, the time and the place. The roles themselves are the
+   * characters' — `casting` on each — so a name is typed once.
+   */
+  castPage: castPageSchema.default({}),
   /**
    * How the chapter pages are set (addendum 02 §12a). Kept loose here so the
    * typography lives with `chapter-style.ts` rather than with the settings,

@@ -51,7 +51,7 @@ const choices = (): string[] =>
   );
 
 describe('the menu a stage play is given', () => {
-  it('offers the six stage house styles and not one screen format', () => {
+  it('offers the stage house styles and not one screen format', () => {
     render(<Harness start={project('stage_play')} />);
     expect(choices()).toEqual([
       'US modern play',
@@ -60,6 +60,8 @@ describe('the menu a stage play is given', () => {
       'UK BBC stage',
       'UK contemporary play',
       'Continental reading copy',
+      // The musical (addendum 38 §3).
+      'US musical',
     ]);
   });
 

@@ -81,6 +81,7 @@ import { SheetPreview } from './components/SheetPreview';
 import { DEFAULT_PAGE_STYLE, type PageStyle } from './components/ScriptOptions';
 import { DEFAULT_PRINT_SETUP, PageSetup, type PrintSetup } from './components/PageSetup';
 import { TitlePageDialog } from './components/TitlePageDialog';
+import { CastPageDialog } from './components/CastPageDialog';
 import { Reports, type ReportTab } from './components/Reports';
 import { EpisodeRail } from './components/EpisodeRail';
 import { StoryRail } from './components/StoryRail';
@@ -220,6 +221,7 @@ export default function App() {
   const [startingNew, setStartingNew] = useState(false);
   /** The title page's own screen: a page of the document, off the File menu. */
   const [titlePageOpen, setTitlePageOpen] = useState(false);
+  const [castPageOpen, setCastPageOpen] = useState(false);
   /** A part the Layout room should open on when it is opened (§16b). */
   const [layoutOpenOn, setLayoutOpenOn] = useState<'title_page' | 'copyright' | null>(null);
   const [chapterPageOpen, setChapterPageOpen] = useState(false);
@@ -775,6 +777,8 @@ export default function App() {
           }
           setTitlePageEpisode(null);
           return setTitlePageOpen(true);
+        case 'file.castPage':
+          return setCastPageOpen(true);
         case 'file.chapterPage':
           return openChapterPage();
         case 'file.pageSetup':
@@ -1763,6 +1767,10 @@ export default function App() {
           setTitlePageEpisode(null);
           setTitlePageOpen(true);
         }}
+        onEditCastPage={() => {
+          setPageSetupOpen(false);
+          setCastPageOpen(true);
+        }}
         onParagraphStyle={(style) => project.update((current) => setParagraphStyle(current, style))}
         onScriptFormat={(next) => project.update((current) => setScriptFormat(current, next))}
         onActBreaks={(on) => project.update((current) => setActBreaks(current, on))}
@@ -1780,6 +1788,8 @@ export default function App() {
         onClose={() => setTitlePageOpen(false)}
         onUpdate={project.update}
       />
+
+      <CastPageDialog file={file} open={castPageOpen} onClose={() => setCastPageOpen(false)} onUpdate={project.update} />
 
       <ChapterPageDialog
         file={file}

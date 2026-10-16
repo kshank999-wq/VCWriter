@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import {
   hasBookIndex,
+  hasCastPage,
   hasChapterPages,
   hasContentsPage,
   type ParagraphStyle,
@@ -29,6 +30,8 @@ import { useModal } from '../use-modal';
  */
 export interface PrintSetup {
   includeTitlePage: boolean;
+  /** A play's cast page, after the title page (addendum 38 §4). */
+  includeCastPage: boolean;
   includeChapterPages: boolean;
   /** The list at the front of a season's stack (§17). */
   includeContentsPage: boolean;
@@ -59,6 +62,7 @@ export interface PrintSetup {
  */
 export const DEFAULT_PRINT_SETUP: PrintSetup = {
   includeTitlePage: true,
+  includeCastPage: true,
   includeChapterPages: true,
   includeContentsPage: true,
   includeBookIndex: true,
@@ -80,6 +84,8 @@ interface PageSetupProps {
   onSetup(next: PrintSetup): void;
   /** Open the title page's own screen, where what it says is decided. */
   onEditTitlePage(): void;
+  /** Open the cast page's own screen (addendum 38 §4); a play's alone. */
+  onEditCastPage?(): void;
   /**
    * How a prose manuscript sets its paragraphs (§6.4). It belongs to the
    * document rather than to one printing, which is why it is not part of
@@ -115,6 +121,7 @@ export function PageSetup({
   setup,
   onSetup,
   onEditTitlePage,
+  onEditCastPage,
   onParagraphStyle,
   onScriptFormat,
   onActBreaks,
@@ -177,6 +184,30 @@ export function PageSetup({
                 What it says…
               </button>
             </Check>
+
+            {/* A play's cast page (addendum 38 §4): absent where the format
+                prints none, `hasChapterPages`' rule for the leaf below. */}
+            {hasCastPage(file.project.format) ? (
+              <Check
+                label="Print the cast page"
+                on={setup.includeCastPage}
+                onChange={(includeCastPage) => set({ includeCastPage })}
+              >
+                Cast page
+                {onEditCastPage ? (
+                  <button
+                    type="button"
+                    className="ghost small"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      onEditCastPage();
+                    }}
+                  >
+                    Who is in it…
+                  </button>
+                ) : null}
+              </Check>
+            ) : null}
 
             {contents ? (
               <Check

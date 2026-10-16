@@ -71,3 +71,49 @@ between a cue and its song, or between a song and the words after it.
 A song is also split over a page the way a speech is, with (MORE) at the foot
 and `SARAH (CONT'D)` at the head of the next page. On the BBC and UK
 side-by-side pages a lyric sits beside its cue, as speech does.
+
+## 4. The cast page
+
+**What already existed.** The cues have always made the cast (`notedCast`), the
+Character Creator holds each person, and the cast panel files them. What Ken's
+§5 asks beyond that is four facts per role and a page that lists them.
+
+**The record widened.** `character.casting` holds:
+
+- `include`, on by default; the offstage voice and the man in the photograph
+  are the ones taken off;
+- `description`, the line a director reads, which is not the writer's own
+  note in `description` on the character;
+- `playingAge`, the range an actor is cast at, which is not `background.age`
+  (the person's age in the story);
+- `vocalRange`, for a musical;
+- `doubles`, the role the same actor also plays.
+
+It is one object stored in one column, `characters.casting` (migration 0067,
+applied to the live project; the advisors raised nothing new). The page's own
+words (heading, order, time, place and notes) are `settings.castPage`, beside
+the title page.
+
+**Read, never stored.** `castPageOf` builds the page from the record. The
+default order is **the order each role first enters**: the first cue in the
+printed script, matched by the bound character or by name and alias, the way
+every other reading of a cue matches. A role that never speaks comes after
+everyone who does. The other order is the cast panel's own, by heading.
+Moving a scene earlier moves an entrance with it, and renaming somebody in
+the Character Creator renames them on the page.
+
+**Doubling is a link per role, read both ways.** NURSE → SARAH and DOCTOR →
+SARAH make one actor playing three parts, printed as one chain in page
+order. A role cannot double itself or someone who does not exist; the
+mutation refuses both. A link to a role taken off the page is skipped,
+because the page cannot double with a role it does not list.
+
+**Where it is.** **File ▸ Cast page…** is the title page's screen for the
+page after it. The fields are on the left and the page as it will print is on
+the right. Nothing is saved until **Update page**, and a role taken off keeps
+everything typed for it. The vocal-range box appears on the musical preset,
+or wherever somebody already has a range. Page setup has **Print the cast
+page** beside the title page's tick, on a play only. The page prints after
+the title page and is counted in the export's page total. A play with nobody
+in its cast prints no cast page, rather than a page headed *Characters* with
+nothing under it.
