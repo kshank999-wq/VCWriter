@@ -225,6 +225,17 @@ export interface VcWriterApi {
     folderName: string;
     files: { name: string; bytes: Uint8Array; mediaType: string }[];
   }): Promise<DesktopApiResult<{ folder: string; paths: string[] } | null>>;
+  /**
+   * Save one file the writer names (addendum 38 §7): a Word export. The
+   * writer picks where; null when they cancelled.
+   */
+  saveFile(input: {
+    name: string;
+    bytes: Uint8Array;
+    mediaType: string;
+    /** What the save dialog offers it as: *Word document*, `docx`. */
+    kind: { name: string; extension: string };
+  }): Promise<DesktopApiResult<{ path: string } | null>>;
   print(input: {
     file: ProjectFile;
     options?: PrintOptions;
@@ -472,6 +483,7 @@ const api: VcWriterApi = {
   restoreSnapshot: (input) => ipcRenderer.invoke('project:restoreSnapshot', input),
   exportPdf: (input) => ipcRenderer.invoke('project:exportPdf', input),
   saveExport: (input) => ipcRenderer.invoke('project:saveExport', input),
+  saveFile: (input) => ipcRenderer.invoke('project:saveFile', input),
   print: (input) => ipcRenderer.invoke('project:print', input),
   appInfo: () => ipcRenderer.invoke('app:version'),
   kindlePreviewer: () => ipcRenderer.invoke('app:kindlePreviewer'),

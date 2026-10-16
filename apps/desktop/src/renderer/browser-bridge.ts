@@ -784,6 +784,19 @@ export const createBrowserBridge = (): BrowserBridge => {
       return ok({ folder: "your browser's downloads folder", paths });
     },
 
+    // One file is one download, where the browser keeps them.
+    async saveFile(input) {
+      const url = URL.createObjectURL(new Blob([input.bytes as BlobPart], { type: input.mediaType }));
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = input.name;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      return ok({ path: `${input.name} in your browser's downloads folder` });
+    },
+
     appInfo: async () => ok({ version: 'preview', platform: 'browser' }),
 
     accountStatus: async () => ok({ configured: false, signedIn: false, email: null }),

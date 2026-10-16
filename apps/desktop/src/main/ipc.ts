@@ -546,6 +546,30 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
     },
   );
 
+  // One file, where the writer says (addendum 38 §7): a Word export.
+  ipcMain.handle(
+    'project:saveFile',
+    async (
+      _event,
+      input: { name: string; bytes: Uint8Array; mediaType: string; kind: { name: string; extension: string } },
+    ): Promise<DesktopApiResult<{ path: string } | null>> => {
+      try {
+        const window = getWindow();
+        const options = {
+          title: `Export ${input.kind.name}`,
+          defaultPath: input.name.replace(/[<>:"/\\|?*\u0000-\u001f]/g, '-'),
+          filters: [{ name: input.kind.name, extensions: [input.kind.extension] }],
+        };
+        const choice = window ? await dialog.showSaveDialog(window, options) : await dialog.showSaveDialog(options);
+        if (choice.canceled || !choice.filePath) return ok(null);
+        await writeFile(choice.filePath, Buffer.from(input.bytes));
+        return ok({ path: choice.filePath });
+      } catch (cause) {
+        return fail(cause);
+      }
+    },
+  );
+
   ipcMain.handle(
     'project:exportPdf',
     async (

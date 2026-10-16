@@ -1980,7 +1980,7 @@ const annotation = (id: string, text: string): ManuscriptElement => ({
  * are attached at the scene, ahead of its first beat. The beat labels sit
  * with their beats. All of it is optional and all of it is off by default.
  */
-const unitElements = (
+export const unitElements = (
   file: ProjectFile,
   unitId: StructuralUnitId,
   options: ManuscriptOptions,

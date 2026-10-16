@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import type { PageStamp, PrintOptions, ProjectFile } from '@vcwriter/domain';
+import { DOCX_MEDIA_TYPE, buildDocx, suggestedDocxFileName, type PageStamp, type PrintOptions, type ProjectFile } from '@vcwriter/domain';
 import type { PrintSetup } from './components/PageSetup';
 import type { VcWriterApi } from '../preload/index';
 
@@ -60,6 +60,8 @@ export const sayExport = (data: { path: string | null; pageCount: number }): str
 export interface Printing {
   print(kind?: PrintKind, outlineId?: string): Promise<void>;
   exportPdf(kind?: PrintKind, outlineId?: string): Promise<void>;
+  /** The script as a Word document, a paragraph style per element (addendum 38 §7). */
+  exportDocx(): Promise<void>;
   busy: boolean;
   message: string | null;
   setMessage(message: string | null): void;
@@ -122,5 +124,29 @@ export const usePrinting = (options: {
     [file, printOptions, flush],
   );
 
-  return { print, exportPdf, busy, message, setMessage };
+  const exportDocx = useCallback(async () => {
+    if (!file) return;
+    setBusy(true);
+    setMessage(null);
+    await flush?.();
+    try {
+      // The same page setup the PDF reads: the title page, the cast page,
+      // the scene headings and the numbers, so the two exports agree.
+      const bytes = await buildDocx(file, printOptions);
+      const result = await window.vcwriter.saveFile({
+        name: suggestedDocxFileName(file),
+        bytes,
+        mediaType: DOCX_MEDIA_TYPE,
+        kind: { name: 'Word document', extension: 'docx' },
+      });
+      if (!result.ok) setMessage(result.error ?? 'The Word document could not be saved');
+      else setMessage(result.data ? `Exported to ${result.data.path}` : null);
+    } catch (cause) {
+      setMessage(cause instanceof Error ? cause.message : 'The Word document could not be made');
+    } finally {
+      setBusy(false);
+    }
+  }, [file, printOptions, flush]);
+
+  return { print, exportPdf, exportDocx, busy, message, setMessage };
 };

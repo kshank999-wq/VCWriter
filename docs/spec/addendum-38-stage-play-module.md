@@ -165,3 +165,66 @@ character shorter stays beside the speech.
 
 It is `cueBeside`'s, so it applies to BBC taped as well, which addendum 37
 said it would.
+
+## 7. Export: a Word document, a paragraph style per element
+
+Ken's spec §8. Theatres, competitions and publishers ask for a `.docx` as
+often as a PDF. What makes one usable rather than merely openable is that
+every line carries the style of what it is: a cue is *Character*, a speech
+is *Dialogue*, a lyric is *Lyric*. A literary manager can then restyle the
+whole script at once, and a production office can pull out every line of one
+style.
+
+**File ▸ Export Word document…** appears on every script format. A book
+already has its own exports in the Layout room. `buildDocx` writes the
+package using the zip writer the eBook already uses. The desktop saves it
+where the writer chooses (`saveFile`, a new bridge method); the browser
+preview downloads it.
+
+- **Geometry comes from the print's layout** (`layoutForFile`). Each style's
+  indent and right edge are the layout's columns at ten to the inch. Capitals
+  use Word's own *all caps* setting, so the writer's words go into the file
+  exactly as typed, and a centred cue is centred. The page is the layout's
+  paper, with the left margin worked back from the column: 1.5″ on Letter
+  and 1″ on the stage A4.
+- **Word paginates for itself.** The file carries what the paginator's rules
+  need: *keep with next* on a heading, a cue and a wryly, and the blank line
+  between blocks written as space before the paragraph. There is no space
+  before a line inside a speech, and no empty paragraphs anywhere.
+- **A cue beside its speech** is the speech paragraph's first word, set with
+  a hanging indent and a tab, never padded with spaces. A long cue becomes a
+  paragraph of its own, following §6's rule.
+- **The front pages** are the title page and the cast page, as Page setup
+  says, in a section of their own with no header. The script's section
+  numbers from 1 and leaves its first page bare, as the printed one does.
+
+## 8. Driven
+
+In the browser preview, built from this branch, with *The Lamp* opened from
+a `.vcw` (musical preset, three roles, one doubling, a song):
+
+- **Writing screen:** the lyric lines are in capitals in their own column.
+  The number's title, the dance and the music cue sit with the directions.
+- **File ▸ Page setup:** *US musical* is the seventh tile and is lit, with
+  its sample page.
+- **File ▸ Cast page…:** SARAH, TOM and THE SECOND GRAVEDIGGER in order of
+  entrance, with the doubling *TOM / THE SECOND GRAVEDIGGER* on the sheet
+  beside them.
+- **File ▸ Title page…:** *What it is* offers *A Musical in One Act* first,
+  the credit words are *by*, and Music by and Lyrics by are listed below.
+- **Printed document:** title page, then cast page, then the script, with
+  the lyrics set ten in.
+- **File ▸ Export Word document…:** *The Lamp.docx*, which python-docx opens
+  with Song Title, Character, Lyric, Dialogue, Dance and Music Cue paragraphs.
+  LibreOffice renders it with the BBC layout's long cue on its own line and
+  the front pages unnumbered.
+
+## 9. Still named rather than built
+
+- **Save as Custom Template and Restore Defaults** (spec §1), and the
+  per-element override inspector (§7). The presets are immutable bundled
+  records, which is what §9's last test asks for. What is missing is a place
+  to keep a writer's own edit of one.
+- **The writing screen does not centre a cue.** The page, the print and the
+  Word file do, but the editor sets every line at its indent. That predates
+  this addendum and belongs with the editor's own layout.

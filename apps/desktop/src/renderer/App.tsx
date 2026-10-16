@@ -583,7 +583,7 @@ export default function App() {
    * a window of its own uses the same module without one.
    */
   const printing = usePrinting({ file, setup, stamp: room.stamp, flush: () => project.saveNow() });
-  const { print, exportPdf } = printing;
+  const { print, exportPdf, exportDocx } = printing;
   const exporting = printing.busy;
   const exportMessage = printing.message;
   const printOptions = useMemo(() => printOptionsFrom(setup, room.stamp), [setup, room.stamp]);
@@ -787,6 +787,8 @@ export default function App() {
           return void print();
         case 'file.exportPdf':
           return void exportPdf();
+        case 'file.exportDocx':
+          return void exportDocx();
         case 'file.printBoard':
           return void print('board');
         case 'file.exportBoard':
@@ -895,7 +897,7 @@ export default function App() {
           return setPreferencesOpen(true);
       }
     },
-    [project, print, exportPdf, saveSomewhere, selectedBeat, detached, view, openPane, closePane, resetWindows],
+    [project, print, exportPdf, exportDocx, saveSomewhere, selectedBeat, detached, view, openPane, closePane, resetWindows],
   );
 
   /** The items with a tick beside them right now. */

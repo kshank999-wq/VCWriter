@@ -13,7 +13,7 @@
  * that is all it should ever know.
  */
 
-import { hasBookIndex, hasCastPage, hasChapterPages, isCollection, isInteractive, isProseFormat, type ProjectFormat } from '@vcwriter/domain';
+import { exportsDocx, hasBookIndex, hasCastPage, hasChapterPages, isCollection, isInteractive, isProseFormat, type ProjectFormat } from '@vcwriter/domain';
 import { paneNamesFor } from './panes';
 
 export type CommandId =
@@ -36,6 +36,7 @@ export type CommandId =
   | 'file.saveCopy'
   | 'file.titlePage'
   | 'file.castPage'
+  | 'file.exportDocx'
   | 'file.chapterPage'
   | 'file.pageSetup'
   | 'file.print'
@@ -155,6 +156,11 @@ export const menusFor = (format: ProjectFormat | null): readonly Menu[] => {
       { command: 'file.pageSetup', label: 'Page setup…' },
       { command: 'file.print', label: 'Print…', accelerator: 'CmdOrCtrl+P' },
       { command: 'file.exportPdf', label: 'Export PDF…', accelerator: 'CmdOrCtrl+Shift+P' },
+      // A script as Word, a paragraph style per element (addendum 38 §7).
+      // A book has its own exports in the Layout room.
+      ...(format !== null && exportsDocx(format)
+        ? [{ command: 'file.exportDocx' as CommandId, label: 'Export Word document…' }]
+        : []),
       // The board is a second document, not a second view of the first: the
       // frames on their own, for a wall (addendum 05 §8). Only short form
       // has one.
