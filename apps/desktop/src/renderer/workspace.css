@@ -2535,7 +2535,10 @@ input[type='color'].swatch {
 .element-character .field,
 .element-transition .field,
 .element-shot .field,
-.element-heading .field {
+.element-heading .field,
+.element-song_title .field,
+.element-lyric .field,
+.element-music_cue .field {
   text-transform: uppercase;
 }
 

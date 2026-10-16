@@ -100,6 +100,12 @@ export const scriptFormatSchema = z.enum([
   'stage_uk_bbc',
   'stage_uk_contemporary',
   'stage_eu_continental',
+  /**
+   * **The musical** (addendum 38, the spec's §4.6): the seventh, which
+   * addendum 37 named and did not build because there was nowhere in a
+   * manuscript to put a lyric. `musicalElementTypeSchema` is that place.
+   */
+  'stage_us_musical',
 ]);
 export type ScriptFormat = z.infer<typeof scriptFormatSchema>;
 

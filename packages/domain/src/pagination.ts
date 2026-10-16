@@ -366,10 +366,59 @@ const STAGE_LETTER = { linesPerPage: 55, columns: 60, paper: 'letter' } as const
 /** A4, the spec's 1" all round: 62 characters, 58 lines. */
 const STAGE_A4 = { linesPerPage: 58, columns: 62, paper: 'a4' } as const;
 
-/** A speech is one block wherever it is set: cue, wryly and words, no gaps. */
+/**
+ * A speech is one block wherever it is set: cue, wryly and words, no gaps —
+ * and in a play with songs, the sung lines are the same speech (addendum 38
+ * §3), so a lyric runs on from its cue and from the words before it, and the
+ * words after it run on from the lyric.
+ */
 const SPEECH_RUNS_ON = {
-  parenthetical: new Set(['character', 'dialogue', 'parenthetical']),
-  dialogue: new Set(['character', 'parenthetical', 'dialogue']),
+  parenthetical: new Set(['character', 'dialogue', 'parenthetical', 'lyric']),
+  dialogue: new Set(['character', 'parenthetical', 'dialogue', 'lyric']),
+  lyric: new Set(['character', 'parenthetical', 'dialogue', 'lyric']),
+};
+
+/**
+ * **Where a musical's lines go on a page that was not drawn for them**
+ * (addendum 38 §3).
+ *
+ * Any stage play may hold a song (`holdsMusic`), so every stage layout has to
+ * say where one is set — and a layout that did not would print a lyric flush
+ * at the left margin, at the full width, which reads as a direction. So each
+ * one is derived from what the layout already says:
+ *
+ * - the **number's title** and the **band's cue** are set where the
+ *   directions are, in capitals, the title centred where the cue is;
+ * - a **lyric** is the speech's column, inset five more, in capitals — sung
+ *   words set apart from spoken ones, which is the musical page's one rule;
+ * - a **dance** is a direction, and sits with them.
+ *
+ * A layout that names its own place for one — the musical preset does —
+ * keeps it: this fills in, it never overrides.
+ */
+const withMusic = (layout: PageLayoutSpec): PageLayoutSpec => {
+  const direction = { indent: layout.indent['action'] ?? 0, width: layout.width['action'] ?? layout.columns };
+  const speech = { indent: layout.indent['dialogue'] ?? 0, width: layout.width['dialogue'] ?? layout.columns };
+  const inset = Math.min(5, Math.max(0, speech.width - 20));
+  return {
+    ...layout,
+    indent: {
+      song_title: direction.indent,
+      lyric: speech.indent + inset,
+      music_cue: direction.indent,
+      dance: direction.indent,
+      ...layout.indent,
+    },
+    width: {
+      song_title: direction.width,
+      lyric: speech.width - inset,
+      music_cue: direction.width,
+      dance: direction.width,
+      ...layout.width,
+    },
+    uppercase: new Set([...layout.uppercase, 'song_title', 'lyric', 'music_cue']),
+    ...(layout.centred?.has('character') ? { centred: new Set([...layout.centred, 'song_title']) } : {}),
+  };
 };
 
 /**
@@ -381,7 +430,7 @@ const SPEECH_RUNS_ON = {
  * directions sit in a narrower region on the right, beginning 3" from the
  * paper's edge, which is column 15 of the text area.
  */
-export const STAGE_US_MODERN_LAYOUT: PageLayoutSpec = {
+export const STAGE_US_MODERN_LAYOUT: PageLayoutSpec = withMusic({
   ...STAGE_LETTER,
   doubleSpaced: false,
   indent: {
@@ -409,7 +458,7 @@ export const STAGE_US_MODERN_LAYOUT: PageLayoutSpec = {
   // The heading and the cue are centred; the speech and the directions are not.
   centred: new Set(['scene_heading', 'character']),
   follows: SPEECH_RUNS_ON,
-};
+});
 
 /**
  * **US — Traditional Play** (`us_traditional`; spec §2, §4.2).
@@ -424,7 +473,7 @@ export const STAGE_US_MODERN_LAYOUT: PageLayoutSpec = {
  * than hard-coded spaces**, which is what this record is: nothing anywhere
  * pads a line with spaces.
  */
-export const STAGE_US_TRADITIONAL_LAYOUT: PageLayoutSpec = {
+export const STAGE_US_TRADITIONAL_LAYOUT: PageLayoutSpec = withMusic({
   ...STAGE_LETTER,
   doubleSpaced: false,
   indent: {
@@ -450,7 +499,7 @@ export const STAGE_US_TRADITIONAL_LAYOUT: PageLayoutSpec = {
   uppercase: new Set(['scene_heading', 'character', 'transition', 'shot']),
   centred: new Set(['scene_heading', 'character']),
   follows: SPEECH_RUNS_ON,
-};
+});
 
 /**
  * **US — Samuel French-inspired** (`us_publisher`; spec §2, §4.3).
@@ -463,7 +512,7 @@ export const STAGE_US_TRADITIONAL_LAYOUT: PageLayoutSpec = {
  * It is the one preset whose cue is **not centred**: a reading copy sets it
  * in from the left, which is what keeps the page compact.
  */
-export const STAGE_US_PUBLISHER_LAYOUT: PageLayoutSpec = {
+export const STAGE_US_PUBLISHER_LAYOUT: PageLayoutSpec = withMusic({
   ...STAGE_LETTER,
   doubleSpaced: false,
   indent: {
@@ -488,7 +537,7 @@ export const STAGE_US_PUBLISHER_LAYOUT: PageLayoutSpec = {
   },
   uppercase: new Set(['scene_heading', 'character', 'transition', 'shot']),
   follows: SPEECH_RUNS_ON,
-};
+});
 
 /**
  * **UK — BBC Stage** (`uk_bbc`; spec §2, §4.4).
@@ -506,7 +555,7 @@ export const STAGE_US_PUBLISHER_LAYOUT: PageLayoutSpec = {
  * The spec forbids space-padding to achieve the column, which is what
  * `cueBeside` is: the cue is laid in the margin, not written into the line.
  */
-export const STAGE_UK_BBC_LAYOUT: PageLayoutSpec = {
+export const STAGE_UK_BBC_LAYOUT: PageLayoutSpec = withMusic({
   ...STAGE_A4,
   doubleSpaced: false,
   cueBeside: true,
@@ -536,7 +585,7 @@ export const STAGE_UK_BBC_LAYOUT: PageLayoutSpec = {
   follows: SPEECH_RUNS_ON,
   // A change of setting is blocked out, as on the BBC's screen pages.
   blanksBeforeHeading: 2,
-};
+});
 
 /**
  * **UK — Contemporary Play** (`uk_contemporary`; spec §2, §4.5).
@@ -547,7 +596,7 @@ export const STAGE_UK_BBC_LAYOUT: PageLayoutSpec = {
  * uppercase and nothing else is, which is where this parts from the BBC
  * sample above.
  */
-export const STAGE_UK_CONTEMPORARY_LAYOUT: PageLayoutSpec = {
+export const STAGE_UK_CONTEMPORARY_LAYOUT: PageLayoutSpec = withMusic({
   ...STAGE_A4,
   doubleSpaced: false,
   cueBeside: true,
@@ -573,7 +622,7 @@ export const STAGE_UK_CONTEMPORARY_LAYOUT: PageLayoutSpec = {
   },
   uppercase: new Set(['scene_heading', 'character', 'transition', 'shot']),
   follows: SPEECH_RUNS_ON,
-};
+});
 
 /**
  * **Europe — Continental Reading Copy** (`eu_continental`; spec §2, §4.5).
@@ -586,7 +635,7 @@ export const STAGE_UK_CONTEMPORARY_LAYOUT: PageLayoutSpec = {
  *
  * The role label stands at the left and the speech is a block to its right.
  */
-export const STAGE_EU_CONTINENTAL_LAYOUT: PageLayoutSpec = {
+export const STAGE_EU_CONTINENTAL_LAYOUT: PageLayoutSpec = withMusic({
   ...STAGE_A4,
   doubleSpaced: false,
   indent: {
@@ -611,7 +660,60 @@ export const STAGE_EU_CONTINENTAL_LAYOUT: PageLayoutSpec = {
   },
   uppercase: new Set(['scene_heading', 'character', 'transition', 'shot']),
   follows: SPEECH_RUNS_ON,
-};
+});
+
+/**
+ * **US — Musical** (`musical`; spec §4.6, addendum 38).
+ *
+ * The modern play's page with a song in it, which is what a musical's
+ * libretto is: the cue centred over the speech, the directions in their own
+ * region, and **the lyrics in capitals in a narrower column** inside the
+ * speech's — sung words set so an actor, a music director and a stage manager
+ * can each find them at a glance, which is the reason the convention exists.
+ *
+ * The number's title is centred and in capitals, where a reader turning pages
+ * looks for where the song starts; the band's cue and the dance are directions
+ * and sit with them.
+ *
+ * The spec marks this preset optional in its own v1, and its caveat holds as
+ * for the others: a house style's starting point, and a producing theatre's or
+ * licensing house's own instructions come first.
+ */
+export const STAGE_US_MUSICAL_LAYOUT: PageLayoutSpec = withMusic({
+  ...STAGE_LETTER,
+  doubleSpaced: false,
+  indent: {
+    scene_heading: 0,
+    action: 15,
+    shot: 15,
+    general: 15,
+    character: 0,
+    parenthetical: 10,
+    dialogue: 0,
+    transition: 45,
+    song_title: 0,
+    lyric: 10,
+    music_cue: 15,
+    dance: 15,
+  },
+  width: {
+    scene_heading: 60,
+    action: 45,
+    shot: 45,
+    general: 45,
+    character: 60,
+    parenthetical: 40,
+    dialogue: 60,
+    transition: 15,
+    song_title: 60,
+    lyric: 45,
+    music_cue: 45,
+    dance: 45,
+  },
+  uppercase: new Set(['scene_heading', 'character', 'transition', 'shot']),
+  centred: new Set(['scene_heading', 'character']),
+  follows: SPEECH_RUNS_ON,
+});
 
 /**
  * Standard manuscript format: 12pt Courier, double spaced, ~25 lines a page,
@@ -653,6 +755,7 @@ const STAGE_LAYOUTS: Record<string, PageLayoutSpec> = {
   stage_uk_bbc: STAGE_UK_BBC_LAYOUT,
   stage_uk_contemporary: STAGE_UK_CONTEMPORARY_LAYOUT,
   stage_eu_continental: STAGE_EU_CONTINENTAL_LAYOUT,
+  stage_us_musical: STAGE_US_MUSICAL_LAYOUT,
 };
 
 export const layoutFor = (
@@ -700,6 +803,7 @@ export const scriptFormatsFor = (format: ProjectFormat): ScriptFormat[] => {
       'stage_uk_bbc',
       'stage_uk_contemporary',
       'stage_eu_continental',
+      'stage_us_musical',
     ];
   }
   return ['us', 'us_multi', 'bbc', 'bbc_taped'];
@@ -900,6 +1004,9 @@ interface Block {
 
 const MIN_SPLIT_LINES = 2;
 
+/** What a speaker says or sings, which a page carrying it on must name. */
+const isSpoken = (type: ManuscriptElementType): boolean => type === 'dialogue' || type === 'lyric';
+
 const sameStyle = (a: InlineStyle, b: InlineStyle): boolean =>
   Boolean(a.bold) === Boolean(b.bold) &&
   Boolean(a.italic) === Boolean(b.italic) &&
@@ -985,7 +1092,9 @@ const toBlock = (element: ManuscriptElement, layout: PageLayoutSpec, speaker: st
     indent,
     firstIndent: layout.firstIndent?.[element.type] ?? 0,
     keepWithNext: element.type === 'scene_heading' || element.type === 'character' || element.type === 'parenthetical',
-    splittable: element.type === 'dialogue',
+    // A song is split the way a speech is: what is sung is somebody's, and
+    // the page it carries on to has to say whose (addendum 38 §3).
+    splittable: element.type === 'dialogue' || element.type === 'lyric',
     speaker,
     mark: typeof element.attributes['sceneNumber'] === 'string' ? element.attributes['sceneNumber'] : undefined,
   };
@@ -1106,7 +1215,7 @@ export const paginateElements = (
         const made = toBlock(
           element,
           layout,
-          element.type === 'dialogue' ? (speakerFor(element) ?? currentSpeaker) : null,
+          isSpoken(element.type) ? (speakerFor(element) ?? currentSpeaker) : null,
         );
         if (pendingCue !== null) {
           made.cue = pendingCue;
@@ -1128,7 +1237,7 @@ export const paginateElements = (
       pendingCue = layoutText(element.text, layout.columns, layout.uppercase.has('character')).lines[0] ?? '';
       continue;
     }
-    const block = toBlock(element, layout, element.type === 'dialogue' ? speaker : null);
+    const block = toBlock(element, layout, isSpoken(element.type) ? speaker : null);
     if (pendingCue !== null) {
       block.cue = pendingCue;
       pendingCue = null;

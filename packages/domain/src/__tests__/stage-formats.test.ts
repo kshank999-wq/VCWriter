@@ -28,7 +28,7 @@ const play = (stored?: ScriptFormat): ProjectFile => {
 };
 
 describe('which house styles a format offers', () => {
-  it('gives a stage play the six stage presets and no screen one', () => {
+  it('gives a stage play the stage presets and no screen one', () => {
     const offered = scriptFormatsFor('stage_play');
     expect(offered).toEqual([
       'stage_us_modern',
@@ -37,6 +37,9 @@ describe('which house styles a format offers', () => {
       'stage_uk_bbc',
       'stage_uk_contemporary',
       'stage_eu_continental',
+      // The musical, addendum 38 — the seventh, once a lyric had somewhere
+      // to be written.
+      'stage_us_musical',
     ]);
     // Absent rather than renamed (`kindsFor`'s rule): a multi-camera sitcom
     // layout is not something a play can be set in.

@@ -1,4 +1,8 @@
-import { screenplayElementTypeSchema, proseElementTypeSchema } from './entities/manuscript.js';
+import {
+  musicalElementTypeSchema,
+  screenplayElementTypeSchema,
+  proseElementTypeSchema,
+} from './entities/manuscript.js';
 import type { ManuscriptElement, ManuscriptElementType } from './entities/manuscript.js';
 import { isProseFormat } from './formats.js';
 import type { ProjectFormat } from './entities/project.js';
@@ -23,6 +27,13 @@ const SCREENPLAY_ON_ENTER: Record<string, ManuscriptElementType> = {
   parenthetical: 'dialogue',
   dialogue: 'action',
   transition: 'scene_heading',
+  // A musical's four (addendum 38 §2). A number's title is followed by who
+  // sings it; a lyric goes on to its next line, the way a verse is written;
+  // the band's cue and the dance are directions, and the scene goes on.
+  song_title: 'character',
+  lyric: 'lyric',
+  music_cue: 'action',
+  dance: 'action',
 };
 
 const PROSE_ON_ENTER: Record<string, ManuscriptElementType> = {
@@ -55,11 +66,31 @@ export const PROSE_CYCLE = [
 // imported it from the editing rules.
 export { isProseFormat };
 
+/**
+ * A stage play's ring: the script's, and then a musical's four (addendum 38
+ * §2) — after the screen's own so Tab from action to a cue is exactly what it
+ * was, and a play with no song in it never meets them unless it walks round.
+ */
+export const STAGE_CYCLE = [
+  ...SCREENPLAY_CYCLE,
+  ...musicalElementTypeSchema.options,
+] as const satisfies readonly ManuscriptElementType[];
+
+/**
+ * Whether the format may hold a musical's elements (addendum 38 §1). A stage
+ * play may, whichever house style it is set in — a play with songs in it is
+ * still a play — and a screenplay may not, a song in a film script being
+ * written as action and dialogue.
+ */
+export const holdsMusic = (format: ProjectFormat): boolean => format === 'stage_play';
+
 export const elementTypesFor = (format: ProjectFormat): ManuscriptElementType[] =>
-  isProseFormat(format) ? [...proseElementTypeSchema.options] : [...screenplayElementTypeSchema.options];
+  isProseFormat(format)
+    ? [...proseElementTypeSchema.options]
+    : [...screenplayElementTypeSchema.options, ...(holdsMusic(format) ? musicalElementTypeSchema.options : [])];
 
 export const cycleFor = (format: ProjectFormat): readonly ManuscriptElementType[] =>
-  isProseFormat(format) ? PROSE_CYCLE : SCREENPLAY_CYCLE;
+  isProseFormat(format) ? PROSE_CYCLE : holdsMusic(format) ? STAGE_CYCLE : SCREENPLAY_CYCLE;
 
 export const defaultElementType = (format: ProjectFormat): ManuscriptElementType =>
   isProseFormat(format) ? 'paragraph' : 'action';
@@ -87,7 +118,7 @@ export const cycleType = (
  * cue offers it, but Tab from action skips straight past it.
  */
 export const isDialogueElement = (type: ManuscriptElementType): boolean =>
-  type === 'character' || type === 'parenthetical' || type === 'dialogue';
+  type === 'character' || type === 'parenthetical' || type === 'dialogue' || type === 'lyric';
 
 // ---------------------------------------------------------------------------
 // The Tab/Enter system (addendum 02 §7)
@@ -158,6 +189,10 @@ export const onTab = (format: ProjectFormat, current: ManuscriptElementType, con
       return here('parenthetical');
     case 'transition':
       return here('scene_heading');
+    // Sung to spoken and back (addendum 38 §2): Tab in a lyric is the line
+    // turning into speech, which is the change a musical's page makes most.
+    case 'lyric':
+      return here('dialogue');
     default:
       return here('action');
   }
@@ -442,7 +477,8 @@ export type ManuscriptItem =
   | { kind: 'element'; element: ManuscriptElement; index: number }
   | SpeechItem;
 
-const isSpeechBody = (type: ManuscriptElementType): boolean => type === 'dialogue' || type === 'parenthetical';
+const isSpeechBody = (type: ManuscriptElementType): boolean =>
+  type === 'dialogue' || type === 'parenthetical' || type === 'lyric';
 
 /**
  * The element list as it is laid out: single elements, and dual speeches as
@@ -523,5 +559,7 @@ export const styleShortcuts = (format: ProjectFormat): Record<string, Manuscript
         '5': 'dialogue',
         '6': 'transition',
         '7': 'shot',
+        // The one number free, and a stage play's alone (addendum 38 §2).
+        ...(holdsMusic(format) ? { '8': 'lyric' as const } : {}),
         '9': 'general',
       };

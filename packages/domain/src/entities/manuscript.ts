@@ -45,7 +45,31 @@ export const proseElementTypeSchema = z.enum([
 ]);
 export type ProseElementType = z.infer<typeof proseElementTypeSchema>;
 
-export const manuscriptElementTypeSchema = z.union([screenplayElementTypeSchema, proseElementTypeSchema]);
+/**
+ * **What a musical holds that a play does not** (addendum 38 §1, Ken's *Stage
+ * Play Formatting Engine* spec §4.6).
+ *
+ * A musical preset was named and not built in addendum 37 because a preset
+ * promising lyrics over a manuscript with no lyric element would be a control
+ * that lies. These are those elements: the number's title, the sung words, the
+ * band's cue and the choreographer's direction.
+ *
+ * **Element types rather than a style of dialogue.** A lyric is sung, keeps
+ * its own line breaks and is set apart from speech on every musical page;
+ * a dance direction is a stage direction someone other than the actors reads.
+ * Each is a different line of the manuscript, which is what a type is for.
+ *
+ * They are a **stage play's** (`elementTypesFor`): a screenplay with a song in
+ * it is written as action and dialogue, the way a film script sets one.
+ */
+export const musicalElementTypeSchema = z.enum(['song_title', 'lyric', 'music_cue', 'dance']);
+export type MusicalElementType = z.infer<typeof musicalElementTypeSchema>;
+
+export const manuscriptElementTypeSchema = z.union([
+  screenplayElementTypeSchema,
+  proseElementTypeSchema,
+  musicalElementTypeSchema,
+]);
 export type ManuscriptElementType = z.infer<typeof manuscriptElementTypeSchema>;
 
 export const manuscriptElementSchema = z.object({

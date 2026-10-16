@@ -262,7 +262,7 @@ export function PageSetup({
                     (addendum 37, from Ken: *when you select stage play, you
                     need a dropdown or some type of preference that can select
                     the proper formatting for you*). `scriptFormatsFor` says
-                    which house styles this format is set in — the six stage
+                    which house styles this format is set in — the seven stage
                     presets on a play, the four screen ones elsewhere, absent
                     rather than renamed — and `SCRIPT_FORMAT_WORDS` says what
                     each is called and shows the page it makes. A second list
@@ -488,6 +488,11 @@ const SCRIPT_FORMAT_WORDS: Record<ScriptFormat, { label: string; says: string; s
     label: 'Continental reading copy',
     says: 'A4. There is no single Europe-wide convention, so this is a configurable reading copy and nothing more: the role label at the left with the speech as a block beside it.',
     sample: ['Scene One', '', 'The bell rings.', '', 'SARAH', '  You came, and I did not', '  think you would.', '', '  She does not move.'],
+  },
+  stage_us_musical: {
+    label: 'US musical',
+    says: 'The modern play with a song in it: the number’s title centred, and the lyrics in capitals in a narrower column inside the speech so the sung words stand apart from the spoken. A starting point — a licensing house’s own instructions come first.',
+    sample: ['#3 — OUT OF THE RAIN', '', '      SARAH', '     OUT OF THE RAIN', '     AND INTO THE LIGHT', 'You hear it too?', '', '        They waltz to the door.'],
   },
 };
 

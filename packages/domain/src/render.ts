@@ -32,9 +32,10 @@ const INDENT: Record<string, number> = {
   character: 22,
   parenthetical: 16,
   dialogue: 10,
+  lyric: 15,
 };
 
-const UPPERCASE_TYPES = new Set(['scene_heading', 'character', 'transition', 'shot']);
+const UPPERCASE_TYPES = new Set(['scene_heading', 'character', 'transition', 'shot', 'song_title', 'lyric', 'music_cue']);
 
 const renderElement = (element: ManuscriptElement, screenplayLayout: boolean): string => {
   // Plain text is plain: the emphasis marks are not part of what is said.
@@ -93,7 +94,19 @@ export interface SpeechSegment {
   voice: VoiceAssignment | null;
 }
 
-const SPOKEN_AS_NARRATION = new Set(['action', 'scene_heading', 'shot', 'general', 'paragraph', 'heading', 'blockquote']);
+const SPOKEN_AS_NARRATION = new Set([
+  'action',
+  'scene_heading',
+  'shot',
+  'general',
+  'paragraph',
+  'heading',
+  'blockquote',
+  // A musical's directions are read as directions (addendum 38 §2).
+  'song_title',
+  'music_cue',
+  'dance',
+]);
 
 export const speechSegmentsForUnit = (file: ProjectFile, unitId: StructuralUnitId): SpeechSegment[] => {
   const voiceFor = (characterId: CharacterId | null): VoiceAssignment | null =>
@@ -109,7 +122,9 @@ export const speechSegmentsForUnit = (file: ProjectFile, unitId: StructuralUnitI
         pendingCharacterId = element.characterId ?? null;
         continue;
       }
-      if (element.type === 'dialogue' || element.type === 'parenthetical') {
+      // A lyric is the singer's, in the singer's voice: read back, a song is
+      // the words of it (addendum 38 §2).
+      if (element.type === 'dialogue' || element.type === 'parenthetical' || element.type === 'lyric') {
         const characterId = element.characterId ?? pendingCharacterId;
         segments.push({
           kind: 'dialogue',
