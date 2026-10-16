@@ -2348,6 +2348,13 @@ input[type='color'].swatch {
   max-width: 100%;
 }
 
+/* A line the layout centres is centred in its own column, as the print sets
+   it (addendum 40) — the box stays at its indent and width, so the wrapping
+   and the page count are the page's. The writer's own alignment wins. */
+.element.centred:not(.own-align) .field {
+  text-align: center;
+}
+
 .element .ink,
 .element textarea {
   grid-area: 1 / 1 / 2 / 2;

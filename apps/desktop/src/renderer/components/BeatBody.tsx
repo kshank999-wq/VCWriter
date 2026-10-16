@@ -829,6 +829,10 @@ export function BeatBody({
           data-element-id={element.id as string}
           className={[
             `element element-${element.type}`,
+            // **Centred where the page centres it** (addendum 40): a stage
+            // play's cue and heading, or anything the writer centred in
+            // Customise. Not in a dual column, which has no centre of its own.
+            !dual && layout.centred?.has(element.type) ? 'centred' : '',
             // How the document it came from set it (addendum 21 §3), honoured
             // only under the Script's *As imported* face.
             importedFace ? 'imported-face' : '',

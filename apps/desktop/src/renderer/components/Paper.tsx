@@ -73,7 +73,13 @@ export function Paper({
                 // Lines have no identity of their own; they are a layout result.
                 key={`${sheet}-${index}`}
                 className={`paper-line ${line.type}`}
-                style={{ paddingLeft: `${line.indent}ch` }}
+                // A centred line is set in its own column and centred in it,
+                // as the print sets it (addendum 37, addendum 40).
+                style={
+                  line.centred
+                    ? { paddingLeft: `${line.indent}ch`, width: `${line.width ?? 0}ch`, textAlign: 'center', boxSizing: 'content-box' }
+                    : { paddingLeft: `${line.indent}ch` }
+                }
               >
                 {line.spans.length > 0 ? line.spans.map((span, at) => <Emphasis key={at} span={span} />) : line.text.length > 0 ? line.text : ' '}
               </div>
