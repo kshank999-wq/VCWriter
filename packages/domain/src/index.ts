@@ -93,6 +93,7 @@ export * from './title-page.js';
 export * from './cast-page.js';
 export * from './title-builder.js';
 export * from './docx-export.js';
+export * from './format-templates.js';
 export * from './beat-peek.js';
 export * from './back-matter.js';
 export * from './back-matter-pages.js';

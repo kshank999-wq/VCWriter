@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react';
 import {
   hasBookIndex,
+  formatOverridesOf,
   hasCastPage,
+  hasFormatOverrides,
   hasChapterPages,
   hasContentsPage,
   type ParagraphStyle,
@@ -86,6 +88,8 @@ interface PageSetupProps {
   onEditTitlePage(): void;
   /** Open the cast page's own screen (addendum 38 §4); a play's alone. */
   onEditCastPage?(): void;
+  /** Open the override inspector and the template library (addendum 39). */
+  onCustomiseFormat?(): void;
   /**
    * How a prose manuscript sets its paragraphs (§6.4). It belongs to the
    * document rather than to one printing, which is why it is not part of
@@ -122,6 +126,7 @@ export function PageSetup({
   onSetup,
   onEditTitlePage,
   onEditCastPage,
+  onCustomiseFormat,
   onParagraphStyle,
   onScriptFormat,
   onActBreaks,
@@ -313,6 +318,25 @@ export function PageSetup({
                     </Style>
                   ))}
                 </div>
+                {/* Custom templates (addendum 39): the lit preset with the
+                    writer's changes in it, said where the preset is chosen. */}
+                {onCustomiseFormat ? (
+                  <p className="format-customised small">
+                    {hasFormatOverrides(file)
+                      ? `Set as ${formatOverridesOf(file).templateName || `${SCRIPT_FORMAT_WORDS[scriptFormat].label}, with your changes`}. Choosing another preset keeps the changes over it.`
+                      : 'Exactly as bundled.'}{' '}
+                    <button
+                      type="button"
+                      className="ghost small"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        onCustomiseFormat();
+                      }}
+                    >
+                      Customise…
+                    </button>
+                  </p>
+                ) : null}
 
                 {/* §6.5: a network episode breaks for the commercials; a
                     feature and a streaming script do not. */}
@@ -469,7 +493,7 @@ function Check({
  * publisher's own instructions override them, the BBC sample is dated, and
  * there is no Europe-wide convention.
  */
-const SCRIPT_FORMAT_WORDS: Record<ScriptFormat, { label: string; says: string; sample: readonly string[] }> = {
+export const SCRIPT_FORMAT_WORDS: Record<ScriptFormat, { label: string; says: string; sample: readonly string[] }> = {
   us: {
     label: 'US single-camera',
     says: 'US Letter, and what Final Draft opens on: the cue out at 3.7", the speech a narrow column down the middle. Laid out for reading, and for the page-a-minute rule.',

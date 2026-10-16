@@ -21414,3 +21414,95 @@ dialog.note-dialog > header {
   gap: 6px;
   margin-left: 88px;
 }
+
+/* ---------------------------------------------------------- custom templates
+   Addendum 39: the per-element override inspector, beside a page set the way
+   the project is set. */
+dialog.track-dialog.format-inspector {
+  width: min(1100px, 96vw);
+  max-width: none;
+}
+
+.format-inspector-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  padding: 14px 16px;
+}
+
+.format-rows {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.format-rows th,
+.format-rows td {
+  padding: 3px 6px;
+  text-align: left;
+}
+
+.format-rows thead th {
+  color: var(--muted);
+  font-weight: normal;
+}
+
+.format-rows input[type='number'] {
+  width: 5em;
+}
+
+.format-rows tr.changed th[scope='row'] {
+  color: var(--gold);
+}
+
+.format-rows tr.changed th[scope='row']::after {
+  content: ' •';
+}
+
+.format-actions,
+.format-save {
+  display: flex;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.format-save input {
+  flex: 1;
+}
+
+.format-library {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.format-library li {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+}
+
+.format-sample {
+  align-self: start;
+}
+
+.format-sheet {
+  box-sizing: content-box;
+  padding: 24px 28px;
+  background: #fff;
+  color: #000;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 9px;
+  line-height: 1.35;
+  border: 1px solid var(--border);
+  white-space: pre;
+  min-height: 360px;
+}
+
+.format-line {
+  box-sizing: border-box;
+}

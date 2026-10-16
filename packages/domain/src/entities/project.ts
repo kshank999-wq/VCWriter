@@ -111,6 +111,41 @@ export const scriptFormatSchema = z.enum([
 export type ScriptFormat = z.infer<typeof scriptFormatSchema>;
 
 /**
+ * **One element's departure from its house style** (addendum 39, Ken's spec
+ * §7, the per-element override inspector).
+ *
+ * Every field is optional and absent means *the preset's own*, so a project
+ * carries only what the writer changed — and *Restore defaults* is clearing
+ * this, not remembering what the preset said.
+ */
+export const elementOverrideSchema = z.object({
+  /** Column the element starts at, from the left of the text area. */
+  indent: z.number().int().min(0).max(120).optional(),
+  /** Characters before it wraps. */
+  width: z.number().int().min(1).max(120).optional(),
+  /** Set in capitals. */
+  uppercase: z.boolean().optional(),
+  /** Centred in its column rather than flush at its indent. */
+  centred: z.boolean().optional(),
+});
+export type ElementOverride = z.infer<typeof elementOverrideSchema>;
+
+/**
+ * **What this project changed about its house style** (addendum 39).
+ *
+ * The project's, not the machine's, for addendum 37 §5's reason: it changes
+ * the geometry and so the page count, and two people opening one play must see
+ * one page. `templateName` is what the page is called once it is a template —
+ * a saved one applied, or the writer's own name for it — and empty where it is
+ * simply the preset with a change or two.
+ */
+export const formatOverridesSchema = z.object({
+  templateName: z.string().default(''),
+  elements: z.record(z.string(), elementOverrideSchema).default({}),
+});
+export type FormatOverrides = z.infer<typeof formatOverridesSchema>;
+
+/**
  * Provider-abstracted voice reference (spec §10, §18: the TTS vendor must be
  * replaceable without touching manuscript data).
  */
@@ -180,6 +215,11 @@ export const projectSettingsSchema = z.object({
    * writer says otherwise; prose formats never read it.
    */
   scriptFormat: scriptFormatSchema.default('us'),
+  /**
+   * The writer's changes to that house style, element by element (addendum
+   * 39). Empty is the preset exactly as bundled.
+   */
+  formatOverrides: formatOverridesSchema.default({}),
   /**
    * Act breaks (spec §6.5). A network episode is written in acts with a
    * commercial between them: each starts on a page of its own, with its name

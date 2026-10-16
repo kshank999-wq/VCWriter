@@ -82,6 +82,7 @@ import { DEFAULT_PAGE_STYLE, type PageStyle } from './components/ScriptOptions';
 import { DEFAULT_PRINT_SETUP, PageSetup, type PrintSetup } from './components/PageSetup';
 import { TitlePageDialog } from './components/TitlePageDialog';
 import { CastPageDialog } from './components/CastPageDialog';
+import { FormatInspector } from './components/FormatInspector';
 import { Reports, type ReportTab } from './components/Reports';
 import { EpisodeRail } from './components/EpisodeRail';
 import { StoryRail } from './components/StoryRail';
@@ -222,6 +223,7 @@ export default function App() {
   /** The title page's own screen: a page of the document, off the File menu. */
   const [titlePageOpen, setTitlePageOpen] = useState(false);
   const [castPageOpen, setCastPageOpen] = useState(false);
+  const [formatInspectorOpen, setFormatInspectorOpen] = useState(false);
   /** A part the Layout room should open on when it is opened (§16b). */
   const [layoutOpenOn, setLayoutOpenOn] = useState<'title_page' | 'copyright' | null>(null);
   const [chapterPageOpen, setChapterPageOpen] = useState(false);
@@ -1773,6 +1775,10 @@ export default function App() {
           setPageSetupOpen(false);
           setCastPageOpen(true);
         }}
+        onCustomiseFormat={() => {
+          setPageSetupOpen(false);
+          setFormatInspectorOpen(true);
+        }}
         onParagraphStyle={(style) => project.update((current) => setParagraphStyle(current, style))}
         onScriptFormat={(next) => project.update((current) => setScriptFormat(current, next))}
         onActBreaks={(on) => project.update((current) => setActBreaks(current, on))}
@@ -1788,6 +1794,13 @@ export default function App() {
         open={titlePageOpen}
         episode={titlePageEpisode}
         onClose={() => setTitlePageOpen(false)}
+        onUpdate={project.update}
+      />
+
+      <FormatInspector
+        file={file}
+        open={formatInspectorOpen}
+        onClose={() => setFormatInspectorOpen(false)}
         onUpdate={project.update}
       />
 

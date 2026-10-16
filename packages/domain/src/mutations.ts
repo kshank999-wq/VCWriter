@@ -40,6 +40,13 @@ import {
 import type { ManuscriptSegment } from './entities/manuscript.js';
 import { titlePageSchema } from './entities/title-page.js';
 import type { TitlePage } from './entities/title-page.js';
+import {
+  formatOverridesOf,
+  templateFits,
+  withElementOverride,
+  type CustomTemplate,
+} from './format-templates.js';
+import type { ElementOverride } from './entities/project.js';
 import { castPageSchema, castingSchema, type CastPageSettings, type Casting } from './entities/cast-page.js';
 import type { ParagraphStyle, ScriptFormat, VoiceAssignment } from './entities/project.js';
 import type { Character, CharacterCategory } from './entities/character.js';
@@ -893,6 +900,51 @@ export const setParagraphStyle = (file: ProjectFile, paragraphStyle: ParagraphSt
  */
 export const setScriptFormat = (file: ProjectFile, scriptFormat: ScriptFormat): ProjectFile =>
   touchProject({ ...file, settings: { ...file.settings, scriptFormat } });
+
+/**
+ * One element's change to the house style (addendum 39). `null` for a field
+ * puts the preset's back; a value equal to the preset's is stored as nothing.
+ */
+export const setElementOverride = (
+  file: ProjectFile,
+  type: string,
+  patch: Partial<Record<keyof ElementOverride, number | boolean | null>>,
+): ProjectFile =>
+  touchProject({ ...file, settings: { ...file.settings, formatOverrides: withElementOverride(file, type, patch) } });
+
+/**
+ * **Restore defaults** (addendum 39, spec §1): the preset exactly as bundled.
+ * The changes are dropped, not remembered — a template saved from them keeps
+ * its own copy, which is what saving one is for.
+ */
+export const restoreFormatDefaults = (file: ProjectFile): ProjectFile =>
+  touchProject({ ...file, settings: { ...file.settings, formatOverrides: { templateName: '', elements: {} } } });
+
+/**
+ * A saved template, applied (addendum 39): its preset chosen and its changes
+ * copied in, so the project prints the same whether or not the library that
+ * held it is on this machine.
+ */
+export const applyCustomTemplate = (file: ProjectFile, template: CustomTemplate): ProjectFile => {
+  if (!templateFits(file, template)) {
+    throw new DomainError(`The template ${template.name} is for another kind of script`);
+  }
+  return touchProject({
+    ...file,
+    settings: {
+      ...file.settings,
+      scriptFormat: template.base,
+      formatOverrides: { templateName: template.name, elements: { ...template.elements } },
+    },
+  });
+};
+
+/** What the project calls its page, once it is a template (addendum 39). */
+export const nameFormatOverrides = (file: ProjectFile, templateName: string): ProjectFile =>
+  touchProject({
+    ...file,
+    settings: { ...file.settings, formatOverrides: { ...formatOverridesOf(file), templateName: templateName.trim() } },
+  });
 
 /**
  * Whether the acts break the script into pages of their own (spec §6.5).

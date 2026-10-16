@@ -22,7 +22,7 @@ import type { TitlePage } from './entities/title-page.js';
 import { groupManuscript } from './editing.js';
 import { parseInline, type InlineSpan, type InlineStyle } from './entities/inline.js';
 import type { ManuscriptElement, ManuscriptElementType } from './entities/manuscript.js';
-import type { ParagraphStyle, ProjectFormat, ScriptFormat } from './entities/project.js';
+import type { FormatOverrides, ParagraphStyle, ProjectFormat, ScriptFormat } from './entities/project.js';
 import type { ProjectFile } from './project-file.js';
 import type { StructuralUnitId } from './ids.js';
 import type { StructuralUnit } from './entities/structure.js';
@@ -831,8 +831,46 @@ export const scriptFormatOf = (format: ProjectFormat, stored?: ScriptFormat): Sc
  * through here, so the choice cannot be honoured in one place and missed in
  * another.
  */
+/**
+ * **A house style with the writer's changes in it** (addendum 39, the spec's
+ * §7 override inspector).
+ *
+ * Each override replaces one field of one element and nothing else, so a
+ * preset with a cue moved two columns is that preset with a cue moved two
+ * columns — its paper, its line count and every other element as bundled.
+ * The two that are sets (capitals, centring) are added to or taken from;
+ * an indent and a width are clamped so the element still fits the column,
+ * a block hanging off the right of the page being no layout at all.
+ *
+ * Nothing in, the same object out — so a script with no changes keeps the
+ * shared layout it has always been given, identity and all.
+ */
+export const applyFormatOverrides = (layout: PageLayoutSpec, overrides?: FormatOverrides): PageLayoutSpec => {
+  const entries = Object.entries(overrides?.elements ?? {}).filter(([, one]) => Object.keys(one).length > 0);
+  if (entries.length === 0) return layout;
+  const indent = { ...layout.indent };
+  const width = { ...layout.width };
+  const uppercase = new Set(layout.uppercase);
+  const centred = new Set(layout.centred ?? []);
+  for (const [type, one] of entries) {
+    const at = Math.min(one.indent ?? indent[type] ?? 0, layout.columns - 1);
+    indent[type] = at;
+    width[type] = Math.max(1, Math.min(one.width ?? width[type] ?? layout.columns, layout.columns - at));
+    if (one.uppercase === true) uppercase.add(type);
+    if (one.uppercase === false) uppercase.delete(type);
+    if (one.centred === true) centred.add(type);
+    if (one.centred === false) centred.delete(type);
+  }
+  return { ...layout, indent, width, uppercase, ...(centred.size > 0 ? { centred } : { centred: undefined }) };
+};
+
 export const layoutForFile = (file: ProjectFile): PageLayoutSpec => {
-  const base = layoutFor(file.project.format, file.settings.paragraphStyle, file.settings.scriptFormat);
+  const preset = layoutFor(file.project.format, file.settings.paragraphStyle, file.settings.scriptFormat);
+  // A book is set in the Layout room, which has its own controls; the
+  // override inspector is a script's (addendum 39).
+  const base = isProseFormat(file.project.format)
+    ? preset
+    : applyFormatOverrides(preset, file.settings.formatOverrides);
   // Only prose can hold a figure, so only prose gets a resolver — and a script
   // keeps the shared layout object it has always been given, identity and all.
   if (!isProseFormat(file.project.format)) return base;
