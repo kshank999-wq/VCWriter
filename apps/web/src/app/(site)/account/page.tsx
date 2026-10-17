@@ -5,6 +5,7 @@ import { adminClient, currentUser } from '@/lib/supabase';
 import { notesPlanFor } from '@/lib/notes-subscription';
 import { DownloadButton } from './download-button';
 import { ResendLicense } from './resend-license';
+import { ManageSubscription } from './manage-subscription';
 import { Devices } from './devices';
 import { SetPassword } from './set-password';
 import { DeleteAccount } from './delete-account';
@@ -43,7 +44,7 @@ export default async function AccountPage() {
   const [{ data: licenses }, { data: builds }, { data: orders }, { data: profile }] = await Promise.all([
     client
       .from('licenses')
-      .select('serial, status, entitled_platforms, max_activations, created_at')
+      .select('serial, status, entitled_platforms, max_activations, created_at, expires_at, stripe_subscription_id')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false }),
     client
@@ -87,11 +88,17 @@ export default async function AccountPage() {
                   <p style={{ marginTop: 8 }}>
                     Covers {license.entitled_platforms.join(' and ')} · up to {license.max_activations} devices
                   </p>
+                  {/* A subscription's licence says when it renews (addendum
+                      41 §4); a perpetual one has no date to say. */}
+                  {license.stripe_subscription_id && license.expires_at ? (
+                    <p className="muted small">Renews {formatDate(license.expires_at)}</p>
+                  ) : null}
                 </article>
               ))}
             </div>
-            <div style={{ marginTop: 16 }}>
+            <div style={{ marginTop: 16, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
               <ResendLicense />
+              {activeLicenses.some((license) => license.stripe_subscription_id) ? <ManageSubscription /> : null}
             </div>
           </>
         )}

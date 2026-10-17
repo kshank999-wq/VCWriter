@@ -180,26 +180,48 @@ ticket was never stapled — customers on a fresh machine will be blocked.
 
 ## Publishing a signed build
 
-Signing and publishing are separate on purpose (§17):
+Signing and publishing are separate on purpose (§17), and since addendum 41
+everything up to the last switch is automatic:
 
-1. Tag the release. The workflow packages both platforms and prints the
-   SHA-256 of each installer.
-2. Upload the installer at `/admin/releases` with its version, minimum OS,
-   release notes and that checksum. It arrives **inactive**.
-3. Verify the artifact, then make it live. Only then can customers download it,
-   and only through a signed URL minted after an entitlement check.
+1. **Tag the release**: `git tag v1.0.0 && git push origin v1.0.0`. A version
+   with a hyphen (`v1.0.0-beta.1`) goes to the beta channel; anything else goes
+   to stable. The tag *is* the version: the installer, the app's About box and
+   the catalogue all read it.
+2. The workflow packages both platforms, then **checks each signature the way
+   a customer's computer will**. On Windows that is `Get-AuthenticodeSignature`;
+   on macOS it is `codesign`, plus `spctl` reporting *Notarized Developer ID*,
+   plus a stapled ticket. A tagged build that is not properly signed fails
+   here and publishes nothing.
+3. The **publish** job uploads `VC-Writer-<version>-Setup.exe` and
+   `VC-Writer-<version>-mac.dmg` (one universal build for Apple silicon and
+   Intel) to the private `releases` bucket, and records each one **inactive**
+   with its size and SHA-256. A version that is already live is refused, never
+   overwritten.
+4. At `/admin/releases`, download each build, install it, and **make it live**.
+   Only then can customers download it, and only through a signed URL issued
+   after their licence is checked. The in-app updater offers it to existing
+   installs from that moment.
+
+The publish job reads two secrets from the **`release` environment**
+(GitHub ▸ Settings ▸ Environments ▸ release):
+
+| Secret | What it is |
+| --- | --- |
+| `SUPABASE_URL` | `https://kpviyoqhmzignjyvixws.supabase.co` |
+| `SUPABASE_SERVICE_ROLE_KEY` | The service-role key (Supabase ▸ Project settings ▸ API). It writes to the private bucket, so it lives only here. |
 
 The checksum matters beyond bookkeeping: the in-app updater refuses an
-installer that does not match the published one and discards it. A build
-published without a checksum cannot be verified, so the updater will not offer
-it.
+installer that does not match the published one and discards it.
 
 ## What is left before a first release
 
-- [ ] Windows certificate obtained and its secrets set
-- [ ] Apple Developer membership, Developer ID certificate and app-specific
-      password obtained and their secrets set
-- [ ] A tagged build packaged on both platforms
-- [ ] `spctl` and `Get-AuthenticodeSignature` both clean
-- [ ] Installers uploaded, checked and activated at `/admin/releases`
-- [ ] One end-to-end purchase on live Stripe keys, download, install, activate
+- [ ] The six `AZURE_*` secrets set (above), from the Artifact Signing account
+- [x] Apple Developer ID certificate, app-specific password and team ID set:
+      the September build signed with them
+- [ ] `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` on the `release` environment
+- [ ] Supabase ▸ Storage ▸ Settings: the upload size limit above the Mac
+      installer's size (about 250 MB for a universal build)
+- [ ] A tagged build: both signature checks green and both installers recorded
+- [ ] Each installer downloaded, installed and activated at `/admin/releases`
+- [ ] One end-to-end purchase on live Stripe keys: buy, download, install,
+      activate, then *Manage subscription* on the account page

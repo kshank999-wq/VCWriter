@@ -35,10 +35,14 @@ win:
   target:
     - target: nsis
       arch: [x64]
+  # One name per release, so the bucket key, the checksum line and the file a
+  # writer finds in Downloads all say the same thing (addendum 41 §2).
+  artifactName: VC-Writer-${version}-Setup.${ext}
   # Windows Authenticode signing (§3.3). Credentials come from CI environment
-  # variables (CSC_LINK / CSC_KEY_PASSWORD, or an Azure Trusted Signing
-  # configuration) rather than anything committed here.
-  signingHashAlgorithms: [sha256]
+  # variables — Azure Artifact Signing, or CSC_LINK / CSC_KEY_PASSWORD for an
+  # older certificate — rather than anything committed here.
+  signtoolOptions:
+    signingHashAlgorithms: [sha256]
 
 nsis:
   oneClick: false
@@ -49,11 +53,15 @@ nsis:
 mac:
   icon: build/icon-mac.png
   category: public.app-category.productivity
+  # **One universal installer** (addendum 41 §2): the release catalogue keeps
+  # one build per platform, the download route hands out one file, and the
+  # updater opens one .dmg — so a Mac build that came out as two, Apple silicon
+  # and Intel, had nowhere to put the second. A universal binary runs natively
+  # on both and is the one a writer cannot download wrongly.
   target:
     - target: dmg
-      arch: [arm64, x64]
-    - target: zip
-      arch: [arm64, x64]
+      arch: [universal]
+  artifactName: VC-Writer-${version}-mac.${ext}
   # Minimum macOS version stays configurable per §18; 11.0 covers Apple silicon
   # from the first shipping hardware.
   minimumSystemVersion: '11.0'

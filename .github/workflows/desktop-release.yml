@@ -44,6 +44,18 @@ jobs:
       - name: Build shared packages
         run: pnpm --filter @vcwriter/domain build
 
+      # **The tag is the version** (addendum 41 §2). package.json says 0.1.0
+      # and always will; a release tagged v1.2.0 is packaged as 1.2.0, so the
+      # installer's name, the app's About box, the catalogue row and the
+      # updater's comparison all read the one number the operator typed.
+      - name: Take the version from the tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          (cd apps/desktop && npm pkg set version="$version")
+          echo "Packaging version $version"
+
       # Notarization is only requested when the Apple credentials are actually
       # present. Asking for it without them fails the build, and a fork or a
       # dry run should still be able to produce an unsigned installer.
@@ -215,6 +227,49 @@ jobs:
           fi
           pnpm --filter @vcwriter/desktop ${{ matrix.script }} ${{ steps.notarize.outputs.flag }} $windows_flags
 
+      # **Proof, not hope** (addendum 41 §3). A build that says it signed and
+      # did not is the expensive failure: SmartScreen or Gatekeeper finds it on
+      # a customer's machine. So the installer is checked here the way the
+      # customer's computer will check it, and a *tagged* release — the only
+      # kind that publishes — fails outright if it is not signed. A manual run
+      # only warns, so an unsigned build can still be made to test with.
+      - name: Verify the Windows signature
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem apps/desktop/release/*.exe | Select-Object -First 1
+          $signature = Get-AuthenticodeSignature $installer.FullName
+          Write-Host "$($installer.Name): $($signature.Status)"
+          if ($signature.SignerCertificate) { Write-Host "Signed by: $($signature.SignerCertificate.Subject)" }
+          if ($signature.Status -ne 'Valid') {
+            if ($env:GITHUB_REF -like 'refs/tags/v*') {
+              Write-Error "A tagged release must carry a valid Authenticode signature. Check the AZURE_* secrets (docs/code-signing.md)."
+              exit 1
+            }
+            Write-Warning "The installer is not signed. SmartScreen will warn; do not publish it."
+          }
+
+      - name: Verify the macOS signature and notarisation
+        if: matrix.platform == 'macos'
+        shell: bash
+        run: |
+          app="$(find apps/desktop/release -maxdepth 2 -name 'VC Writer.app' -print -quit)"
+          ok=true
+          codesign --verify --deep --strict --verbose=2 "$app" 2>&1 | sed 's/^/  /' || ok=false
+          assessment="$(spctl --assess --type execute --verbose "$app" 2>&1 || true)"
+          echo "$assessment" | sed 's/^/  /'
+          # `accepted` alone is not enough: an un-notarised Developer ID build
+          # is accepted on the machine that built it and refused on a fresh one.
+          echo "$assessment" | grep -q 'source=Notarized Developer ID' || ok=false
+          xcrun stapler validate "$app" 2>&1 | sed 's/^/  /' || ok=false
+          if [ "$ok" != true ]; then
+            if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+              echo "::error::A tagged release must be signed with a Developer ID and notarised. See docs/code-signing.md."
+              exit 1
+            fi
+            echo "::warning::The app is not signed and notarised. Gatekeeper will refuse it; do not publish it."
+          fi
+
       # The admin release form asks for a checksum, and the updater refuses an
       # installer that does not match one. Computing it here is the only place
       # it can be trusted — after this the file is just bytes on a disk.
@@ -223,7 +278,7 @@ jobs:
         run: |
           cd apps/desktop/release
           : > SHA256SUMS.txt
-          for file in *.exe *.dmg *.zip; do
+          for file in *.exe *.dmg; do
             [ -e "$file" ] || continue
             if command -v sha256sum >/dev/null; then
               sha256sum "$file" >> SHA256SUMS.txt
@@ -241,14 +296,21 @@ jobs:
           path: |
             apps/desktop/release/*.exe
             apps/desktop/release/*.dmg
-            apps/desktop/release/*.zip
             apps/desktop/release/SHA256SUMS.txt
           if-no-files-found: error
 
-  # Uploading to the private release bucket and flipping `active` on the
-  # release_builds row is a deliberate, separate step: an artifact exists as
-  # soon as it is packaged, but customers only ever receive a build an operator
-  # has published.
+  # **Publishing, made automatic up to the last step** (addendum 41 §2).
+  #
+  # Each installer goes into the private `releases` bucket and gets an
+  # **inactive** release_builds row with its size and checksum. Nobody can
+  # download it yet: the operator installs it, then switches it on at
+  # /admin/releases. An artifact exists as soon as it is packaged, but
+  # customers only ever receive a build somebody has published (spec §17).
+  #
+  # Windows and macOS are uploaded independently, so republishing one never
+  # touches the other. A version already **active** is refused rather than
+  # overwritten — replacing the bytes under a live row would hand customers a
+  # file whose checksum the updater no longer believes.
   publish:
     name: Publish to the release catalogue
     needs: package
@@ -260,9 +322,59 @@ jobs:
         with:
           path: artifacts
 
-      - name: Upload to the private releases bucket
+      - name: Upload each installer and record it, inactive
+        shell: bash
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
-          echo "Publish step is intentionally manual until signing credentials are in place."
-          echo "It uploads each artifact to the 'releases' bucket and inserts a release_builds"
-          echo "row per platform, then activates it. Downloads are always signed URLs."
-          ls -R artifacts
+          set -euo pipefail
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "::error::SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set on the 'release' environment (docs/code-signing.md)."
+            exit 1
+          fi
+          version="${GITHUB_REF_NAME#v}"
+          # A version with a hyphen — 1.2.0-beta.1 — is a pre-release.
+          case "$version" in *-*) channel=beta ;; *) channel=stable ;; esac
+          auth=(-H "apikey: $SUPABASE_SERVICE_ROLE_KEY" -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY")
+
+          publish() {
+            local platform="$1" file="$2" minimum="$3"
+            local name size sha key existing
+            name="$(basename "$file")"
+            size="$(stat -c %s "$file")"
+            sha="$(sha256sum "$file" | cut -d' ' -f1)"
+            key="$platform/$version/$name"
+
+            existing="$(curl -fsS "${auth[@]}" "$SUPABASE_URL/rest/v1/release_builds?select=active&platform=eq.$platform&channel=eq.$channel&version=eq.$version")"
+            if echo "$existing" | grep -q '"active":true'; then
+              echo "::error::$platform $version ($channel) is already live. Tag a new version instead of replacing a published build."
+              exit 1
+            fi
+
+            echo "Uploading $name ($size bytes) to releases/$key"
+            status="$(curl -sS -o upload.out -w '%{http_code}' "${auth[@]}" \
+              -H 'x-upsert: true' -H 'Content-Type: application/octet-stream' \
+              --data-binary "@$file" "$SUPABASE_URL/storage/v1/object/releases/$key")"
+            if [ "$status" != 200 ]; then
+              cat upload.out
+              if [ "$status" = 413 ]; then
+                echo "::error::Storage refused $name as too large. Raise the upload size limit in Supabase → Storage → Settings."
+              else
+                echo "::error::Upload of $name failed with HTTP $status."
+              fi
+              exit 1
+            fi
+
+            curl -fsS "${auth[@]}" -H 'Content-Type: application/json' \
+              -H 'Prefer: resolution=merge-duplicates,return=minimal' \
+              "$SUPABASE_URL/rest/v1/release_builds?on_conflict=platform,channel,version" \
+              -d "{\"platform\":\"$platform\",\"version\":\"$version\",\"channel\":\"$channel\",\"minimum_os_version\":\"$minimum\",\"artifact_key\":\"$key\",\"artifact_size_bytes\":$size,\"sha256\":\"$sha\",\"active\":false}"
+            echo "Recorded $platform $version on $channel, inactive, sha256 $sha"
+          }
+
+          windows="$(find artifacts/vcwriter-windows -name '*.exe' -print -quit)"
+          mac="$(find artifacts/vcwriter-macos -name '*.dmg' -print -quit)"
+          [ -n "$windows" ] && publish windows "$windows" "10.0.19041" || echo "::warning::No Windows installer to publish."
+          [ -n "$mac" ] && publish macos "$mac" "11.0" || echo "::warning::No macOS installer to publish."
+          echo "Done. Install each one, then switch it on at /admin/releases."

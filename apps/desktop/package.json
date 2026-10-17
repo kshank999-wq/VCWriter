@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "VC Writer desktop application for Windows 10/11 and macOS",
+  "author": "VC Writer",
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
