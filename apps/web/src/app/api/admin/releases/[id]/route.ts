@@ -1,10 +1,44 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdmin } from '@/lib/admin';
+import { env } from '@/lib/env';
 import { adminClient } from '@/lib/supabase';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+/**
+ * Download one build, live or not, so it can be installed before it is
+ * activated (addendum 41 §9). Customers go through /api/downloads, which only
+ * ever serves the active stable build; this route is the admin's way to the
+ * others, and it hands out the same short-lived signed URL.
+ */
+export async function GET(_request: Request, { params }: { params: { id: string } }): Promise<Response> {
+  try {
+    await requireAdmin();
+  } catch {
+    return NextResponse.json({ error: 'This area is for release administrators.' }, { status: 403 });
+  }
+
+  const client = adminClient();
+  const { data: build, error: readError } = await client
+    .from('release_builds')
+    .select('artifact_key')
+    .eq('id', params.id)
+    .maybeSingle();
+  if (readError) return NextResponse.json({ error: 'That build could not be read' }, { status: 500 });
+  if (!build) return NextResponse.json({ error: 'No such build' }, { status: 404 });
+
+  const fileName = build.artifact_key.split('/').pop() ?? 'VC-Writer-installer';
+  const { data: signed, error: signError } = await client.storage
+    .from(env.releaseBucket)
+    .createSignedUrl(build.artifact_key, env.releaseDownloadTtlSeconds, { download: fileName });
+  if (signError || !signed) {
+    return NextResponse.json({ error: 'Could not prepare the download' }, { status: 500 });
+  }
+
+  return NextResponse.redirect(signed.signedUrl, 303);
+}
 
 const patchSchema = z.object({
   active: z.boolean().optional(),

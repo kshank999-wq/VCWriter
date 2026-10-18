@@ -614,6 +614,12 @@ input[type='email'] {
   font-size: 14px;
 }
 
+.build-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .order-list {
   list-style: none;
   margin: 16px 0 0;

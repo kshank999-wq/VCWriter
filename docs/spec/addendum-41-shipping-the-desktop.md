@@ -124,3 +124,19 @@ server directly (`<ref>.storage.supabase.co`) instead of through the gateway.
 It states the size before sending anything. If the upload is refused at that
 point, the project's limit is the cause, and the message says so and names the
 setting.
+
+The project's global limit had been set to 100 MB, which is 100,000,000 bytes.
+The Windows installer is 102,351,328 bytes and the Mac one about 210 MB. At
+1 GB, both 1.0.0 installers uploaded and were recorded inactive.
+
+## 9. Installing a build before it goes live
+
+The admin page showed live builds at the top and every build at the bottom.
+It had no way to fetch a build that was not yet live, so the only way to
+install one was to activate it first. That made activation the test.
+
+Each row under *All builds* now has a **Download** button.
+`GET /api/admin/releases/:id` re-checks that the caller is an admin, then
+redirects to a short-lived signed URL with the installer's own file name. That
+is the same kind of link customers get. Customers' route, `/api/downloads`, is
+unchanged: it still serves only the active stable build.

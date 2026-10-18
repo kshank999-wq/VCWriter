@@ -254,14 +254,19 @@ export function ReleaseManager({ initialBuilds }: { initialBuilds: ReleaseBuildR
                       {formatBytes(build.artifact_size_bytes)}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    className={build.active ? 'button secondary' : 'button'}
-                    disabled={busy !== null}
-                    onClick={() => void setActive(build, !build.active)}
-                  >
-                    {build.active ? 'Retire' : 'Make live'}
-                  </button>
+                  <div className="build-actions">
+                    <a href={`/api/admin/releases/${build.id}`} className="button secondary">
+                      Download
+                    </a>
+                    <button
+                      type="button"
+                      className={build.active ? 'button secondary' : 'button'}
+                      disabled={busy !== null}
+                      onClick={() => void setActive(build, !build.active)}
+                    >
+                      {build.active ? 'Retire' : 'Make live'}
+                    </button>
+                  </div>
                 </div>
               </li>
             ))}
