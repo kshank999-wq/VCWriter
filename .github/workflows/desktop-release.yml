@@ -375,8 +375,10 @@ jobs:
               --data-binary "@$file" "$SUPABASE_URL/storage/v1/object/releases/$key")"
             if [ "$status" != 200 ]; then
               cat upload.out
-              if [ "$status" = 413 ]; then
-                echo "::error::Storage refused $name as too large. Raise the upload size limit in Supabase → Storage → Settings."
+              # Storage answers an oversized file with HTTP 400 and a body that
+              # says 413, so the body is what is read.
+              if [ "$status" = 413 ] || grep -q 'EntityTooLarge' upload.out; then
+                echo "::error::Storage refused $name ($size bytes) as larger than the project's upload limit. Raise 'Global file size limit' in Supabase → the VCWriter project → Storage → Settings."
               else
                 echo "::error::Upload of $name failed with HTTP $status."
               fi
