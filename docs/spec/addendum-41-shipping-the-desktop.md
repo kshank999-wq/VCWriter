@@ -88,3 +88,16 @@ These are listed in `docs/code-signing.md` under *What is left*:
 3. Raise Supabase Storage's upload size limit above the Mac installer's size.
 4. Push a tag, install both builds, and activate them at `/admin/releases`.
 5. Make one live purchase end to end.
+
+## 6. The first signed build, and the space in a file name
+
+With the Azure secrets in place, the first run got past sign-in, which proves
+the secrets and the role assignment are right. It then failed at the
+signature. electron-builder 25.1.8 passes the program's path to the Trusted
+Signing module **unquoted**, so `win-unpacked\VC Writer.exe` arrived as
+`…\VC` and `Writer.exe`, and signtool reported the file missing.
+
+The Windows program file is now `VCWriter.exe` (`win.executableName`). The
+name a writer sees in the Start menu, the taskbar and *Add or remove
+programs* is still `productName`, "VC Writer". Only the file on disk changed,
+and nothing in the code refers to the old file name.

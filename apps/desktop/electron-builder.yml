@@ -38,6 +38,12 @@ win:
   # One name per release, so the bucket key, the checksum line and the file a
   # writer finds in Downloads all say the same thing (addendum 41 §2).
   artifactName: VC-Writer-${version}-Setup.${ext}
+  # **No space in the program's file name** (addendum 41 §6). electron-builder
+  # 25 hands the path to Azure's signing tool unquoted, so `VC Writer.exe`
+  # arrived as `…\VC` and `Writer.exe` and the tool reported the file missing.
+  # The name people see — Start menu, taskbar, Add or remove programs — is
+  # still productName, "VC Writer"; only the file on disk changes.
+  executableName: VCWriter
   # Windows Authenticode signing (§3.3). Credentials come from CI environment
   # variables — Azure Artifact Signing, or CSC_LINK / CSC_KEY_PASSWORD for an
   # older certificate — rather than anything committed here.
