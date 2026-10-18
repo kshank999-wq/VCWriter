@@ -136,6 +136,20 @@ export function ReleaseManager({ initialBuilds }: { initialBuilds: ReleaseBuildR
   const live = (target: Platform) =>
     builds.find((build) => build.platform === target && build.channel === 'stable' && build.active);
 
+  // The newest stable build not yet live: what an operator has come to install
+  // and switch on, so it is shown here rather than only at the foot of the page.
+  const waiting = (target: Platform) => {
+    const current = live(target);
+    return builds.find(
+      (build) =>
+        build.platform === target &&
+        build.channel === 'stable' &&
+        !build.active &&
+        build.id !== current?.id &&
+        (!current || build.created_at > current.created_at),
+    );
+  };
+
   return (
     <>
       <section>
@@ -143,6 +157,7 @@ export function ReleaseManager({ initialBuilds }: { initialBuilds: ReleaseBuildR
         <div className="grid">
           {(['windows', 'macos'] as const).map((target) => {
             const current = live(target);
+            const next = waiting(target);
             return (
               <article key={target} className="card">
                 <h3>{PLATFORM_LABEL[target]}</h3>
@@ -156,6 +171,27 @@ export function ReleaseManager({ initialBuilds }: { initialBuilds: ReleaseBuildR
                     'No stable build published yet.'
                   )}
                 </p>
+                {next ? (
+                  <>
+                    <p>
+                      Version {next.version} is uploaded and waiting · {formatBytes(next.artifact_size_bytes)}.
+                      Install it, then make it live.
+                    </p>
+                    <div className="build-actions">
+                      <a href={`/api/admin/releases/${next.id}`} className="button secondary">
+                        Download
+                      </a>
+                      <button
+                        type="button"
+                        className="button"
+                        disabled={busy !== null}
+                        onClick={() => void setActive(next, true)}
+                      >
+                        Make live
+                      </button>
+                    </div>
+                  </>
+                ) : null}
               </article>
             );
           })}
