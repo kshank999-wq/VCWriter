@@ -354,6 +354,9 @@ jobs:
           # A version with a hyphen — 1.2.0-beta.1 — is a pre-release.
           case "$version" in *-*) channel=beta ;; *) channel=stable ;; esac
           auth=(-H "apikey: $SUPABASE_SERVICE_ROLE_KEY" -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY")
+          # The storage server's own address, https://<ref>.storage.supabase.co,
+          # which Supabase recommends for large files over the API gateway.
+          STORAGE_URL="$(printf '%s' "$SUPABASE_URL" | sed -E 's#^https://([^.]+)\.supabase\.co/?$#https://\1.storage.supabase.co#')"
 
           publish() {
             local platform="$1" file="$2" minimum="$3"
@@ -370,20 +373,44 @@ jobs:
             fi
 
             echo "Uploading $name ($size bytes) to releases/$key"
-            status="$(curl -sS -o upload.out -w '%{http_code}' "${auth[@]}" \
-              -H 'x-upsert: true' -H 'Content-Type: application/octet-stream' \
-              --data-binary "@$file" "$SUPABASE_URL/storage/v1/object/releases/$key")"
-            if [ "$status" != 200 ]; then
-              cat upload.out
-              # Storage answers an oversized file with HTTP 400 and a body that
-              # says 413, so the body is what is read.
-              if [ "$status" = 413 ] || grep -q 'EntityTooLarge' upload.out; then
+            # **Resumable, in 6 MB pieces, to the storage host directly**
+            # (addendum 41 §8) — Supabase's own route for anything large. One
+            # request carrying 100–250 MB was refused however the project limit
+            # was set; this one states the size first, so a refusal here is the
+            # project's limit and nothing else.
+            b64() { printf '%s' "$1" | base64 -w0; }
+            created="$(curl -sS -D headers.out -o create.out -w '%{http_code}' -X POST "${auth[@]}" \
+              -H 'Tus-Resumable: 1.0.0' -H 'x-upsert: true' -H "Upload-Length: $size" \
+              -H "Upload-Metadata: bucketName $(b64 releases),objectName $(b64 "$key"),contentType $(b64 application/octet-stream),cacheControl $(b64 3600)" \
+              "$STORAGE_URL/storage/v1/upload/resumable")"
+            if [ "$created" != 201 ]; then
+              cat create.out; echo
+              if [ "$created" = 413 ] || grep -q 'EntityTooLarge\|exceeded the maximum' create.out; then
                 echo "::error::Storage refused $name ($size bytes) as larger than the project's upload limit. Raise 'Global file size limit' in Supabase → the VCWriter project → Storage → Settings."
               else
-                echo "::error::Upload of $name failed with HTTP $status."
+                echo "::error::Storage would not start the upload of $name (HTTP $created)."
               fi
               exit 1
             fi
+            location="$(grep -i '^location:' headers.out | head -1 | cut -d' ' -f2- | tr -d '\r')"
+            case "$location" in http*) ;; *) location="$STORAGE_URL$location" ;; esac
+            chunk=$((6 * 1024 * 1024))
+            offset=0
+            while [ "$offset" -lt "$size" ]; do
+              length=$(( size - offset < chunk ? size - offset : chunk ))
+              tail -c +$((offset + 1)) "$file" | head -c "$length" > piece.bin
+              sent="$(curl -sS -D piece.headers -o piece.out -w '%{http_code}' -X PATCH "${auth[@]}" \
+                -H 'Tus-Resumable: 1.0.0' -H "Upload-Offset: $offset" \
+                -H 'Content-Type: application/offset+octet-stream' \
+                --data-binary @piece.bin "$location")"
+              if [ "$sent" != 204 ]; then
+                cat piece.out; echo
+                echo "::error::Upload of $name stopped at byte $offset (HTTP $sent)."
+                exit 1
+              fi
+              offset="$(grep -i '^upload-offset:' piece.headers | head -1 | cut -d' ' -f2 | tr -d '\r')"
+            done
+            echo "Uploaded $name."
 
             curl -fsS "${auth[@]}" -H 'Content-Type: application/json' \
               -H 'Prefer: resolution=merge-duplicates,return=minimal' \

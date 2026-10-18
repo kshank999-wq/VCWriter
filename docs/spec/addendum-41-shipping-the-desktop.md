@@ -113,3 +113,14 @@ unsigned build fails, and the publish job uploads both installers inactive.
 Left empty, the run is a test build that publishes nothing. One variable,
 `RELEASE_VERSION`, carries the tag or the typed version, so the two routes
 cannot drift apart. A run from any branch other than `main` never publishes.
+
+## 8. Resumable uploads
+
+The first publish was refused with *EntityTooLarge* three times: a 102 MB
+installer sent as one request to the API gateway, even after the project's
+upload limit was raised. The publish job now uses Supabase's own route for
+large files: a **resumable (TUS) upload** sent in 6 MB pieces to the storage
+server directly (`<ref>.storage.supabase.co`) instead of through the gateway.
+It states the size before sending anything. If the upload is refused at that
+point, the project's limit is the cause, and the message says so and names the
+setting.
