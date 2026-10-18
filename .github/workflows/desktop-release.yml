@@ -13,6 +13,21 @@ on:
         type: choice
         options: [internal, beta, stable]
         default: internal
+      # **A release without a tag** (addendum 41 §7). Typing a version here —
+      # 1.0.0, or 1.1.0-beta.1 — makes this run a release exactly as pushing
+      # the tag v1.0.0 would: the version is stamped in, an unsigned build
+      # fails, and the publish job uploads both installers, inactive. Left
+      # empty, the run is a test build that publishes nothing.
+      version:
+        description: Release version to publish (e.g. 1.0.0). Leave empty for a test build.
+        type: string
+        default: ''
+
+# The version this run releases: the tag's, or the one typed into the run form,
+# or nothing for a test build. Read by every step that behaves differently for
+# a release, so a tag and a typed version cannot drift apart.
+env:
+  RELEASE_VERSION: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || inputs.version }}
 
 jobs:
   package:
@@ -49,10 +64,10 @@ jobs:
       # installer's name, the app's About box, the catalogue row and the
       # updater's comparison all read the one number the operator typed.
       - name: Take the version from the tag
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: env.RELEASE_VERSION != ''
         shell: bash
         run: |
-          version="${GITHUB_REF_NAME#v}"
+          version="${RELEASE_VERSION#v}"
           (cd apps/desktop && npm pkg set version="$version")
           echo "Packaging version $version"
 
@@ -242,7 +257,7 @@ jobs:
           Write-Host "$($installer.Name): $($signature.Status)"
           if ($signature.SignerCertificate) { Write-Host "Signed by: $($signature.SignerCertificate.Subject)" }
           if ($signature.Status -ne 'Valid') {
-            if ($env:GITHUB_REF -like 'refs/tags/v*') {
+            if ($env:RELEASE_VERSION) {
               Write-Error "A tagged release must carry a valid Authenticode signature. Check the AZURE_* secrets (docs/code-signing.md)."
               exit 1
             }
@@ -263,7 +278,7 @@ jobs:
           echo "$assessment" | grep -q 'source=Notarized Developer ID' || ok=false
           xcrun stapler validate "$app" 2>&1 | sed 's/^/  /' || ok=false
           if [ "$ok" != true ]; then
-            if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            if [ -n "$RELEASE_VERSION" ]; then
               echo "::error::A tagged release must be signed with a Developer ID and notarised. See docs/code-signing.md."
               exit 1
             fi
@@ -314,7 +329,9 @@ jobs:
   publish:
     name: Publish to the release catalogue
     needs: package
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    # A tag, or a typed version on a run from main — never a test build, and
+    # never a release from a branch nobody has merged.
+    if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || (github.event_name == 'workflow_dispatch' && inputs.version != '' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     environment: release
     steps:
@@ -333,7 +350,7 @@ jobs:
             echo "::error::SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set on the 'release' environment (docs/code-signing.md)."
             exit 1
           fi
-          version="${GITHUB_REF_NAME#v}"
+          version="${RELEASE_VERSION#v}"
           # A version with a hyphen — 1.2.0-beta.1 — is a pre-release.
           case "$version" in *-*) channel=beta ;; *) channel=stable ;; esac
           auth=(-H "apikey: $SUPABASE_SERVICE_ROLE_KEY" -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY")

@@ -101,3 +101,15 @@ The Windows program file is now `VCWriter.exe` (`win.executableName`). The
 name a writer sees in the Start menu, the taskbar and *Add or remove
 programs* is still `productName`, "VC Writer". Only the file on disk changed,
 and nothing in the code refers to the old file name.
+
+## 7. A release without a tag
+
+Tags could not be pushed from where this was built: the session's git proxy
+accepts branches and drops a tag push. That would also be true of anyone
+releasing from a web editor or a phone. So the workflow's **Run workflow**
+form now takes a version as well. Typing `1.0.0` there, on `main`, makes the
+run a release exactly as pushing `v1.0.0` would: the version is stamped in, an
+unsigned build fails, and the publish job uploads both installers inactive.
+Left empty, the run is a test build that publishes nothing. One variable,
+`RELEASE_VERSION`, carries the tag or the typed version, so the two routes
+cannot drift apart. A run from any branch other than `main` never publishes.

@@ -183,7 +183,9 @@ ticket was never stapled — customers on a fresh machine will be blocked.
 Signing and publishing are separate on purpose (§17), and since addendum 41
 everything up to the last switch is automatic:
 
-1. **Tag the release**: `git tag v1.0.0 && git push origin v1.0.0`. A version
+1. **Start the release**: either push a tag (`git tag v1.0.0 && git push origin
+   v1.0.0`), or open GitHub ▸ Actions ▸ *Desktop release* ▸ **Run workflow**, choose
+   `main`, and type the version (`1.0.0`) into the version box. A version
    with a hyphen (`v1.0.0-beta.1`) goes to the beta channel; anything else goes
    to stable. The tag *is* the version: the installer, the app's About box and
    the catalogue all read it.
