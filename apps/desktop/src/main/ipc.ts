@@ -48,7 +48,7 @@ import {
   type SyncOutcome,
 } from './cloud';
 import { deviceFingerprint, deviceName, devicePlatform } from './device';
-import { licenseStanding } from './license-check';
+import { licenseStanding, noteActivated, thisComputerActivated } from './license-check';
 import { checkForUpdate, downloadUpdate, runInstaller, type DownloadedUpdate, type UpdateStatus } from './updater';
 import { reportError, reportingSettings, setReportingEnabled } from './reporting';
 import { kindlePreviewerStatus, openInKindlePreviewer } from './kindle-previewer';
@@ -799,19 +799,30 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
 
   // --- licensing and updates -----------------------------------------------
 
-  ipcMain.handle('license:activate', async (_event, serial: string): Promise<DesktopApiResult<ActivationResult>> => {
+  ipcMain.handle('license:activate', async (_event, serial?: string): Promise<DesktopApiResult<ActivationResult>> => {
     try {
       const platform = devicePlatform();
       if (!platform) return fail(new Error('VC Writer is licensed for Windows and macOS.'));
-      return ok(
-        await activateLicense({
-          serial,
-          deviceFingerprint: await deviceFingerprint(),
-          deviceName: deviceName(),
-          platform,
-          appVersion: app.getVersion(),
-        }),
-      );
+      const result = await activateLicense({
+        serial: typeof serial === 'string' ? serial : '',
+        deviceFingerprint: await deviceFingerprint(),
+        deviceName: deviceName(),
+        platform,
+        appVersion: app.getVersion(),
+      });
+      // Written down so this computer writes from now on, offline included
+      // (addendum 41 §10).
+      if (result.activated) await noteActivated();
+      return ok(result);
+    } catch (cause) {
+      return fail(cause);
+    }
+  });
+
+  /** Whether this installation has been activated, or null where writing is not licensed (§10). */
+  ipcMain.handle('license:activated', async (): Promise<DesktopApiResult<boolean | null>> => {
+    try {
+      return ok(await thisComputerActivated());
     } catch (cause) {
       return fail(cause);
     }

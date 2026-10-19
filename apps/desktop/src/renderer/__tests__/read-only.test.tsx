@@ -146,7 +146,8 @@ describe('a room on the other monitor', () => {
   });
 });
 
-const access = (over: { writable: boolean; notice: string | null; warning: boolean }) => ({
+const access = (over: { writable: boolean; notice: string | null; warning: boolean; needsActivation?: boolean }) => ({
+  needsActivation: false,
   ...over,
   recheck: () => undefined,
   checking: false,

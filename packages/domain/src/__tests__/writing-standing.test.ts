@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   deskStandingFrom,
+  NOT_ACTIVATED_NOTICE,
   noteStanding,
   STANDING_GOOD_FOR_DAYS,
   WRITING_GRACE_DAYS,
@@ -90,7 +91,7 @@ describe('writing down what the server said', () => {
 
 describe('whether this copy may be written in', () => {
   it('is writable, and says nothing, where nothing has been heard', () => {
-    expect(writingStanding(null, NOW)).toEqual({ writable: true, notice: null, warning: false });
+    expect(writingStanding(null, NOW)).toEqual({ writable: true, notice: null, warning: false, needsActivation: false });
   });
 
   it('is writable, and says nothing, while the subscription is paid', () => {
@@ -101,7 +102,7 @@ describe('whether this copy may be written in', () => {
       expiresAt: '2026-07-01T00:00:00.000Z',
       seenLapsedAt: null,
     });
-    expect(writingStanding(live, NOW)).toEqual({ writable: true, notice: null, warning: false });
+    expect(writingStanding(live, NOW)).toEqual({ writable: true, notice: null, warning: false, needsActivation: false });
   });
 
   it('warns for a week before it bites, and names the day', () => {
@@ -164,6 +165,33 @@ describe('whether this copy may be written in', () => {
       writable: true,
       notice: null,
       warning: false,
+      needsActivation: false,
+    });
+  });
+
+  describe('activation (addendum 41 §10)', () => {
+    it('is read-only on a computer that was never activated, whatever the subscription says', () => {
+      const live = standing({ status: 'active', expiresAt: '2027-01-01T00:00:00.000Z', seenLapsedAt: null });
+      for (const held of [null, live]) {
+        const answer = writingStanding(held, NOW, false);
+        expect(answer.writable).toBe(false);
+        expect(answer.needsActivation).toBe(true);
+        expect(answer.warning).toBe(false);
+        expect(answer.notice).toBe(NOT_ACTIVATED_NOTICE);
+      }
+    });
+
+    it('leaves a host that does not licence writing exactly as it was', () => {
+      // The browser preview, a build without the cloud, a development run.
+      expect(writingStanding(null, NOW, null)).toEqual(writingStanding(null, NOW));
+      expect(writingStanding(null, NOW, null).writable).toBe(true);
+    });
+
+    it('reads an activated computer by its subscription alone', () => {
+      expect(writingStanding(null, NOW, true).writable).toBe(true);
+      const lapsed = writingStanding(standing(), day(WRITING_GRACE_DAYS + 1), true);
+      expect(lapsed.writable).toBe(false);
+      expect(lapsed.needsActivation).toBe(false);
     });
   });
 });

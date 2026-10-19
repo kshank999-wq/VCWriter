@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { UpdateStatus } from '../../preload/index';
+import { ACTIVATED_EVENT } from '../use-writing-access';
 
 /**
  * Licensing this computer, and updating it (spec §3.3).
@@ -60,6 +61,7 @@ export function LicensePanel() {
           : 'This computer is now activated.',
     );
     setSerial('');
+    window.dispatchEvent(new Event(ACTIVATED_EVENT));
   };
 
   const download = async () => {
@@ -94,16 +96,16 @@ export function LicensePanel() {
         <input
           value={serial}
           onChange={(event) => setSerial(event.target.value)}
-          placeholder="VCW-XXXXX-XXXXX-XXXXX-XXXXX"
+          placeholder="Serial (optional)"
           aria-label="License serial"
         />
-        <button type="submit" className="primary" disabled={activating || serial.trim().length === 0}>
+        <button type="submit" className="primary" disabled={activating}>
           {activating ? 'Activating…' : 'Activate'}
         </button>
       </form>
       <p className="muted">
-        Your serial is in your purchase email and on your account page. Freeing a seat from a computer you no
-        longer use is done there too.
+        Without a serial, VC Writer activates on this account’s own licence. Your serial is in your purchase
+        email and on your account page, which is also where you free a seat on a computer you no longer use.
       </p>
       {activation ? <p className="notice">{activation}</p> : null}
 

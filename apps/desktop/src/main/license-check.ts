@@ -3,6 +3,7 @@ import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { licenseStatusSchema, noteStanding, type DeskStanding } from '@vcwriter/domain';
 import { accessToken, isCloudConfigured, SITE_URL } from './cloud';
+import { devicePlatform } from './device';
 
 /**
  * What this machine last heard about its licence (addendum 32 §8).
@@ -117,4 +118,33 @@ export const licenseStanding = async (recheck = false): Promise<DeskStanding | n
   const due = !previous || Date.now() - new Date(previous.checkedAt).getTime() > ASK_EVERY_MS;
   if (due) void ask(previous);
   return previous;
+};
+
+/**
+ * Whether this installation has been activated (addendum 41 §10, from Ken:
+ * *read-only until activated*).
+ *
+ * Written when the server accepts an activation and read on every launch, so
+ * a computer activated once keeps writing offline. Like the standing above it
+ * is a plain file and not a credential, and for the same reason.
+ *
+ * Null where this build does not licence writing at all: no cloud built in,
+ * a platform VC Writer is not sold for, or a development run. The renderer
+ * reads null as writable, so nobody working on VC Writer is locked out of it.
+ */
+const activationPath = () => join(app.getPath('userData'), 'activation.json');
+
+export const thisComputerActivated = async (): Promise<boolean | null> => {
+  if (!app.isPackaged || !isCloudConfigured() || !devicePlatform()) return null;
+  try {
+    const parsed = JSON.parse(await readFile(activationPath(), 'utf8')) as { activatedAt?: unknown };
+    return typeof parsed.activatedAt === 'string';
+  } catch {
+    return false;
+  }
+};
+
+export const noteActivated = async (): Promise<void> => {
+  await mkdir(app.getPath('userData'), { recursive: true });
+  await writeFile(activationPath(), JSON.stringify({ activatedAt: new Date().toISOString() }), 'utf8');
 };

@@ -19,7 +19,7 @@ import type { WritingAccess } from '../use-writing-access';
  * not take a keystroke, which is the one notice they have to be able to find at
  * any moment. Dismissing is about this sitting and is remembered nowhere.
  */
-export function WritingNotice({ access }: { access: WritingAccess }) {
+export function WritingNotice({ access, onActivate }: { access: WritingAccess; onActivate?: () => void }) {
   const [put, setPut] = useState(false);
   if (!access.notice) return null;
   if (access.warning && put) return null;
@@ -35,16 +35,28 @@ export function WritingNotice({ access }: { access: WritingAccess }) {
           opens in their own browser, the host sending every `_blank` to the
           real one (addendum 30 §2a) identically in both builds. */}
       <span className="notice-acts">
-        <button
-          type="button"
-          className="ghost"
-          onClick={() => window.open('https://vc-writer.com/account', '_blank', 'noreferrer')}
-        >
-          Renew
-        </button>
-        <button type="button" className="ghost" disabled={access.checking} onClick={access.recheck}>
-          {access.checking ? 'Checking…' : 'Check again'}
-        </button>
+        {access.needsActivation ? (
+          // Never activated (addendum 41 §10): the way out is activating, not
+          // renewing, and it opens where this window can show it.
+          onActivate ? (
+            <button type="button" className="ghost" onClick={onActivate}>
+              Activate
+            </button>
+          ) : null
+        ) : (
+          <>
+            <button
+              type="button"
+              className="ghost"
+              onClick={() => window.open('https://vc-writer.com/account', '_blank', 'noreferrer')}
+            >
+              Renew
+            </button>
+            <button type="button" className="ghost" disabled={access.checking} onClick={access.recheck}>
+              {access.checking ? 'Checking…' : 'Check again'}
+            </button>
+          </>
+        )}
         {access.warning ? (
           <button type="button" className="ghost" onClick={() => setPut(true)}>
             Dismiss

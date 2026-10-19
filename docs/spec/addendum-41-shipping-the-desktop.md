@@ -140,3 +140,39 @@ Each row under *All builds* now has a **Download** button.
 redirects to a short-lived signed URL with the installer's own file name. That
 is the same kind of link customers get. Customers' route, `/api/downloads`, is
 unchanged: it still serves only the active stable build.
+
+## 10. Read-only until activated
+
+Ken installed 1.0.0 and it never asked about a licence. That was the design
+at the time (addendum 32 §8.3): only a lapse made a copy read-only, a copy
+that was never activated wrote freely, and the licence check sat on the
+download. An installer passed on by hand was therefore a free copy. Ken chose
+**read-only until activated**.
+
+- **The rule** is the domain's: `writingStanding(standing, now, activated)`.
+  An explicit `activated === false` comes before everything else and answers
+  read-only with `NOT_ACTIVATED_NOTICE` and `needsActivation: true`. Null
+  means a host that does not licence writing (the browser preview, a build
+  without the cloud, an unpackaged development run), and it reads exactly as
+  before. So the preview and anyone working on VC Writer stay writable.
+- **The record** is `activation.json` in the app's data folder, written by
+  the host when the server accepts an activation. It is read through the new
+  `license:activated` channel. Like the standing, it is a plain file and not
+  a credential. A computer activated once keeps writing offline, and the
+  subscription's own lapse rules apply on top.
+- **Activating needs no serial.** `POST /api/licenses/activate` takes the
+  serial as optional. Without one it tries the signed-in account's own
+  licences, live ones first, and uses the first that has a seat for this
+  platform. A serial can still be typed for an account with several.
+- **What the writer sees.** On first launch, *Activate VC Writer* opens by
+  itself: sign in with the six-digit code (the form is now `SignInForm`,
+  shared with the account page), then one button, *Activate this computer*.
+  Closing it leaves the read-only notice at the top, with **Activate** in
+  place of *Renew* and *Check again*. Activating tells every hook in the
+  window at once (`ACTIVATED_EVENT`), so the page becomes writable without a
+  restart.
+
+Not covered yet: freeing a seat on the account page does not reach the
+computer that held it. That computer keeps its `activation.json` and stays
+writable until it is reinstalled. Closing that gap means the standing check
+reporting whether this device's activation is still open.

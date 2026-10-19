@@ -375,7 +375,10 @@ export interface VcWriterApi {
   }): Promise<DesktopApiResult<true>>;
 
   // Licensing and updates (§3.3).
-  activateLicense(serial: string): Promise<DesktopApiResult<ActivationResult>>;
+  /** An empty or absent serial activates on the signed-in account's own licence. */
+  activateLicense(serial?: string): Promise<DesktopApiResult<ActivationResult>>;
+  /** Whether this installation is activated; null where writing is not licensed (addendum 41 §10). */
+  licenseActivated?(): Promise<DesktopApiResult<boolean | null>>;
   /**
    * What this machine last heard about its licence (addendum 32 §8).
    *
@@ -506,6 +509,7 @@ const api: VcWriterApi = {
   noteCategoriesStatus: () => ipcRenderer.invoke('cloud:noteCategoriesStatus'),
   sendOneSheet: (input) => ipcRenderer.invoke('cloud:sendOneSheet', input),
   activateLicense: (serial) => ipcRenderer.invoke('license:activate', serial),
+  licenseActivated: () => ipcRenderer.invoke('license:activated'),
   licenseStanding: (recheck) => ipcRenderer.invoke('license:standing', recheck === true),
   checkForUpdate: () => ipcRenderer.invoke('update:check'),
   downloadUpdate: (input) => ipcRenderer.invoke('update:download', input),

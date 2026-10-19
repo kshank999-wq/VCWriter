@@ -166,9 +166,9 @@ const endsAt = (license: Pick<License, 'expiresAt'>): number =>
  * Where none is live, the one that ended last is the one to answer with, its
  * date being what the writer is owed an explanation about.
  *
- * Null for an account with no licence at all, which is **not** a lapse: a copy
- * that was never activated has always been able to write, and turning those
- * read-only would be a far bigger change than the one asked for.
+ * Null for an account with no licence at all, which is **not** a lapse. Whether
+ * this computer was ever activated is a separate question, answered by the host
+ * and read by `writingStanding` (addendum 41 §10).
  */
 export const deskStandingFrom = (
   licenses: readonly Pick<License, 'status' | 'expiresAt'>[],
@@ -241,7 +241,20 @@ export interface WritingStanding {
    * one notice a writer must be able to find at any moment.
    */
   warning: boolean;
+  /**
+   * Whether what stands between the writer and the page is activating this
+   * computer rather than paying (addendum 41 §10), so the notice offers
+   * *Activate* and not *Renew*.
+   */
+  needsActivation: boolean;
 }
+
+/**
+ * What an installation that has never been activated says (addendum 41 §10,
+ * from Ken: *read-only until activated*).
+ */
+export const NOT_ACTIVATED_NOTICE =
+  'This computer is not activated yet. Sign in and activate VC Writer to write. Until then your work opens, prints and exports, but cannot be changed.';
 
 /**
  * Why it ended, in the writer's terms.
@@ -270,16 +283,28 @@ const lapseWords = (standing: DeskStanding): string => {
  * It is generous wherever it is uncertain, in both directions, and the order of
  * the clauses *is* the design.
  */
-export const writingStanding = (standing: DeskStanding | null, now: Date): WritingStanding => {
-  // Nothing has ever been heard: a fresh install, a copy that has not signed
-  // in, an account with no licence, or a host that does not licence writing at
-  // all. Every one of those has always been writable and still is.
-  if (!standing) return { writable: true, notice: null, warning: false };
+export const writingStanding = (
+  standing: DeskStanding | null,
+  now: Date,
+  activated: boolean | null = null,
+): WritingStanding => {
+  // Never activated (addendum 41 §10). It comes first because nothing else is
+  // worth saying until it is done. Only an explicit `false` counts: null is a
+  // host that does not licence writing at all (the browser preview, a build
+  // without the cloud, a development run), and those stay writable.
+  if (activated === false) {
+    return { writable: false, notice: NOT_ACTIVATED_NOTICE, warning: false, needsActivation: true };
+  }
+
+  // Activated, but nothing heard about the subscription yet: offline since
+  // activating, or a host that does not licence writing at all. Being unable
+  // to ask is never a lapse.
+  if (!standing) return { writable: true, notice: null, warning: false, needsActivation: false };
 
   // Paid up. Nothing is said, deliberately: a renewal reminder is the shop's to
   // send, and a banner counting down a subscription nobody has cancelled is the
   // program nagging about its own bill while somebody is working.
-  if (licenseLive(standing, now)) return { writable: true, notice: null, warning: false };
+  if (licenseLive(standing, now)) return { writable: true, notice: null, warning: false, needsActivation: false };
 
   const ended = lapseWords(standing);
 
@@ -291,6 +316,7 @@ export const writingStanding = (standing: DeskStanding | null, now: Date): Writi
       writable: true,
       notice: `${ended} Renew it to sync your work and to install on another computer.`,
       warning: true,
+      needsActivation: false,
     };
   }
 
@@ -300,6 +326,7 @@ export const writingStanding = (standing: DeskStanding | null, now: Date): Writi
       writable: true,
       notice: `${ended} This copy stays writable until ${sayDay(bitesAt)}. After that your work still opens, prints and exports, but cannot be changed.`,
       warning: true,
+      needsActivation: false,
     };
   }
 
@@ -307,6 +334,7 @@ export const writingStanding = (standing: DeskStanding | null, now: Date): Writi
     writable: false,
     notice: `${ended} This copy is read-only. ${DESKTOP_LAPSE_PROMISE}`,
     warning: false,
+    needsActivation: false,
   };
 };
 

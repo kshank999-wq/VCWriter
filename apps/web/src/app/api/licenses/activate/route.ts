@@ -9,7 +9,10 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const bodySchema = z.object({
-  serial: z.string().min(1).max(60),
+  // Optional (addendum 41 §10): a signed-in writer with one licence should not
+  // have to find a serial to start writing, so without one the account's own
+  // licences are tried.
+  serial: z.string().max(60).optional(),
   deviceFingerprint: z.string().min(8).max(200),
   deviceName: z.string().max(120).default(''),
   platform: platformSchema,
@@ -30,7 +33,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
-    return NextResponse.json({ error: 'A serial and device are required' }, { status: 400 });
+    return NextResponse.json({ error: 'A device is required' }, { status: 400 });
   }
 
   const userId = await resolveUserId(request);

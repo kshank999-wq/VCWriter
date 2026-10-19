@@ -1030,6 +1030,8 @@ export const createBrowserBridge = (): BrowserBridge => {
      * must never do is make the browser preview read-only.
      */
     licenseStanding: async () => ok(null),
+    // The preview is not an installation, so there is nothing to activate (addendum 41 §10).
+    licenseActivated: async () => ok(null),
     checkForUpdate: async () => fail(NOT_HERE),
     downloadUpdate: async () => fail(NOT_HERE),
     installUpdate: async () => fail(NOT_HERE),

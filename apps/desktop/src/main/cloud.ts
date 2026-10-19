@@ -590,7 +590,9 @@ export const activateLicense = async (input: {
   const response = await fetch(`${SITE_URL}/api/licenses/activate`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
-    body: JSON.stringify(input),
+    // An empty serial is left out, and the server tries the account's own
+    // licences (addendum 41 §10).
+    body: JSON.stringify(input.serial.trim() ? input : { ...input, serial: undefined }),
   });
 
   const payload = (await response.json().catch(() => null)) as

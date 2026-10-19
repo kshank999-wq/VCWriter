@@ -3,6 +3,7 @@ import {
   decideActivation,
   deviceActivationSchema,
   explainRefusal,
+  licenseLive,
   licenseSchema,
   type ActivationOutcome,
   type DeviceActivation,
@@ -23,7 +24,8 @@ import { adminClient } from './supabase';
 
 export interface ActivateInput {
   userId: string;
-  serial: string;
+  /** Absent: try the account's own licences, liveliest first (addendum 41 §10). */
+  serial?: string | undefined;
   deviceFingerprint: string;
   deviceName: string;
   platform: Platform;
@@ -67,41 +69,57 @@ export const activateDevice = async (
   input: ActivateInput,
   client: SupabaseClient = adminClient(),
 ): Promise<ActivateResult> => {
+  const serial = input.serial?.trim().toUpperCase() ?? '';
+
   // Scoped to the caller's own licenses: a serial is not a bearer token, so
   // knowing one is not enough to activate against someone else's account.
-  const { data: licenseRow } = await client
-    .from('licenses')
-    .select('*')
-    .eq('user_id', input.userId)
-    .eq('serial', input.serial.trim().toUpperCase())
-    .maybeSingle();
+  let query = client.from('licenses').select('*').eq('user_id', input.userId);
+  if (serial) query = query.eq('serial', serial);
+  const { data: licenseRows } = await query;
+  const now = new Date();
+  // Without a serial, every licence on the account is a candidate, live ones
+  // first, so a writer who bought once and later subscribed activates on the
+  // one that is paid for.
+  const candidates = ((licenseRows ?? []) as Record<string, unknown>[])
+    .map(licenseRowToDomain)
+    .sort((a, b) => Number(licenseLive(b, now)) - Number(licenseLive(a, now)));
 
-  if (!licenseRow) {
+  if (candidates.length === 0) {
     return {
       outcome: { result: 'refused', reason: 'license_inactive' },
-      message: 'That license is not on this account.',
+      message: serial
+        ? 'That license is not on this account.'
+        : 'There is no VC Writer licence on this account. Buy one at vc-writer.com, then activate.',
       license: null,
     };
   }
 
-  const license = licenseRowToDomain(licenseRow as Record<string, unknown>);
+  let chosen: { license: License; outcome: ActivationOutcome } | null = null;
+  let firstRefusal: ActivationOutcome | null = null;
+  for (const license of candidates) {
+    const { data: activationRows } = await client
+      .from('device_activations')
+      .select('*')
+      .eq('license_id', license.id);
+    const activations = ((activationRows ?? []) as Record<string, unknown>[]).map(activationRowToDomain);
+    const decided = decideActivation({
+      license,
+      activations,
+      deviceFingerprint: input.deviceFingerprint,
+      platform: input.platform,
+    });
+    if (decided.result !== 'refused') {
+      chosen = { license, outcome: decided };
+      break;
+    }
+    firstRefusal ??= decided;
+  }
 
-  const { data: activationRows } = await client
-    .from('device_activations')
-    .select('*')
-    .eq('license_id', license.id);
-
-  const activations = ((activationRows ?? []) as Record<string, unknown>[]).map(activationRowToDomain);
-  const outcome = decideActivation({
-    license,
-    activations,
-    deviceFingerprint: input.deviceFingerprint,
-    platform: input.platform,
-  });
-
-  if (outcome.result === 'refused') {
+  if (!chosen) {
+    const outcome = firstRefusal!;
     return { outcome, message: explainRefusal(outcome), license: null };
   }
+  const { license, outcome } = chosen;
 
   const nowIso = new Date().toISOString();
   // Unique on (license_id, device_fingerprint), so a device that already has a

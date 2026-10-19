@@ -97,6 +97,7 @@ import { BeatPeekLayer } from './components/BeatPeekLayer';
 import { RoomBar } from './components/RoomBar';
 import { menusFor, type CommandId } from './menus';
 import { AccountPanel } from './components/AccountPanel';
+import { ActivationDialog } from './components/ActivationDialog';
 import { EditorPanel } from './components/EditorPanel';
 import { ReadBackPanel } from './components/ReadBackPanel';
 import { RecoveryPanel } from './components/RecoveryPanel';
@@ -160,6 +161,17 @@ export default function App() {
   const [imported, setImported] = useState<{ file: ProjectFile; names: string[] } | null>(null);
   const [editorTab, setEditorTab] = useState<'daily' | 'final' | 'grid' | 'index' | 'polarity'>('daily');
   const [account, setAccount] = useState<AccountStatus>({ configured: false, signedIn: false, email: null });
+  /**
+   * Activating this computer (addendum 41 §10). It opens by itself once, the
+   * first time this copy is found unactivated, and again from the notice.
+   */
+  const [activationOpen, setActivationOpen] = useState(false);
+  const offeredActivation = useRef(false);
+  useEffect(() => {
+    if (!access.needsActivation || offeredActivation.current) return;
+    offeredActivation.current = true;
+    setActivationOpen(true);
+  }, [access.needsActivation]);
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   /**
@@ -972,13 +984,23 @@ export default function App() {
     if (openedId) setView('write');
   }, [openedId]);
 
+  const activation = (
+    <ActivationDialog
+      open={activationOpen}
+      account={account}
+      onSignedIn={setAccount}
+      onClose={() => setActivationOpen(false)}
+    />
+  );
+
   if (!file || startingNew) {
     return (
       <>
+        {activation}
         {/* Said here too (addendum 32 §8). Somebody who starts a project on a
             read-only copy and finds they cannot type a word has been trapped
             by a screen that knew and did not say. */}
-        <WritingNotice access={access} />
+        <WritingNotice access={access} onActivate={() => setActivationOpen(true)} />
         <StaleBuildNotice movedOn={buildMovedOn} />
         <Welcome
           onCreate={(input) => {
@@ -1279,7 +1301,8 @@ export default function App() {
 
       {/* A lapsed subscription (addendum 32 §8). Above the project's own
           errors, because it explains every one of them that follows. */}
-      <WritingNotice access={access} />
+      {activation}
+      <WritingNotice access={access} onActivate={() => setActivationOpen(true)} />
       {/* And a page older than the deployment it is talking to (§9a). */}
       <StaleBuildNotice movedOn={buildMovedOn} />
 
