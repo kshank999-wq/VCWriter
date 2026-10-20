@@ -1,0 +1,120 @@
+name: Notes iOS release
+
+# VC Writer Notes to App Store Connect (addendum 27 §9, docs/store-setup.md).
+#
+# EAS builds the app on Apple hardware in the cloud, so this runs on Linux and
+# needs no Mac. It signs with an Apple *Distribution* certificate, which EAS
+# creates and keeps the first time through the App Store Connect API key below.
+# That certificate is not the Mac download's Developer ID certificate, and the
+# Azure signing has no part in it.
+#
+# A finished run leaves the build in App Store Connect → TestFlight. Sending it
+# for review stays a human act in App Store Connect, as activating a desktop
+# build does at /admin/releases.
+on:
+  workflow_dispatch:
+    inputs:
+      submit:
+        description: Upload the finished build to App Store Connect (TestFlight)
+        type: boolean
+        default: true
+
+jobs:
+  ios:
+    name: Build and upload
+    runs-on: ubuntu-latest
+    environment: release
+    defaults:
+      run:
+        working-directory: apps/mobile
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EXPO_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      EXPO_ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      EXPO_ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+      ASC_APP_ID: ${{ secrets.ASC_APP_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the secrets are set
+        run: |
+          missing=""
+          for name in EXPO_TOKEN EXPO_APPLE_TEAM_ID EXPO_ASC_KEY_ID EXPO_ASC_ISSUER_ID ASC_API_KEY_P8; do
+            [ -n "${!name}" ] || missing="$missing $name"
+          done
+          if [ "${{ inputs.submit }}" = "true" ] && [ -z "$ASC_APP_ID" ]; then missing="$missing ASC_APP_ID"; fi
+          if [ -n "$missing" ]; then
+            echo "::error::Missing from the release environment:$missing. docs/store-setup.md §1.8 says where each comes from."
+            exit 1
+          fi
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # The app config names plugins, and reading it means resolving them.
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Install EAS CLI
+        run: npm install --global eas-cli@25.2.0
+
+      - name: Write the App Store Connect key
+        run: |
+          key="$RUNNER_TEMP/asc-api-key.p8"
+          printf '%s\n' "$ASC_API_KEY_P8" > "$key"
+          echo "EXPO_ASC_API_KEY_PATH=$key" >> "$GITHUB_ENV"
+
+      # Creates the EAS project on the token's account the first time, links it
+      # every time after. The id it writes into app.json travels with this
+      # run's upload (EAS sends the working tree, uncommitted changes included).
+      - name: Link the EAS project
+        run: |
+          eas init --non-interactive --force
+          echo "EAS project: $(jq -r '.expo.extra.eas.projectId' app.json)"
+
+      # Distribution certificate and provisioning profile. EAS will not create
+      # either in non-interactive mode, so this runs in a terminal it believes
+      # is real and takes every default. With the API key it signs in by itself
+      # and asks nothing else on a team that has no certificate yet. Once they
+      # exist it only checks them.
+      - name: Set up signing
+        run: |
+          yes '' | script -qec "eas credentials:configure-build --platform ios --profile production" /dev/null
+
+      - name: Build
+        id: build
+        run: |
+          set +e
+          eas build --platform ios --profile production --non-interactive --json > build.json
+          status=$?
+          set -e
+          cat build.json
+          id="$(jq -r '.[0].id // empty' build.json)"
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+          if [ "$status" != 0 ] || [ "$(jq -r '.[0].status' build.json)" != FINISHED ]; then
+            echo "::error::The iOS build did not finish. Its logs follow."
+            if [ -n "$id" ]; then
+              eas build:view "$id" --json > view.json || true
+              jq -r '.error.message // empty' view.json || true
+              for url in $(jq -r '.logFiles[]? // empty' view.json); do
+                curl -fsSL "$url" | tail -n 200 || true
+              done
+            fi
+            exit 1
+          fi
+
+      # The submit profile is completed here rather than in eas.json: the key's
+      # path is this runner's, and nothing about the key belongs in the repository.
+      - name: Upload to App Store Connect
+        if: inputs.submit
+        run: |
+          jq --arg path "$EXPO_ASC_API_KEY_PATH" --arg id "$EXPO_ASC_KEY_ID" --arg issuer "$EXPO_ASC_ISSUER_ID" --arg app "$ASC_APP_ID" \
+            '.submit.production.ios += {ascApiKeyPath: $path, ascApiKeyId: $id, ascApiKeyIssuerId: $issuer, ascAppId: $app}' \
+            eas.json > eas.submit.json && mv eas.submit.json eas.json
+          eas submit --platform ios --profile production --id "${{ steps.build.outputs.id }}" --non-interactive --wait
+          echo "Uploaded. It appears in App Store Connect → TestFlight once Apple has processed it, usually 10–30 minutes."

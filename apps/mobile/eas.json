@@ -7,7 +7,9 @@
     "base": {
       "node": "22.22.2",
       "env": {
-        "EXPO_PUBLIC_SITE": "https://vc-writer.com"
+        "EXPO_PUBLIC_SITE": "https://vc-writer.com",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://kpviyoqhmzignjyvixws.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtwdml5b3FobXppZ25qeXZpeHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg1NjgzODIsImV4cCI6MjEwNDE0NDM4Mn0.vkpTQu0GuLxqyfsOa1SnprE6vOqWnvb5svrtfnk-KmQ"
       }
     },
     "development": {

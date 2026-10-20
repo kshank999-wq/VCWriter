@@ -213,6 +213,32 @@ The `.p8` is several lines. Vercel's box takes a multi-line paste; if whatever
 you paste from flattens it into one line with `\n` in it, that works too — the
 server accepts both spellings.
 
+### 1.8 Building and uploading from GitHub
+
+GitHub → Actions → **Notes iOS release** → Run workflow builds the app with
+EAS and uploads it to App Store Connect → TestFlight. No Mac and no terminal
+are needed. It reads these from the **release** environment (Settings →
+Environments → release), next to the desktop's secrets:
+
+| Secret | What to paste | Where it comes from |
+| --- | --- | --- |
+| `EXPO_TOKEN` | an Expo access token | expo.dev → sign up (free) → Account settings → **Access tokens** → Create |
+| `ASC_API_KEY_P8` | the **entire contents** of the `.p8` file | App Store Connect → Users and Access → Integrations → **App Store Connect API** → Team Keys → **+**, access **Admin**. Downloadable once. |
+| `ASC_KEY_ID` | that key's Key ID | the same row |
+| `ASC_ISSUER_ID` | the Issuer ID | above the list of keys |
+| `ASC_APP_ID` | the app's **Apple ID**, a number like `6740000000` | App Store Connect → the app (§1.4) → App Information → General |
+
+`APPLE_TEAM_ID` is already there for the Mac build. It is the same team.
+
+This API key is **not** the In-App Purchase key of §1.6. That one lets the
+website check receipts. This one lets EAS create the Apple Distribution
+certificate and provisioning profile, and upload builds. Both kinds sit under
+*Integrations*, on neighbouring tabs, and share the Issuer ID.
+
+The first run registers nothing by itself in App Store Connect: the bundle id
+(§1.3) and the app record (§1.4) must exist first, because `ASC_APP_ID` comes
+from the app record.
+
 ---
 
 ## 2. Google Play — starting from nothing

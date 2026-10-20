@@ -20,23 +20,14 @@ development build (`eas build --profile development`) or a local
 
 ## Configuration
 
-Three values, all of them public by design and none of them in this
-repository. Locally they go in `apps/mobile/.env` (git-ignored; copy
-`.env.example`). For builds they are **EAS environment variables**, set once
-against the project:
+Three values, all of them public by design: `EXPO_PUBLIC_SITE`,
+`EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY`. For builds
+they are in `eas.json`, so every EAS build has them with nothing to set up.
+Locally they go in `apps/mobile/.env` (git-ignored; copy `.env.example`).
 
-```sh
-eas env:create --name EXPO_PUBLIC_SUPABASE_URL      --value https://<project>.supabase.co --visibility plaintext
-eas env:create --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value <the anon key>               --visibility plaintext
-```
-
-`EXPO_PUBLIC_SITE` is already in `eas.json` because it is not a secret and not
-a value anybody should have to remember.
-
-The Supabase **anon key** is publishable — it is in every web page this project
-serves, and row level security is what protects the data, not the key. It is
-still read from the environment rather than committed, so that rotating it is a
-dashboard change rather than a release.
+The Supabase **anon key** is publishable. It is in every web page this
+project serves, and row level security is what protects the data, not the
+key. Rotating it means changing `eas.json` and making a new build.
 
 **Nothing else belongs here.** The service role key, the Stripe keys, the
 Anthropic key and the Resend key are the website's and never travel to a phone:
@@ -79,6 +70,11 @@ npx eas build --profile development --platform ios
 npx eas build --profile production  --platform all
 npx eas submit  --profile production --platform ios
 ```
+
+**For the App Store, use GitHub instead:** Actions → **Notes iOS release** →
+Run workflow. It builds with EAS, sets up signing the first time, and uploads
+the build to App Store Connect, where it appears under TestFlight. The secrets
+it needs are listed in `docs/store-setup.md` §1.8.
 
 `eas submit` asks for what it needs at the prompt and stores nothing here. The
 `submit` block in `eas.json` is deliberately empty for that reason.
