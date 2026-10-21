@@ -30,6 +30,11 @@ jobs:
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       EXPO_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      # Ken's membership is an individual one. Left unset, the credentials step
+      # is asked and its default is Enterprise, which makes it request an
+      # in-house provisioning profile and Apple refuses it with a 403. Change
+      # this to COMPANY_OR_ORGANIZATION if the membership moves to the company.
+      EXPO_APPLE_TEAM_TYPE: INDIVIDUAL
       EXPO_ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
       EXPO_ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
       ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
