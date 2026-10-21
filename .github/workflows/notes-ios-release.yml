@@ -18,6 +18,10 @@ on:
         description: Upload the finished build to App Store Connect (TestFlight)
         type: boolean
         default: true
+      build_id:
+        description: Send this existing EAS build instead of making a new one (its id, from expo.dev or a previous run)
+        type: string
+        default: ''
 
 jobs:
   ios:
@@ -94,6 +98,7 @@ jobs:
       # of answers is far more than the half-minute this takes, and the
       # feeder stops at the first Return after the command has finished.
       - name: Set up signing
+        if: inputs.build_id == ''
         run: |
           set -o pipefail
           (for _ in $(seq 120); do sleep 1; echo 2>/dev/null || break; done) \
@@ -102,6 +107,7 @@ jobs:
 
       - name: Build
         id: build
+        if: inputs.build_id == ''
         run: |
           set +e
           eas build --platform ios --profile production --non-interactive --json > build.json
@@ -139,5 +145,7 @@ jobs:
           jq --arg path "$EXPO_ASC_API_KEY_PATH" --arg id "$EXPO_ASC_KEY_ID" --arg issuer "$EXPO_ASC_ISSUER_ID" --arg app "$ASC_APP_ID" \
             '.submit.production.ios += {ascApiKeyPath: $path, ascApiKeyId: $id, ascApiKeyIssuerId: $issuer, ascAppId: $app}' \
             eas.json > eas.submit.json && mv eas.submit.json eas.json
-          eas submit --platform ios --profile production --id "${{ steps.build.outputs.id }}" --non-interactive --wait
+          # Verbose, so a refusal prints Apple's own words rather than
+          # "Unknown error. See logs" with the logs left on expo.dev.
+          eas submit --platform ios --profile production --id "${{ inputs.build_id || steps.build.outputs.id }}" --non-interactive --wait --verbose
           echo "Uploaded. It appears in App Store Connect → TestFlight once Apple has processed it, usually 10–30 minutes."
