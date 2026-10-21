@@ -25,6 +25,8 @@ export * from './entities/narrative.js';
 export * from './entities/revision.js';
 export * from './entities/commerce.js';
 export * from './entities/document.js';
+export * from './entities/extract.js';
+export * from './extracts.js';
 export * from './document.js';
 export * from './document-docx.js';
 export * from './document-import.js';

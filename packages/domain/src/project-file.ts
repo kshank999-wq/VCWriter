@@ -41,6 +41,7 @@ import { assetSchema } from './entities/asset.js';
 import { boardSchema } from './entities/sculptor.js';
 import { outlineSchema } from './entities/outline.js';
 import { emptyDocContent, wpDocumentSchema } from './entities/document.js';
+import { extractCategorySchema, extractPaletteSchema, extractSchema } from './entities/extract.js';
 import { setupPayoffSchema } from './entities/setups.js';
 import { indexMarkSchema, indexRefSchema } from './entities/book-index.js';
 import { snapshotSchema } from './entities/revision.js';
@@ -105,6 +106,13 @@ export const projectFileSchema = z.object({
    * every other format holds none.
    */
   documents: z.array(wpDocumentSchema).default([]),
+  /**
+   * Extract & Organize (addendum 42 §8): the palettes of category buttons,
+   * their categories, and the extracts captured into each category's bin.
+   */
+  extractPalettes: z.array(extractPaletteSchema).default([]),
+  extractCategories: z.array(extractCategorySchema).default([]),
+  extracts: z.array(extractSchema).default([]),
   /** The Outliner's trees (addendum 06). Empty until one is made. */
   outlines: z.array(outlineSchema).default([]),
   researchCategories: z.array(researchCategorySchema).default([]),

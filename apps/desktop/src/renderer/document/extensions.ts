@@ -1,4 +1,4 @@
-import { Extension, Node } from '@tiptap/core';
+import { Extension, Mark, Node, mergeAttributes } from '@tiptap/core';
 import type { Node as PmNode } from '@tiptap/pm/model';
 import { Plugin, PluginKey, type EditorState } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
@@ -275,6 +275,84 @@ export const Search = Extension.create({
   },
 });
 
+// ---------------------------------------------------------------- extracts
+
+/**
+ * **A passage captured into a bin** (addendum 42 §8).
+ *
+ * A mark rather than a stored position, so it travels with the words however
+ * the text around it is edited. It never changes a character: removing it
+ * leaves the passage as it was. `excludes: ''` lets marks of this type
+ * overlap, so one sentence can sit in Character and Description at once
+ * (WP spec §5.2). `inclusive: false` means typing at its edge does not grow
+ * the extract.
+ */
+export const ExtractMark = Mark.create({
+  name: 'extract',
+  inclusive: false,
+  excludes: '',
+  addAttributes() {
+    return {
+      id: {
+        default: null,
+        parseHTML: (element: HTMLElement) => element.getAttribute('data-extract'),
+        renderHTML: (attributes: Record<string, unknown>) => ({ 'data-extract': attributes['id'] }),
+      },
+      color: {
+        default: null,
+        parseHTML: (element: HTMLElement) => element.getAttribute('data-extract-color'),
+        renderHTML: (attributes: Record<string, unknown>) =>
+          attributes['color'] ? { 'data-extract-color': attributes['color'], style: `--extract-color: ${String(attributes['color'])}` } : {},
+      },
+      label: {
+        default: null,
+        parseHTML: (element: HTMLElement) => element.getAttribute('data-extract-label'),
+        renderHTML: (attributes: Record<string, unknown>) =>
+          attributes['label'] ? { 'data-extract-label': attributes['label'], title: `Extracted: ${String(attributes['label'])}` } : {},
+      },
+    };
+  },
+  parseHTML() {
+    return [{ tag: 'span[data-extract]' }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ['span', mergeAttributes({ class: 'wp-extract' }, HTMLAttributes), 0];
+  },
+});
+
+/** Where an extract's mark is in the document: from its first character to its last. */
+export const extractRange = (doc: PmNode, id: string): Match | null => {
+  let from = -1;
+  let to = -1;
+  doc.descendants((node, pos) => {
+    if (!node.isText) return true;
+    if (node.marks.some((mark) => mark.type.name === 'extract' && mark.attrs['id'] === id)) {
+      if (from < 0) from = pos;
+      to = pos + node.nodeSize;
+    }
+    return false;
+  });
+  return from < 0 ? null : { from, to };
+};
+
+/** The words an extract's mark covers now, to compare with what was saved. */
+export const extractTextNow = (doc: PmNode, id: string): string | null => {
+  const range = extractRange(doc, id);
+  return range ? doc.textBetween(range.from, range.to, '\n', '\uFFFC') : null;
+};
+
+/** Every extract id with a mark in the document. */
+export const extractIdsIn = (doc: PmNode): Set<string> => {
+  const ids = new Set<string>();
+  doc.descendants((node) => {
+    node.marks.forEach((mark) => {
+      if (mark.type.name === 'extract' && mark.attrs['id']) ids.add(String(mark.attrs['id']));
+    });
+    return true;
+  });
+  return ids;
+};
+
 /** Everything the document editor is built from. */
 export const documentExtensions = () => [
   StarterKit.configure({
@@ -292,4 +370,5 @@ export const documentExtensions = () => [
   BlockFormat,
   PageBreak,
   Search,
+  ExtractMark,
 ];

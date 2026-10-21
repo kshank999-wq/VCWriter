@@ -90,6 +90,10 @@ export type DeviceActivationId = Id<'DeviceActivation'>;
 /** Any branded id, when a helper genuinely does not care which kind it holds. */
 /** A word-processor document (addendum 42). */
 export type WpDocumentId = Id<'WpDocument'>;
+/** The Extract & Organize sidebar (addendum 42 §8). */
+export type ExtractPaletteId = Id<'ExtractPalette'>;
+export type ExtractCategoryId = Id<'ExtractCategory'>;
+export type ExtractId = Id<'Extract'>;
 export type AnyId = Id<string>;
 
 interface RandomSource {

@@ -206,11 +206,114 @@ table arrives as its cells' paragraphs in reading order and every list as
 bullets at one level. Every word arrives. A merged cell's `rowspan` is
 written as separate cells.
 
-Next, in the WP spec's order:
+Next, in the WP spec's order: the Extract & Organize sidebar and custom
+palettes (both built, §8), then **the Outliner tab**, then **sending
+extracts** to Research, the cast and the scenes of this project or another.
 
-1. **The Extract & Organize sidebar**: select, press a category, and the
-   passage is an extract in a bin, with the source marked, greyed or hidden.
-2. **Custom palettes.**
-3. **The Outliner tab.**
-4. **Sending extracts** to Research, the cast and the scenes of this project
-   or another.
+## 8. Extract & Organize (WP spec phases 2 and 3)
+
+From Ken: *build the extract and organize sidebar next.*
+
+**The model** (`entities/extract.ts`, `extracts.ts`). Three collections on
+the project file:
+
+- `extractPalettes`: a palette is a set of buttons.
+- `extractCategories`: a category is one button and the bin behind it. It has
+  a label, a colour, an order, an on/off state, and a **kind**: the canonical
+  type a later stage maps to a destination (scene, character, plot point…).
+- `extracts`: an extract is a captured passage, with the following:
+  - a plain-text snapshot, and the rich one as the editor's tree
+  - the document revision it was taken at
+  - a title (its first words, to start), tags and a status (Unassigned,
+    Ready, Exported, Failed)
+  - its place in the bin
+
+**General Writing** is the spec's fifteen buttons in its order: Scene, Beat,
+Character, Characterization, Dialogue, Description, Location, Object, Plot
+Point, Note, Idea, Setup, Payoff, Research, Other. Each has a colour and its
+kind. It is added the first time the sidebar opens (`ensureExtractPalettes`),
+so documents made before it get it too.
+
+**Where an extract is: a mark, not a position.** The passage is marked in the
+document itself, an `extract` mark carrying the extract's id, colour and
+label. So it moves with its words however the text around it is edited.
+`excludes: ''` lets marks overlap, so one sentence can be a Location, a
+Description and a Setup at once (WP spec §5.2, EX-05). `inclusive: false`
+means typing at the edge does not grow it. The mark changes no character, and
+the Word file ignores it. The capture adds the mark outside the writing's undo
+history, so Ctrl+Z after a capture takes back the last thing typed.
+
+**One press, one extract** (WP spec §5.1):
+
+- The buttons take the press on mouse-down and never take focus, so the
+  selection survives (the spec's *selection focus rule*). With nothing
+  selected they are off and the sidebar says *Select text first*.
+- The mark in the page and the copy in the bin go into the project in one
+  change, so they can never be saved apart.
+- A line confirms each capture: *Added to Character (3)*. There is no dialog,
+  so the twentieth capture is as quick as the first (EX-02).
+- The same words in the same bin are warned of, not copied twice. In another
+  bin they are a separate extract.
+
+**The source text** has three views: **Normal** (tinted in the category's
+colour and underlined with dots, so it is told apart by shape as well as
+colour), **Gray** and **Hide**. All three are views only: the saved document
+is identical under all of them (EX-03), and none of it reaches the printed
+page. Hovering a marked passage names its category.
+
+**The bins**, in the sidebar under the buttons:
+
+- One bin per category that has something in it, for this palette or for all
+  categories.
+- Counts on the buttons and the bins.
+- Search over titles, words and tags, and a status filter.
+- Each extract's title shows the passage in the page. Each can be renamed,
+  given a status, moved to any category in any palette, reordered, or
+  deleted after a confirmation.
+- *Source changed* when the marked words no longer match the snapshot, with
+  *Update from source* to take the new words. The snapshot is never changed
+  silently (WP spec §5.2). *Source removed* when the passage has been
+  deleted from the document; the extract stays.
+- Deleting an extract removes the copy and its mark. Every word of the
+  document stays.
+
+**Palettes of your own** (WP spec §5.3, EX-04):
+
+- *New…* names a palette ("Math Instruction") and opens it for editing. Each
+  button can be added, relabelled, recoloured, given a kind, moved up or
+  down, or removed.
+- A palette can be duplicated as the start of another.
+- **Nothing is ever thrown away.** Removing a button whose bin holds extracts
+  turns the button off and keeps the bin. Removing a palette with extracts
+  archives it: the buttons go, and the extracts stay, reachable under All
+  categories. General Writing cannot be removed.
+- Switching palettes loses no extract and no selection.
+
+**Not yet:**
+
+- palettes shared across every project, and saved presets (the spec's
+  scopes)
+- a right-click *Extract as…* on the page, and a keyboard shortcut per
+  category
+- drag-and-drop between bins, merging extracts, and undo for bin-only actions
+  (a delete is confirmed instead)
+- sending extracts anywhere: that is the destinations stage
+
+**Proof:**
+
+- Domain (`extracts.test.ts`, 12 tests):
+  - General Writing's fifteen categories, added once
+  - capture into the matching bin, with overlaps and duplicates
+  - twenty captures kept in order
+  - save and reopen
+  - moving, reordering, editing and deleting, with the document untouched
+  - search
+  - Math Instruction persisting, duplication, and the never-discard rules
+- Renderer (`extract-sidebar.test.tsx`, 9 tests):
+  - EX-01 to EX-05, driven through the sidebar
+  - the no-selection and duplicate messages
+  - *Source changed* and *Update from source*
+  - deleting the extract and its mark, and showing where an extract came
+    from
+- Driven in Chromium: six captures, one line carrying three overlapping
+  extracts, Gray, and a four-button Math Instruction palette.

@@ -14,15 +14,26 @@ import {
   DOCX_MEDIA_TYPE,
   pageSize,
   readDocx,
+  createExtract,
+  deleteExtract,
+  ensureExtractPalettes,
+  isDuplicateExtract,
+  newId,
+  palettesOf,
   setDocumentContent,
   setDocumentPageSetup,
   textToDocContent,
   type DocNode,
+  type Extract,
+  type ExtractCategory,
+  type ExtractId,
+  type ExtractPaletteId,
   type ProjectFile,
   type WpDocument,
 } from '@vcwriter/domain';
 import { readDocxParts } from '../read-docx';
-import { documentExtensions, findMatches, searchKey, type SearchState } from './extensions';
+import { documentExtensions, extractRange, findMatches, type SearchState } from './extensions';
+import { ExtractSidebar, type SourceDisplay } from './ExtractSidebar';
 import { Ribbon, type RibbonTab, type ViewState } from './Ribbon';
 import { documentCommands } from './document-commands';
 import './document.css';
@@ -73,6 +84,11 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
   const [message, setMessage] = useState<string | null>(null);
   const [painter, setPainter] = useState<readonly Mark[] | null>(null);
   const [pages, setPages] = useState(1);
+  // Extract & Organize (addendum 42 §8).
+  const [extracting, setExtracting] = useState(false);
+  const [paletteId, setPaletteId] = useState<ExtractPaletteId | null>(null);
+  const [display, setDisplay] = useState<SourceDisplay>('normal');
+  const [extractNotice, setExtractNotice] = useState<string | null>(null);
 
   const documentId = document.id;
   // What this editor last handed the project, so an echo of it is not taken
@@ -341,6 +357,88 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
     editor.chain().focus().setTextSelection(pos + 1).scrollIntoView().run();
   };
 
+  // General Writing is there the first time the sidebar opens.
+  useEffect(() => {
+    if (extracting && !readOnly && !file.extractPalettes.some((palette) => palette.builtIn === 'general_writing')) {
+      onUpdate(ensureExtractPalettes);
+    }
+  }, [extracting, readOnly, file.extractPalettes, onUpdate]);
+
+  /**
+   * One press, one extract (WP spec §5.1 step 4): the passage is marked in
+   * the page and its copy goes into the bin in the **same** change to the
+   * project, so the two cannot be saved apart.
+   */
+  const capture = (category: ExtractCategory) => {
+    if (!editor || readOnly) return;
+    const { from, to, empty } = editor.state.selection;
+    if (empty) {
+      setExtractNotice('Select text first.');
+      return;
+    }
+    const textPlain = editor.state.doc.textBetween(from, to, '\n', '\uFFFC').trim();
+    if (!textPlain) {
+      setExtractNotice('That selection has no words in it.');
+      return;
+    }
+    if (isDuplicateExtract(file, { documentId, categoryId: category.id, textPlain })) {
+      setExtractNotice(`That passage is already in ${category.label}.`);
+      return;
+    }
+    const id = newId<ExtractId>();
+    const textRich = editor.state.doc.slice(from, to).content.toJSON() as DocNode[];
+    const mark = editor.schema.marks['extract']!.create({ id, color: category.color, label: category.label });
+    // Not an edit to the writing, so not in its undo: Ctrl+Z after a capture
+    // takes back the last thing typed, not the mark.
+    editor.view.dispatch(editor.state.tr.addMark(from, to, mark).setMeta('addToHistory', false));
+    if (timer.current !== null) {
+      window.clearTimeout(timer.current);
+      timer.current = null;
+    }
+    const content = editor.getJSON() as DocNode;
+    pushed.current = content;
+    pushedJson.current = JSON.stringify(content);
+    onUpdate((current) =>
+      createExtract(setDocumentContent(current, documentId, content), {
+        id,
+        documentId,
+        categoryId: category.id,
+        textPlain,
+        textRich,
+        sourceRevision: document.revision + 1,
+      }).file,
+    );
+    const count = file.extracts.filter((extract) => extract.categoryId === category.id).length + 1;
+    setExtractNotice(`Added to ${category.label} (${count}).`);
+  };
+
+  /** The copy and its mark go; the words stay in the document. */
+  const removeExtract = (extract: Extract) => {
+    if (!editor || readOnly) return;
+    const type = editor.schema.marks['extract']!;
+    const { tr } = editor.state;
+    editor.state.doc.descendants((node, pos) => {
+      node.marks.forEach((mark) => {
+        if (mark.type === type && mark.attrs['id'] === extract.id) tr.removeMark(pos, pos + node.nodeSize, mark);
+      });
+      return true;
+    });
+    let content = document.content;
+    if (tr.docChanged) {
+      editor.view.dispatch(tr.setMeta('addToHistory', false));
+      content = editor.getJSON() as DocNode;
+      pushed.current = content;
+      pushedJson.current = JSON.stringify(content);
+    }
+    onUpdate((current) => deleteExtract(tr.docChanged ? setDocumentContent(current, documentId, content) : current, extract.id));
+  };
+
+  const reveal = (extract: Extract) => {
+    if (!editor) return;
+    const range = extractRange(editor.state.doc, extract.id);
+    if (range) editor.chain().focus().setTextSelection(range).scrollIntoView().run();
+  };
+
   if (!editor) return null;
 
   const sheetStyle =
@@ -356,7 +454,7 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
       : {};
 
   return (
-    <div className={`wp-workspace${view.marks ? ' show-marks' : ''}`}>
+    <div className={`wp-workspace${view.marks ? ' show-marks' : ''} extracts-${display}`}>
       <style>{DOCUMENT_CONTENT_CSS}</style>
       <Ribbon
         editor={editor}
@@ -368,6 +466,8 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
         view={view}
         onView={(patch) => setView((current) => ({ ...current, ...patch }))}
         onFind={setFinding}
+        extracting={extracting}
+        onExtracting={() => setExtracting((current) => !current)}
         painting={painter !== null}
         onPaint={startPainter}
         words={words}
@@ -465,6 +565,27 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
             <EditorContent editor={editor} />
           </div>
         </div>
+        {extracting && palettesOf(file).length ? (
+          <ExtractSidebar
+            file={file}
+            document={document}
+            editor={editor}
+            onUpdate={onUpdate}
+            paletteId={paletteId}
+            onPalette={(id) => {
+              setPaletteId(id);
+              setExtractNotice(null);
+            }}
+            onCapture={capture}
+            onRemove={removeExtract}
+            onReveal={reveal}
+            display={display}
+            onDisplay={setDisplay}
+            onClose={() => setExtracting(false)}
+            readOnly={readOnly}
+            notice={extractNotice}
+          />
+        ) : null}
       </div>
 
       <footer className="wp-status" aria-label="Status">

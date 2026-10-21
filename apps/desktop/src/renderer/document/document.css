@@ -388,3 +388,299 @@
 .wp-zoom input {
   width: 110px;
 }
+
+/* ---------------------------------------------------------------------------
+   Extract & Organize (addendum 42 §8). An extracted passage is tinted in its
+   category's colour and underlined with dots, so it is told apart by shape as
+   well as by colour (WP spec §10). Gray and Hide are views only; the words
+   are never touched, and none of this reaches the printed page. */
+
+.wp-tabs-spacer {
+  flex: 1;
+}
+
+.wp-extract-toggle {
+  align-self: center;
+  margin-bottom: 3px;
+  font-size: 12px;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.wp-extract-toggle.active {
+  border-color: var(--gold, #c9a45c);
+  color: var(--gold, #c9a45c);
+  background: color-mix(in srgb, var(--gold, #c9a45c) 15%, transparent);
+}
+
+.wp-sheet .wp-extract {
+  background: color-mix(in srgb, var(--extract-color, #8fa8c4) 22%, transparent);
+  text-decoration: underline dotted;
+  text-decoration-color: var(--extract-color, #8fa8c4);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.extracts-gray .wp-sheet .wp-extract {
+  background: none;
+  color: #a3a3a3;
+  text-decoration-color: #c8c8c8;
+}
+
+.extracts-hide .wp-sheet .wp-extract {
+  display: none;
+}
+
+.wp-extract-sidebar {
+  width: 330px;
+  flex: none;
+  overflow: auto;
+  border-left: 1px solid var(--border);
+  background: var(--panel);
+  padding: 8px 10px 24px;
+  font-size: 12.5px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wp-extract-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.wp-extract-head strong {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gold, #c9a45c);
+}
+
+.wp-extract-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.wp-extract-row select,
+.wp-extract-row input:not([type='color']) {
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  padding: 2px 6px;
+  line-height: normal;
+  box-sizing: border-box;
+}
+
+.wp-bin-actions select,
+.wp-category-edit select {
+  padding: 1px 4px;
+  line-height: normal;
+  box-sizing: border-box;
+}
+
+.wp-extract-row .spacer {
+  flex: 1;
+}
+
+.wp-extract-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.wp-extract-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 7px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--extract-color);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.wp-extract-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--extract-color) 18%, transparent);
+}
+
+.wp-extract-button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.wp-extract-button .swatch {
+  display: none;
+}
+
+.wp-extract-button .label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wp-extract-button .count,
+.wp-bin-head .count {
+  font-size: 10.5px;
+  padding: 0 5px;
+  border-radius: 8px;
+  background: var(--border);
+  color: var(--text);
+}
+
+.wp-extract-hint {
+  margin: 0;
+  min-height: 1.3em;
+  color: var(--muted, #8a8a8a);
+  font-size: 11.5px;
+}
+
+.wp-bins {
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wp-bin-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 2px;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.wp-bin-head .swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.wp-bin-head .label {
+  flex: 1;
+}
+
+.wp-bin-items {
+  list-style: none;
+  margin: 0 0 4px;
+  padding: 0 0 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wp-bin-item {
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 6px 7px;
+}
+
+.wp-bin-title {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+.wp-bin-title:disabled {
+  cursor: default;
+}
+
+.wp-bin-text {
+  margin: 3px 0;
+  color: var(--muted, #8a8a8a);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: pre-wrap;
+}
+
+.wp-bin-flags {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.wp-bin-flags .flag {
+  font-size: 10.5px;
+  color: var(--gold, #c9a45c);
+  border: 1px solid var(--gold, #c9a45c);
+  border-radius: 3px;
+  padding: 0 4px;
+}
+
+.wp-bin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.wp-bin-actions select {
+  height: 24px;
+  font-size: 11.5px;
+  max-width: 130px;
+}
+
+.wp-palette-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wp-category-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wp-category-edit {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.wp-category-edit input[type='color'] {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+.wp-category-edit input:not([type='color']) {
+  flex: 1;
+  min-width: 0;
+  height: 24px;
+}
+
+.wp-category-edit select {
+  width: 92px;
+  height: 24px;
+  font-size: 11px;
+}
