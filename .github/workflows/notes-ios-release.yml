@@ -96,7 +96,7 @@ jobs:
       - name: Set up signing
         run: |
           set -o pipefail
-          (for _ in $(seq 120); do sleep 1; echo; done) \
+          (for _ in $(seq 120); do sleep 1; echo 2>/dev/null || break; done) \
             | script -qec "eas credentials:configure-build --platform ios --profile production" /dev/null \
             | grep -v '^\s*$' || [ "${PIPESTATUS[1]}" = 0 ]
 
@@ -115,8 +115,17 @@ jobs:
             if [ -n "$id" ]; then
               eas build:view "$id" --json > view.json || true
               jq -r '.error.message // empty' view.json || true
+              # The log files are gzipped. Each phase's last lines are where
+              # the reason is.
               for url in $(jq -r '.logFiles[]? // empty' view.json); do
-                curl -fsSL "$url" | tail -n 200 || true
+                curl -fsSL "$url" -o phase.log.gz || continue
+                { gunzip -c phase.log.gz 2>/dev/null || cat phase.log.gz; } > phase.log
+                # Lines are JSON records where EAS writes them that way; plain
+                # text otherwise. Either way, the readable tail.
+                jq -r 'select(type == "object") | "[\(.phase // "")] \(.msg // "")"' phase.log 2>/dev/null > phase.txt \
+                  || grep -a '' phase.log > phase.txt || true
+                [ -s phase.txt ] || grep -a '' phase.log > phase.txt || true
+                tail -n 80 phase.txt || true
               done
             fi
             exit 1

@@ -88,9 +88,16 @@ Google's help; a committed one is leaked.
 
 ### The monorepo
 
-`metro.config.js` is what makes the workspace work — it watches the repository
-root, restricts resolution to two `node_modules` directories, and turns off
-hierarchical lookup so pnpm's store cannot answer with the wrong copy of React.
+`metro.config.js` is Expo's default, which already understands a pnpm
+workspace. Turning off Metro's hierarchical lookup, as this app once did,
+breaks the build under pnpm. A package's own dependencies live beside it in
+the store, and the bundler stops being able to find them.
+
+The versions of `react-native` and the other native modules are the ones Expo
+57 ships with (`expo/bundledNativeModules.json`). A version ahead of Expo's
+(React Native 0.87 against Expo 57's 0.86) bundles nothing. `npx expo export
+--platform ios` builds the same JavaScript bundle EAS does, on Linux, in about
+a minute. Run it after changing a dependency.
 
 `@vcwriter/domain` is consumed as its **built `dist`**, so EAS runs
 `eas-build-post-install` (in `package.json`) to build it before the bundler

@@ -1,32 +1,17 @@
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { getDefaultConfig } = require('expo/metro-config');
-const path = require('node:path');
 
 /**
  * Metro, in a pnpm workspace (addendum 27 §10).
  *
- * The app imports `@vcwriter/domain`, which is not a published package: it is
- * a symlink into `packages/domain`, and what is imported is its built `dist`.
- * Metro's defaults assume one `node_modules` under the project, so without
- * this the bundler watches only `apps/mobile` and a change in the domain is
- * invisible to it — and on a clean machine the import does not resolve at all.
- *
- * `disableHierarchicalLookup` is the part that is easy to leave out and is the
- * reason this file exists rather than two lines in `app.json`: pnpm's store
- * puts a package's own dependencies under `.pnpm/<name>@<version>/…`, so
- * walking up from a file to find `node_modules` finds the wrong copy of React.
- * The two directories below are the only two that may answer.
+ * Expo's own defaults handle the workspace: they watch the repository root
+ * and resolve `@vcwriter/domain` through its symlink. This file used to turn
+ * off Metro's hierarchical lookup and name two `node_modules` folders as the
+ * only places a package could come from, to stop a second copy of React being
+ * found. Under pnpm that is wrong. Each package's own dependencies live beside
+ * it in `.pnpm/<name>@<version>/node_modules`, so React Native could not find
+ * `invariant`, and the first iOS build failed at "Bundle JavaScript".
+ * One React is now kept by pinning `react` once, in this package, at the
+ * version Expo ships (checked against the bundle's source map: one copy).
  */
-const project = __dirname;
-const workspace = path.resolve(project, '..', '..');
-
-const config = getDefaultConfig(project);
-
-config.watchFolders = [workspace];
-config.resolver.nodeModulesPaths = [
-  path.resolve(project, 'node_modules'),
-  path.resolve(workspace, 'node_modules'),
-];
-config.resolver.disableHierarchicalLookup = true;
-
-module.exports = config;
+module.exports = getDefaultConfig(__dirname);
