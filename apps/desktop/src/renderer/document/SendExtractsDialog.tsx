@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   applyTransfer,
+  choiceFromKey,
+  destinationOptions,
+  itemsOnShelf,
   planTransfer,
   recordTransfer,
+  type DestinationChoice,
   type Extract,
   type ProjectEntry,
   type ProjectFile,
@@ -48,6 +52,9 @@ export function SendExtractsDialog({ file, projectPath, extracts, onClose, onSen
   const [again, setAgain] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  // Where the writer has said each goes, by extract (addendum 42 §11).
+  const [choices, setChoices] = useState<Record<string, DestinationChoice>>({});
+  const [confirmed, setConfirmed] = useState(false);
   const ids = useMemo(() => extracts.map((extract) => extract.id as string), [extracts]);
 
   useEffect(() => {
@@ -73,6 +80,8 @@ export function SendExtractsDialog({ file, projectPath, extracts, onClose, onSen
     setChoice(path);
     setError(null);
     setAgain(false);
+    setChoices({});
+    setConfirmed(false);
     if (path === HERE) {
       setTarget({ path: null, file, contentHash: null });
       return;
@@ -94,31 +103,60 @@ export function SendExtractsDialog({ file, projectPath, extracts, onClose, onSen
     setTarget({ path, file: result.data.file, contentHash: result.data.contentHash });
   };
 
+  /** A project anywhere on the computer, added to the list and chosen. */
+  const browse = async () => {
+    const picked = await window.vcwriter.pickProject();
+    if (!picked.ok) {
+      setError(picked.error ?? 'That project could not be chosen.');
+      return;
+    }
+    if (!picked.data) return;
+    const path = picked.data.path;
+    if (path === projectPath) {
+      void choose(HERE);
+      return;
+    }
+    const read = await window.vcwriter.readProject(path);
+    if (read.ok && read.data && !projects?.some((entry) => entry.path === path)) {
+      const title = read.data.file.project.title;
+      setProjects((current) => [...(current ?? []), { path, title, savedAt: null, sizeBytes: null, missing: false }]);
+    }
+    void choose(path);
+  };
+
   const here = target?.path === null;
-  const plan = useMemo(() => (target ? planTransfer(file, ids, here ? file : target.file) : null), [file, ids, target, here]);
+  const targetFile = target ? (here ? file : target.file) : null;
+  const plan = useMemo(
+    () => (targetFile ? planTransfer(file, ids, targetFile, choices) : null),
+    [file, ids, targetFile, choices],
+  );
+  const options = useMemo(() => (targetFile ? destinationOptions(targetFile) : []), [targetFile]);
+  const replacing = Object.values(choices).filter(
+    (one) => one.area === 'research' && 'shelfId' in one && one.into?.mode === 'replace',
+  ).length;
   const already = plan?.steps.filter((step) => step.already !== null).length ?? 0;
   const going = plan ? (again ? plan.steps.length : plan.steps.length - already) : 0;
   const name = here ? 'this project' : (target?.file.project.title ?? '');
 
   const send = async () => {
-    if (!target || !plan || going === 0) return;
+    if (!target || !plan || going === 0 || (replacing > 0 && !confirmed)) return;
     setSending(true);
     setError(null);
     const said = (count: number) =>
       `${action === 'move' ? 'Moved' : 'Sent'} ${count} ${count === 1 ? 'extract' : 'extracts'} to ${here ? 'this project' : target.file.project.title}.`;
     if (here) {
-      const count = applyTransfer(file, ids, file, { again }).receipts.size;
+      const count = applyTransfer(file, ids, file, { again, choices }).receipts.size;
       onSent(
         (current) => {
-          const result = applyTransfer(current, ids, current, { again });
+          const result = applyTransfer(current, ids, current, { again, choices });
           return recordTransfer(result.target, result.receipts, action);
         },
-        action === 'move' ? applyTransferIds(file, ids, again) : [],
+        action === 'move' ? applyTransferIds(file, ids, again, choices) : [],
         said(count),
       );
       return;
     }
-    const result = applyTransfer(file, ids, target.file, { path: target.path, again });
+    const result = applyTransfer(file, ids, target.file, { path: target.path, again, choices });
     const written = await window.vcwriter.sendIntoProject({
       path: target.path!,
       file: result.target,
@@ -159,6 +197,9 @@ export function SendExtractsDialog({ file, projectPath, extracts, onClose, onSen
               </option>
             ))}
           </select>
+          <button type="button" className="ghost small" onClick={() => void browse()} title="Choose a project file anywhere">
+            Browse…
+          </button>
         </label>
         {projects !== null && projects.length === 0 ? (
           <p className="muted small">No other projects yet. Extracts can go into this one.</p>
@@ -190,10 +231,20 @@ export function SendExtractsDialog({ file, projectPath, extracts, onClose, onSen
                       {step.already && !again ? (
                         <span>Already sent ({step.already.areaName}) — skipped</span>
                       ) : (
-                        <>
-                          {step.areaName}
-                          {step.fallback ? <span className="muted small"> (no shelf of its own there)</span> : null}
-                        </>
+                        <Into
+                          step={step}
+                          options={options}
+                          choice={choices[step.extractId] ?? null}
+                          target={targetFile!}
+                          onChoose={(next) =>
+                            setChoices((current) => {
+                              const copy = { ...current };
+                              if (next) copy[step.extractId] = next;
+                              else delete copy[step.extractId];
+                              return copy;
+                            })
+                          }
+                        />
                       )}
                     </td>
                   </tr>
@@ -204,6 +255,13 @@ export function SendExtractsDialog({ file, projectPath, extracts, onClose, onSen
               <label className="wp-send-check">
                 <input type="checkbox" checked={again} onChange={(event) => setAgain(event.target.checked)} />
                 Send the {already === 1 ? 'one' : already} already sent there again, as new copies
+              </label>
+            ) : null}
+            {replacing > 0 ? (
+              <label className="wp-send-check wp-send-warn">
+                <input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />
+                Replace the words of {replacing === 1 ? 'one item' : `${replacing} items`} in {name}.{' '}
+                {here ? 'Undo brings the old words back.' : 'A recovery point of the project is taken first.'}
               </label>
             ) : null}
             <fieldset className="wp-send-action">
@@ -223,7 +281,7 @@ export function SendExtractsDialog({ file, projectPath, extracts, onClose, onSen
           <button type="button" className="ghost" onClick={onClose}>
             Cancel
           </button>
-          <button type="button" className="primary" disabled={!plan || going === 0 || sending} onClick={() => void send()}>
+          <button type="button" className="primary" disabled={!plan || going === 0 || sending || (replacing > 0 && !confirmed)} onClick={() => void send()}>
             {sending ? 'Sending…' : going === 0 ? 'Nothing to send' : `${action === 'move' ? 'Move' : 'Send'} ${going}`}
           </button>
         </footer>
@@ -233,5 +291,81 @@ export function SendExtractsDialog({ file, projectPath, extracts, onClose, onSen
 }
 
 /** Which of these a send to this project would take: those not sent here before, unless again. */
-const applyTransferIds = (file: ProjectFile, ids: readonly string[], again: boolean): string[] =>
-  [...applyTransfer(file, ids, file, { again }).receipts.keys()];
+const applyTransferIds = (
+  file: ProjectFile,
+  ids: readonly string[],
+  again: boolean,
+  choices: Readonly<Record<string, DestinationChoice>>,
+): string[] => [...applyTransfer(file, ids, file, { again, choices }).receipts.keys()];
+
+/**
+ * One row's destination: the place, and for a research shelf already there,
+ * whether to make a new item or add to one (WP spec §7.1, §9: *Create New /
+ * Append to Existing / Replace*).
+ */
+function Into({
+  step,
+  options,
+  choice,
+  target,
+  onChoose,
+}: {
+  step: { extractId: string; key: string; areaName: string; fallback: boolean; title: string };
+  options: { key: string; label: string }[];
+  choice: DestinationChoice | null;
+  target: ProjectFile;
+  onChoose(choice: DestinationChoice | null): void;
+}) {
+  // Where it goes now may be a shelf the send will make: offered as itself.
+  const list = options.some((option) => option.key === step.key) ? options : [...options, { key: step.key, label: step.areaName }];
+  const shelfId = step.key.startsWith('shelf:') ? step.key.slice(6) : null;
+  const items = shelfId ? itemsOnShelf(target, shelfId) : [];
+  const into = choice && choice.area === 'research' && 'shelfId' in choice ? choice.into ?? null : null;
+  const asValue = into ? `${into.mode}:${into.itemId}` : 'new';
+  return (
+    <div className="wp-send-into">
+      <select
+        aria-label={`Where ${step.title || 'this extract'} goes`}
+        value={step.key}
+        onChange={(event) => onChoose(choiceFromKey(event.target.value))}
+      >
+        {list.map((option) => (
+          <option key={option.key} value={option.key}>
+            {option.key.startsWith('new-shelf:') ? `${option.label.replace(/ ›.*$/, '')} › ${option.key.slice(10)} (new shelf)` : option.label}
+          </option>
+        ))}
+      </select>
+      {shelfId && items.length > 0 ? (
+        <select
+          aria-label={`As what, for ${step.title || 'this extract'}`}
+          value={asValue}
+          onChange={(event) => {
+            const [mode, itemId] = event.target.value.split(/:(.*)/s) as [string, string | undefined];
+            onChoose({
+              area: 'research',
+              shelfId,
+              into: mode === 'append' || mode === 'replace' ? { mode, itemId: itemId! } : null,
+            });
+          }}
+        >
+          <option value="new">A new item</option>
+          <optgroup label="Add to">
+            {items.map((item) => (
+              <option key={`a${item.id}`} value={`append:${item.id}`}>
+                Add to “{item.title || 'Untitled'}”
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="Replace">
+            {items.map((item) => (
+              <option key={`r${item.id}`} value={`replace:${item.id}`}>
+                Replace “{item.title || 'Untitled'}”
+              </option>
+            ))}
+          </optgroup>
+        </select>
+      ) : null}
+      {step.fallback && !choice ? <span className="muted small">No shelf of its own there, so Notes.</span> : null}
+    </div>
+  );
+}

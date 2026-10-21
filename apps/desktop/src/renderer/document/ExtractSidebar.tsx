@@ -5,7 +5,12 @@ import {
   addCategory,
   addPalette,
   binsOf,
+  buildExtractBundle,
   categoriesOf,
+  extractsCsv,
+  importExtractBundle,
+  readExtractBundle,
+  serializeExtractBundle,
   duplicatePalette,
   extractKindSchema,
   extractsInCategory,
@@ -235,6 +240,47 @@ function Bins({ file, document, editor, onUpdate, paletteId, onRemove, onReveal,
   const total = bins.reduce((sum, bin) => sum + bin.extracts.length, 0);
   // What a bulk send takes: every extract the bins are showing.
   const showing = bins.flatMap((bin) => bin.extracts.filter((extract) => matchesExtract(extract, query, status)));
+  const [said, setSaid] = useState<string | null>(null);
+
+  /**
+   * The bins as a portable bundle or a CSV (addendum 42 §11, WP spec §7.2):
+   * what is listed, so a search or a status narrows what goes.
+   */
+  const save = async (as: 'bundle' | 'csv') => {
+    const ids = showing.map((extract) => extract.id as string);
+    const base = (document.title || file.project.title || 'Extracts').replace(/[^\w\-. ]+/g, '').trim() || 'Extracts';
+    const result =
+      as === 'bundle'
+        ? await window.vcwriter.saveFile({
+            name: `${base} extracts.json`,
+            bytes: new TextEncoder().encode(serializeExtractBundle(buildExtractBundle(file, ids))),
+            mediaType: 'application/json',
+            kind: { name: 'VC Writer extract bundle', extension: 'json' },
+          })
+        : await window.vcwriter.saveFile({
+            name: `${base} extracts.csv`,
+            bytes: new TextEncoder().encode(extractsCsv(file, ids)),
+            mediaType: 'text/csv',
+            kind: { name: 'CSV', extension: 'csv' },
+          });
+    if (!result.ok) setSaid(result.error ?? 'The file could not be saved.');
+    else if (result.data?.path) setSaid(`Saved ${result.data.path}`);
+  };
+
+  const importBundle = async (chosen: File) => {
+    const read = readExtractBundle(await chosen.text());
+    if (!read.ok) {
+      setSaid(read.error);
+      return;
+    }
+    const counted = importExtractBundle(file, read.bundle, document.id);
+    onUpdate((current) => importExtractBundle(current, read.bundle, document.id).file);
+    setSaid(
+      counted.added === 0
+        ? `Nothing new in ${chosen.name}: ${counted.skipped === 1 ? 'its extract is' : 'all of its extracts are'} already here.`
+        : `Imported ${counted.added} ${counted.added === 1 ? 'extract' : 'extracts'} from ${chosen.name}${counted.skipped ? ` (${counted.skipped} already here)` : ''}.`,
+    );
+  };
 
   return (
     <section className="wp-bins" aria-label="Bins">
@@ -267,6 +313,34 @@ function Bins({ file, document, editor, onUpdate, paletteId, onRemove, onReveal,
           ))}
         </select>
       </div>
+      <div className="wp-extract-row wp-bins-files">
+        <button type="button" className="ghost small" disabled={showing.length === 0} title="The extracts listed, with their palettes, as one file another VC Writer can import" onClick={() => void save('bundle')}>
+          Export bundle
+        </button>
+        <button type="button" className="ghost small" disabled={showing.length === 0} title="The extracts listed, one row each, for a spreadsheet" onClick={() => void save('csv')}>
+          Export CSV
+        </button>
+        <label className={`ghost small wp-file-button${readOnly ? ' disabled' : ''}`}>
+          Import bundle…
+          <input
+            type="file"
+            accept=".json,application/json"
+            aria-label="Import bundle"
+            disabled={readOnly}
+            hidden
+            onChange={(event) => {
+              const chosen = event.target.files?.[0];
+              event.target.value = '';
+              if (chosen) void importBundle(chosen);
+            }}
+          />
+        </label>
+      </div>
+      {said ? (
+        <p className="muted small" role="status">
+          {said}
+        </p>
+      ) : null}
       {bins.length === 0 ? <p className="muted small">Nothing extracted{scope === 'palette' ? ' with this palette' : ''} yet.</p> : null}
       {bins.map((bin) => {
         const shown = bin.extracts.filter((extract) => matchesExtract(extract, query, status));
@@ -508,6 +582,13 @@ function PaletteEditor({
                 </option>
               ))}
             </select>
+            <input
+              aria-label={`${category.label} default shelf`}
+              defaultValue={category.targetShelf ?? ''}
+              placeholder="Shelf: by kind"
+              title="The research shelf this button's extracts go to when sent. Left empty, the kind decides. Made in the project if it is not there."
+              onBlur={(event) => onUpdate((current) => updateCategory(current, category.id, { targetShelf: event.target.value }))}
+            />
             <button type="button" className="ghost small" aria-label={`Move ${category.label} up`} disabled={index === 0} onClick={() => onUpdate((current) => moveCategory(current, category.id, -1))}>
               ↑
             </button>

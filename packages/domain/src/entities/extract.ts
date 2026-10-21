@@ -59,6 +59,13 @@ export const extractCategorySchema = z.object({
   color: z.string().max(20).default('#8FA8C4'),
   orderKey: orderKey(),
   enabled: z.boolean().default(true),
+  /**
+   * The research shelf this button's extracts go to by default, by name
+   * (WP spec §5: *default destination*): "Multiplication" in a Math palette
+   * can land on a Multiplication shelf of the book. Made in the target if it
+   * is not there. Null goes by the kind.
+   */
+  targetShelf: z.string().max(120).nullable().default(null),
   ...timestamps,
 });
 export type ExtractCategory = z.infer<typeof extractCategorySchema>;

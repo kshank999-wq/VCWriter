@@ -835,3 +835,59 @@
   color: var(--danger, #e06c6c);
   margin: 0;
 }
+
+/* ------------------------------------------------ destinations (§11) */
+
+.wp-send-into {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.wp-send-into select {
+  max-width: 240px;
+}
+
+.wp-send-warn {
+  color: var(--danger, #e06c6c);
+}
+
+.wp-bins-files {
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.wp-file-button {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.wp-file-button:hover {
+  background: var(--panel-2, rgba(255, 255, 255, 0.06));
+}
+
+.wp-file-button.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Five controls to a button now: let the row wrap rather than overflow the sidebar. */
+.wp-category-edit {
+  flex-wrap: wrap;
+}
+
+/* First line: the swatch, the name and the kind. Second: the shelf and the moves. */
+.wp-category-edit input[aria-label$=' label'] {
+  flex: 1 1 calc(100% - 136px);
+}
+
+.wp-category-edit input[aria-label$='default shelf'] {
+  flex: 1 1 calc(100% - 150px);
+  margin-left: 28px;
+}

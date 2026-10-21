@@ -656,6 +656,19 @@ export const createBrowserBridge = (): BrowserBridge => {
       }
     },
 
+    /** A .vcw from disk, kept in this browser's library like any opened one, and not opened. */
+    async pickProject() {
+      try {
+        const picked = await pickFile();
+        if (!picked) return ok(null);
+        const file = parseProjectFile(JSON.parse(await picked.text()));
+        const result = await store(await pathFor(file.project.title), file);
+        return ok({ path: result.path });
+      } catch (error) {
+        return fail((error as Error).message);
+      }
+    },
+
     /** Written back only if it is still what was read, with a recovery point of it first. */
     async sendIntoProject(input) {
       try {

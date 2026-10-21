@@ -468,6 +468,18 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
     }
   });
 
+  ipcMain.handle('project:pick', async (): Promise<DesktopApiResult<{ path: string } | null>> => {
+    try {
+      const window = getWindow();
+      const options = { properties: ['openFile' as const], filters: FILE_FILTERS, defaultPath: await readHome() };
+      const choice = window ? await dialog.showOpenDialog(window, options) : await dialog.showOpenDialog(options);
+      const path = choice.filePaths[0];
+      return ok(choice.canceled || !path ? null : { path });
+    } catch (cause) {
+      return fail(cause);
+    }
+  });
+
   ipcMain.handle(
     'project:sendInto',
     async (_event, input: { path: string; file: unknown; expectedHash: string }): Promise<DesktopApiResult<{ contentHash: string }>> => {

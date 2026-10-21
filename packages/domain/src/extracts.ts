@@ -79,6 +79,7 @@ export const ensureExtractPalettes = (file: ProjectFile): ProjectFile => {
       color: seed.color,
       orderKey: key,
       enabled: true,
+      targetShelf: null,
       createdAt: at,
       updatedAt: at,
     };
@@ -196,6 +197,7 @@ export const addCategory = (
     color: options.color ?? (CATEGORY_COLOURS[siblings.length % CATEGORY_COLOURS.length] as string),
     orderKey: orderKeyBetween(lastKey(siblings), null),
     enabled: true,
+    targetShelf: null,
     createdAt: at,
     updatedAt: at,
   };
@@ -205,13 +207,15 @@ export const addCategory = (
 export const updateCategory = (
   file: ProjectFile,
   id: ExtractCategoryId,
-  patch: Partial<Pick<ExtractCategory, 'label' | 'kind' | 'color' | 'enabled'>>,
+  patch: Partial<Pick<ExtractCategory, 'label' | 'kind' | 'color' | 'enabled' | 'targetShelf'>>,
 ): ProjectFile => ({
   ...file,
   extractCategories: file.extractCategories.map((category) => {
     if (category.id !== id) return category;
     const label = patch.label === undefined ? category.label : patch.label.trim().slice(0, 60) || category.label;
-    return { ...category, ...patch, label, updatedAt: nowIso() };
+    const targetShelf =
+      patch.targetShelf === undefined ? category.targetShelf : patch.targetShelf?.trim().slice(0, 120) || null;
+    return { ...category, ...patch, label, targetShelf, updatedAt: nowIso() };
   }),
 });
 

@@ -1,14 +1,14 @@
 import { newId } from './ids.js';
 import { nowIso } from './entities/common.js';
-import { addBeat, addResearchCategory, addResearchItem, addUnit, updateBeat } from './mutations.js';
+import { addBeat, addResearchCategory, addResearchItem, addUnit, updateBeat, updateResearchItem } from './mutations.js';
 import { deleteExtract } from './extracts.js';
 import { defaultElementType } from './editing.js';
 import { isInstructional, isProseFormat, isWordProcessor } from './formats.js';
-import { unitsInStoryOrder } from './selectors.js';
+import { researchCategoriesInOrder, unitsInStoryOrder } from './selectors.js';
 import type { Extract, ExtractKind, ExtractReceipt, TransferArea } from './entities/extract.js';
 import type { SystemCategoryKey } from './entities/research.js';
 import type { ProjectFile } from './project-file.js';
-import type { ExtractId, ManuscriptElementId, ResearchCategoryId } from './ids.js';
+import type { ExtractId, ManuscriptElementId, ResearchCategoryId, ResearchItemId } from './ids.js';
 
 /**
  * **Sending extracts to a project** (addendum 42 §10, the WP spec's §7).
@@ -50,6 +50,60 @@ const SHELF_NAMES: Partial<Record<SystemCategoryKey, string>> = {
   notes: 'Notes',
 };
 
+/**
+ * **Where the writer says it goes** (WP spec §7.1: *destination VC module,
+ * target area/type, new versus existing item*). Without one, an extract goes
+ * where its category's default shelf, or else its kind, says.
+ *
+ * - A research shelf already in the target, by id, or a new one by name.
+ *   Either can be told to add to an existing item there instead of making a
+ *   new one: `append` puts the words after the item's own, and `replace`
+ *   puts them in place of them, which the dialog asks about first.
+ * - A new scene (a chapter in prose), or a beat in a given scene.
+ */
+export type DestinationChoice =
+  | { area: 'research'; shelfId: string; into?: { itemId: string; mode: 'append' | 'replace' } | null }
+  | { area: 'research'; shelfName: string }
+  | { area: 'scene' }
+  | { area: 'beat'; unitId: string };
+
+export interface DestinationOption {
+  key: string;
+  label: string;
+}
+
+const isProseTarget = (target: ProjectFile): boolean => isProseFormat(target.project.format);
+
+/** Every place in the target an extract can go, as the dialog's list offers them. */
+export const destinationOptions = (target: ProjectFile): DestinationOption[] => {
+  const shelves = researchCategoriesInOrder(target).map((category) => ({
+    key: `shelf:${category.id}`,
+    label: `Research › ${category.name}`,
+  }));
+  if (!takesScenes(target)) return shelves;
+  return [
+    ...shelves,
+    { key: 'scene', label: isProseTarget(target) ? 'A new chapter' : 'A new scene' },
+    ...unitsInStoryOrder(target).map((unit, index) => ({
+      key: `beat:${unit.id}`,
+      label: `A beat in “${unit.title || `${isProseTarget(target) ? 'Chapter' : 'Scene'} ${index + 1}`}”`,
+    })),
+  ];
+};
+
+/** The choice a list key stands for. */
+export const choiceFromKey = (key: string): DestinationChoice | null => {
+  if (key === 'scene') return { area: 'scene' };
+  if (key.startsWith('shelf:')) return { area: 'research', shelfId: key.slice(6) };
+  if (key.startsWith('new-shelf:')) return { area: 'research', shelfName: key.slice(10) };
+  if (key.startsWith('beat:')) return { area: 'beat', unitId: key.slice(5) };
+  return null;
+};
+
+/** The items on one shelf of the target, for *add to an existing item*. */
+export const itemsOnShelf = (target: ProjectFile, shelfId: string) =>
+  target.researchItems.filter((item) => item.categoryId === shelfId);
+
 export interface TransferStep {
   extractId: string;
   title: string;
@@ -62,6 +116,8 @@ export interface TransferStep {
   fallback: boolean;
   /** An earlier send of this extract to the same project. */
   already: ExtractReceipt | null;
+  /** The list key of where it goes, so the dialog's list can show it chosen. */
+  key: string;
 }
 
 export interface TransferPlan {
@@ -77,7 +133,10 @@ const categoryNameOf = (source: ProjectFile, extract: Extract): string =>
   source.extractCategories.find((category) => category.id === extract.categoryId)?.label ?? '';
 
 const liveShelf = (target: ProjectFile, key: SystemCategoryKey) =>
-  target.researchCategories.find((category) => category.systemKey === key && !category.archived) ?? null;
+  researchCategoriesInOrder(target).find((category) => category.systemKey === key) ?? null;
+
+const shelfNamed = (target: ProjectFile, name: string) =>
+  researchCategoriesInOrder(target).find((category) => category.name.trim().toLowerCase() === name.trim().toLowerCase()) ?? null;
 
 /** A story project with a track to put a scene on. Documents and instructional books have shelves only. */
 const takesScenes = (target: ProjectFile): boolean =>
@@ -88,37 +147,91 @@ const lastUnit = (target: ProjectFile) => {
   return units[units.length - 1] ?? null;
 };
 
-/** Where one extract goes in the target, without writing anything. */
-const destinationOf = (
-  source: ProjectFile,
-  extract: Extract,
+/** Where one extract goes, resolved: what `applyTransfer` acts on. */
+interface Resolved {
+  area: TransferArea;
+  areaName: string;
+  key: string;
+  /** For research: the shelf, by id where it exists, else by key or name to be made. */
+  shelf: { id: string } | { systemKey: SystemCategoryKey } | { name: string } | null;
+  /** For a beat: the scene it goes into; null is the last one. */
+  unitId: string | null;
+  into: { itemId: string; mode: 'append' | 'replace' } | null;
+  fallback: boolean;
+}
+
+const researchTo = (
   target: ProjectFile,
-): { area: TransferArea; areaName: string; shelf: SystemCategoryKey | null; fallback: boolean } => {
-  const kind = kindOf(source, extract);
-  if ((kind === 'scene' || kind === 'beat') && takesScenes(target)) {
-    const unit = lastUnit(target);
-    if (kind === 'scene' && !isProseFormat(target.project.format)) {
-      return { area: 'scene', areaName: 'A new scene', shelf: null, fallback: false };
-    }
-    if (kind === 'scene' && isProseFormat(target.project.format) && unit === null) {
-      return { area: 'scene', areaName: 'A new chapter', shelf: null, fallback: false };
-    }
-    return {
-      area: unit === null ? 'scene' : 'beat',
-      areaName: unit === null ? 'A new scene' : `A beat in “${unit.title || 'the last scene'}”`,
-      shelf: null,
-      fallback: false,
-    };
-  }
-  const wanted = SHELF_FOR[kind];
-  const shelf = wanted && liveShelf(target, wanted) ? wanted : 'notes';
-  const existing = liveShelf(target, shelf);
+  shelf: { id: string } | { systemKey: SystemCategoryKey } | { name: string },
+  fallback = false,
+  into: Resolved['into'] = null,
+): Resolved => {
+  const found =
+    'id' in shelf
+      ? target.researchCategories.find((category) => category.id === shelf.id) ?? null
+      : 'systemKey' in shelf
+        ? liveShelf(target, shelf.systemKey)
+        : shelfNamed(target, shelf.name);
+  const name = found?.name ?? ('name' in shelf ? shelf.name.trim() : 'systemKey' in shelf ? SHELF_NAMES[shelf.systemKey] ?? 'Notes' : 'Notes');
+  const item = into ? target.researchItems.find((one) => one.id === into.itemId) ?? null : null;
   return {
     area: 'research',
-    areaName: `Research › ${existing?.name ?? SHELF_NAMES[shelf] ?? 'Notes'}`,
-    shelf,
-    fallback: shelf === 'notes' && wanted !== undefined,
+    areaName: `Research › ${name}${item ? ` › “${item.title}” (${into!.mode === 'append' ? 'added to' : 'replaced'})` : ''}`,
+    key: found ? `shelf:${found.id}` : `new-shelf:${name}`,
+    shelf: found ? { id: found.id } : shelf,
+    unitId: null,
+    into: item ? into : null,
+    fallback,
   };
+};
+
+const sceneTo = (target: ProjectFile): Resolved => ({
+  area: 'scene',
+  areaName: isProseTarget(target) ? 'A new chapter' : 'A new scene',
+  key: 'scene',
+  shelf: null,
+  unitId: null,
+  into: null,
+  fallback: false,
+});
+
+const beatTo = (target: ProjectFile, unitId: string | null): Resolved => {
+  const unit = (unitId ? target.units.find((one) => one.id === unitId) : null) ?? lastUnit(target);
+  if (!unit) return sceneTo(target);
+  return {
+    area: 'beat',
+    areaName: `A beat in “${unit.title || (isProseTarget(target) ? 'the last chapter' : 'the last scene')}”`,
+    key: `beat:${unit.id}`,
+    shelf: null,
+    unitId: unit.id,
+    into: null,
+    fallback: false,
+  };
+};
+
+/** Where one extract goes in the target, without writing anything. */
+const destinationOf = (source: ProjectFile, extract: Extract, target: ProjectFile, choice?: DestinationChoice | null): Resolved => {
+  if (choice) {
+    if (choice.area === 'scene' && takesScenes(target)) return sceneTo(target);
+    if (choice.area === 'beat' && takesScenes(target)) return beatTo(target, choice.unitId);
+    if (choice.area === 'research' && 'shelfId' in choice && target.researchCategories.some((one) => one.id === choice.shelfId)) {
+      return researchTo(target, { id: choice.shelfId }, false, choice.into ?? null);
+    }
+    if (choice.area === 'research' && 'shelfName' in choice && choice.shelfName.trim()) {
+      return researchTo(target, { name: choice.shelfName });
+    }
+  }
+  const category = source.extractCategories.find((one) => one.id === extract.categoryId);
+  // The category's own default shelf (WP spec §5: *default destination*), by name.
+  if (category?.targetShelf) return researchTo(target, { name: category.targetShelf });
+  const kind = kindOf(source, extract);
+  if ((kind === 'scene' || kind === 'beat') && takesScenes(target)) {
+    if (kind === 'scene' && (!isProseTarget(target) || lastUnit(target) === null)) return sceneTo(target);
+    return beatTo(target, null);
+  }
+  const wanted = SHELF_FOR[kind];
+  const key = wanted && liveShelf(target, wanted) ? wanted : 'notes';
+  return researchTo(target, { systemKey: key }, key === 'notes' && wanted !== undefined);
 };
 
 const receiptFor = (extract: Extract, projectId: string): ExtractReceipt | null =>
@@ -129,8 +242,13 @@ const receiptFor = (extract: Extract, projectId: string): ExtractReceipt | null 
  * It is the send itself, done on a copy and thrown away, so the preview cannot
  * say one thing and the send do another.
  */
-export const planTransfer = (source: ProjectFile, extractIds: readonly string[], target: ProjectFile): TransferPlan => {
-  const trial = applyTransfer(source, extractIds, target, { again: true });
+export const planTransfer = (
+  source: ProjectFile,
+  extractIds: readonly string[],
+  target: ProjectFile,
+  choices: Readonly<Record<string, DestinationChoice>> = {},
+): TransferPlan => {
+  const trial = applyTransfer(source, extractIds, target, { again: true, choices });
   return {
     projectId: target.project.id,
     projectTitle: target.project.title,
@@ -145,23 +263,28 @@ export const planTransfer = (source: ProjectFile, extractIds: readonly string[],
           categoryName: categoryNameOf(source, extract),
           area: receipt.area,
           areaName: receipt.areaName,
-          fallback: destinationOf(source, extract, target).fallback,
+          fallback: destinationOf(source, extract, target, choices[extractId]).fallback,
           already: receiptFor(extract, target.project.id),
+          key: trial.keys.get(extractId) ?? '',
         },
       ];
     }),
   };
 };
 
-const shelfId = (file: ProjectFile, key: SystemCategoryKey): { file: ProjectFile; id: ResearchCategoryId } => {
-  const found = liveShelf(file, key);
+/** The shelf's id in the file, making it first where it is not there yet. */
+const shelfIdIn = (file: ProjectFile, shelf: NonNullable<Resolved['shelf']>): { file: ProjectFile; id: ResearchCategoryId } => {
+  if ('id' in shelf) return { file, id: shelf.id as ResearchCategoryId };
+  const found = 'systemKey' in shelf ? liveShelf(file, shelf.systemKey) : shelfNamed(file, shelf.name);
   if (found) return { file, id: found.id };
-  const made = addResearchCategory(file, { name: SHELF_NAMES[key] ?? 'Notes' });
+  const name = 'systemKey' in shelf ? SHELF_NAMES[shelf.systemKey] ?? 'Notes' : shelf.name.trim().slice(0, 120);
+  const made = addResearchCategory(file, { name });
+  if (!('systemKey' in shelf)) return { file: made.file, id: made.category.id };
   return {
     file: {
       ...made.file,
       researchCategories: made.file.researchCategories.map((category) =>
-        category.id === made.category.id ? { ...category, systemKey: key } : category,
+        category.id === made.category.id ? { ...category, systemKey: shelf.systemKey } : category,
       ),
     },
     id: made.category.id,
@@ -186,6 +309,8 @@ export interface TransferResult {
   /** The target with everything written into it. */
   target: ProjectFile;
   receipts: Map<string, ExtractReceipt>;
+  /** Where each went, as a list key (`destinationOptions`). */
+  keys: Map<string, string>;
 }
 
 /**
@@ -197,10 +322,11 @@ export const applyTransfer = (
   source: ProjectFile,
   extractIds: readonly string[],
   target: ProjectFile,
-  options: { path?: string | null; again?: boolean } = {},
+  options: { path?: string | null; again?: boolean; choices?: Readonly<Record<string, DestinationChoice>> } = {},
 ): TransferResult => {
   let next = target;
   const receipts = new Map<string, ExtractReceipt>();
+  const keys = new Map<string, string>();
   const documentTitle = (extract: Extract): string =>
     source.documents.find((document) => document.id === extract.documentId)?.title || source.project.title;
 
@@ -208,27 +334,42 @@ export const applyTransfer = (
     const extract = source.extracts.find((one) => one.id === extractId);
     if (!extract) continue;
     if (!options.again && receiptFor(extract, target.project.id)) continue;
-    const where = destinationOf(source, extract, next);
+    const where = destinationOf(source, extract, next, options.choices?.[extractId]);
     let resultId: string;
     let areaName = where.areaName;
+    const credit =
+      source.project.id === target.project.id
+        ? `From “${documentTitle(extract)}”`
+        : `From “${documentTitle(extract)}” in ${source.project.title}`;
 
-    if (where.area === 'research') {
-      const shelf = shelfId(next, where.shelf ?? 'notes');
+    if (where.area === 'research' && where.into) {
+      // Into an item that is already there: never silently (WP spec §9), so
+      // the dialog has asked, and the receipt says which.
+      const item = next.researchItems.find((one) => one.id === where.into!.itemId)!;
+      const body =
+        where.into.mode === 'replace'
+          ? extract.textPlain
+          : [item.body.trimEnd(), extract.textPlain].filter((part) => part.length > 0).join('\n\n');
+      next = updateResearchItem(next, item.id as ResearchItemId, {
+        body,
+        tags: [...new Set([...item.tags, ...extract.tags])],
+        ...(item.source ? {} : { source: credit }),
+      });
+      resultId = item.id;
+    } else if (where.area === 'research') {
+      const shelf = shelfIdIn(next, where.shelf ?? { systemKey: 'notes' });
       next = addResearchItem(shelf.file, {
         categoryId: shelf.id,
         title: extract.title,
         body: extract.textPlain,
         tags: extract.tags,
-        source:
-          source.project.id === target.project.id
-            ? `From “${documentTitle(extract)}”`
-            : `From “${documentTitle(extract)}” in ${source.project.title}`,
+        source: credit,
         origin: 'import',
       });
       resultId = next.researchItems[next.researchItems.length - 1]!.id;
       areaName = `Research › ${next.researchCategories.find((category) => category.id === shelf.id)?.name ?? 'Notes'}`;
     } else {
-      let unit = where.area === 'beat' ? lastUnit(next) : null;
+      let unit = where.area === 'beat' ? (next.units.find((one) => one.id === where.unitId) ?? lastUnit(next)) : null;
       if (unit === null) {
         const made = addUnit(next, { trackId: next.tracks[0]!.id, title: extract.title });
         next = made.file;
@@ -239,6 +380,7 @@ export const applyTransfer = (
       resultId = where.area === 'scene' ? unit.id : made.beat.id;
     }
 
+    keys.set(extractId, where.area === 'scene' ? 'scene' : where.area === 'beat' ? `beat:${where.unitId ?? ''}` : where.key);
     receipts.set(extractId, {
       projectId: target.project.id,
       projectTitle: target.project.title,
@@ -249,7 +391,7 @@ export const applyTransfer = (
       at: nowIso(),
     });
   }
-  return { target: next, receipts };
+  return { target: next, receipts, keys };
 };
 
 /**

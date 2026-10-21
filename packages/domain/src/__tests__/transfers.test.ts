@@ -13,6 +13,9 @@ import {
   planTransfer,
   recordTransfer,
   unitsInStoryOrder,
+  choiceFromKey,
+  destinationOptions,
+  updateCategory,
   type ExtractId,
   type ExtractKind,
   type ProjectFile,
@@ -115,5 +118,65 @@ describe('sending extracts', () => {
     expect(JSON.stringify(mainDocument(moved)!.content)).toBe(document);
     // Sent to its own project: research shelves, since a document has no scenes.
     expect(moved.researchItems).toHaveLength(2);
+  });
+});
+
+describe('choosing the destination (addendum 42 §11)', () => {
+  it('offers every shelf, a new scene and a beat in each scene, and sends where it is told', () => {
+    const { file, ids } = source();
+    const target = createProjectFile({ title: 'The Lamp', format: 'screenplay' });
+    const options = destinationOptions(target);
+    const labels = options.map((option) => option.label);
+    expect(labels).toContain('Research › Themes');
+    expect(labels).toContain('A new scene');
+    expect(labels.some((label) => label.startsWith('A beat in'))).toBe(true);
+
+    const themes = options.find((option) => option.label === 'Research › Themes')!;
+    const plan = planTransfer(file, ids.slice(0, 1), target, { [ids[0]!]: choiceFromKey(themes.key)! });
+    expect(plan.steps[0]).toMatchObject({ areaName: 'Research › Themes', key: themes.key });
+    const result = applyTransfer(file, ids.slice(0, 1), target, { choices: { [ids[0]!]: choiceFromKey(themes.key)! } });
+    const shelf = result.target.researchCategories.find((category) => category.name === 'Themes')!;
+    expect(result.target.researchItems.at(-1)!.categoryId).toBe(shelf.id);
+
+    // A beat in a chosen scene.
+    const beat = options.find((option) => option.key.startsWith('beat:'))!;
+    const sent = applyTransfer(file, ids.slice(5, 6), target, { choices: { [ids[5]!]: choiceFromKey(beat.key)! } });
+    expect(sent.receipts.get(ids[5]!)!.area).toBe('beat');
+    expect(beatsForUnit(sent.target, beat.key.slice(5) as never)).toHaveLength(beatsForUnit(target, beat.key.slice(5) as never).length + 1);
+  });
+
+  it('adds to an existing item, or replaces its words, and says which', () => {
+    const { file, ids } = source();
+    const first = applyTransfer(file, ids.slice(0, 1), createProjectFile({ title: 'The Lamp', format: 'novel' }));
+    const item = first.target.researchItems.at(-1)!;
+    const shelfId = item.categoryId as string;
+    const appended = applyTransfer(file, ids.slice(1, 2), first.target, {
+      choices: { [ids[1]!]: { area: 'research', shelfId, into: { itemId: item.id, mode: 'append' } } },
+    });
+    expect(appended.target.researchItems).toHaveLength(first.target.researchItems.length);
+    expect(appended.target.researchItems.find((one) => one.id === item.id)!.body).toBe(
+      'Sarah never sleeps before two.\n\nShe keeps a lamp lit.',
+    );
+    expect(appended.receipts.get(ids[1]!)).toMatchObject({ resultId: item.id });
+    expect(appended.receipts.get(ids[1]!)!.areaName).toContain('(added to)');
+
+    const replaced = applyTransfer(file, ids.slice(1, 2), first.target, {
+      choices: { [ids[1]!]: { area: 'research', shelfId, into: { itemId: item.id, mode: 'replace' } } },
+    });
+    expect(replaced.target.researchItems.find((one) => one.id === item.id)!.body).toBe('She keeps a lamp lit.');
+  });
+
+  it("follows a button's default shelf, making it in the target where it is missing", () => {
+    let { file, ids } = source();
+    const multiplication = file.extractCategories.find((category) => category.label === 'Multiplication')!;
+    file = updateCategory(file, multiplication.id, { targetShelf: 'Times tables' });
+    const target = createProjectFile({ title: 'Arithmetic', format: 'instructional' });
+    const plan = planTransfer(file, ids.slice(9), target);
+    expect(plan.steps[0]!.areaName).toBe('Research › Times tables');
+    const result = applyTransfer(file, ids.slice(9), target);
+    expect(result.target.researchCategories.filter((category) => category.name === 'Times tables')).toHaveLength(1);
+    // A second extract finds the shelf rather than making another.
+    const again = applyTransfer(file, ids.slice(9), result.target, { again: true });
+    expect(again.target.researchCategories.filter((category) => category.name === 'Times tables')).toHaveLength(1);
   });
 });

@@ -182,6 +182,13 @@ export interface VcWriterApi {
    */
   readProject(path: string): Promise<DesktopApiResult<OpenResult>>;
   /**
+   * Choose a project anywhere, for extracts to be sent to (addendum 42 §11):
+   * its path, or null where the picker was dismissed. Nothing is opened. In
+   * the browser the chosen file is copied into the browser's own library,
+   * which is where its projects live, and that copy's path comes back.
+   */
+  pickProject(): Promise<DesktopApiResult<{ path: string } | null>>;
+  /**
    * Write into that project what was sent to it. Refused when the file has
    * changed since `readProject` (`expectedHash`), so nothing written there in
    * the meantime is overwritten; a recovery point of it is taken first.
@@ -494,6 +501,7 @@ const api: VcWriterApi = {
   recentProjects: () => ipcRenderer.invoke('project:recents'),
   listProjects: () => ipcRenderer.invoke('project:list'),
   readProject: (path) => ipcRenderer.invoke('project:read', path),
+  pickProject: () => ipcRenderer.invoke('project:pick'),
   sendIntoProject: (input) => ipcRenderer.invoke('project:sendInto', input),
   deleteProject: (path: string) => ipcRenderer.invoke('project:delete', path),
   listSnapshots: (path) => ipcRenderer.invoke('project:snapshots', path),

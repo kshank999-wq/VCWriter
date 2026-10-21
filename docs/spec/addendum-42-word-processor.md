@@ -445,12 +445,8 @@ by a category's label:
 - A second send to the same project skips what went before, unless the
   writer ticks *Send … again, as new copies*.
 
-**Not yet:**
-
-- picking a file outside the projects list
-- appending to or replacing an existing item (only Create New is offered)
-- a portable JSON bundle, and the CSV manifest
-- sending outline rows themselves
+**Not yet:** sending outline rows themselves. The rest of what was listed
+here is built in §11.
 
 **Proof:**
 
@@ -466,3 +462,89 @@ by a category's label:
   - a failed write recording nothing
   - a move into this project
   - *Add to outline*
+
+## 11. Destinations (WP spec §7.1, §7.2, §9)
+
+From Ken: *build the destinations next.*
+
+§10 sent each extract where its kind said. This stage lets the writer say
+otherwise, and adds the portable files the spec lists.
+
+**Each row has its own destination** (`destinationOptions`, `choiceFromKey`).
+The *Into* list for a row offers every place in the chosen project:
+
+- every research shelf there, in its order
+- a new scene (a new chapter in prose)
+- a beat in any scene or chapter, by name
+
+The kind's choice is preselected, so a writer who changes nothing gets §10's
+result. A shelf the send will make (Notes, or a button's default shelf)
+appears as *(new shelf)*.
+
+**New, add to, or replace** (WP spec §9: *Create New / Append to Existing /
+Replace, with explicit confirmation; never overwrite silently*). A row going
+to a shelf that has items gets a second list:
+
+- **A new item.** This is the default.
+- **Add to an item.** The extract's words go after the item's own, separated
+  by a blank line, and the tags merge.
+- **Replace an item's words.** The Send button stays off until a checkbox
+  confirms it, and the box names how many items will be replaced and where.
+  In another project the recovery point from §10 holds the old words; in
+  this one, Undo does.
+
+The receipt names the item and what happened to it: *Research › Locations ›
+"The house" (added to)*.
+
+**A default shelf on each button** (WP spec §5: *default destination*). In
+the palette editor every button has a *Shelf* box. When it is filled in, the
+button's extracts go to that shelf by name, and the shelf is made in the
+target if it is missing. So Math's *Multiplication* can land on a *Times
+tables* shelf of the book (the spec's own example). When it is empty, the
+kind decides. A per-row choice in the dialog still wins.
+
+**Browse…** beside the project list chooses a project file anywhere
+(`pickProject`) and adds it to the list without opening it. In the browser
+the chosen file is copied into the browser's library, which is where its
+projects live, and the send writes to that copy.
+
+**The portable bundle and the CSV** (`extract-bundle.ts`, WP spec §7.2).
+They sit under the bins and use what the bins are listing, so a search or a
+status filter narrows them:
+
+- **Export bundle:** a versioned JSON file (`vcwriter.extracts`, version 1)
+  holding the extracts with their text, tags and receipts. Each extract's
+  whole palette travels with it, buttons, kinds, colours and default shelves
+  included.
+- **Import bundle…** puts one into this document.
+  - A palette of the same name is joined rather than repeated, as is General
+    Writing, and a button of the same label inside it is reused.
+  - An extract already here, by id, is skipped, so importing twice adds
+    nothing.
+  - Imported extracts have no passage in this document, so each shows
+    *Source removed* and keeps its words.
+  - A bundle from a newer version is refused in words rather than guessed at.
+- **Export CSV:** one row per extract (title, category, palette, kind,
+  status, tags, sent to, captured, text), quoted so a spreadsheet reads
+  commas and line breaks. It is for review, not a way back in.
+
+**Not yet:**
+
+- the bin report as a PDF
+- sending outline rows
+- a shared, cross-install service for direct handoff (the bundle is how
+  extracts move between installs today)
+
+**Proof:**
+
+- Domain:
+  - `transfers.test.ts`, 3 new tests: the destination list; sending to a
+    chosen shelf and into a chosen scene; append and replace; a button's
+    default shelf, made once.
+  - `extract-bundle.test.ts`, 3 tests: a round trip that joins palettes and
+    imports once; refusing a non-bundle and a newer version; CSV quoting.
+- Renderer (`document-destinations.test.tsx`, 4 tests):
+  - a row sent to Themes instead of Locations
+  - add to an existing item, with replace held back until confirmed
+  - Browse
+  - importing a bundle, twice, adding once
