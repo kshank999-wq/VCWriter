@@ -13,6 +13,8 @@ import {
   isInstructional,
   describeSavedTo,
   isProseFormat,
+  isWordProcessor,
+  mainDocument,
   LANE_DEFAULT,
   isInteractive,
   setParagraphStyle,
@@ -36,6 +38,8 @@ import {
   type SyncConflict,
   nounsFor,
 } from '@vcwriter/domain';
+import { DocumentWorkspace } from './document/DocumentWorkspace';
+import { documentCommands } from './document/document-commands';
 import { useProject } from './use-project';
 import { useBuildStanding } from './use-build-standing';
 import { useWritingAccess } from './use-writing-access';
@@ -439,12 +443,26 @@ export default function App() {
       // document — a typed letter as much as a merge — goes through the same
       // `update`, so one stack already holds both and two undos on one screen
       // would fight over which had happened last.
-      if (mod && !event.shiftKey && event.key.toLowerCase() === 'z') {
+      const undoKey = mod && !event.shiftKey && event.key.toLowerCase() === 'z';
+      const redoKey = (mod && event.shiftKey && event.key.toLowerCase() === 'z') || (mod && event.key.toLowerCase() === 'y');
+      // A document keeps its own undo, as Word does (addendum 42). In the
+      // page the editor has already taken the key; anywhere else, it is sent
+      // there rather than undoing the project under it.
+      if ((undoKey || redoKey) && documentCommands.current) {
+        const inPage = event.target instanceof Element && event.target.closest('.wp-sheet');
+        if (!inPage) {
+          event.preventDefault();
+          if (undoKey) documentCommands.current.undo();
+          else documentCommands.current.redo();
+        }
+        return;
+      }
+      if (undoKey) {
         event.preventDefault();
         project.undo();
         return;
       }
-      if ((mod && event.shiftKey && event.key.toLowerCase() === 'z') || (mod && event.key.toLowerCase() === 'y')) {
+      if (redoKey) {
         event.preventDefault();
         project.redo();
         return;
@@ -748,6 +766,40 @@ export default function App() {
 
   const runCommand = useCallback(
     (command: CommandId) => {
+      // A document's own versions of the commands it shares with every
+      // project (addendum 42).
+      const doc = documentCommands.current;
+      if (doc) {
+        switch (command) {
+          case 'editor.undo':
+            return doc.undo();
+          case 'editor.redo':
+            return doc.redo();
+          case 'editor.find':
+            return doc.find();
+          case 'editor.replace':
+            return doc.replace();
+          case 'editor.findNext':
+            return doc.findNext();
+          case 'file.pageSetup':
+            return doc.pageSetup();
+          case 'file.print':
+            return doc.print();
+          case 'file.exportPdf':
+            return doc.exportPdf();
+          case 'file.exportDocx':
+            return doc.exportDocx();
+          case 'file.save':
+          case 'file.saveAs':
+          case 'file.saveCopy':
+          case 'file.close':
+            // Whatever is still settling goes into the project first.
+            doc.flush();
+            break;
+          default:
+            break;
+        }
+      }
       switch (command) {
         case 'file.new':
           // The project screen, not six menu items. What kind of thing this
@@ -1050,6 +1102,10 @@ export default function App() {
   }
 
   const writing = view === 'write';
+  // A Document project is one document in a word processor (addendum 42),
+  // shown in place of the story workspace.
+  const wordProcessor = isWordProcessor(file.project.format);
+  const wpDocument = wordProcessor ? mainDocument(file) : null;
   /** On a book the Outliner is a page, elsewhere a room (addendum 19 §5). */
   const isBook = isInstructional(file.project.format);
   const focused = focusMode && writing;
@@ -1334,7 +1390,18 @@ export default function App() {
         </p>
       ) : null}
 
-      {writing ? (
+      {writing && wordProcessor && wpDocument ? (
+        <DocumentWorkspace
+          key={wpDocument.id}
+          file={file}
+          document={wpDocument}
+          onUpdate={project.update}
+          saveState={project.saveState}
+          onSave={() => void project.saveNow()}
+          onSaveAs={() => void saveSomewhere('as')}
+          readOnly={!access.writable}
+        />
+      ) : writing ? (
         <div className="workspace-body">
           {focused ? (
             // Focus mode is the page and nothing else: no places, no strips —
@@ -1856,7 +1923,7 @@ export default function App() {
             ...(isBook && away.has('outliner') ? (['outline'] as const) : []),
           ]}
           // A screenplay has no Outline page: the Outliner is a room there.
-          hidden={isBook ? [] : ['outline']}
+          hidden={wordProcessor ? ['outline', 'preview', 'editor', 'readback'] : isBook ? [] : ['outline']}
         />
       )}
     </div>

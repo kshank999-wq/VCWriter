@@ -37,10 +37,11 @@ const draw = (onCreate = vi.fn()) => {
 describe('a format built in another program', () => {
   it('is not among the formats, every one of which is a choice', () => {
     draw();
-    // Seven cards, and all seven are toggles: there is no card on the grid
-    // that does something other than choose a format (§2a).
+    // Eight cards, and all eight are toggles: there is no card on the grid
+    // that does something other than choose a format (§2a). The eighth is the
+    // word processor's Document, in the slot the game card left (addendum 42).
     const cards = screen.getAllByRole('button').filter((one) => one.className.includes('format-option'));
-    expect(cards).toHaveLength(7);
+    expect(cards).toHaveLength(8);
     for (const card of cards) expect(card.getAttribute('aria-pressed')).toBeTypeOf('string');
     expect(screen.queryByRole('button', { name: /Video game/ })).toBe(null);
   });

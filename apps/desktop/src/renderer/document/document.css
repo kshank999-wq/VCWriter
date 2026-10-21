@@ -1,0 +1,390 @@
+/* The word processor (addendum 42). The ribbon and the chrome wear the app's
+   scheme; the page is paper, white with black type, whatever the scheme,
+   because that is what prints. */
+
+.wp-workspace {
+  --wp-page-rule: #c8ccd4;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  background: var(--bg, #1a1a1a);
+}
+
+.wp-ribbon {
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.wp-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 4px 8px 0;
+}
+
+.wp-tab {
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: none;
+  padding: 5px 14px;
+  font-size: 12.5px;
+  color: var(--text);
+  border-radius: 3px 3px 0 0;
+  cursor: pointer;
+}
+
+.wp-tab.active {
+  background: var(--panel-2, var(--bg));
+  border-color: var(--border);
+  color: var(--gold, #c9a45c);
+}
+
+.wp-panel {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  align-items: stretch;
+  gap: 0;
+  padding: 6px 8px 4px;
+  background: var(--panel-2, var(--bg));
+  border-top: 1px solid var(--border);
+  min-height: 74px;
+}
+
+.wp-group {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 0 10px;
+  border-right: 1px solid var(--border);
+}
+
+.wp-group:last-child {
+  border-right: none;
+}
+
+.wp-group-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  align-content: flex-start;
+  gap: 3px;
+  max-width: 460px;
+}
+
+.wp-group {
+  flex: none;
+}
+
+.wp-group-label {
+  font-size: 10.5px;
+  color: var(--muted, #8a8a8a);
+  text-align: center;
+  padding-top: 3px;
+  letter-spacing: 0.02em;
+}
+
+.wp-tool {
+  min-width: 28px;
+  height: 26px;
+  padding: 0 6px;
+  font-size: 12.5px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.wp-tool.wide {
+  padding: 0 9px;
+}
+
+.wp-tool:hover:not(:disabled) {
+  border-color: var(--border);
+  background: var(--hover, rgba(255, 255, 255, 0.06));
+}
+
+.wp-tool.active {
+  border-color: var(--gold, #c9a45c);
+  background: color-mix(in srgb, var(--gold, #c9a45c) 18%, transparent);
+}
+
+.wp-tool:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.wp-select {
+  height: 26px;
+  font-size: 12.5px;
+  padding: 0 4px;
+}
+
+.wp-select.font {
+  width: 150px;
+}
+
+.wp-select.size {
+  width: 58px;
+}
+
+.wp-select.style {
+  width: 140px;
+}
+
+.wp-swatches {
+  display: inline-flex;
+  gap: 2px;
+  padding: 0 4px;
+  border-left: 1px solid var(--border);
+  margin-left: 2px;
+}
+
+.wp-swatch {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.wp-swatch.none {
+  background: transparent;
+  color: var(--muted, #8a8a8a);
+  font-size: 10px;
+  line-height: 14px;
+}
+
+.wp-field {
+  display: inline-flex;
+  flex-direction: column;
+  font-size: 10.5px;
+  color: var(--muted, #8a8a8a);
+  gap: 2px;
+}
+
+.wp-field.narrow input {
+  width: 58px;
+  height: 24px;
+}
+
+.wp-symbols {
+  display: flex;
+  flex-wrap: wrap;
+  max-width: 330px;
+  gap: 1px;
+}
+
+.wp-inline-form {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.wp-inline-form input {
+  width: 220px;
+  height: 26px;
+}
+
+.wp-count {
+  font-size: 12.5px;
+  padding: 4px 2px;
+}
+
+.wp-find {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  font-size: 12.5px;
+}
+
+.wp-find input[type='text'],
+.wp-find input:not([type]) {
+  width: 220px;
+  height: 26px;
+}
+
+.wp-find-count {
+  min-width: 70px;
+  color: var(--muted, #8a8a8a);
+}
+
+.wp-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.wp-nav {
+  width: 240px;
+  flex: none;
+  overflow: auto;
+  padding: 10px 12px;
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+  font-size: 12.5px;
+}
+
+.wp-nav h3 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted, #8a8a8a);
+  margin: 0 0 8px;
+}
+
+.wp-nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.wp-nav li button {
+  text-align: left;
+  width: 100%;
+  padding: 3px 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wp-canvas {
+  flex: 1;
+  overflow: auto;
+  padding: 24px 24px 64px;
+  background: var(--wp-canvas, #3a3d42);
+}
+
+.wp-canvas.print .wp-sheet {
+  margin: 0 auto;
+  background-color: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  box-sizing: border-box;
+}
+
+.wp-canvas.web {
+  padding: 0;
+}
+
+.wp-canvas.web .wp-sheet {
+  background: #fff;
+  min-height: 100%;
+  padding: 28px 48px;
+  box-sizing: border-box;
+}
+
+.wp-sheet .ProseMirror {
+  outline: none;
+  min-height: 1in;
+}
+
+/* The app's own headings are gold capitals in its display face. On the page a
+   heading is Word's: the document's face, black, as typed. */
+.wp-sheet .wp-doc h1,
+.wp-sheet .wp-doc h2,
+.wp-sheet .wp-doc h3,
+.wp-sheet .wp-doc h4,
+.wp-sheet .wp-doc h5,
+.wp-sheet .wp-doc h6 {
+  font-family: inherit;
+  text-transform: none;
+  letter-spacing: normal;
+  color: inherit;
+}
+
+.wp-sheet .wp-doc {
+  color: #000;
+}
+
+.wp-sheet .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #9a9a9a;
+  pointer-events: none;
+  height: 0;
+}
+
+/* A page break shows as a labelled rule on screen; on paper it is a break. */
+.wp-sheet .wp-page-break {
+  border-top: 1px dashed #9aa3ad;
+  margin: 12pt 0;
+  position: relative;
+  height: 0;
+}
+
+.wp-sheet .wp-page-break::after {
+  content: 'Page break';
+  position: absolute;
+  left: 50%;
+  top: -0.7em;
+  transform: translateX(-50%);
+  background: #fff;
+  color: #7a838d;
+  font: 10px/1.2 system-ui, sans-serif;
+  padding: 0 6px;
+}
+
+.wp-sheet .ProseMirror-selectednode {
+  outline: 2px solid #5b9bd5;
+}
+
+.wp-sheet table .selectedCell {
+  background: rgba(91, 155, 213, 0.18);
+}
+
+.wp-find-match {
+  background: #fff176;
+}
+
+.wp-find-current {
+  background: #ff9800;
+}
+
+.show-marks .wp-sheet .ProseMirror p::after,
+.show-marks .wp-sheet .ProseMirror h1::after,
+.show-marks .wp-sheet .ProseMirror h2::after,
+.show-marks .wp-sheet .ProseMirror h3::after,
+.show-marks .wp-sheet .ProseMirror h4::after,
+.show-marks .wp-sheet .ProseMirror h5::after,
+.show-marks .wp-sheet .ProseMirror h6::after {
+  content: '¶';
+  color: #7aa7d8;
+  font-weight: 400;
+  font-style: normal;
+  margin-left: 2px;
+}
+
+.wp-status {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 3px 12px;
+  font-size: 11.5px;
+  border-top: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--muted, #8a8a8a);
+}
+
+.wp-status-spacer {
+  flex: 1;
+}
+
+.wp-status-note {
+  color: var(--gold, #c9a45c);
+}
+
+.wp-zoom {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wp-zoom input {
+  width: 110px;
+}

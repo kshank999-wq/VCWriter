@@ -404,6 +404,10 @@ export const readDocx = (parts: DocxParts): DocxDocument => {
   let drawing: { width: number; height: number; rId: string } | null = null;
   let depthInBody = 0;
 
+  // A page break standing alone in an empty paragraph, which is how Word's
+  // Insert → Page Break writes one. That paragraph is not kept, so the break
+  // is carried to the next paragraph that is: the one that starts the page.
+  let breakPending = false;
   const finishParagraph = () => {
     if (!para) return;
     const style = resolvedStyle(styles, para.styleId || styles.normalId);
@@ -428,10 +432,13 @@ export const readDocx = (parts: DocxParts): DocxDocument => {
         face: face ?? null,
         size: size ?? null,
         caps: caps || (plain.length > 2 && plain === plain.toUpperCase() && /[A-Z]/.test(plain)),
-        pageBreakBefore: p.pageBreakBefore || own.pageBreakBefore || style.pageBreakBefore,
+        pageBreakBefore: breakPending || p.pageBreakBefore || own.pageBreakBefore || style.pageBreakBefore,
         list: p.list,
         pictures: p.pictures,
       });
+      breakPending = false;
+    } else if (p.pageBreakBefore) {
+      breakPending = true;
     }
     para = null;
     firstRunFace = null;

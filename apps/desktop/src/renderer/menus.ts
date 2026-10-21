@@ -13,7 +13,7 @@
  * that is all it should ever know.
  */
 
-import { exportsDocx, hasBookIndex, hasCastPage, hasChapterPages, isCollection, isInteractive, isProseFormat, type ProjectFormat } from '@vcwriter/domain';
+import { exportsDocx, hasBookIndex, hasCastPage, hasChapterPages, isCollection, isInteractive, isProseFormat, isWordProcessor, type ProjectFormat } from '@vcwriter/domain';
 import { paneNamesFor } from './panes';
 
 export type CommandId =
@@ -113,6 +113,7 @@ export interface Menu {
  * it in a novel is a menu that lies.
  */
 export const menusFor = (format: ProjectFormat | null): readonly Menu[] => {
+  if (format !== null && isWordProcessor(format)) return DOCUMENT_MENUS;
   const names = paneNamesFor(format);
   return [
   {
@@ -287,6 +288,66 @@ export const menusFor = (format: ProjectFormat | null): readonly Menu[] => {
   },
   ];
 };
+
+/**
+ * **A document's menus** (addendum 42): the word processor's, which is most
+ * of what Word puts in its File and Edit menus and none of a story's rooms.
+ * The ribbon over the page does the formatting; these are the acts that
+ * belong to the file and the keys everybody already knows.
+ */
+const DOCUMENT_MENUS: readonly Menu[] = [
+  {
+    id: 'file',
+    label: 'File',
+    items: [
+      { command: 'file.new', label: 'New project…', accelerator: 'CmdOrCtrl+N' },
+      null,
+      { command: 'file.open', label: 'Open…', accelerator: 'CmdOrCtrl+O' },
+      { command: 'file.projects', label: 'Delete a project…' },
+      null,
+      { command: 'file.save', label: 'Save', accelerator: 'CmdOrCtrl+S' },
+      { command: 'file.saveAs', label: 'Save as…', accelerator: 'CmdOrCtrl+Shift+S' },
+      { command: 'file.saveCopy', label: 'Save a copy…', accelerator: 'CmdOrCtrl+Alt+S' },
+      null,
+      { command: 'file.pageSetup', label: 'Page setup…' },
+      { command: 'file.print', label: 'Print…', accelerator: 'CmdOrCtrl+P' },
+      { command: 'file.exportPdf', label: 'Export PDF…', accelerator: 'CmdOrCtrl+Shift+P' },
+      { command: 'file.exportDocx', label: 'Export Word document…' },
+      null,
+      { command: 'file.preferences', label: 'Preferences…', accelerator: 'CmdOrCtrl+,' },
+      { command: 'file.close', label: 'Close project' },
+    ],
+  },
+  {
+    id: 'editor',
+    label: 'Edit',
+    items: [
+      { command: 'editor.undo', label: 'Undo', accelerator: 'CmdOrCtrl+Z' },
+      { command: 'editor.redo', label: 'Redo', accelerator: 'CmdOrCtrl+Shift+Z' },
+      null,
+      { command: 'editor.find', label: 'Find…', accelerator: 'CmdOrCtrl+F' },
+      { command: 'editor.findNext', label: 'Find next', accelerator: 'CmdOrCtrl+G' },
+      { command: 'editor.replace', label: 'Replace…', accelerator: 'CmdOrCtrl+Alt+F' },
+    ],
+  },
+  {
+    id: 'window',
+    label: 'Window',
+    items: [
+      { command: 'window.research', label: 'Research in its own window', checkable: true },
+      null,
+      { command: 'window.preferences', label: 'Window preferences…' },
+    ],
+  },
+  {
+    id: 'help',
+    label: 'Help',
+    items: [
+      { command: 'help.spec', label: 'What this build does' },
+      { command: 'help.about', label: 'About VC Writer' },
+    ],
+  },
+];
 
 /** The menus with nothing open: everything a project does not decide. */
 export const MENUS: readonly Menu[] = menusFor(null);

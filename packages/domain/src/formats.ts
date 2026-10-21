@@ -111,6 +111,16 @@ const other = (name: string, host: string): OtherProgram => ({ name, host, url: 
 export const builtElsewhere = (format: ProjectFormat): OtherProgram | null =>
   format === 'game' ? other('VC Game Studio', 'vc-gamestudio.com') : null;
 
+/**
+ * **Whether the project is one document in a word processor** (addendum 42).
+ *
+ * Every other format is written as beats on tracks. This one is a single
+ * rich-text document, edited the way Word edits one, so the story workspace,
+ * its rails and its tracks have nothing to show and the document workspace
+ * takes the window instead.
+ */
+export const isWordProcessor = (format: ProjectFormat): boolean => format === 'document';
+
 /** Whether a new project of this format is made in this program. */
 export const startsHere = (format: ProjectFormat): boolean => builtElsewhere(format) === null;
 
@@ -153,6 +163,7 @@ const FORMAT_NAMES: Record<ProjectFormat, string> = {
   stage_play: 'Stage play',
   short_story: 'Short stories and collections',
   short_form: 'Short form',
+  document: 'Document',
   /**
    * **The ninth, which no screen offers and the record allows.** Every one of
    * the four private lists stopped at eight, so a project carrying this —
@@ -290,6 +301,20 @@ const NOUNS: Partial<Record<ProjectFormat, FormatNouns>> = {
   game: {
     ...SCRIPT_NOUNS,
     work: 'Game',
+  },
+  /**
+   * A document is divided by its headings, so its parts are sections and
+   * paragraphs, and the work is the document itself (addendum 42).
+   */
+  document: {
+    unit: 'Section',
+    unitPlural: 'Sections',
+    sub: 'Paragraph',
+    subPlural: 'Paragraphs',
+    division: 'Section',
+    divisionPlural: 'Sections',
+    manuscript: 'Document',
+    work: 'Document',
   },
 };
 

@@ -39,6 +39,13 @@ export const projectFormatSchema = z.enum([
    * difference; nothing should test this string directly.
    */
   'game',
+  /**
+   * A general-purpose document: a letter, a report, an essay, notes
+   * (addendum 42). Written in a word processor rather than as beats, with an
+   * Extract & Organize sidebar that files passages into this or another
+   * project. Ask `isWordProcessor`; nothing should test this string directly.
+   */
+  'document',
   'other',
 ]);
 export type ProjectFormat = z.infer<typeof projectFormatSchema>;

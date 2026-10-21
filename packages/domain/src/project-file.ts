@@ -40,6 +40,7 @@ import { noteSessionSchema, noteSourceSchema } from './entities/note-sorter.js';
 import { assetSchema } from './entities/asset.js';
 import { boardSchema } from './entities/sculptor.js';
 import { outlineSchema } from './entities/outline.js';
+import { emptyDocContent, wpDocumentSchema } from './entities/document.js';
 import { setupPayoffSchema } from './entities/setups.js';
 import { indexMarkSchema, indexRefSchema } from './entities/book-index.js';
 import { snapshotSchema } from './entities/revision.js';
@@ -50,8 +51,8 @@ import {
   type ProjectFormat,
 } from './entities/project.js';
 import { TRACK_COLOURS, beatSchema, trackSchema, storyMarkerSchema, structuralUnitSchema } from './entities/structure.js';
-import type { CharacterCategoryId, TrackId, ProjectId, ResearchCategoryId, StructuralUnitId, UserId } from './ids.js';
-import { isInstructional, isProseFormat } from './formats.js';
+import type { CharacterCategoryId, TrackId, ProjectId, ResearchCategoryId, StructuralUnitId, UserId, WpDocumentId } from './ids.js';
+import { isInstructional, isProseFormat, isWordProcessor } from './formats.js';
 
 /**
  * The VC Writer project document.
@@ -99,6 +100,11 @@ export const projectFileSchema = z.object({
    * predates them, and in every project whose writer has not opened one.
    */
   boards: z.array(boardSchema).default([]),
+  /**
+   * Word-processor documents (addendum 42). A Document project holds one;
+   * every other format holds none.
+   */
+  documents: z.array(wpDocumentSchema).default([]),
   /** The Outliner's trees (addendum 06). Empty until one is made. */
   outlines: z.array(outlineSchema).default([]),
   researchCategories: z.array(researchCategorySchema).default([]),
@@ -476,5 +482,20 @@ export const createProjectFile = (options: CreateProjectOptions): ProjectFile =>
     ],
     researchCategories,
     characterCategories,
+    // A Document project is one document (addendum 42). The track, unit and
+    // beat above stay, empty and out of sight, so nothing that counts or
+    // lists them meets a project with none.
+    documents: isWordProcessor(options.format)
+      ? [
+          {
+            id: newId<WpDocumentId>(),
+            projectId,
+            title: options.title,
+            content: emptyDocContent(),
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          },
+        ]
+      : [],
   });
 };

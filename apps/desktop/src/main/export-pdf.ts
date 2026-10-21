@@ -15,6 +15,7 @@ import {
   renderSheetDocumentHtml,
   suggestedBoardFileName,
   suggestedBookFileName,
+  suggestedPdfName,
   suggestedExportFileName,
   suggestedGridFileName,
   suggestedNarrativeFileName,
@@ -102,7 +103,7 @@ const withDocumentWindow = async <T>(
  * tree as one (addendum 06 §12, stage 9). They are renderings of one project
  * rather than separate projects.
  */
-export type PrintKind = 'script' | 'sheet' | 'board' | 'grid' | 'outline' | 'one-sheet' | 'narrative' | 'book';
+export type PrintKind = 'script' | 'sheet' | 'board' | 'grid' | 'outline' | 'one-sheet' | 'narrative' | 'book' | 'document';
 
 export interface ExportPdfInput {
   file: unknown;
@@ -148,6 +149,19 @@ const documentFor = (
       landscape: false,
       paper: drawn?.paper,
       pageClass: 'bk-page',
+    };
+  }
+  // A word-processor document (addendum 42): drawn by the renderer from the
+  // editor, set into pages by the browser's own print layout at the paper
+  // the document names, so the page count is the PDF's.
+  if (kind === 'document') {
+    return {
+      html: drawn?.html ?? '',
+      name: suggestedPdfName(project.project.title),
+      paged: false,
+      landscape: false,
+      paper: drawn?.paper,
+      pageClass: 'page',
     };
   }
   // §18's reports, one after another (addendum 18 stage 9). Not paged as a

@@ -216,6 +216,8 @@ const SPOKEN_FORMATS: ReadonlyArray<{ format: ProjectFormat; name: string; spoke
   { format: 'stage_play', name: 'Stage play', spoken: ['stage play', 'play', 'theatre', 'theater'] },
   { format: 'short_form', name: 'Short form', spoken: ['short form', 'commercial', 'music video'] },
   { format: 'game', name: 'Game', spoken: ['game', 'video game', 'interactive'] },
+  // A word-processor document (addendum 42): a letter, a report, an essay.
+  { format: 'document', name: 'Document', spoken: ['document', 'word document', 'letter', 'report', 'essay'] },
 ];
 
 /**

@@ -317,7 +317,9 @@ describe('a format said out loud', () => {
     // the program can **make** is what this list is of (addendum 30).
     expect(spokenFormatNames()).toContain('Educational book');
     expect(spokenFormatNames()).toContain('Novel');
-    expect(spokenFormatNames().length).toBe(7);
+    // The word processor's Document is the eighth (addendum 42).
+    expect(spokenFormatNames()).toContain('Document');
+    expect(spokenFormatNames().length).toBe(8);
   });
 
   /**

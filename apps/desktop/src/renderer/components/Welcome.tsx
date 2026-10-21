@@ -3,6 +3,7 @@ import {
   builtElsewhere,
   describeProjectFolder,
   nounsFor,
+  isWordProcessor,
   startsHere,
   type ProjectFormat,
   type ProjectFolder,
@@ -71,9 +72,14 @@ const FORMATS: ReadonlyArray<{ value: ProjectFormat; about: string }> = [
   // room sets the collection as a book (addendum 22).
   { value: 'short_story', about: 'one story, or a collection set as a book' },
   { value: 'short_form', about: 'commercials, web video, social' },
+  // The eighth card, in the slot the game card's move left open (addendum 42):
+  // a word processor, for everything that is not a story's manuscript.
+  { value: 'document', about: 'A word processor: letters, reports, essays and notes, filed into your other projects' },
 ];
 
 const detailFor = (option: { value: ProjectFormat; about: string }): string => {
+  // A document has no parts to list; what it is for says more.
+  if (isWordProcessor(option.value)) return option.about;
   const nouns = nounsFor(option.value);
   const parts = `${nouns.unitPlural} and ${nouns.subPlural.toLowerCase()}`;
   return option.about.length > 0 ? `${parts}, ${option.about}` : parts;

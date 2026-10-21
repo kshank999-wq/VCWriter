@@ -1,7 +1,7 @@
 import { beatIdOf, paneTitle } from '../panes';
 import { Wordmark } from './Brand';
 import { RoomFormat } from './RoomFormat';
-import { avSheet, formatRt, nounsFor, type ProjectFile, type ProjectFormat } from '@vcwriter/domain';
+import { avSheet, formatRt, isWordProcessor, nounsFor, type ProjectFile, type ProjectFormat } from '@vcwriter/domain';
 import type { AccountStatus } from '../../preload/index';
 
 const SAVE_LABEL: Record<string, string> = {
@@ -88,6 +88,9 @@ export function TitleBar({
   // of them; the chips here are for the sections and for research.
   const sections = away.filter((pane) => !beatIdOf(pane));
   const nouns = nounsFor(file.project.format);
+  // A document's rooms are its ribbon and sidebar (addendum 42); the story
+  // rooms — Sculptor, Outliner, the note sorter, focus mode — are a story's.
+  const story = !isWordProcessor(file.project.format);
 
   return (
     <header className="titlebar">
@@ -112,6 +115,9 @@ export function TitleBar({
             <>
               {formatRt(avSheet(file).seconds)} · {beatCount} shots · {wordCount} words
             </>
+          ) : isWordProcessor(file.project.format) ? (
+            // A document's own counts are in its status bar (addendum 42).
+            null
           ) : (
             <>
               {pages} {pages === 1 ? 'page' : 'pages'} · {beatCount} {nouns.subPlural.toLowerCase()} · {wordCount} words
@@ -154,7 +160,7 @@ export function TitleBar({
         ) : null}
         {/* Every format's, unlike Layout: a page of notes wants sorting
             whatever is being written from it (addendum 26 §4). */}
-        {writing && onOpenSorter ? (
+        {writing && onOpenSorter && story ? (
           <button
             type="button"
             className="raised"
@@ -164,7 +170,7 @@ export function TitleBar({
             Notes
           </button>
         ) : null}
-        {writing ? (
+        {writing && story ? (
           <button
             type="button"
             className="raised"
@@ -184,7 +190,7 @@ export function TitleBar({
             Narrative
           </button>
         ) : null}
-        {writing ? (
+        {writing && story ? (
           <button
             type="button"
             className="raised"
@@ -194,7 +200,7 @@ export function TitleBar({
             Outliner
           </button>
         ) : null}
-        {writing ? (
+        {writing && story ? (
           <button
             type="button"
             className={focusMode ? 'raised active' : 'raised'}

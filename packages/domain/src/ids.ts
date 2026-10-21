@@ -88,6 +88,8 @@ export type ReleaseBuildId = Id<'ReleaseBuild'>;
 export type DeviceActivationId = Id<'DeviceActivation'>;
 
 /** Any branded id, when a helper genuinely does not care which kind it holds. */
+/** A word-processor document (addendum 42). */
+export type WpDocumentId = Id<'WpDocument'>;
 export type AnyId = Id<string>;
 
 interface RandomSource {
