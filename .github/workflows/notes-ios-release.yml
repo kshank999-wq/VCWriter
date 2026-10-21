@@ -87,9 +87,18 @@ jobs:
       # is real and takes every default. With the API key it signs in by itself
       # and asks nothing else on a team that has no certificate yet. Once they
       # exist it only checks them.
+      #
+      # The answers are a Return a second, not `yes ''`: the terminal echoes
+      # every one into the log, and an endless stream of them got the runner
+      # shut down a few seconds after the credentials were ready. Two minutes
+      # of answers is far more than the half-minute this takes, and the
+      # feeder stops at the first Return after the command has finished.
       - name: Set up signing
         run: |
-          yes '' | script -qec "eas credentials:configure-build --platform ios --profile production" /dev/null
+          set -o pipefail
+          (for _ in $(seq 120); do sleep 1; echo; done) \
+            | script -qec "eas credentials:configure-build --platform ios --profile production" /dev/null \
+            | grep -v '^\s*$' || [ "${PIPESTATUS[1]}" = 0 ]
 
       - name: Build
         id: build
