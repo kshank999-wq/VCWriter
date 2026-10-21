@@ -1400,6 +1400,7 @@ export default function App() {
           onSave={() => void project.saveNow()}
           onSaveAs={() => void saveSomewhere('as')}
           readOnly={!access.writable}
+          projectPath={project.path}
         />
       ) : writing ? (
         <div className="workspace-body">

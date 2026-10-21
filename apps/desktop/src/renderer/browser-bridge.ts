@@ -645,6 +645,33 @@ export const createBrowserBridge = (): BrowserBridge => {
      * every project back out, so it does not pretend to: the row says what it
      * is and when it was written, and nothing about how big it is.
      */
+    /** Another project in this browser, read without opening it (addendum 42 §10). */
+    async readProject(path) {
+      try {
+        const record = await read(path);
+        if (!record) return fail('That project is no longer in this browser');
+        return ok({ path, file: parseProjectFile(record.file), contentHash: record.contentHash });
+      } catch (error) {
+        return fail((error as Error).message);
+      }
+    },
+
+    /** Written back only if it is still what was read, with a recovery point of it first. */
+    async sendIntoProject(input) {
+      try {
+        const record = await read(input.path);
+        if (!record) return fail('That project is no longer in this browser');
+        if (record.contentHash !== input.expectedHash) {
+          return fail(`${record.file.project.title || 'That project'} changed while you were choosing. Nothing was sent; try again.`);
+        }
+        await keepSnapshot(input.path, JSON.stringify(record.file), 'pre_transfer');
+        const saved = await store(input.path, input.file);
+        return ok({ contentHash: saved.contentHash });
+      } catch (error) {
+        return fail((error as Error).message);
+      }
+    },
+
     async listProjects() {
       try {
         const records = await readAll();

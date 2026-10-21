@@ -82,6 +82,10 @@ interface ExtractSidebarProps {
   onRemove(extract: Extract): void;
   /** Select the passage an extract came from. */
   onReveal(extract: Extract): void;
+  /** Open the destination picker for these (addendum 42 §10). */
+  onSend(extracts: Extract[]): void;
+  /** A row for it in the document's outline (addendum 42 §9). */
+  onAddToOutline(extract: Extract): void;
   display: SourceDisplay;
   onDisplay(display: SourceDisplay): void;
   onClose(): void;
@@ -214,7 +218,7 @@ export function ExtractSidebar(props: ExtractSidebarProps) {
 
 // ------------------------------------------------------------------- bins
 
-function Bins({ file, document, editor, onUpdate, paletteId, onRemove, onReveal, readOnly }: ExtractSidebarProps) {
+function Bins({ file, document, editor, onUpdate, paletteId, onRemove, onReveal, onSend, onAddToOutline, readOnly }: ExtractSidebarProps) {
   const [scope, setScope] = useState<'palette' | 'all'>('palette');
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<ExtractStatus | 'all'>('all');
@@ -229,6 +233,8 @@ function Bins({ file, document, editor, onUpdate, paletteId, onRemove, onReveal,
   );
   const filtering = query.trim() !== '' || status !== 'all';
   const total = bins.reduce((sum, bin) => sum + bin.extracts.length, 0);
+  // What a bulk send takes: every extract the bins are showing.
+  const showing = bins.flatMap((bin) => bin.extracts.filter((extract) => matchesExtract(extract, query, status)));
 
   return (
     <section className="wp-bins" aria-label="Bins">
@@ -240,6 +246,15 @@ function Bins({ file, document, editor, onUpdate, paletteId, onRemove, onReveal,
           <option value="palette">This palette</option>
           <option value="all">All categories</option>
         </select>
+        <button
+          type="button"
+          className="ghost small"
+          disabled={readOnly || showing.length === 0}
+          title="Send every extract listed here to a project"
+          onClick={() => onSend(showing)}
+        >
+          Send {showing.length === total ? 'all' : showing.length}…
+        </button>
       </div>
       <div className="wp-extract-row">
         <input type="search" aria-label="Search extracts" placeholder="Search extracts" value={query} onChange={(event) => setQuery(event.target.value)} />
@@ -289,6 +304,8 @@ function Bins({ file, document, editor, onUpdate, paletteId, onRemove, onReveal,
                     onUpdate={onUpdate}
                     onRemove={() => onRemove(extract)}
                     onReveal={() => onReveal(extract)}
+                    onSend={() => onSend([extract])}
+                    onAddToOutline={() => onAddToOutline(extract)}
                     onResync={() => {
                       const now = extractTextNow(editor.state.doc, extract.id);
                       if (now !== null) onUpdate((current) => updateExtract(current, extract.id, { textPlain: now, sourceRevision: document.revision }));
@@ -315,6 +332,8 @@ function ExtractItem({
   onUpdate,
   onRemove,
   onReveal,
+  onSend,
+  onAddToOutline,
   onResync,
 }: {
   extract: Extract;
@@ -327,6 +346,8 @@ function ExtractItem({
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
   onRemove(): void;
   onReveal(): void;
+  onSend(): void;
+  onAddToOutline(): void;
   onResync(): void;
 }) {
   const [renaming, setRenaming] = useState<string | null>(null);
@@ -359,8 +380,19 @@ function ExtractItem({
             </button>
           </>
         ) : null}
+        {extract.sentTo.map((receipt) => (
+          <span key={`${receipt.projectId}-${receipt.resultId}`} className="flag sent" title={receipt.path ?? undefined}>
+            Sent to {receipt.projectTitle || 'a project'} › {receipt.areaName}
+          </span>
+        ))}
       </div>
       <div className="wp-bin-actions">
+        <button type="button" className="small" disabled={readOnly} onClick={onSend}>
+          Send…
+        </button>
+        <button type="button" className="ghost small" disabled={readOnly} onClick={onAddToOutline}>
+          Add to outline
+        </button>
         <select
           aria-label="Status"
           value={extract.status}

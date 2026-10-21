@@ -47,7 +47,7 @@ export interface SnapshotSummary {
   createdAt: string;
   sizeBytes: number;
   /** Why the recovery point exists, so the writer can find the right one. */
-  reason: 'autosave' | 'manual' | 'pre_migration' | 'pre_sync';
+  reason: 'autosave' | 'manual' | 'pre_migration' | 'pre_sync' | 'pre_transfer';
   /**
    * What this point is called, where it has a name.
    *
@@ -175,6 +175,18 @@ export interface VcWriterApi {
    * A list somebody deletes from has to say what each one *is*.
    */
   listProjects(): Promise<DesktopApiResult<ProjectEntry[]>>;
+  /**
+   * Another project, read without opening it (addendum 42 §10): where
+   * extracts are about to be sent. Nothing about the open project changes,
+   * and it is not added to the recent list.
+   */
+  readProject(path: string): Promise<DesktopApiResult<OpenResult>>;
+  /**
+   * Write into that project what was sent to it. Refused when the file has
+   * changed since `readProject` (`expectedHash`), so nothing written there in
+   * the meantime is overwritten; a recovery point of it is taken first.
+   */
+  sendIntoProject(input: { path: string; file: ProjectFile; expectedHash: string }): Promise<DesktopApiResult<{ contentHash: string }>>;
   /**
    * Take one away. The only thing in the application that cannot be undone,
    * which is why the interface asks first and this does not.
@@ -481,6 +493,8 @@ const api: VcWriterApi = {
   chooseProjectsFolder: () => ipcRenderer.invoke('project:chooseHome'),
   recentProjects: () => ipcRenderer.invoke('project:recents'),
   listProjects: () => ipcRenderer.invoke('project:list'),
+  readProject: (path) => ipcRenderer.invoke('project:read', path),
+  sendIntoProject: (input) => ipcRenderer.invoke('project:sendInto', input),
   deleteProject: (path: string) => ipcRenderer.invoke('project:delete', path),
   listSnapshots: (path) => ipcRenderer.invoke('project:snapshots', path),
   restoreSnapshot: (input) => ipcRenderer.invoke('project:restoreSnapshot', input),

@@ -54,6 +54,8 @@ import { reportError, reportingSettings, setReportingEnabled } from './reporting
 import { kindlePreviewerStatus, openInKindlePreviewer } from './kindle-previewer';
 import {
   PROJECT_EXTENSION,
+  hash as hashOfContents,
+  writeSnapshot,
   listSnapshots,
   loadProject,
   restoreSnapshot,
@@ -453,6 +455,36 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
       return fail(cause);
     }
   });
+
+  /**
+   * Sending extracts into another project (addendum 42 §10): read it as it is
+   * on disk, and write it back only if it is still that.
+   */
+  ipcMain.handle('project:read', async (_event, path: string): Promise<DesktopApiResult<OpenResult>> => {
+    try {
+      return ok(toOpenResult(await loadProject(path)));
+    } catch (cause) {
+      return fail(cause);
+    }
+  });
+
+  ipcMain.handle(
+    'project:sendInto',
+    async (_event, input: { path: string; file: unknown; expectedHash: string }): Promise<DesktopApiResult<{ contentHash: string }>> => {
+      try {
+        const file = parseProjectFile(input.file);
+        const before = await readFile(input.path, 'utf8');
+        if (hashOfContents(before) !== input.expectedHash) {
+          return fail(new Error(`${file.project.title || 'That project'} changed while you were choosing. Nothing was sent; try again.`));
+        }
+        await writeSnapshot(input.path, before, 'pre_transfer');
+        const result = await saveProject(input.path, file);
+        return ok({ contentHash: result.contentHash });
+      } catch (cause) {
+        return fail(cause);
+      }
+    },
+  );
 
   ipcMain.handle('project:list', async (): Promise<DesktopApiResult<ProjectEntry[]>> => {
     try {

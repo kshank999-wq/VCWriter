@@ -1,6 +1,7 @@
 import { Extension, Mark, Node, mergeAttributes } from '@tiptap/core';
 import type { Node as PmNode } from '@tiptap/pm/model';
-import { Plugin, PluginKey, type EditorState } from '@tiptap/pm/state';
+import { Plugin, PluginKey, type EditorState, type Transaction } from '@tiptap/pm/state';
+import { headingNumbers, type DocNode, type HeadingNumbering } from '@vcwriter/domain';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import StarterKit from '@tiptap/starter-kit';
 import { TextStyleKit } from '@tiptap/extension-text-style';
@@ -34,6 +35,10 @@ declare module '@tiptap/core' {
     };
     search: {
       setSearch: (search: SearchState) => ReturnType;
+    };
+    headingIds: {
+      /** How the headings are numbered on the page: drawn, never typed (addendum 42 §9). */
+      setHeadingNumbering: (scheme: HeadingNumbering) => ReturnType;
     };
   }
 }
@@ -353,6 +358,145 @@ export const extractIdsIn = (doc: PmNode): Set<string> => {
   return ids;
 };
 
+// ------------------------------------------------------------ headings
+
+const newHeadingId = (): string =>
+  typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : `h-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+
+/** A transaction giving every heading without an id, or with a second copy of one, an id of its own. */
+const fixHeadingIds = (state: EditorState): Transaction | null => {
+  const seen = new Set<string>();
+  let tr: Transaction | null = null;
+  state.doc.forEach((node, offset) => {
+    if (node.type.name !== 'heading') return;
+    const id = node.attrs['headingId'] as string | null;
+    if (id && !seen.has(id)) {
+      seen.add(id);
+      return;
+    }
+    const fresh = newHeadingId();
+    seen.add(fresh);
+    tr = (tr ?? state.tr).setNodeMarkup(offset, undefined, { ...node.attrs, headingId: fresh });
+  });
+  return tr === null ? null : (tr as Transaction).setMeta('addToHistory', false);
+};
+
+export const headingNumbersKey = new PluginKey<{ scheme: HeadingNumbering; decorations: DecorationSet }>('wpHeadingNumbers');
+
+const numberDecorations = (doc: PmNode, scheme: HeadingNumbering): DecorationSet => {
+  if (scheme === 'none') return DecorationSet.empty;
+  // Only the headings are handed over: the numbering reads nothing else.
+  const offsets: number[] = [];
+  const blocks: DocNode[] = [];
+  doc.forEach((node, offset) => {
+    if (node.type.name !== 'heading') return;
+    offsets.push(offset);
+    blocks.push({ type: 'heading', attrs: { level: node.attrs['level'], headingId: node.attrs['headingId'] } });
+  });
+  const numbers = headingNumbers({ type: 'doc', content: blocks }, scheme);
+  const decorations: Decoration[] = [];
+  blocks.forEach((block, index) => {
+    const number = numbers.get(String(block.attrs?.['headingId'] ?? ''));
+    if (number === undefined) return;
+    decorations.push(
+      Decoration.widget(
+        offsets[index]! + 1,
+        () => {
+          const span = document.createElement('span');
+          span.className = 'wp-heading-number';
+          span.contentEditable = 'false';
+          span.textContent = number;
+          return span;
+        },
+        { side: -1, key: `n-${number}` },
+      ),
+    );
+  });
+  return DecorationSet.create(doc, decorations);
+};
+
+/**
+ * **A heading keeps one id for life** (addendum 42 §9): the document's
+ * outline is bound to its headings by it, so a heading edited, moved or
+ * restyled is still the same row. A heading made by Enter inside another
+ * starts as a copy of its id, and the later copy is given its own.
+ *
+ * And the numbering (1, 1.1 or I, A, 1) is drawn in front of each heading,
+ * never typed into it: the words stay the writer's.
+ */
+export const HeadingIds = Extension.create({
+  name: 'headingIds',
+  addGlobalAttributes() {
+    return [
+      {
+        types: ['heading'],
+        attributes: {
+          headingId: {
+            default: null,
+            parseHTML: (element: HTMLElement) => element.getAttribute('data-heading-id'),
+            renderHTML: (attributes: Record<string, unknown>) =>
+              attributes['headingId'] ? { 'data-heading-id': attributes['headingId'] } : {},
+          },
+        },
+      },
+    ];
+  },
+  addCommands() {
+    return {
+      setHeadingNumbering:
+        (scheme: HeadingNumbering) =>
+        ({ tr, dispatch }) => {
+          if (dispatch) tr.setMeta(headingNumbersKey, scheme);
+          return true;
+        },
+    };
+  },
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        appendTransaction: (transactions, _old, state) =>
+          transactions.some((tr) => tr.docChanged) ? fixHeadingIds(state) : null,
+        view: (view) => {
+          // A document opened or imported has headings with no ids yet.
+          if (fixHeadingIds(view.state)) {
+            queueMicrotask(() => {
+              const fix = view.isDestroyed ? null : fixHeadingIds(view.state);
+              if (fix) view.dispatch(fix);
+            });
+          }
+          return {};
+        },
+      }),
+      new Plugin<{ scheme: HeadingNumbering; decorations: DecorationSet }>({
+        key: headingNumbersKey,
+        state: {
+          init: () => ({ scheme: 'none', decorations: DecorationSet.empty }),
+          apply: (tr, value, _old, state) => {
+            const asked = tr.getMeta(headingNumbersKey) as HeadingNumbering | undefined;
+            const scheme = asked ?? value.scheme;
+            if (asked === undefined && !tr.docChanged) return value;
+            return { scheme, decorations: numberDecorations(state.doc, scheme) };
+          },
+        },
+        props: {
+          decorations: (state) => headingNumbersKey.getState(state)?.decorations ?? null,
+        },
+      }),
+    ];
+  },
+});
+
+/** Where a heading is, by its id: the position just inside it. */
+export const headingPosition = (doc: PmNode, headingId: string): number | null => {
+  let found: number | null = null;
+  doc.forEach((node, offset) => {
+    if (found === null && node.type.name === 'heading' && node.attrs['headingId'] === headingId) found = offset + 1;
+  });
+  return found;
+};
+
 /** Everything the document editor is built from. */
 export const documentExtensions = () => [
   StarterKit.configure({
@@ -371,4 +515,5 @@ export const documentExtensions = () => [
   PageBreak,
   Search,
   ExtractMark,
+  HeadingIds,
 ];

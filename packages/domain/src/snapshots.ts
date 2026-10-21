@@ -29,13 +29,15 @@
  * project has stepped around and the third the compiler caught rather than a
  * reader.
  */
-export type RecoveryReason = 'autosave' | 'manual' | 'pre_migration' | 'pre_sync';
+export type RecoveryReason = 'autosave' | 'manual' | 'pre_migration' | 'pre_sync' | 'pre_transfer';
 
 export const RECOVERY_REASONS: readonly RecoveryReason[] = [
   'autosave',
   'manual',
   'pre_migration',
   'pre_sync',
+  /** Taken from a project before extracts are sent into it from another (addendum 42 §10). */
+  'pre_transfer',
 ];
 
 /**

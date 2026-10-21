@@ -7,6 +7,7 @@ import { usePhoneNotes } from '../phone-notes';
 import { PopOutButton } from './PopOutButton';
 import {
   isInstructional,
+  isWordProcessor,
   addItem,
   addResearchRow,
   approveCapture,
@@ -120,6 +121,23 @@ interface OutlinerWindowProps {
    * *to the Book*. The same component; only where it is mounted differs.
    */
   page?: boolean;
+  /**
+   * **The Outliner inside a document** (addendum 42 §9). Each is optional and
+   * absent everywhere else, so every other mount is unchanged.
+   *
+   * - `outlineId` pins the one outline this host shows (the document's own).
+   * - `promotion: false` leaves out Add to track, the scene card and the
+   *   promotion panel: a document has no track to put a row on.
+   * - `numbers` replaces the outline's own numbering with the host's.
+   * - `onOpenRow` is a double-click on a row: the document goes to the
+   *   heading the row stands for.
+   * - `toolbar` is the host's own controls, after the row buttons.
+   */
+  outlineId?: string;
+  promotion?: boolean;
+  numbers?: ReadonlyMap<string, string>;
+  onOpenRow?(item: OutlineItem): void;
+  toolbar?: React.ReactNode;
 }
 
 /** How far one level of depth moves a row in. */
@@ -170,6 +188,11 @@ const kindsFor = (format: ProjectFormat): Record<string, { name: string; mark: s
     idea: { name: 'Idea', mark: MARKS['idea']! },
   };
   if (isInstructional(format)) return { chapter: { name: 'Chapter', mark: MARKS['chapter']! }, ...shared };
+  // A document's outline is its headings, with notes and ideas among them
+  // (addendum 42 §9). Scenes and beats are a story's.
+  if (isWordProcessor(format)) {
+    return { heading: { name: 'Heading', mark: MARKS['chapter']! }, note: shared['note']!, idea: shared['idea']! };
+  }
   return {
     ...shared,
     character: { name: 'Character', mark: MARKS['character']! },
@@ -202,9 +225,25 @@ const placeholderOf = (kind: string, format: ProjectFormat): string => {
 };
 const markOf = (kind: string): string => MARKS[kind] ?? '•';
 
-export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExport, onPopOut, onSaveAs, page = false }: OutlinerWindowProps) {
+export function OutlinerWindow({
+  file,
+  open,
+  onClose,
+  onUpdate,
+  onPrint,
+  onExport,
+  onPopOut,
+  onSaveAs,
+  page = false,
+  outlineId: pinned,
+  promotion = true,
+  numbers: hostNumbers,
+  onOpenRow,
+  toolbar,
+}: OutlinerWindowProps) {
   const outlines = outlinesOf(file);
-  const [outlineId, setOutlineId] = useState<string | null>(null);
+  const [chosenOutlineId, setOutlineId] = useState<string | null>(null);
+  const outlineId = pinned ?? chosenOutlineId;
   const [selected, setSelected] = useState<OutlineItemId | null>(null);
   /**
    * The rest of a selection of more than one (§8).
@@ -299,10 +338,11 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
    * Read from the tree every time, so indenting a row makes it 1.2.1 with
    * nothing run and nowhere to type the figure.
    */
-  const numbers = useMemo(
+  const ownNumbers = useMemo(
     () => (outline ? outlineNumbers(file, outline) : new Map<string, string>()),
     [file, outline],
   );
+  const numbers = hostNumbers ?? ownNumbers;
   const nouns = nounsFor(file.project.format);
 
   const write = (mutate: (current: ProjectFile, id: Outline['id']) => ProjectFile) => {
@@ -567,7 +607,7 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
     if (event.key === 'Enter') {
       event.preventDefault();
       const here = findOutlineItem(outline, selected);
-      add(...nextAfter(here));
+      add(...(isWordProcessor(file.project.format) ? nextAfterInDocument(here) : nextAfter(here)));
     }
   };
 
@@ -598,6 +638,25 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
                 + Chapter
               </button>
             ) : null}
+            {/* A document's rows are its headings (addendum 42 §9): one
+                beside the chosen row, or one under it, which is a level
+                down in the document. */}
+            {isWordProcessor(file.project.format) ? (
+              <>
+                <button type="button" className="tool" title="A heading beside the chosen row, at its level" onClick={() => add('heading', true)}>
+                  + Heading
+                </button>
+                <button
+                  type="button"
+                  className="tool"
+                  disabled={!chosen}
+                  title={chosen ? `A heading under ${chosen.title || 'the selected row'}, a level down` : 'Choose a row to put it under'}
+                  onClick={() => add('heading')}
+                >
+                  + Subheading
+                </button>
+              </>
+            ) : (
             <button
               type="button"
               className="tool"
@@ -606,8 +665,9 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
             >
               + {nouns.unit}
             </button>
+            )}
             {Object.keys(kindsFor(file.project.format))
-              .filter((kind) => kind !== 'scene' && kind !== 'chapter')
+              .filter((kind) => kind !== 'scene' && kind !== 'chapter' && kind !== 'heading')
               .map((kind) => (
                 <button
                   key={kind}
@@ -632,6 +692,8 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
                 under Ken's name for it — onto the first track, and so into
                 the manuscript, the unit being one thing seen from two places.
                 There is no × on a row, so Delete is the only way out. */}
+            {toolbar}
+            {promotion ? (
             <button
               type="button"
               className="tool"
@@ -647,6 +709,7 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
             >
               Add to track
             </button>
+            ) : null}
             <button
               type="button"
               className="tool danger"
@@ -727,11 +790,13 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
             {tally ? (
               <span className="muted small">
                 {filtering ? `${found.hits.size} found · ` : ''}
-                {`${tally.scenes} ${(tally.scenes === 1 ? nouns.unit : nouns.unitPlural).toLowerCase()} · ${tally.rows} ${tally.rows === 1 ? 'row' : 'rows'}`}
+                {isWordProcessor(file.project.format)
+                  ? `${tally.rows} ${tally.rows === 1 ? 'row' : 'rows'}`
+                  : `${tally.scenes} ${(tally.scenes === 1 ? nouns.unit : nouns.unitPlural).toLowerCase()} · ${tally.rows} ${tally.rows === 1 ? 'row' : 'rows'}`}
               </span>
             ) : null}
 
-            {outlines.length > 1 ? (
+            {outlines.length > 1 && !pinned ? (
               <select
                 aria-label="Which outline"
                 value={outline.id as string}
@@ -889,6 +954,7 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
               hit={filtering && found.hits.has(row.item.id as string)}
               editing={editing === row.item.id}
               onSelect={(how) => choose(row.item.id, how)}
+              onOpen={onOpenRow ? () => onOpenRow(row.item) : undefined}
               onEdit={(on) => {
                 setEditing(on ? row.item.id : null);
                 // Cast the name when the writer leaves the box, never while
@@ -1054,16 +1120,18 @@ export function OutlinerWindow({ file, open, onClose, onUpdate, onPrint, onExpor
 
               {/* The scene card (§7): what a scene says about itself, from
                   wherever each part of it actually lives. */}
-              <SceneCardPanel file={file} outline={outline as Outline} item={chosen} onWrite={write} />
+              {promotion ? <SceneCardPanel file={file} outline={outline as Outline} item={chosen} onWrite={write} /> : null}
 
               {/* §1: a row is a plan until the writer says otherwise, and
                   saying so is this. */}
-              <Promotion
-                file={file}
-                outline={outline as Outline}
-                item={chosen}
-                onWrite={write}
-              />
+              {promotion ? (
+                <Promotion
+                  file={file}
+                  outline={outline as Outline}
+                  item={chosen}
+                  onWrite={write}
+                />
+              ) : null}
             </>
           ) : (
             <p className="muted small">
@@ -1432,6 +1500,10 @@ const nextAfter = (here: OutlineItem | null): [kind: string, beside: boolean] =>
   return [here.kind, true];
 };
 
+/** In a document, Return after a heading is another heading beside it; after anything else, one like it. */
+const nextAfterInDocument = (here: OutlineItem | null): [kind: string, beside: boolean] =>
+  here ? [here.kind, true] : ['heading', true];
+
 /**
  * A row and everything above it, up to the top: the row first, the topmost
  * last. What `add` reads to find the scene a row is inside, or the chapter.
@@ -1468,6 +1540,7 @@ function Row({
   hit,
   editing,
   onSelect,
+  onOpen,
   onEdit,
   onTitle,
   onFold,
@@ -1498,6 +1571,8 @@ function Row({
   picked: boolean;
   /** What the search was actually looking for, as against a parent along for the ride. */
   hit: boolean;
+  /** A double-click: where the host has somewhere to go for this row (addendum 42 §9). */
+  onOpen?(): void;
   editing: boolean;
   onSelect(how: { add?: boolean; through?: boolean }): void;
   onEdit(on: boolean): void;
@@ -1558,6 +1633,7 @@ function Row({
       aria-selected={selected}
       aria-expanded={childCount === 0 ? undefined : !item.collapsed}
       onPointerDown={(event) => onSelect({ add: event.metaKey || event.ctrlKey, through: event.shiftKey })}
+      onDoubleClick={onOpen}
       // The whole row is the handle. A grip would be one more thing to aim at,
       // and the title is an input, so the browser leaves its text alone.
       draggable

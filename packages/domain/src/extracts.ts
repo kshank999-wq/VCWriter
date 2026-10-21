@@ -295,6 +295,7 @@ export const createExtract = (file: ProjectFile, input: ExtractInput): { file: P
     title: defaultExtractTitle(input.textPlain),
     tags: [],
     status: 'unassigned',
+    sentTo: [],
     orderKey: orderKeyBetween(lastKey(bin), null),
     createdAt: at,
     updatedAt: at,

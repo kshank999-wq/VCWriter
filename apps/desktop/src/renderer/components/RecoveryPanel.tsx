@@ -15,6 +15,7 @@ const REASON_LABEL: Record<string, string> = {
   manual: "Manual",
   pre_migration: "Before a format upgrade",
   pre_sync: "Before a sync that had conflicts",
+  pre_transfer: "Before extracts were sent in",
 };
 
 const when = (iso: string): string => new Date(iso).toLocaleString();

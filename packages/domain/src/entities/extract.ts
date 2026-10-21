@@ -66,6 +66,24 @@ export type ExtractCategory = z.infer<typeof extractCategorySchema>;
 export const extractStatusSchema = z.enum(['unassigned', 'ready', 'exported', 'failed']);
 export type ExtractStatus = z.infer<typeof extractStatusSchema>;
 
+/** Where an extract went: the project, the place in it, and the record it became. */
+export const transferAreaSchema = z.enum(['research', 'scene', 'beat']);
+export type TransferArea = z.infer<typeof transferAreaSchema>;
+
+export const extractReceiptSchema = z.object({
+  projectId: z.string().min(1),
+  projectTitle: z.string().default(''),
+  /** The file it was written into, where the host has one. */
+  path: z.string().nullable().default(null),
+  area: transferAreaSchema,
+  /** The shelf or scene's name in that project, as the writer saw it. */
+  areaName: z.string().default(''),
+  /** The id of what it became there: a research item, a scene, a beat. */
+  resultId: z.string().min(1),
+  at: z.string().datetime({ offset: true }),
+});
+export type ExtractReceipt = z.infer<typeof extractReceiptSchema>;
+
 export const extractSchema = z.object({
   id: id<ExtractId>(),
   documentId: id<WpDocumentId>(),
@@ -85,6 +103,12 @@ export const extractSchema = z.object({
   status: extractStatusSchema.default('unassigned'),
   /** Its place in the bin. */
   orderKey: orderKey(),
+  /**
+   * Every project it has been sent to, and what it became there (addendum
+   * 42 §10). The receipt is what stops a second send making a second copy,
+   * and what the bin shows as *Sent to…*.
+   */
+  sentTo: z.array(extractReceiptSchema).default([]),
   ...timestamps,
 });
 export type Extract = z.infer<typeof extractSchema>;

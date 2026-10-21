@@ -16,6 +16,18 @@ import {
   readDocx,
   createExtract,
   deleteExtract,
+  documentFromOutline,
+  documentOutlineNumbers,
+  ensureDocumentOutline,
+  extractOfRow,
+  findOutline,
+  headingOfRow,
+  linkExtractToOutline,
+  outlineFromDocument,
+  setHeadingNumbering,
+  HEADING_NUMBERINGS,
+  type HeadingNumbering,
+  type OutlineId,
   ensureExtractPalettes,
   isDuplicateExtract,
   newId,
@@ -32,7 +44,9 @@ import {
   type WpDocument,
 } from '@vcwriter/domain';
 import { readDocxParts } from '../read-docx';
-import { documentExtensions, extractRange, findMatches, type SearchState } from './extensions';
+import { documentExtensions, extractRange, findMatches, headingPosition, type SearchState } from './extensions';
+import { OutlinerWindow } from '../components/OutlinerWindow';
+import { SendExtractsDialog } from './SendExtractsDialog';
 import { ExtractSidebar, type SourceDisplay } from './ExtractSidebar';
 import { Ribbon, type RibbonTab, type ViewState } from './Ribbon';
 import { documentCommands } from './document-commands';
@@ -56,6 +70,8 @@ interface DocumentWorkspaceProps {
   onSave(): void;
   onSaveAs(): void;
   readOnly?: boolean;
+  /** Where the open project is kept, so sending extracts does not offer it twice. */
+  projectPath?: string | null;
 }
 
 /** How long typing must pause before the tree is handed to the project. */
@@ -75,7 +91,7 @@ const SAVE_WORDS: Record<string, string> = {
 const download = async (name: string, bytes: Uint8Array, mediaType: string, kind: { name: string; extension: string }) =>
   window.vcwriter.saveFile({ name, bytes, mediaType, kind });
 
-export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave, onSaveAs, readOnly = false }: DocumentWorkspaceProps) {
+export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave, onSaveAs, readOnly = false, projectPath = null }: DocumentWorkspaceProps) {
   const [tab, setTab] = useState<RibbonTab>('home');
   const [view, setView] = useState<ViewState>({ layout: 'print', navigation: false, marks: false, spelling: true, zoom: 1 });
   const [finding, setFinding] = useState<'off' | 'find' | 'replace'>('off');
@@ -89,6 +105,9 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
   const [paletteId, setPaletteId] = useState<ExtractPaletteId | null>(null);
   const [display, setDisplay] = useState<SourceDisplay>('normal');
   const [extractNotice, setExtractNotice] = useState<string | null>(null);
+  // The Outliner tab (addendum 42 §9), and extracts on their way to a project (§10).
+  const [pane, setPane] = useState<'document' | 'outliner'>('document');
+  const [sending, setSending] = useState<Extract[] | null>(null);
 
   const documentId = document.id;
   // What this editor last handed the project, so an echo of it is not taken
@@ -109,9 +128,11 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
       if (json === pushedJson.current) return;
       pushed.current = content;
       pushedJson.current = json;
-      onUpdate((current) => setDocumentContent(current, documentId, content));
+      if (readOnly) return;
+      // The outline follows the headings (addendum 42 §9); with no outline yet this changes nothing.
+      onUpdate((current) => outlineFromDocument(setDocumentContent(current, documentId, content), documentId));
     },
-    [documentId, onUpdate],
+    [documentId, onUpdate, readOnly],
   );
 
   const editor = useEditor({
@@ -161,6 +182,11 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
   useEffect(() => {
     editor?.setEditable(!readOnly);
   }, [editor, readOnly]);
+
+  // Heading numbers are drawn on the page, never typed into it.
+  useEffect(() => {
+    editor?.commands.setHeadingNumbering(document.headingNumbering);
+  }, [editor, document.headingNumbering]);
 
   // Whatever is still settling is handed over when the workspace closes.
   useEffect(() => () => flush(editorRef.current), [flush]);
@@ -412,25 +438,87 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
     setExtractNotice(`Added to ${category.label} (${count}).`);
   };
 
-  /** The copy and its mark go; the words stay in the document. */
-  const removeExtract = (extract: Extract) => {
-    if (!editor || readOnly) return;
+  /**
+   * Take these extracts' marks off the page, and say what the page is now —
+   * or null where none of them was marked. The words are untouched.
+   */
+  const stripMarks = (ids: ReadonlySet<string>): DocNode | null => {
+    if (!editor || ids.size === 0) return null;
     const type = editor.schema.marks['extract']!;
     const { tr } = editor.state;
     editor.state.doc.descendants((node, pos) => {
       node.marks.forEach((mark) => {
-        if (mark.type === type && mark.attrs['id'] === extract.id) tr.removeMark(pos, pos + node.nodeSize, mark);
+        if (mark.type === type && ids.has(String(mark.attrs['id']))) tr.removeMark(pos, pos + node.nodeSize, mark);
       });
       return true;
     });
-    let content = document.content;
-    if (tr.docChanged) {
-      editor.view.dispatch(tr.setMeta('addToHistory', false));
-      content = editor.getJSON() as DocNode;
-      pushed.current = content;
-      pushedJson.current = JSON.stringify(content);
+    if (!tr.docChanged) return null;
+    editor.view.dispatch(tr.setMeta('addToHistory', false));
+    if (timer.current !== null) {
+      window.clearTimeout(timer.current);
+      timer.current = null;
     }
-    onUpdate((current) => deleteExtract(tr.docChanged ? setDocumentContent(current, documentId, content) : current, extract.id));
+    const content = editor.getJSON() as DocNode;
+    pushed.current = content;
+    pushedJson.current = JSON.stringify(content);
+    return content;
+  };
+
+  /** The copy and its mark go; the words stay in the document. */
+  const removeExtract = (extract: Extract) => {
+    if (!editor || readOnly) return;
+    const content = stripMarks(new Set([extract.id]));
+    onUpdate((current) => deleteExtract(content ? setDocumentContent(current, documentId, content) : current, extract.id));
+  };
+
+  /** What the destination dialog sent, recorded here; a move also takes the marks off the page. */
+  const finishSend = (apply: (current: ProjectFile) => ProjectFile, moved: string[], said: string) => {
+    const content = stripMarks(new Set(moved));
+    onUpdate((current) => apply(content ? setDocumentContent(current, documentId, content) : current));
+    setSending(null);
+    setExtractNotice(said);
+  };
+
+  const addToOutline = (extract: Extract) => {
+    if (readOnly) return;
+    flush(editor);
+    const done = linkExtractToOutline(file, documentId, extract.id);
+    onUpdate((current) => linkExtractToOutline(current, documentId, extract.id).file);
+    setExtractNotice(done.existed ? 'That extract is already in the outline.' : 'Added to the outline.');
+  };
+
+  // ------------------------------------------------------ the outliner
+
+  const outlineId = document.outlineId && findOutline(file, document.outlineId as OutlineId) ? document.outlineId : null;
+
+  const openOutliner = () => {
+    flush(editor);
+    if (!outlineId && !readOnly) onUpdate((current) => ensureDocumentOutline(current, documentId).file);
+    setPane('outliner');
+  };
+
+  /** A change made in the Outliner, carried into the document's headings. */
+  const updateFromOutline = useCallback(
+    (mutate: (current: ProjectFile) => ProjectFile) => onUpdate((current) => documentFromOutline(mutate(current), documentId)),
+    [onUpdate, documentId],
+  );
+
+  const outlineNumbers = useMemo(() => documentOutlineNumbers(document), [document]);
+
+  /** A double-click on a row: to its heading, or to the passage it was extracted from. */
+  const openRow = (itemId: string) => {
+    if (!editor) return;
+    const headingId = headingOfRow(document, itemId);
+    const extractId = extractOfRow(document, itemId);
+    const at = headingId ? headingPosition(editor.state.doc, headingId) : null;
+    const range = extractId ? extractRange(editor.state.doc, extractId) : null;
+    if (at === null && range === null) return;
+    setPane('document');
+    // After the page is shown again, so it can scroll.
+    window.setTimeout(() => {
+      if (at !== null) editor.chain().focus().setTextSelection(at).scrollIntoView().run();
+      else if (range) editor.chain().focus().setTextSelection(range).scrollIntoView().run();
+    }, 0);
   };
 
   const reveal = (extract: Extract) => {
@@ -526,6 +614,15 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
         </form>
       ) : null}
 
+      <div className="wp-panes" role="tablist" aria-label="View">
+        <button type="button" role="tab" aria-selected={pane === 'document'} className={pane === 'document' ? 'on' : ''} onClick={() => setPane('document')}>
+          Document
+        </button>
+        <button type="button" role="tab" aria-selected={pane === 'outliner'} className={pane === 'outliner' ? 'on' : ''} onClick={openOutliner}>
+          Outliner
+        </button>
+      </div>
+
       {message ? (
         <p className="notice banner" role="status">
           {message}
@@ -535,7 +632,40 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
         </p>
       ) : null}
 
-      <div className="wp-body">
+      {pane === 'outliner' && outlineId ? (
+        <div className="wp-outliner">
+          <OutlinerWindow
+            file={file}
+            open
+            page
+            onClose={() => setPane('document')}
+            onUpdate={updateFromOutline}
+            outlineId={outlineId}
+            promotion={false}
+            numbers={outlineNumbers}
+            onOpenRow={(item) => openRow(item.id as string)}
+            toolbar={
+              <label className="wp-numbering">
+                Numbering
+                <select
+                  aria-label="Heading numbering"
+                  value={document.headingNumbering}
+                  disabled={readOnly}
+                  onChange={(event) => onUpdate((current) => setHeadingNumbering(current, documentId, event.target.value as HeadingNumbering))}
+                >
+                  {HEADING_NUMBERINGS.map((one) => (
+                    <option key={one.value} value={one.value}>
+                      {one.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            }
+          />
+        </div>
+      ) : null}
+
+      <div className="wp-body" hidden={pane === 'outliner'}>
         {view.navigation ? (
           <nav className="wp-nav" aria-label="Navigation">
             <h3>Headings</h3>
@@ -579,6 +709,11 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
             onCapture={capture}
             onRemove={removeExtract}
             onReveal={reveal}
+            onSend={(extracts) => {
+              flush(editor);
+              setSending(extracts);
+            }}
+            onAddToOutline={addToOutline}
             display={display}
             onDisplay={setDisplay}
             onClose={() => setExtracting(false)}
@@ -587,6 +722,16 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
           />
         ) : null}
       </div>
+
+      {sending ? (
+        <SendExtractsDialog
+          file={file}
+          projectPath={projectPath}
+          extracts={sending}
+          onClose={() => setSending(null)}
+          onSent={finishSend}
+        />
+      ) : null}
 
       <footer className="wp-status" aria-label="Status">
         {view.layout === 'print' ? <span>{pages === 1 ? '1 page' : `${pages} pages`}</span> : null}

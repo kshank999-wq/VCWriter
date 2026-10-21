@@ -380,7 +380,7 @@ const keyFor = (
   return orderKeyBetween(siblings[index]?.orderKey ?? null, siblings[index + 1]?.orderKey ?? null);
 };
 
-const madeItem = (input: {
+export const madeItem = (input: {
   outlineId: OutlineId;
   parentId: OutlineItemId | null;
   orderKey: string;

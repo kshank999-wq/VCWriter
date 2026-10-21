@@ -60,7 +60,7 @@ const reasonOf = (name: string): SnapshotReason =>
 /** The stamp a snapshot's name opens with, back as the time it was taken. */
 const stampOf = (name: string): string => name.split('.')[0] ?? name;
 
-const hash = (contents: string): string => createHash('sha256').update(contents).digest('hex');
+export const hash = (contents: string): string => createHash('sha256').update(contents).digest('hex');
 
 const snapshotDirFor = (projectPath: string): string =>
   join(dirname(projectPath), SNAPSHOT_DIR, basename(projectPath, `.${PROJECT_EXTENSION}`));

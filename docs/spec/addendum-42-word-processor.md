@@ -207,8 +207,8 @@ bullets at one level. Every word arrives. A merged cell's `rowspan` is
 written as separate cells.
 
 Next, in the WP spec's order: the Extract & Organize sidebar and custom
-palettes (both built, §8), then **the Outliner tab**, then **sending
-extracts** to Research, the cast and the scenes of this project or another.
+palettes (§8), the Outliner tab (§9) and sending extracts to a project
+(§10) are built.
 
 ## 8. Extract & Organize (WP spec phases 2 and 3)
 
@@ -297,7 +297,7 @@ page. Hovering a marked passage names its category.
   category
 - drag-and-drop between bins, merging extracts, and undo for bin-only actions
   (a delete is confirmed instead)
-- sending extracts anywhere: that is the destinations stage
+- sending extracts anywhere: built since, in §10
 
 **Proof:**
 
@@ -317,3 +317,152 @@ page. Hovering a marked passage names its category.
     from
 - Driven in Chromium: six captures, one line carrying three overlapping
   extracts, Gray, and a four-button Math Instruction palette.
+
+## 9. The Outliner tab (WP spec §6, phase 4)
+
+From Ken: *build the outliner tab next.*
+
+**Two tabs under the ribbon: Document and Outliner.** The Outliner is the
+program's own Outliner (`OutlinerWindow`), mounted as a page, so a
+document's outline is the same tree, keys and commands as a book's. The
+editor stays mounted and hidden while the Outliner shows, so its undo
+history and selection survive the trip.
+
+**What the Outliner shows in a document:**
+
+- Kinds are Heading, Note and Idea.
+- *+ Heading* adds one beside the chosen row. *+ Subheading* adds one under
+  it, which is a level down in the document.
+- Promotion, Add to track and the scene card are left out
+  (`promotion={false}`), because a document has no track.
+- A double-click on a row goes to its heading, or to the passage an extract
+  row came from.
+
+**The binding** (`document-outline.ts`):
+
+- Every heading carries a `headingId` for life. The editor's `HeadingIds`
+  extension assigns one to a heading that has none, and to the second copy
+  that Enter makes when it splits a heading.
+- The document records which row stands for which heading in
+  `outlineLinks`. The link lives on the document, not the row: rows sync to
+  the cloud column by column, and a field the row did not know would be lost
+  on the way back. So no migration was needed.
+- The outline is made the first time the tab opens (`ensureDocumentOutline`).
+
+**Both directions:**
+
+- **Document → outline** (`outlineFromDocument`, on every save of the
+  editor's tree):
+  - Every heading has a row, nested as the levels nest, titled with the
+    heading's words, in the document's order.
+  - A note the writer added stays beside the heading it followed.
+  - A row whose heading is deleted becomes a note if anything was written on
+    it, and goes otherwise.
+  - When nothing has changed it returns the same file, so it is free to run
+    on every save.
+- **Outline → document** (`documentFromOutline`, on every change made in
+  the Outliner):
+  - Sections are rebuilt in one change, each a heading and everything up to
+    the next.
+  - They take the outline's order and titles, and the levels its nesting
+    gives.
+  - A heading row added in the Outliner becomes a heading.
+  - A heading keeps its own level where its parent did not change, so a
+    Heading 3 straight under a Heading 1 is not made a 2 by an unrelated
+    edit.
+- **No text is lost** (OL-01). A heading whose row is deleted stays in the
+  document as a paragraph, with its body, after the section it followed.
+
+**Numbering** (WP spec §6: *configurable numbering schemes*):
+
+- The choices are None, 1 / 1.1 / 1.1.1, or I / A / 1 / a / i, with `(1)`
+  deeper still. The setting is on the document (`headingNumbering`).
+- The number comes from the nesting, so the page and the outline agree.
+- On the page the number is drawn in front of each heading as a widget,
+  never typed into it, so the heading's words stay the writer's.
+- **Not yet:** the numbers do not print or go into the Word file.
+
+**Extracts into the outline:** *Add to outline* on an extract makes a linked
+Note (an Idea for an idea) carrying its words (`linkExtractToOutline`). A
+second press finds the row that is already there.
+
+## 10. Sending extracts to a project (WP spec §7, §9)
+
+From Ken: *there should be an ability to select a project. So if there's an
+existing project that you have, it should show up in the list … you can
+export it directly to a certain project.*
+
+**Where to start a send:** *Send…* on any extract, or *Send all…* (or *Send
+N…* while filtering) at the top of the bins.
+
+**The destination dialog:**
+
+- **To:** this project, or any project on the list of the writer's projects
+  (`listProjects`, the same list the Projects page uses). The open project is
+  not offered twice: a list entry that turns out to be the same project is
+  treated as this one.
+- **The preview** says where each extract will land in that project:
+  *Research › Characters*, *A new scene*, *A beat in "The Harbour"*. The
+  preview is the send done on a copy (`planTransfer` runs `applyTransfer`),
+  so it cannot say one thing while the send does another.
+- **Copy** (the default) or **Move.** A move takes the extracts out of the
+  bins and their marks off the page. Every word of the document stays (WP
+  spec §7.1).
+
+**The mapping** (`transfers.ts`), by the target's shelf system keys, never
+by a category's label:
+
+| Extract kind | Lands in |
+| --- | --- |
+| Character, Characterization | Research › Characters |
+| Location | Research › Locations |
+| Object | Research › Props |
+| Plot point | Research › Plot Points |
+| Idea | Research › Ideas |
+| Setup, Payoff | Research › Setups & Payoffs, where the project has it |
+| Scene | A new scene in a script; in prose, a beat in the last chapter (a new chapter if there is none) |
+| Beat | A beat in the last scene or chapter |
+| Anything else, or no such shelf | Research › Notes, made if missing; the preview marks it *no shelf of its own there* (TR-02) |
+
+- A Document or instructional target has shelves only, so its scenes and
+  beats go to Notes.
+- A research item carries the extract's words and tags. Its source reads
+  *From "Notes" in My Project*: the credit is kept, and the copy is
+  independent (WP spec §9).
+
+**Safe to retry** (WP spec §9, TR-03):
+
+- Another project is read without opening it (`readProject`) and written
+  back with `sendIntoProject`, which refuses if the file has changed since it
+  was read.
+- A recovery point of the target is taken first, with the new reason
+  `pre_transfer` (*Before extracts were sent in* in Recovery).
+- Receipts are recorded here only after that write succeeds. A failure says
+  why and records nothing.
+- Each extract keeps a receipt per send (`sentTo`: project, file, area, the
+  id of what it became, when). Its status becomes Exported, and the bin
+  shows *Sent to The Lamp › Research › Locations*.
+- A second send to the same project skips what went before, unless the
+  writer ticks *Send … again, as new copies*.
+
+**Not yet:**
+
+- picking a file outside the projects list
+- appending to or replacing an existing item (only Create New is offered)
+- a portable JSON bundle, and the CSV manifest
+- sending outline rows themselves
+
+**Proof:**
+
+- Domain:
+  - `document-outline.test.ts`, 10 tests: OL-01; renames, reorders and
+    deletions both ways; no-op detection; level keeping; numbering; extract
+    rows.
+  - `transfers.test.ts`, 3 tests: TR-01 with ten mixed extracts to a
+    screenplay, TR-02's Notes fallback, TR-03, and a move.
+- Renderer (`document-outliner.test.tsx`, 7 tests):
+  - the tab, reordering and renaming through the Outliner, and numbering
+  - a send to another project through stubbed bridge calls
+  - a failed write recording nothing
+  - a move into this project
+  - *Add to outline*

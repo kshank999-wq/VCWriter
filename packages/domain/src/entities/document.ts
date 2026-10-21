@@ -70,6 +70,16 @@ export const documentPageSetupSchema = z.object({
 });
 export type DocumentPageSetup = z.infer<typeof documentPageSetupSchema>;
 
+/** One outline row and what it stands for in the document. */
+export const documentOutlineLinkSchema = z.object({
+  itemId: z.string().min(1),
+  /** The heading's own id, which it keeps however it is edited or moved. */
+  headingId: z.string().nullable().default(null),
+  /** An extract the row was made from, in the Extract & Organize bins. */
+  extractId: z.string().nullable().default(null),
+});
+export type DocumentOutlineLink = z.infer<typeof documentOutlineLinkSchema>;
+
 /** Bumped when the stored tree changes shape in a way a reader must know about. */
 export const DOCUMENT_SCHEMA_VERSION = 1;
 
@@ -85,6 +95,21 @@ export const wpDocumentSchema = z.object({
    * was taken at (spec §5.2), which is how it knows its source has moved on.
    */
   revision: z.number().int().nonnegative().default(0),
+  /**
+   * The document's own outline (addendum 42 §9): the Outliner tab's tree,
+   * kept in step with the headings. Null until the tab is first opened.
+   */
+  outlineId: z.string().nullable().default(null),
+  /**
+   * Which outline row stands for which heading, and which for which extract.
+   * Kept here rather than on the row: an outline row is synced to the cloud
+   * column by column, and a field it did not know would be lost on the way
+   * back. The document is the one place that knows its headings, so the
+   * binding is the document's.
+   */
+  outlineLinks: z.array(documentOutlineLinkSchema).default([]),
+  /** How the headings are numbered, on the page and in the outline (WP spec §6). */
+  headingNumbering: z.enum(['none', 'decimal', 'outline']).default('none'),
   ...timestamps,
 });
 export type WpDocument = z.infer<typeof wpDocumentSchema>;
