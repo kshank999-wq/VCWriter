@@ -30,6 +30,7 @@ export * from './extracts.js';
 export * from './document-outline.js';
 export * from './transfers.js';
 export * from './extract-bundle.js';
+export * from './bin-report.js';
 export * from './document.js';
 export * from './document-docx.js';
 export * from './document-import.js';

@@ -288,7 +288,7 @@ const documentFor = (input: PrintInput): string => {
   // type was measured, which is this window. Its own `@page` names the trim.
   if (input.kind === 'book') return input.html ?? '';
   // A word-processor document arrives drawn, like the book (addendum 42).
-  if (input.kind === 'document') return input.html ?? '';
+  if (input.kind === 'document' || input.kind === 'bins') return input.html ?? '';
   if (input.kind === 'outline') return renderOutlineDocumentHtml(input.file, input.outlineId ?? null, options);
   if (input.kind === 'grid') return renderGridDocumentHtml(input.file, options);
   if (input.kind === 'board') return renderBoardDocumentHtml(input.file, options);
@@ -310,6 +310,7 @@ const describeDocument = (input: PrintInput): { name: string; what: string } => 
     return { name: suggestedBookFileName(title).replace(/\.pdf$/, ''), what: `${title} as a book — ${pages} ${pages === 1 ? 'page' : 'pages'} at ${paper}, every page as it stands in the Layout room` };
   }
   if (input.kind === 'document') return { name: title, what: `${title}, as its pages print` };
+  if (input.kind === 'bins') return { name: `${title} extracts`, what: `${title}: the extracts, bin by bin` };
   return { name: suggestedExportFileName(input.file).replace(/\.pdf$/, ''), what: `${title} — ${input.kind ?? 'the script'}` };
 };
 

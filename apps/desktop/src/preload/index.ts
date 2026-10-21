@@ -214,7 +214,7 @@ export interface VcWriterApi {
      * Omitted means the script — and a short-form project prints its sheet
      * whatever is asked for, because it has no script to print instead.
      */
-    kind?: 'script' | 'sheet' | 'board' | 'grid' | 'outline' | 'one-sheet' | 'narrative' | 'book' | 'document';
+    kind?: 'script' | 'sheet' | 'board' | 'grid' | 'outline' | 'one-sheet' | 'narrative' | 'book' | 'document' | 'bins';
     /** Which outline, when there is more than one. Left out, it is the first. */
     outlineId?: string;
     /**
@@ -258,7 +258,7 @@ export interface VcWriterApi {
   print(input: {
     file: ProjectFile;
     options?: PrintOptions;
-    kind?: 'script' | 'sheet' | 'board' | 'grid' | 'outline' | 'one-sheet' | 'narrative' | 'book' | 'document';
+    kind?: 'script' | 'sheet' | 'board' | 'grid' | 'outline' | 'one-sheet' | 'narrative' | 'book' | 'document' | 'bins';
     outlineId?: string;
     html?: string;
     paper?: { width: number; height: number };

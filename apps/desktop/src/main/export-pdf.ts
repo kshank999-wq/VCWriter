@@ -103,7 +103,7 @@ const withDocumentWindow = async <T>(
  * tree as one (addendum 06 §12, stage 9). They are renderings of one project
  * rather than separate projects.
  */
-export type PrintKind = 'script' | 'sheet' | 'board' | 'grid' | 'outline' | 'one-sheet' | 'narrative' | 'book' | 'document';
+export type PrintKind = 'script' | 'sheet' | 'board' | 'grid' | 'outline' | 'one-sheet' | 'narrative' | 'book' | 'document' | 'bins';
 
 export interface ExportPdfInput {
   file: unknown;
@@ -154,10 +154,12 @@ const documentFor = (
   // A word-processor document (addendum 42): drawn by the renderer from the
   // editor, set into pages by the browser's own print layout at the paper
   // the document names, so the page count is the PDF's.
-  if (kind === 'document') {
+  // The bins of Extract & Organize as a report (addendum 42 §12): drawn by
+  // the renderer from the bins as listed, laid out like the document.
+  if (kind === 'document' || kind === 'bins') {
     return {
       html: drawn?.html ?? '',
-      name: suggestedPdfName(project.project.title),
+      name: suggestedPdfName(kind === 'bins' ? `${project.project.title || 'Untitled'} extracts` : project.project.title),
       paged: false,
       landscape: false,
       paper: drawn?.paper,

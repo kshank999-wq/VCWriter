@@ -530,7 +530,6 @@ status filter narrows them:
 
 **Not yet:**
 
-- the bin report as a PDF
 - sending outline rows
 - a shared, cross-install service for direct handoff (the bundle is how
   extracts move between installs today)
@@ -548,3 +547,43 @@ status filter narrows them:
   - add to an existing item, with replace held back until confirmed
   - Browse
   - importing a bundle, twice, adding once
+
+## 12. The bin report (WP spec §7.2)
+
+From Ken: *build the bin report PDF next.*
+
+**Report PDF** and **Print report** sit under the bins, beside the bundle
+and CSV buttons. Both use what the bins are listing, so the scope, status
+and search narrow a report the same way they narrow an export. That gives a
+report of everything Ready, or of every extract matching "harbour".
+
+**The page** (`bin-report.ts`):
+
+- **A title** (*Story Notes: extracts*), and under it a line saying how many
+  extracts in how many bins, the date, and the filters in force: the
+  palette, the status, the search.
+- **A count by bin**, with how many in each are Ready and how many Exported,
+  when there is more than one bin.
+- **Each bin under its own heading**, in the sidebar's order and in the
+  bin's colour, with its palette's name. Each extract in it shows:
+  - its title, where that is more than its first words
+  - its words, set off by a rule in the bin's colour, line breaks kept
+  - its status, tags, every project it was sent to and where, and the day
+    it was captured
+- **The document's own paper and margins**, so the report prints on the
+  same stock as the writing it came from.
+- An extract is never split across a page, and a bin's heading is never left
+  at the foot of one.
+
+It goes through the same print and PDF path as the document (a new `bins`
+print kind on both hosts). The PDF is named *Story Notes extracts.pdf*. In
+the browser it opens the print window, as the document does.
+
+**Proof:**
+
+- Domain (`bin-report.test.ts`, 3 tests): bins in listed order with the
+  count table; the writer's words escaped, with status, tags and receipts;
+  only what is listed, the filter said, on the document's paper.
+- Renderer (`document-destinations.test.tsx`, 1 new): a search narrows the
+  report, the PDF is asked for with the `bins` kind, and the saved path is
+  reported.

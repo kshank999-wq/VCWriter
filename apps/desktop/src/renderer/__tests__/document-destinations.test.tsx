@@ -175,4 +175,20 @@ describe('destinations', () => {
     await waitFor(() => expect(screen.getByText(/Nothing new in other.json/)).toBeTruthy());
     expect(latest!.extracts).toHaveLength(2);
   });
+
+  it('makes a bin report of what the bins list, saying what narrowed it', async () => {
+    const exportPdf = vi.fn(async () => ({ ok: true, data: { path: '/p/Notes extracts.pdf', pageCount: 1 } }));
+    bridge(lamp(), { exportPdf });
+    await openWithExtract();
+    fireEvent.change(screen.getByLabelText('Search extracts'), { target: { value: 'house' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Report PDF' }));
+    });
+    const input = (exportPdf.mock.calls[0] as unknown as [{ kind: string; html: string; paper: { width: number } }])[0];
+    expect(input.kind).toBe('bins');
+    expect(input.paper.width).toBe(8.5);
+    expect(input.html).toContain('The old house on Cutter Street');
+    expect(input.html).toContain('1 extract in 1 bin · General Writing · Matching “house”');
+    expect(screen.getByText('Saved /p/Notes extracts.pdf')).toBeTruthy();
+  });
 });

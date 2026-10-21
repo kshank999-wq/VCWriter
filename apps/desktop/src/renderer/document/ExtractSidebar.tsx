@@ -4,8 +4,10 @@ import {
   CATEGORY_COLOURS,
   addCategory,
   addPalette,
+  binReportHtml,
   binsOf,
   buildExtractBundle,
+  pageSize,
   categoriesOf,
   extractsCsv,
   importExtractBundle,
@@ -267,6 +269,35 @@ function Bins({ file, document, editor, onUpdate, paletteId, onRemove, onReveal,
     else if (result.data?.path) setSaid(`Saved ${result.data.path}`);
   };
 
+  /**
+   * The bins as a report (addendum 42 §12): what is listed, on the document's
+   * own paper, to the printer or a PDF. The filters in force are said under
+   * the title, so a report of *Ready only* says so.
+   */
+  const report = async (to: 'pdf' | 'print') => {
+    const filter = [
+      scope === 'palette' ? palettesOf(file).find((one) => one.id === paletteId)?.name : null,
+      status !== 'all' ? `${STATUS_NAMES[status]} only` : null,
+      query.trim() ? `Matching “${query.trim()}”` : null,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+    const input = {
+      file,
+      kind: 'bins' as const,
+      html: binReportHtml(file, document, { extractIds: showing.map((extract) => extract.id as string), filter }),
+      paper: pageSize(document.pageSetup),
+    };
+    if (to === 'print') {
+      const printed = await window.vcwriter.print(input);
+      if (!printed.ok) setSaid(printed.error ?? 'The report could not be printed.');
+      return;
+    }
+    const result = await window.vcwriter.exportPdf(input);
+    if (!result.ok) setSaid(result.error ?? 'The report could not be saved.');
+    else if (result.data?.path) setSaid(`Saved ${result.data.path}`);
+  };
+
   const importBundle = async (chosen: File) => {
     const read = readExtractBundle(await chosen.text());
     if (!read.ok) {
@@ -314,6 +345,12 @@ function Bins({ file, document, editor, onUpdate, paletteId, onRemove, onReveal,
         </select>
       </div>
       <div className="wp-extract-row wp-bins-files">
+        <button type="button" className="ghost small" disabled={showing.length === 0} title="The extracts listed, bin by bin, as a PDF" onClick={() => void report('pdf')}>
+          Report PDF
+        </button>
+        <button type="button" className="ghost small" disabled={showing.length === 0} title="Print the extracts listed, bin by bin" onClick={() => void report('print')}>
+          Print report
+        </button>
         <button type="button" className="ghost small" disabled={showing.length === 0} title="The extracts listed, with their palettes, as one file another VC Writer can import" onClick={() => void save('bundle')}>
           Export bundle
         </button>
