@@ -25,6 +25,12 @@ import {
   linkExtractToOutline,
   outlineFromDocument,
   numberedPlainText,
+  fillFields,
+  hasHeaderFooter,
+  pageNumberPresetOf,
+  printedDate,
+  setHeaderFooter,
+  setPageNumbers,
   rowReceipts,
   setHeadingNumbering,
   HEADING_NUMBERINGS,
@@ -49,6 +55,8 @@ import { readDocxParts } from '../read-docx';
 import { documentExtensions, extractRange, findMatches, headingPosition, type SearchState } from './extensions';
 import { OutlinerWindow } from '../components/OutlinerWindow';
 import { SendExtractsDialog, type SendSubject } from './SendExtractsDialog';
+import { HeaderFooterBar } from './HeaderFooterBar';
+import { useDocumentSpeech } from './speech';
 import { ExtractSidebar, type SourceDisplay } from './ExtractSidebar';
 import { Ribbon, type RibbonTab, type ViewState } from './Ribbon';
 import { documentCommands } from './document-commands';
@@ -95,7 +103,7 @@ const download = async (name: string, bytes: Uint8Array, mediaType: string, kind
 
 export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave, onSaveAs, readOnly = false, projectPath = null }: DocumentWorkspaceProps) {
   const [tab, setTab] = useState<RibbonTab>('home');
-  const [view, setView] = useState<ViewState>({ layout: 'print', navigation: false, marks: false, spelling: true, zoom: 1 });
+  const [view, setView] = useState<ViewState>({ layout: 'print', navigation: false, marks: false, spelling: true, zoom: 1, fit: 'none' });
   const [finding, setFinding] = useState<'off' | 'find' | 'replace'>('off');
   const [search, setSearch] = useState<SearchState>({ query: '', caseSensitive: false, wholeWord: false, current: -1 });
   const [replacement, setReplacement] = useState('');
@@ -110,6 +118,8 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
   // The Outliner tab (addendum 42 §9), and extracts on their way to a project (§10).
   const [pane, setPane] = useState<'document' | 'outliner'>('document');
   const [sending, setSending] = useState<SendSubject | null>(null);
+  // Headers, footers and page numbers (addendum 42 §15).
+  const [headerFooterOpen, setHeaderFooterOpen] = useState(false);
 
   const documentId = document.id;
   // What this editor last handed the project, so an echo of it is not taken
@@ -156,6 +166,9 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
 
   const editorRef = useRef<Editor | null>(null);
   editorRef.current = editor;
+
+  // Dictate and read aloud (addendum 42 §15).
+  const speech = useDocumentSpeech(editor, setMessage);
 
   function insertPictures(files: FileList | undefined | null): boolean {
     const pictures = Array.from(files ?? []).filter((one) => /^image\/(png|jpeg|gif)$/.test(one.type));
@@ -363,14 +376,45 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
   useEffect(() => {
     const node = sheet.current;
     if (!node || view.layout !== 'print') return;
-    const measure = () => setPages(Math.max(1, Math.ceil(node.scrollHeight / (height * PX_PER_INCH) - 0.01)));
+    // The words' own height and the margins, not the sheet's: the sheet is
+    // drawn at a whole number of pages, so measuring it would never shrink.
+    const measure = () => {
+      const words = (node.querySelector('.ProseMirror') as HTMLElement | null)?.offsetHeight ?? node.scrollHeight;
+      const used = words + (margins.top + margins.bottom) * PX_PER_INCH;
+      setPages(Math.max(1, Math.ceil(used / (height * PX_PER_INCH) - 0.01)));
+    };
     measure();
     // Absent where there is no layout to watch (a test's DOM).
     if (typeof ResizeObserver === 'undefined') return;
     const observer = new ResizeObserver(measure);
     observer.observe(node);
     return () => observer.disconnect();
-  }, [height, view.layout, editor]);
+  }, [height, view.layout, editor, margins.top, margins.bottom, editor?.state.doc]);
+
+  // Zoom that follows the window: the whole page, or its width.
+  const canvas = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const node = canvas.current;
+    if (!node || view.fit === 'none' || view.layout !== 'print') return;
+    const fit = () => {
+      // Measured on the canvas's parent, which is not zoomed: the canvas's own
+      // size is in its zoomed pixels, so reading it would chase its own tail.
+      const body = node.parentElement;
+      if (!body) return;
+      const beside = [...body.children].filter((child) => child !== node).reduce((sum, child) => sum + (child as HTMLElement).offsetWidth, 0);
+      const room = { width: body.clientWidth - beside - 48, height: body.clientHeight - 48 };
+      if (room.width <= 0 || room.height <= 0) return;
+      const page = { width: width * PX_PER_INCH, height: height * PX_PER_INCH };
+      const zoom = view.fit === 'page' ? Math.min(room.width / page.width, room.height / page.height) : room.width / page.width;
+      const rounded = Math.max(0.25, Math.min(3, Math.round(zoom * 100) / 100));
+      setView((current) => (current.zoom === rounded ? current : { ...current, zoom: rounded }));
+    };
+    fit();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(fit);
+    if (node.parentElement) observer.observe(node.parentElement);
+    return () => observer.disconnect();
+  }, [view.fit, view.layout, width, height, view.navigation, extracting]);
 
   const words = useMemo(() => (editor ? docWordCount(editor.getJSON() as DocNode) : 0), [editor, editor?.state.doc]);
   const characters = useMemo(() => (editor ? docPlainText(editor.getJSON() as DocNode).replace(/\n/g, '').length : 0), [editor, editor?.state.doc]);
@@ -538,7 +582,8 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
     view.layout === 'print'
       ? {
           width: `${width}in`,
-          minHeight: `${height}in`,
+          minHeight: `${height * pages}in`,
+          position: 'relative' as const,
           padding: `${margins.top}in ${margins.right}in ${margins.bottom}in ${margins.left}in`,
           // A rule at the foot of every page, so the writer sees where the
           // pages fall. The words are set into pages when printed.
@@ -561,6 +606,14 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
         onFind={setFinding}
         extracting={extracting}
         onExtracting={() => setExtracting((current) => !current)}
+        headerFooter={{
+          open: headerFooterOpen,
+          onToggle: () => setHeaderFooterOpen((current) => !current),
+          pageNumbers: pageNumberPresetOf(document),
+          onPageNumbers: (preset) => onUpdate((current) => setPageNumbers(current, documentId, preset)),
+        }}
+        speech={speech}
+        onSay={setMessage}
         painting={painter !== null}
         onPaint={startPainter}
         words={words}
@@ -617,6 +670,15 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
             ×
           </button>
         </form>
+      ) : null}
+
+      {headerFooterOpen ? (
+        <HeaderFooterBar
+          value={document.headerFooter}
+          readOnly={readOnly}
+          onChange={(patch) => onUpdate((current) => setHeaderFooter(current, documentId, patch))}
+          onClose={() => setHeaderFooterOpen(false)}
+        />
       ) : null}
 
       <div className="wp-panes" role="tablist" aria-label="View">
@@ -714,7 +776,7 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
             )}
           </nav>
         ) : null}
-        <div className={`wp-canvas ${view.layout}`} style={{ zoom: view.zoom } as React.CSSProperties} onMouseDown={(event) => {
+        <div ref={canvas} className={`wp-canvas ${view.layout}`} style={{ zoom: view.zoom } as React.CSSProperties} onMouseDown={(event) => {
           // A press on the grey around the page puts the cursor at the end.
           if (event.target === event.currentTarget) {
             event.preventDefault();
@@ -722,6 +784,14 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
           }
         }}>
           <div ref={sheet} className="wp-sheet" style={sheetStyle} spellCheck={view.spelling}>
+            {view.layout === 'print' && hasHeaderFooter(document) ? (
+              <PageBands
+                document={document}
+                pages={pages}
+                pageHeight={height}
+                onOpen={() => setHeaderFooterOpen(true)}
+              />
+            ) : null}
             <EditorContent editor={editor} />
           </div>
         </div>
@@ -771,6 +841,12 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
         <span>{characters.toLocaleString()} characters</span>
         {painter ? <span className="wp-status-note">Format painter: select text to paint</span> : null}
         {readOnly ? <span className="wp-status-note">Read-only</span> : null}
+        {speech.dictating ? (
+          <span className="wp-status-note wp-dictating" role="status">
+            Dictating{speech.heard ? `: ${speech.heard}` : '…'}
+          </span>
+        ) : null}
+        {speech.reading ? <span className="wp-status-note" role="status">Reading aloud</span> : null}
         <span className="wp-status-spacer" />
         <label className="wp-zoom">
           Zoom
@@ -781,12 +857,87 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
             step={10}
             value={Math.round(view.zoom * 100)}
             aria-label="Zoom"
-            onChange={(event) => setView((current) => ({ ...current, zoom: Number(event.target.value) / 100 }))}
+            onChange={(event) => setView((current) => ({ ...current, zoom: Number(event.target.value) / 100, fit: 'none' }))}
           />
           <span>{Math.round(view.zoom * 100)}%</span>
         </label>
+        <button
+          type="button"
+          className={`ghost small wp-fit${view.fit === 'page' ? ' on' : ''}`}
+          title="One page: the whole page in the window"
+          aria-pressed={view.fit === 'page'}
+          onClick={() => setView((current) => ({ ...current, fit: 'page', layout: 'print' }))}
+        >
+          One page
+        </button>
+        <button
+          type="button"
+          className={`ghost small wp-fit${view.fit === 'width' ? ' on' : ''}`}
+          title="Page width: the page as wide as the window"
+          aria-pressed={view.fit === 'width'}
+          onClick={() => setView((current) => ({ ...current, fit: 'width', layout: 'print' }))}
+        >
+          Page width
+        </button>
         <span className="wp-save">{SAVE_WORDS[saveState] ?? saveState}</span>
       </footer>
     </div>
+  );
+}
+
+/**
+ * The header on the first page and the footer on the last, drawn in their
+ * margins with the fields filled in (addendum 42 §15). The screen is one long
+ * sheet, not set into pages, so the bands of the pages between are left to the
+ * printed page, where the browser sets each one exactly. A double-click opens
+ * the bar to change them, as in Word.
+ */
+function PageBands({
+  document,
+  pages,
+  pageHeight,
+  onOpen,
+}: {
+  document: WpDocument;
+  pages: number;
+  pageHeight: number;
+  onOpen(): void;
+}) {
+  const { header, footer, firstPage } = document.headerFooter;
+  const values = { pages, title: document.title || '', date: printedDate() };
+  const margins = document.pageSetup.margins;
+  const band = (slots: typeof header, page: number) =>
+    (['left', 'center', 'right'] as const).map((slot) => (
+      <span key={slot} className={`wp-band-slot ${slot}`}>
+        {fillFields(slots[slot], { ...values, page })}
+      </span>
+    ));
+  const showHeader = firstPage && Object.values(header).some((text) => text.trim());
+  const showFooter = (firstPage || pages > 1) && Object.values(footer).some((text) => text.trim());
+  return (
+    <>
+      {showHeader ? (
+        <div
+          className="wp-band header"
+          style={{ top: `${margins.top / 2}in`, left: `${margins.left}in`, right: `${margins.right}in` }}
+          title="Header: double-click to change"
+          onDoubleClick={onOpen}
+          aria-label="Header"
+        >
+          {band(header, 1)}
+        </div>
+      ) : null}
+      {showFooter ? (
+        <div
+          className="wp-band footer"
+          style={{ top: `${pages * pageHeight - margins.bottom / 2}in`, left: `${margins.left}in`, right: `${margins.right}in` }}
+          title="Footer: double-click to change"
+          onDoubleClick={onOpen}
+          aria-label="Footer"
+        >
+          {band(footer, pages)}
+        </div>
+      ) : null}
+    </>
   );
 }

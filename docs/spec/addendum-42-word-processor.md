@@ -194,7 +194,7 @@ Recovery.
 
 Not in phase 1, and not shown as buttons:
 
-- headers and footers, page numbers, footnotes and endnotes
+- footnotes and endnotes (headers, footers and page numbers are built: §15)
 - a table of contents, bookmarks and cross-references (WP spec §4.3, "staged")
 - comments and tracked changes (WP spec §4.3: only if robustly supported)
 - columns and section breaks
@@ -696,3 +696,138 @@ Word counts and search use the words without numbers, as before.
 - Renderer (`document-outliner.test.tsx`, 1 new): with 1.1.1 numbering
   chosen, the HTML the real editor hands to the PDF carries each heading's
   number.
+
+## 15. The Word basics, checked
+
+From Ken: *make sure that … zoom … fit the page … insert a table or pictures
+or shapes … headers and footers and page numbers … lines, page breaks,
+margins … alignment … bullet points, numbers, the outlining stuff,
+indention … font size … a font library … dictate or listen back … standard
+print menu, export menu.*
+
+**What was already there:**
+
+| Asked for | Where |
+| --- | --- |
+| Zoom slider | Status bar, 50–200% |
+| Table | Insert › Tables, with rows, columns, merge, split, header row |
+| Pictures | Insert › Picture…, also by paste or drop |
+| Lines | Insert › Horizontal line |
+| Page breaks | Insert › Page break, Layout › Breaks, Ctrl+Enter |
+| Margins | Layout › Page setup: presets and each side in inches |
+| Alignment | Home › Paragraph: left, centre, right, justify |
+| Bullets, numbers | Home › Paragraph: bullets, 1-2-3, a-b-c, i-ii-iii |
+| Outlining | Tab and Shift+Tab nest lists; the Outliner tab (§9) |
+| Indent | Home › Paragraph: decrease and increase indent |
+| Font size | Home › Font: 8 to 72 pt |
+| Print, export | File › Print…, Word (.docx), PDF, Plain text |
+
+**What is new:**
+
+- **One page and Page width.** These are in View › Zoom and beside the
+  status bar's slider. The zoom follows the window as it is resized; moving
+  the slider or choosing a percentage takes back control.
+- **Shapes.** Insert › Illustrations › Shapes offers rectangle, rounded
+  rectangle, oval, triangle, diamond, pentagon, star, right arrow, line and
+  speech bubble, in Word's eight fills or outline only. Each shape is drawn
+  as SVG and inserted as a PNG picture at twice its size (`shapes.ts`), so
+  the printed page, the PDF and the Word file all carry it as they carry a
+  photograph. Pictures and shapes now have Word's corner handles: drag to
+  resize, keeping their proportions. The width is saved and exported.
+- **Headers, footers and page numbers** (`document-pages.ts`). Details
+  below.
+- **The font library** (`fonts.ts`).
+  - The list is grouped as Word's is: Serif, Sans serif, Monospace, Script
+    and display. About 55 common faces from Windows and macOS are included.
+  - Only faces installed on this computer are listed. Each is measured
+    against its fallback; none is offered and then drawn in something else.
+  - *All fonts on this computer…* lists every installed font by family,
+    through the browser's Local Font Access. The browser asks once; the app
+    allows it.
+  - A face already used in the document stays in the list even on a
+    computer without it.
+- **Dictate and Read aloud**, in Review › Speech (`speech.ts`).
+  - Dictation uses the program's own recogniser (`dictation.ts`) and types
+    at the cursor. The status bar shows what is being heard. Where this build
+    has no speech service, the writer is told which keys start the operating
+    system's dictation, which types into the page directly.
+  - Read aloud uses the computer's voices. It reads the selection, or from
+    the cursor to the end, one paragraph at a time, selecting each paragraph
+    as it is read. Speed and voice can be chosen. Pressing the button again
+    stops it.
+
+### Headers, footers and page numbers
+
+**The model.** A document has a header and a footer, each with left, centre
+and right slots, as Word's default header has. A slot is text that may hold
+fields:
+
+- `{page}`: the page number
+- `{pages}`: the number of pages
+- `{title}`: the document's title
+- `{date}`: the date printed
+
+*On the first page too* can be switched off (Word's *Different first page*).
+They live on the document as `headerFooter`.
+
+**Writing them.**
+
+- Insert › Header & footer opens a bar under the ribbon with the six slots.
+  Its *Insert* buttons put a field at the cursor of the slot last typed in.
+- Insert › *Page numbers* is Word's gallery:
+  - bottom centre
+  - bottom right
+  - bottom right as *Page 1 of 3*
+  - top right
+  - top centre
+  - none
+
+  Choosing one moves the numbers rather than adding a second set, and
+  *none* leaves a running title alone.
+
+**On screen.** The header is drawn in the first page's top margin and the
+footer in the last page's bottom margin, with the fields filled in. A
+double-click on either opens the bar. The screen is one long sheet, not set
+into pages, so the pages in between show theirs only on paper.
+
+**On paper (print and PDF).** The slots are the page's own margin boxes,
+`@page { @top-left { content: … counter(page) … } }`. The browser that sets
+the pages also numbers them, so each page's number is the page it is on.
+
+- The desktop's Chromium 130 has margin boxes built in, but behind a switch.
+  The app turns that switch on at start (`PageMarginBoxes`). This was tested
+  under the app's own Electron: with the switch, each page printed its
+  header and "Page 1 of 5", and without it nothing printed.
+- The browser preview needs no switch: Chrome has had margin boxes on since
+  131.
+
+**In Word.**
+
+- The Word file has real header and footer parts (`header1.xml`,
+  `footer1.xml`), referenced from the section.
+- Each part is one paragraph with Word's centre and right tab stops, so
+  the slots sit where Word puts them.
+- `{page}` and `{pages}` become Word's PAGE and NUMPAGES fields, so they
+  keep counting as the writer edits in Word.
+- *On the first page too* off is Word's `titlePg`.
+- Checked by opening a generated file in LibreOffice: every page carried
+  the title, the date and "Page N of 4".
+
+**Proof:**
+
+- Domain (`document-pages.test.ts`, 5 tests):
+  - the page-number gallery: moving the numbers, taking them out, the
+    running title kept
+  - fields filled for the screen
+  - margin boxes with counters and escaped quotes
+  - the bare first page
+  - Word's header and footer parts and the section's references
+- Renderer (`document-features.test.tsx`, 7 tests):
+  - a footer written with a field, shown on the page, and printed in the
+    margin
+  - the page-number gallery in and out
+  - a shape inserted at its size in the chosen fill
+  - One page and Page width
+  - the grouped font list, and the computer's own fonts
+  - reading aloud a paragraph at a time from the cursor
+  - dictation typed at the cursor

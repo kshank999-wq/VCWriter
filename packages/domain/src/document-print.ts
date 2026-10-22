@@ -1,5 +1,6 @@
 import { pageSize } from './document.js';
 import { headingNumbers } from './document-outline.js';
+import { headerFooterCss, printedDate } from './document-pages.js';
 import type { WpDocument } from './entities/document.js';
 
 /**
@@ -86,6 +87,8 @@ export const documentPrintHtml = (document: WpDocument, bodyHtml: string): strin
     `<title>${escape(document.title || 'Untitled')}</title>` +
     '<style>' +
     `@page { size: ${width}in ${height}in; margin: ${m.top}in ${m.right}in ${m.bottom}in ${m.left}in; }` +
+    // Headers, footers and page numbers in the page's margin boxes (addendum 42 §15).
+    headerFooterCss(document, { title: document.title || '', date: printedDate() }) +
     'html, body { margin: 0; padding: 0; background: #fff; }' +
     '* { -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
     DOCUMENT_CONTENT_CSS +

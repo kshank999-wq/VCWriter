@@ -509,7 +509,8 @@ export const documentExtensions = () => [
   Subscript,
   Superscript,
   TableKit.configure({ table: { resizable: false } }),
-  Image.configure({ allowBase64: true, inline: false }),
+  // Pictures and shapes take Word's corner handles: drag to resize, the shape kept (addendum 42 §15).
+  Image.configure({ allowBase64: true, inline: false, resize: { enabled: true, alwaysPreserveAspectRatio: true, minWidth: 16, minHeight: 8 } }),
   Placeholder.configure({ placeholder: 'Start typing…' }),
   BlockFormat,
   PageBreak,

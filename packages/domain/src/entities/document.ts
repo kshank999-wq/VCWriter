@@ -81,6 +81,26 @@ export const documentOutlineLinkSchema = z.object({
 });
 export type DocumentOutlineLink = z.infer<typeof documentOutlineLinkSchema>;
 
+/**
+ * One band across the page, a header or a footer: what stands at its left, its
+ * centre and its right (addendum 42 §15). Each may hold fields that are filled
+ * in per page: {page}, {pages}, {title}, {date}.
+ */
+export const documentBandSchema = z.object({
+  left: z.string().max(200).default(''),
+  center: z.string().max(200).default(''),
+  right: z.string().max(200).default(''),
+});
+export type DocumentBand = z.infer<typeof documentBandSchema>;
+
+export const documentHeaderFooterSchema = z.object({
+  header: documentBandSchema.default({}),
+  footer: documentBandSchema.default({}),
+  /** Off: the first page has neither, as a title page usually wants (Word's *Different first page*). */
+  firstPage: z.boolean().default(true),
+});
+export type DocumentHeaderFooter = z.infer<typeof documentHeaderFooterSchema>;
+
 /** Bumped when the stored tree changes shape in a way a reader must know about. */
 export const DOCUMENT_SCHEMA_VERSION = 1;
 
@@ -117,6 +137,8 @@ export const wpDocumentSchema = z.object({
    * column and would lose a field they did not know.
    */
   rowReceipts: z.array(rowReceiptSchema).default([]),
+  /** Headers, footers and page numbers (addendum 42 §15). */
+  headerFooter: documentHeaderFooterSchema.default({}),
   ...timestamps,
 });
 export type WpDocument = z.infer<typeof wpDocumentSchema>;

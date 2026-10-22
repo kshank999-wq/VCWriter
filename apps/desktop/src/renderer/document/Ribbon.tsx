@@ -1,15 +1,18 @@
 import { useRef, useState, type ReactNode } from 'react';
 import type { Editor } from '@tiptap/core';
-import { PAPER_SIZES, type DocumentPageSetup, type PaperSize } from '@vcwriter/domain';
+import { PAGE_NUMBER_PRESETS, PAPER_SIZES, type DocumentPageSetup, type PageNumberPreset, type PaperSize } from '@vcwriter/domain';
+import { useFontLibrary } from './fonts';
+import { NO_FILL, SHAPES, SHAPE_FILLS, insertShape, shapeSvg, type ShapeId } from './shapes';
+import type { DocumentSpeech } from './speech';
 
 /**
  * **The ribbon** (addendum 42 §3): Word's tabs of grouped controls, over the
  * page.
  *
  * Every control does something. The spec's rule (§14) is that a feature the
- * editor cannot do is left off rather than shown greyed, so headers and
- * footers, footnotes, comments and tracked changes have no buttons here yet.
- * The addendum lists them as follow-on work.
+ * editor cannot do is left off rather than shown greyed, so footnotes,
+ * comments and tracked changes have no buttons here yet. The addendum lists
+ * them as follow-on work.
  *
  * Buttons take the press on mouse-down and refuse focus, which keeps the
  * selection in the page. That is how Word behaves, and it is what lets a
@@ -27,22 +30,10 @@ const TABS: { id: RibbonTab; label: string }[] = [
   { id: 'view', label: 'View' },
 ];
 
-export const FONTS = [
-  'Calibri',
-  'Arial',
-  'Cambria',
-  'Courier New',
-  'Garamond',
-  'Georgia',
-  'Helvetica',
-  'Palatino',
-  'Tahoma',
-  'Times New Roman',
-  'Trebuchet MS',
-  'Verdana',
-];
-
 export const SIZES = [8, 9, 10, 10.5, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 72];
+
+/** The font list's last line: list every face this computer has. */
+const MORE_FONTS = '__more-fonts';
 
 const INKS = ['#000000', '#404040', '#7f7f7f', '#c00000', '#ff0000', '#ffc000', '#00b050', '#0070c0', '#002060', '#7030a0'];
 const HIGHLIGHTS = ['#ffff00', '#00ff00', '#00ffff', '#ff00ff', '#ffc0cb', '#d9d9d9'];
@@ -108,6 +99,8 @@ export interface ViewState {
   marks: boolean;
   spelling: boolean;
   zoom: number;
+  /** Zoom that follows the window: the whole page, or its width (addendum 42 §15). */
+  fit: 'none' | 'page' | 'width';
 }
 
 interface RibbonProps {
@@ -127,7 +120,19 @@ interface RibbonProps {
   /** Whether the Extract & Organize sidebar is open (addendum 42 §8). */
   extracting: boolean;
   onExtracting(): void;
+  /** Headers, footers and page numbers (addendum 42 §15). */
+  headerFooter: {
+    open: boolean;
+    onToggle(): void;
+    pageNumbers: PageNumberPreset | 'none' | 'custom';
+    onPageNumbers(preset: PageNumberPreset | 'none'): void;
+  };
+  speech: DocumentSpeech;
+  /** A line for the writer, where something did not work. */
+  onSay(message: string): void;
 }
+
+type TabProps = RibbonProps & { fonts: ReturnType<typeof useFontLibrary> };
 
 /** A ribbon button: pressed on mouse-down so the page keeps its selection. */
 function Tool({
@@ -228,8 +233,11 @@ function Swatches({
   );
 }
 
-export function Ribbon(props: RibbonProps) {
-  const { editor, tab, onTab } = props;
+export function Ribbon(ribbon: RibbonProps) {
+  const { editor, tab, onTab } = ribbon;
+  // Here rather than in the Home tab, so the computer's fonts, once listed, stay listed across tabs.
+  const fonts = useFontLibrary();
+  const props: TabProps = { ...ribbon, fonts };
   return (
     <div className="wp-ribbon">
       <div className="wp-tabs" role="tablist" aria-label="Ribbon">
@@ -273,7 +281,7 @@ export function Ribbon(props: RibbonProps) {
   );
 }
 
-function FileTab({ file }: RibbonProps) {
+function FileTab({ file }: TabProps) {
   const picker = useRef<HTMLInputElement>(null);
   return (
     <>
@@ -308,7 +316,7 @@ function FileTab({ file }: RibbonProps) {
   );
 }
 
-function HomeTab({ editor, onFind, painting, onPaint }: RibbonProps) {
+function HomeTab({ editor, onFind, painting, onPaint, fonts, onSay }: TabProps) {
   const style = editor.getAttributes('textStyle');
   const family = typeof style['fontFamily'] === 'string' ? String(style['fontFamily']).split(',')[0]?.replace(/["']/g, '').trim() : '';
   const size = typeof style['fontSize'] === 'string' ? String(style['fontSize']).replace(/pt$/, '') : '';
@@ -334,14 +342,43 @@ function HomeTab({ editor, onFind, painting, onPaint }: RibbonProps) {
           className="wp-select font"
           aria-label="Font"
           value={family}
-          onChange={(event) => (event.target.value ? chain().setFontFamily(event.target.value).run() : chain().unsetFontFamily().run())}
+          onChange={(event) => {
+            const chosen = event.target.value;
+            if (chosen === MORE_FONTS) {
+              void fonts.askLocal().then((why) => why && onSay(why));
+              return;
+            }
+            if (chosen) chain().setFontFamily(chosen).run();
+            else chain().unsetFontFamily().run();
+          }}
         >
           <option value="">Calibri (Body)</option>
-          {FONTS.filter((font) => font !== 'Calibri').map((font) => (
-            <option key={font} value={font} style={{ fontFamily: font }}>
-              {font}
-            </option>
+          {/* The face in use stays offered, even if this computer lacks it. */}
+          {family && !fonts.groups.some((group) => group.fonts.includes(family)) && !fonts.local?.includes(family) ? (
+            <option value={family}>{family}</option>
+          ) : null}
+          {fonts.groups.map((group) => (
+            <optgroup key={group.label} label={group.label}>
+              {group.fonts
+                .filter((font) => font !== 'Calibri')
+                .map((font) => (
+                  <option key={font} value={font} style={{ fontFamily: font }}>
+                    {font}
+                  </option>
+                ))}
+            </optgroup>
           ))}
+          {fonts.local ? (
+            <optgroup label="On this computer">
+              {fonts.local.map((font) => (
+                <option key={`local-${font}`} value={font} style={{ fontFamily: font }}>
+                  {font}
+                </option>
+              ))}
+            </optgroup>
+          ) : fonts.canAskLocal ? (
+            <option value={MORE_FONTS}>All fonts on this computer…</option>
+          ) : null}
         </select>
         <select
           className="wp-select size"
@@ -496,11 +533,13 @@ function HomeTab({ editor, onFind, painting, onPaint }: RibbonProps) {
   );
 }
 
-function InsertTab({ editor }: RibbonProps) {
+function InsertTab({ editor, headerFooter }: TabProps) {
   const picture = useRef<HTMLInputElement>(null);
   const [linking, setLinking] = useState(false);
   const [href, setHref] = useState('');
   const [symbols, setSymbols] = useState(false);
+  const [shapes, setShapes] = useState(false);
+  const [fill, setFill] = useState(SHAPE_FILLS[0]!);
   const chain = () => editor.chain().focus();
   const inTable = editor.isActive('table');
   return (
@@ -527,6 +566,44 @@ function InsertTab({ editor }: RibbonProps) {
       </Group>
       <Group label="Illustrations">
         <Tool label="Picture…" title="Insert a picture from this computer" onPress={() => picture.current?.click()} wide />
+        <Tool label="Shapes" title="Rectangles, ovals, arrows, stars and more" active={shapes} onPress={() => setShapes(!shapes)} wide />
+        {shapes ? (
+          <div className="wp-shapes" role="group" aria-label="Shapes">
+            {SHAPES.map((shape) => (
+              <Tool
+                key={shape.id}
+                label={`Insert ${shape.name.toLowerCase()}`}
+                title={shape.name}
+                onPress={() => {
+                  void insertShape(editor, shape.id as ShapeId, fill);
+                  setShapes(false);
+                }}
+              >
+                <span className="wp-shape-icon" aria-hidden dangerouslySetInnerHTML={{ __html: shapeSvg(shape.id, fill) }} />
+              </Tool>
+            ))}
+            <div className="wp-shape-fills" role="group" aria-label="Shape fill">
+              {[...SHAPE_FILLS, NO_FILL].map((one) => (
+                <button
+                  key={one}
+                  type="button"
+                  className={`wp-swatch${one === NO_FILL ? ' none' : ''}${one === fill ? ' chosen' : ''}`}
+                  style={one === NO_FILL ? undefined : { background: one }}
+                  aria-label={one === NO_FILL ? 'No fill' : `Fill ${one}`}
+                  aria-pressed={one === fill}
+                  title={one === NO_FILL ? 'Outline only' : one}
+                  tabIndex={-1}
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    setFill(one);
+                  }}
+                >
+                  {one === NO_FILL ? '∅' : null}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
         <input
           ref={picture}
           type="file"
@@ -544,6 +621,32 @@ function InsertTab({ editor }: RibbonProps) {
             reader.readAsDataURL(chosen);
           }}
         />
+      </Group>
+      <Group label="Header & footer">
+        <Tool
+          label="Header & footer"
+          title="Text at the top and foot of every page, with page numbers, the title or the date"
+          active={headerFooter.open}
+          onPress={headerFooter.onToggle}
+          wide
+        />
+        <select
+          className="wp-select"
+          aria-label="Page numbers"
+          title="Where the page numbers go"
+          value={headerFooter.pageNumbers === 'custom' ? 'custom' : headerFooter.pageNumbers}
+          onChange={(event) => {
+            if (event.target.value !== 'custom') headerFooter.onPageNumbers(event.target.value as PageNumberPreset | 'none');
+          }}
+        >
+          <option value="none">Page numbers: none</option>
+          {PAGE_NUMBER_PRESETS.map((preset) => (
+            <option key={preset.id} value={preset.id}>
+              {preset.name}
+            </option>
+          ))}
+          {headerFooter.pageNumbers === 'custom' ? <option value="custom">Your own (in Header &amp; footer)</option> : null}
+        </select>
       </Group>
       <Group label="Links">
         {linking ? (
@@ -601,7 +704,7 @@ function InsertTab({ editor }: RibbonProps) {
   );
 }
 
-function LayoutTab({ pageSetup, onPageSetup, editor }: RibbonProps) {
+function LayoutTab({ pageSetup, onPageSetup, editor }: TabProps) {
   const preset = MARGIN_PRESETS.findIndex(
     (one) =>
       one.margins.top === pageSetup.margins.top &&
@@ -676,9 +779,43 @@ function LayoutTab({ pageSetup, onPageSetup, editor }: RibbonProps) {
   );
 }
 
-function ReviewTab({ view, onView, words, characters }: RibbonProps) {
+function ReviewTab({ view, onView, words, characters, speech }: TabProps) {
   return (
     <>
+      <Group label="Speech">
+        <Tool
+          label={speech.dictating ? 'Stop dictating' : 'Dictate'}
+          title="Speak, and the words are typed at the cursor"
+          active={speech.dictating}
+          onPress={speech.dictate}
+          wide
+        />
+        <Tool
+          label={speech.reading ? 'Stop reading' : 'Read aloud'}
+          title="Hear the selection, or from the cursor to the end"
+          active={speech.reading}
+          disabled={!speech.canRead}
+          onPress={() => void speech.read()}
+          wide
+        />
+        <select className="wp-select" aria-label="Reading speed" value={String(speech.rate)} onChange={(event) => speech.setRate(Number(event.target.value))}>
+          {[0.75, 1, 1.25, 1.5, 2].map((rate) => (
+            <option key={rate} value={String(rate)}>
+              {rate === 1 ? 'Normal speed' : `${rate}×`}
+            </option>
+          ))}
+        </select>
+        {speech.voices.length > 0 ? (
+          <select className="wp-select voice" aria-label="Reading voice" value={speech.voiceId} onChange={(event) => speech.setVoiceId(event.target.value)}>
+            <option value="">The computer's voice</option>
+            {speech.voices.map((voice) => (
+              <option key={voice.id} value={voice.id}>
+                {voice.name}
+              </option>
+            ))}
+          </select>
+        ) : null}
+      </Group>
       <Group label="Proofing">
         <Tool
           label="Spelling"
@@ -697,7 +834,7 @@ function ReviewTab({ view, onView, words, characters }: RibbonProps) {
   );
 }
 
-function ViewTab({ view, onView }: RibbonProps) {
+function ViewTab({ view, onView }: TabProps) {
   return (
     <>
       <Group label="Views">
@@ -709,8 +846,10 @@ function ViewTab({ view, onView }: RibbonProps) {
         <Tool label="Formatting marks" title="Show ¶ at each paragraph's end" active={view.marks} onPress={() => onView({ marks: !view.marks })} wide />
       </Group>
       <Group label="Zoom">
+        <Tool label="One page" title="The whole page in the window" active={view.fit === 'page'} onPress={() => onView({ fit: 'page', layout: 'print' })} wide />
+        <Tool label="Page width" title="The page as wide as the window" active={view.fit === 'width'} onPress={() => onView({ fit: 'width', layout: 'print' })} wide />
         {[0.75, 1, 1.25, 1.5].map((zoom) => (
-          <Tool key={zoom} label={`${Math.round(zoom * 100)}%`} active={view.zoom === zoom} onPress={() => onView({ zoom })} />
+          <Tool key={zoom} label={`${Math.round(zoom * 100)}%`} active={view.fit === 'none' && view.zoom === zoom} onPress={() => onView({ zoom, fit: 'none' })} />
         ))}
       </Group>
     </>

@@ -13,6 +13,14 @@ import { createWindowRegistry } from './windows';
  * conventions differ.
  */
 
+/**
+ * Page margin boxes (`@page { @top-left … }`), which a document's headers,
+ * footers and page numbers print in (addendum 42 §15). Chromium 130, under
+ * this Electron, has them built and behind this switch; Chrome turned them on
+ * by default in 131. Set before the app is ready, as switches must be.
+ */
+app.commandLine.appendSwitch('enable-blink-features', 'PageMarginBoxes');
+
 let mainWindow: BrowserWindow | null = null;
 
 const isDevelopment = !app.isPackaged;

@@ -1,7 +1,8 @@
 import { writeZip } from './zip-write.js';
 import { pageSize } from './document.js';
 import { headingNumbers } from './document-outline.js';
-import type { DocMark, DocNode, WpDocument } from './entities/document.js';
+import { BAND_SLOTS, printedDate } from './document-pages.js';
+import type { DocMark, DocNode, DocumentBand, WpDocument } from './entities/document.js';
 
 /**
  * **A document as a Word file** (addendum 42 §4, spec §4.1 and §7.2).
@@ -426,15 +427,63 @@ const NS =
   'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" ' +
   'xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"';
 
+/** Whether a band has anything in it, and so gets a part of its own in the Word file. */
+const bandUsed = (band: DocumentBand): boolean => BAND_SLOTS.some((slot) => band[slot].trim().length > 0);
+
 const sectionXml = (document: WpDocument): string => {
   const { width, height } = pageSize(document.pageSetup);
   const margins = document.pageSetup.margins;
   const twips = (inches: number) => Math.round(inches * TWIPS_PER_INCH);
   const orient = document.pageSetup.orientation === 'landscape' ? ' w:orient="landscape"' : '';
+  const { header, footer, firstPage } = document.headerFooter;
+  const banded = bandUsed(header) || bandUsed(footer);
   return (
-    `<w:sectPr><w:pgSz w:w="${twips(width)}" w:h="${twips(height)}"${orient}/>` +
+    '<w:sectPr>' +
+    (bandUsed(header) ? '<w:headerReference w:type="default" r:id="rIdHeader1"/>' : '') +
+    (bandUsed(footer) ? '<w:footerReference w:type="default" r:id="rIdFooter1"/>' : '') +
+    `<w:pgSz w:w="${twips(width)}" w:h="${twips(height)}"${orient}/>` +
     `<w:pgMar w:top="${twips(margins.top)}" w:right="${twips(margins.right)}" w:bottom="${twips(margins.bottom)}" ` +
-    `w:left="${twips(margins.left)}" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr>`
+    `w:left="${twips(margins.left)}" w:header="720" w:footer="720" w:gutter="0"/>` +
+    // Word's *Different first page*: with no first-page header given, the first page has none.
+    (banded && !firstPage ? '<w:titlePg/>' : '') +
+    '</w:sectPr>'
+  );
+};
+
+/**
+ * A header or footer part (addendum 42 §15): one paragraph with Word's own
+ * centre and right tab stops, so left, centre and right sit where Word's
+ * default header puts them. Page fields are Word fields, so they count.
+ */
+export const bandXml = (document: WpDocument, kind: 'header' | 'footer'): string => {
+  const { width } = pageSize(document.pageSetup);
+  const inner = Math.max(1, width - document.pageSetup.margins.left - document.pageSetup.margins.right);
+  const twips = (inches: number) => Math.round(inches * TWIPS_PER_INCH);
+  const look = '<w:rPr><w:color w:val="404040"/><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr>';
+  const field = (instruction: string) =>
+    `<w:fldSimple w:instr=" ${instruction} "><w:r>${look}<w:t>1</w:t></w:r></w:fldSimple>`;
+  const runs = (text: string): string =>
+    text
+      .replace(/\{title\}/g, document.title || '')
+      .replace(/\{date\}/g, printedDate())
+      .split(/(\{page\}|\{pages\})/)
+      .map((piece) =>
+        piece === '{page}'
+          ? field('PAGE')
+          : piece === '{pages}'
+            ? field('NUMPAGES')
+            : piece
+              ? `<w:r>${look}<w:t xml:space="preserve">${xml(piece)}</w:t></w:r>`
+              : '',
+      )
+      .join('');
+  const band = document.headerFooter[kind];
+  const tag = kind === 'header' ? 'hdr' : 'ftr';
+  return (
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    `<w:${tag} ${NS}><w:p><w:pPr><w:tabs><w:tab w:val="center" w:pos="${twips(inner / 2)}"/>` +
+    `<w:tab w:val="right" w:pos="${twips(inner)}"/></w:tabs><w:spacing w:after="0"/></w:pPr>` +
+    `${runs(band.left)}<w:r><w:tab/></w:r>${runs(band.center)}<w:r><w:tab/></w:r>${runs(band.right)}</w:p></w:${tag}>`
   );
 };
 
@@ -543,6 +592,12 @@ export const buildDocumentDocx = async (document: WpDocument, options: { author?
     '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
     '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>' +
     '<Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>' +
+    (bandUsed(document.headerFooter.header)
+      ? '<Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>'
+      : '') +
+    (bandUsed(document.headerFooter.footer)
+      ? '<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>'
+      : '') +
     '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>' +
     '</Types>';
   const rootRels =
@@ -556,6 +611,12 @@ export const buildDocumentDocx = async (document: WpDocument, options: { author?
     '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
     '<Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
     '<Relationship Id="rIdNumbering" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>' +
+    (bandUsed(document.headerFooter.header)
+      ? '<Relationship Id="rIdHeader1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>'
+      : '') +
+    (bandUsed(document.headerFooter.footer)
+      ? '<Relationship Id="rIdFooter1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>'
+      : '') +
     context.pictures
       .map(
         (picture) =>
@@ -583,6 +644,8 @@ export const buildDocumentDocx = async (document: WpDocument, options: { author?
     { path: 'word/document.xml', data: utf8(body) },
     { path: 'word/styles.xml', data: utf8(DOCUMENT_STYLES_XML) },
     { path: 'word/numbering.xml', data: utf8(numberingXml(context.lists)) },
+    ...(bandUsed(document.headerFooter.header) ? [{ path: 'word/header1.xml', data: utf8(bandXml(document, 'header')) }] : []),
+    ...(bandUsed(document.headerFooter.footer) ? [{ path: 'word/footer1.xml', data: utf8(bandXml(document, 'footer')) }] : []),
     ...context.pictures.map((picture) => ({ path: `word/${picture.path}`, data: picture.data })),
     { path: 'docProps/core.xml', data: utf8(core) },
   ]);
