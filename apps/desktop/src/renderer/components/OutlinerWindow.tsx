@@ -138,6 +138,14 @@ interface OutlinerWindowProps {
   numbers?: ReadonlyMap<string, string>;
   onOpenRow?(item: OutlineItem): void;
   toolbar?: React.ReactNode;
+  /**
+   * Send the chosen rows, and everything under them, to a project (addendum
+   * 42 §13). Given only where the host can send them; the button is then
+   * beside Delete and acts on the same selection.
+   */
+  onSendRows?(items: OutlineItem[]): void;
+  /** The host's own lines about the chosen row, under its notes: a document's *Sent to…* receipts. */
+  rowDetail?(item: OutlineItem): React.ReactNode;
 }
 
 /** How far one level of depth moves a row in. */
@@ -240,6 +248,8 @@ export function OutlinerWindow({
   numbers: hostNumbers,
   onOpenRow,
   toolbar,
+  onSendRows,
+  rowDetail,
 }: OutlinerWindowProps) {
   const outlines = outlinesOf(file);
   const [chosenOutlineId, setOutlineId] = useState<string | null>(null);
@@ -710,6 +720,19 @@ export function OutlinerWindow({
               Add to track
             </button>
             ) : null}
+            {onSendRows ? (
+              <button
+                type="button"
+                className="tool"
+                disabled={picked.length === 0}
+                title={picked.length === 0 ? 'Choose a row first' : 'Send the chosen rows, with everything under them, to a project'}
+                onClick={() =>
+                  onSendRows(picked.flatMap((id) => (outline ? [findOutlineItem(outline, id)].filter((one): one is OutlineItem => one !== null) : [])))
+                }
+              >
+                Send…
+              </button>
+            ) : null}
             <button
               type="button"
               className="tool danger"
@@ -1121,6 +1144,7 @@ export function OutlinerWindow({
               {/* The scene card (§7): what a scene says about itself, from
                   wherever each part of it actually lives. */}
               {promotion ? <SceneCardPanel file={file} outline={outline as Outline} item={chosen} onWrite={write} /> : null}
+              {rowDetail ? rowDetail(chosen) : null}
 
               {/* §1: a row is a plan until the writer says otherwise, and
                   saying so is this. */}

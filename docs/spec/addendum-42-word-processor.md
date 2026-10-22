@@ -445,8 +445,8 @@ by a category's label:
 - A second send to the same project skips what went before, unless the
   writer ticks *Send … again, as new copies*.
 
-**Not yet:** sending outline rows themselves. The rest of what was listed
-here is built in §11.
+**Not yet:** nothing from this list; picking files, adding to items and the
+bundle are in §11, and sending outline rows is §13.
 
 **Proof:**
 
@@ -530,7 +530,6 @@ status filter narrows them:
 
 **Not yet:**
 
-- sending outline rows
 - a shared, cross-install service for direct handoff (the bundle is how
   extracts move between installs today)
 
@@ -587,3 +586,76 @@ the browser it opens the print window, as the document does.
 - Renderer (`document-destinations.test.tsx`, 1 new): a search narrows the
   report, the PDF is asked for with the `bins` kind, and the saved path is
   reported.
+
+## 13. Sending outline rows (WP spec §6)
+
+From Ken: *build sending outline rows next.* The spec's line is *send
+outline nodes into the appropriate authoring destination*.
+
+**Send…** sits in the Outliner tab's toolbar, beside Delete, and acts on the
+same selection. A row goes with everything under it. Choosing a row and its
+parent sends the parent once, with the row inside it.
+
+**The same dialog as extracts** (`SendExtractsDialog` with a `rows`
+subject):
+
+- the same project list and Browse
+- the same per-row *Into* list, with new, add to or replace for shelves
+- the same preview, made by doing the send on a copy
+- the same refusal when the target changed, and the same recovery point
+- no second copy unless asked
+
+What differs: a row is only ever copied, so there is no Move. The outline
+and the document are untouched, and the dialog says so.
+
+**What a row becomes** (`outline-transfer.ts`):
+
+| Row | Into a story (script or prose) | Into a Document project | Anywhere else |
+| --- | --- | --- | --- |
+| Heading | A new scene (a chapter in prose) | Its whole section at the end of that document | A research note with the section's words |
+| Note | Research › Notes | Research › Notes | Research › Notes |
+| Idea | Research › Ideas, else Notes | Research › Ideas, else Notes | Research › Ideas, else Notes |
+
+**A heading as a scene:**
+
+- The row's own notes become the scene's summary.
+- The words under the heading in the document, up to the next heading,
+  become its first beat.
+- Each subheading becomes a beat after it, titled with the subheading. The
+  beat carries the subheading's words and anything nested deeper.
+- A note or idea hanging under the heading goes into the scene's notes as
+  *title: words*.
+
+**A heading into another document:** its whole section, down to the next
+heading at its level, goes on at the end of that document as it is written.
+Its heading ids are left behind, so the target gives its own, and so are its
+extract marks, which belong to this document's bins. A target that is only
+an empty page is replaced rather than appended to.
+
+**Pointing a row elsewhere.** The *Into* list offers:
+
+- the end of the target's document (for a Document project)
+- every shelf
+- a new scene
+- a beat in any scene, which puts the row and everything under it into one
+  beat
+
+On a shelf, the item's words are the row's notes, then its section, then
+each row under it with its title.
+
+**Receipts** are kept on the document (`rowReceipts`), not on the row,
+because rows sync column by column. When a row is chosen in the Outliner,
+its receipts show under its notes: *Sent to The Lamp › A new scene*.
+
+**Proof:**
+
+- Domain (`outline-transfer.test.ts`, 5 tests):
+  - a heading becoming a scene with its summary, opening beat, a beat per
+    subheading, and notes
+  - a section appended to another document, without its ids or marks
+  - notes and ideas onto their shelves, and a nested row sent once
+  - a row pointed at a beat in a chosen scene, and at a shelf
+  - receipts, and a second send skipped unless asked
+- Renderer (`document-outliner.test.tsx`, 1 new): Send… off until a row is
+  chosen; no Move; the row lands as a scene in another project; the
+  message; the receipt under the row.

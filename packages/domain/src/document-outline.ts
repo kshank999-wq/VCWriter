@@ -530,3 +530,23 @@ export const extractOfRow = (document: WpDocument, itemId: string): string | nul
 /** The heading a row stands for, if it does. */
 export const headingOfRow = (document: WpDocument, itemId: string): string | null =>
   document.outlineLinks.find((link) => link.itemId === itemId)?.headingId ?? null;
+
+// ------------------------------------------------------------- sections
+
+/**
+ * A heading's words in the document (addendum 42 §13): `own` is what sits
+ * under it up to the next heading of any level, `whole` is the heading and
+ * everything down to the next heading at its level or above, subheadings
+ * and all. Empty where there is no such heading.
+ */
+export const headingSection = (content: DocNode, headingId: string): { own: DocNode[]; whole: DocNode[] } => {
+  const blocks = content.content ?? [];
+  const start = blocks.findIndex((block) => headingIdOf(block) === headingId);
+  if (start < 0) return { own: [], whole: [] };
+  const level = levelOf(blocks[start]!);
+  let ownEnd = start + 1;
+  while (ownEnd < blocks.length && blocks[ownEnd]!.type !== 'heading') ownEnd += 1;
+  let wholeEnd = start + 1;
+  while (wholeEnd < blocks.length && !(blocks[wholeEnd]!.type === 'heading' && levelOf(blocks[wholeEnd]!) <= level)) wholeEnd += 1;
+  return { own: blocks.slice(start + 1, ownEnd), whole: blocks.slice(start, wholeEnd) };
+};

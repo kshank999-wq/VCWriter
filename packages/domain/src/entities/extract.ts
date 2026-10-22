@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { ExtractCategoryId, ExtractId, ExtractPaletteId, ProjectId, WpDocumentId } from '../ids.js';
 import { id, orderKey, timestamps } from './common.js';
 import { docNodeSchema } from './document.js';
+import { extractReceiptSchema } from './receipt.js';
 
 /**
  * **Extract & Organize** (addendum 42 §8, the WP spec's §5).
@@ -73,23 +74,8 @@ export type ExtractCategory = z.infer<typeof extractCategorySchema>;
 export const extractStatusSchema = z.enum(['unassigned', 'ready', 'exported', 'failed']);
 export type ExtractStatus = z.infer<typeof extractStatusSchema>;
 
-/** Where an extract went: the project, the place in it, and the record it became. */
-export const transferAreaSchema = z.enum(['research', 'scene', 'beat']);
-export type TransferArea = z.infer<typeof transferAreaSchema>;
-
-export const extractReceiptSchema = z.object({
-  projectId: z.string().min(1),
-  projectTitle: z.string().default(''),
-  /** The file it was written into, where the host has one. */
-  path: z.string().nullable().default(null),
-  area: transferAreaSchema,
-  /** The shelf or scene's name in that project, as the writer saw it. */
-  areaName: z.string().default(''),
-  /** The id of what it became there: a research item, a scene, a beat. */
-  resultId: z.string().min(1),
-  at: z.string().datetime({ offset: true }),
-});
-export type ExtractReceipt = z.infer<typeof extractReceiptSchema>;
+/** Where an extract went: the receipt is shared with the document's outline rows. */
+export { transferAreaSchema, extractReceiptSchema, type TransferArea, type ExtractReceipt } from './receipt.js';
 
 export const extractSchema = z.object({
   id: id<ExtractId>(),

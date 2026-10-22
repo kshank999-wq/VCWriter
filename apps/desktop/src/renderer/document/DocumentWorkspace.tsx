@@ -24,6 +24,7 @@ import {
   headingOfRow,
   linkExtractToOutline,
   outlineFromDocument,
+  rowReceipts,
   setHeadingNumbering,
   HEADING_NUMBERINGS,
   type HeadingNumbering,
@@ -46,7 +47,7 @@ import {
 import { readDocxParts } from '../read-docx';
 import { documentExtensions, extractRange, findMatches, headingPosition, type SearchState } from './extensions';
 import { OutlinerWindow } from '../components/OutlinerWindow';
-import { SendExtractsDialog } from './SendExtractsDialog';
+import { SendExtractsDialog, type SendSubject } from './SendExtractsDialog';
 import { ExtractSidebar, type SourceDisplay } from './ExtractSidebar';
 import { Ribbon, type RibbonTab, type ViewState } from './Ribbon';
 import { documentCommands } from './document-commands';
@@ -107,7 +108,7 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
   const [extractNotice, setExtractNotice] = useState<string | null>(null);
   // The Outliner tab (addendum 42 §9), and extracts on their way to a project (§10).
   const [pane, setPane] = useState<'document' | 'outliner'>('document');
-  const [sending, setSending] = useState<Extract[] | null>(null);
+  const [sending, setSending] = useState<SendSubject | null>(null);
 
   const documentId = document.id;
   // What this editor last handed the project, so an echo of it is not taken
@@ -475,8 +476,10 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
   const finishSend = (apply: (current: ProjectFile) => ProjectFile, moved: string[], said: string) => {
     const content = stripMarks(new Set(moved));
     onUpdate((current) => apply(content ? setDocumentContent(current, documentId, content) : current));
+    // Rows are sent from the Outliner, where the sidebar's notice is out of sight.
+    if (sending?.kind === 'rows') setMessage(said);
+    else setExtractNotice(said);
     setSending(null);
-    setExtractNotice(said);
   };
 
   const addToOutline = (extract: Extract) => {
@@ -644,6 +647,31 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
             promotion={false}
             numbers={outlineNumbers}
             onOpenRow={(item) => openRow(item.id as string)}
+            rowDetail={(item) => {
+              const sent = rowReceipts(document, item.id as string);
+              return sent.length ? (
+                <ul className="wp-row-sent" aria-label="Sent to">
+                  {sent.map((receipt) => (
+                    <li key={`${receipt.projectId}-${receipt.resultId}-${receipt.at}`} title={receipt.path ?? undefined}>
+                      Sent to {receipt.projectTitle || 'a project'} › {receipt.areaName}
+                    </li>
+                  ))}
+                </ul>
+              ) : null;
+            }}
+            onSendRows={
+              readOnly
+                ? undefined
+                : (items) => {
+                    flush(editor);
+                    setSending({
+                      kind: 'rows',
+                      documentId,
+                      itemIds: items.map((item) => item.id as string),
+                      titles: items.map((item) => item.title),
+                    });
+                  }
+            }
             toolbar={
               <label className="wp-numbering">
                 Numbering
@@ -711,7 +739,7 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
             onReveal={reveal}
             onSend={(extracts) => {
               flush(editor);
-              setSending(extracts);
+              setSending({ kind: 'extracts', extracts });
             }}
             onAddToOutline={addToOutline}
             display={display}
@@ -727,7 +755,7 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
         <SendExtractsDialog
           file={file}
           projectPath={projectPath}
-          extracts={sending}
+          subject={sending}
           onClose={() => setSending(null)}
           onSent={finishSend}
         />

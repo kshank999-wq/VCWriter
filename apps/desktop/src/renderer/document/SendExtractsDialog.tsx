@@ -1,16 +1,25 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  applyRowTransfer,
   applyTransfer,
   choiceFromKey,
   destinationOptions,
   itemsOnShelf,
+  planRowTransfer,
   planTransfer,
+  recordRowTransfer,
   recordTransfer,
+  rowDestinationOptions,
   type DestinationChoice,
+  type DestinationOption,
   type Extract,
+  type ExtractReceipt,
   type ProjectEntry,
   type ProjectFile,
   type TransferAction,
+  type TransferPlan,
+  type TransferResult,
+  type WpDocumentId,
 } from '@vcwriter/domain';
 
 /**
@@ -27,11 +36,64 @@ import {
 
 const HERE = '';
 
+/**
+ * What is being sent: extracts from the bins, or rows of the document's
+ * outline (addendum 42 §13). The dialog is the same for both; only the
+ * engine underneath and a few words differ.
+ */
+export type SendSubject =
+  | { kind: 'extracts'; extracts: Extract[] }
+  | { kind: 'rows'; documentId: WpDocumentId; itemIds: string[]; titles: string[] };
+
+type Options = { path?: string | null; again?: boolean; choices?: Readonly<Record<string, DestinationChoice>> };
+
+interface Engine {
+  ids: string[];
+  noun: [string, string];
+  plan(source: ProjectFile, target: ProjectFile, choices: Readonly<Record<string, DestinationChoice>>): TransferPlan;
+  apply(source: ProjectFile, target: ProjectFile, options: Options): TransferResult;
+  record(source: ProjectFile, receipts: ReadonlyMap<string, ExtractReceipt>, action: TransferAction): ProjectFile;
+  options(target: ProjectFile): DestinationOption[];
+  /** Whether Move means anything: an extract leaves its bin, a row stays in the outline. */
+  movable: boolean;
+  heading: string;
+}
+
+const engineFor = (subject: SendSubject): Engine => {
+  if (subject.kind === 'extracts') {
+    const ids = subject.extracts.map((extract) => extract.id as string);
+    return {
+      ids,
+      noun: ['extract', 'extracts'],
+      plan: (source, target, choices) => planTransfer(source, ids, target, choices),
+      apply: (source, target, options) => applyTransfer(source, ids, target, options),
+      record: (source, receipts, action) => recordTransfer(source, receipts, action),
+      options: destinationOptions,
+      movable: true,
+      heading:
+        subject.extracts.length === 1
+          ? `Send “${subject.extracts[0]!.title || 'Untitled extract'}”`
+          : `Send ${subject.extracts.length} extracts`,
+    };
+  }
+  const { documentId, itemIds, titles } = subject;
+  return {
+    ids: itemIds,
+    noun: ['row', 'rows'],
+    plan: (source, target, choices) => planRowTransfer(source, documentId, itemIds, target, choices),
+    apply: (source, target, options) => applyRowTransfer(source, documentId, itemIds, target, options),
+    record: (source, receipts) => recordRowTransfer(source, documentId, receipts),
+    options: rowDestinationOptions,
+    movable: false,
+    heading: itemIds.length === 1 ? `Send “${titles[0] || 'Untitled row'}”` : `Send ${itemIds.length} rows`,
+  };
+};
+
 interface SendExtractsDialogProps {
   file: ProjectFile;
   /** Where the open project is, so the list does not offer it twice. */
   projectPath: string | null;
-  extracts: Extract[];
+  subject: SendSubject;
   onClose(): void;
   /**
    * Record what was sent. `apply` changes the open project (the extracts'
@@ -43,7 +105,9 @@ interface SendExtractsDialogProps {
 
 type Target = { path: string | null; file: ProjectFile; contentHash: string | null };
 
-export function SendExtractsDialog({ file, projectPath, extracts, onClose, onSent }: SendExtractsDialogProps) {
+export function SendExtractsDialog({ file, projectPath, subject, onClose, onSent }: SendExtractsDialogProps) {
+  const engine = useMemo(() => engineFor(subject), [subject]);
+  const [one, many] = engine.noun;
   const [projects, setProjects] = useState<ProjectEntry[] | null>(null);
   const [choice, setChoice] = useState<string>(HERE);
   const [target, setTarget] = useState<Target | null>({ path: null, file, contentHash: null });
@@ -55,7 +119,6 @@ export function SendExtractsDialog({ file, projectPath, extracts, onClose, onSen
   // Where the writer has said each goes, by extract (addendum 42 §11).
   const [choices, setChoices] = useState<Record<string, DestinationChoice>>({});
   const [confirmed, setConfirmed] = useState(false);
-  const ids = useMemo(() => extracts.map((extract) => extract.id as string), [extracts]);
 
   useEffect(() => {
     let live = true;
@@ -127,10 +190,10 @@ export function SendExtractsDialog({ file, projectPath, extracts, onClose, onSen
   const here = target?.path === null;
   const targetFile = target ? (here ? file : target.file) : null;
   const plan = useMemo(
-    () => (targetFile ? planTransfer(file, ids, targetFile, choices) : null),
-    [file, ids, targetFile, choices],
+    () => (targetFile ? engine.plan(file, targetFile, choices) : null),
+    [engine, file, targetFile, choices],
   );
-  const options = useMemo(() => (targetFile ? destinationOptions(targetFile) : []), [targetFile]);
+  const options = useMemo(() => (targetFile ? engine.options(targetFile) : []), [engine, targetFile]);
   const replacing = Object.values(choices).filter(
     (one) => one.area === 'research' && 'shelfId' in one && one.into?.mode === 'replace',
   ).length;
@@ -143,20 +206,20 @@ export function SendExtractsDialog({ file, projectPath, extracts, onClose, onSen
     setSending(true);
     setError(null);
     const said = (count: number) =>
-      `${action === 'move' ? 'Moved' : 'Sent'} ${count} ${count === 1 ? 'extract' : 'extracts'} to ${here ? 'this project' : target.file.project.title}.`;
+      `${action === 'move' ? 'Moved' : 'Sent'} ${count} ${count === 1 ? one : many} to ${here ? 'this project' : target.file.project.title}.`;
     if (here) {
-      const count = applyTransfer(file, ids, file, { again, choices }).receipts.size;
+      const trial = engine.apply(file, file, { again, choices });
       onSent(
         (current) => {
-          const result = applyTransfer(current, ids, current, { again, choices });
-          return recordTransfer(result.target, result.receipts, action);
+          const result = engine.apply(current, current, { again, choices });
+          return engine.record(result.target, result.receipts, action);
         },
-        action === 'move' ? applyTransferIds(file, ids, again, choices) : [],
-        said(count),
+        action === 'move' ? [...trial.receipts.keys()] : [],
+        said(trial.receipts.size),
       );
       return;
     }
-    const result = applyTransfer(file, ids, target.file, { path: target.path, again, choices });
+    const result = engine.apply(file, target.file, { path: target.path, again, choices });
     const written = await window.vcwriter.sendIntoProject({
       path: target.path!,
       file: result.target,
@@ -168,7 +231,7 @@ export function SendExtractsDialog({ file, projectPath, extracts, onClose, onSen
       return;
     }
     onSent(
-      (current) => recordTransfer(current, result.receipts, action),
+      (current) => engine.record(current, result.receipts, action),
       action === 'move' ? [...result.receipts.keys()] : [],
       said(result.receipts.size),
     );
@@ -176,11 +239,9 @@ export function SendExtractsDialog({ file, projectPath, extracts, onClose, onSen
 
   return (
     <div className="wp-dialog-backdrop" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <div className="wp-dialog wp-send" role="dialog" aria-modal="true" aria-label="Send extracts">
+      <div className="wp-dialog wp-send" role="dialog" aria-modal="true" aria-label={`Send ${many}`}>
         <header>
-          <h2>
-            Send {extracts.length === 1 ? `“${extracts[0]!.title || 'Untitled extract'}”` : `${extracts.length} extracts`}
-          </h2>
+          <h2>{engine.heading}</h2>
           <button type="button" className="ghost" aria-label="Close" onClick={onClose}>
             ×
           </button>
@@ -202,7 +263,7 @@ export function SendExtractsDialog({ file, projectPath, extracts, onClose, onSen
           </button>
         </label>
         {projects !== null && projects.length === 0 ? (
-          <p className="muted small">No other projects yet. Extracts can go into this one.</p>
+          <p className="muted small">No other projects yet. {many[0]!.toUpperCase() + many.slice(1)} can go into this one.</p>
         ) : null}
 
         {loading ? <p className="muted small">Reading {choice}…</p> : null}
@@ -217,7 +278,7 @@ export function SendExtractsDialog({ file, projectPath, extracts, onClose, onSen
             <table className="wp-send-plan" aria-label="Where each goes">
               <thead>
                 <tr>
-                  <th>Extract</th>
+                  <th>{one[0]!.toUpperCase() + one.slice(1)}</th>
                   <th>From</th>
                   <th>Into {name}</th>
                 </tr>
@@ -225,7 +286,7 @@ export function SendExtractsDialog({ file, projectPath, extracts, onClose, onSen
               <tbody>
                 {plan.steps.map((step) => (
                   <tr key={step.extractId} className={step.already && !again ? 'skipped' : undefined}>
-                    <td>{step.title || 'Untitled extract'}</td>
+                    <td>{step.title || `Untitled ${one}`}</td>
                     <td>{step.categoryName}</td>
                     <td>
                       {step.already && !again ? (
@@ -264,6 +325,7 @@ export function SendExtractsDialog({ file, projectPath, extracts, onClose, onSen
                 {here ? 'Undo brings the old words back.' : 'A recovery point of the project is taken first.'}
               </label>
             ) : null}
+            {engine.movable ? (
             <fieldset className="wp-send-action">
               <legend>Then</legend>
               <label>
@@ -274,6 +336,9 @@ export function SendExtractsDialog({ file, projectPath, extracts, onClose, onSen
               </label>
               <p className="muted small">Either way, the passages stay in this document.</p>
             </fieldset>
+            ) : (
+              <p className="muted small">A copy goes. The rows stay in this outline, and the document keeps every word.</p>
+            )}
           </>
         ) : null}
 
@@ -289,14 +354,6 @@ export function SendExtractsDialog({ file, projectPath, extracts, onClose, onSen
     </div>
   );
 }
-
-/** Which of these a send to this project would take: those not sent here before, unless again. */
-const applyTransferIds = (
-  file: ProjectFile,
-  ids: readonly string[],
-  again: boolean,
-  choices: Readonly<Record<string, DestinationChoice>>,
-): string[] => [...applyTransfer(file, ids, file, { again, choices }).receipts.keys()];
 
 /**
  * One row's destination: the place, and for a research shelf already there,
@@ -325,7 +382,7 @@ function Into({
   return (
     <div className="wp-send-into">
       <select
-        aria-label={`Where ${step.title || 'this extract'} goes`}
+        aria-label={`Where ${step.title || 'this one'} goes`}
         value={step.key}
         onChange={(event) => onChoose(choiceFromKey(event.target.value))}
       >
@@ -337,7 +394,7 @@ function Into({
       </select>
       {shelfId && items.length > 0 ? (
         <select
-          aria-label={`As what, for ${step.title || 'this extract'}`}
+          aria-label={`As what, for ${step.title || 'this one'}`}
           value={asValue}
           onChange={(event) => {
             const [mode, itemId] = event.target.value.split(/:(.*)/s) as [string, string | undefined];

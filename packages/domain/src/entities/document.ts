@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { ProjectId, WpDocumentId } from '../ids.js';
 import { id, timestamps } from './common.js';
+import { rowReceiptSchema } from './receipt.js';
 
 /**
  * **A word-processor document** (addendum 42).
@@ -110,6 +111,12 @@ export const wpDocumentSchema = z.object({
   outlineLinks: z.array(documentOutlineLinkSchema).default([]),
   /** How the headings are numbered, on the page and in the outline (WP spec §6). */
   headingNumbering: z.enum(['none', 'decimal', 'outline']).default('none'),
+  /**
+   * Where the document's outline rows have been sent (addendum 42 §13). Kept
+   * here, like the outline links, because the rows themselves sync column by
+   * column and would lose a field they did not know.
+   */
+  rowReceipts: z.array(rowReceiptSchema).default([]),
   ...timestamps,
 });
 export type WpDocument = z.infer<typeof wpDocumentSchema>;

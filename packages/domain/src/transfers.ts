@@ -65,7 +65,9 @@ export type DestinationChoice =
   | { area: 'research'; shelfId: string; into?: { itemId: string; mode: 'append' | 'replace' } | null }
   | { area: 'research'; shelfName: string }
   | { area: 'scene' }
-  | { area: 'beat'; unitId: string };
+  | { area: 'beat'; unitId: string }
+  /** The end of the target's own document, for outline rows (addendum 42 §13). */
+  | { area: 'document' };
 
 export interface DestinationOption {
   key: string;
@@ -94,6 +96,7 @@ export const destinationOptions = (target: ProjectFile): DestinationOption[] => 
 /** The choice a list key stands for. */
 export const choiceFromKey = (key: string): DestinationChoice | null => {
   if (key === 'scene') return { area: 'scene' };
+  if (key === 'document') return { area: 'document' };
   if (key.startsWith('shelf:')) return { area: 'research', shelfId: key.slice(6) };
   if (key.startsWith('new-shelf:')) return { area: 'research', shelfName: key.slice(10) };
   if (key.startsWith('beat:')) return { area: 'beat', unitId: key.slice(5) };
@@ -148,7 +151,7 @@ const lastUnit = (target: ProjectFile) => {
 };
 
 /** Where one extract goes, resolved: what `applyTransfer` acts on. */
-interface Resolved {
+export interface Resolved {
   area: TransferArea;
   areaName: string;
   key: string;
@@ -305,6 +308,50 @@ const segmentOf = (target: ProjectFile, text: string) => ({
     })),
 });
 
+/**
+ * Words onto a research shelf: a new item, or added to or put in place of an
+ * existing one's (WP spec §9). What both extracts and outline rows do when
+ * their destination is a shelf.
+ */
+const writeResearch = (
+  file: ProjectFile,
+  where: Resolved,
+  words: { title: string; body: string; tags: readonly string[]; credit: string },
+): { file: ProjectFile; resultId: string; areaName: string } => {
+  if (where.into) {
+    // Into an item that is already there: never silently, so the dialog has
+    // asked, and the receipt says which.
+    const item = file.researchItems.find((one) => one.id === where.into!.itemId)!;
+    const body =
+      where.into.mode === 'replace'
+        ? words.body
+        : [item.body.trimEnd(), words.body].filter((part) => part.length > 0).join('\n\n');
+    return {
+      file: updateResearchItem(file, item.id as ResearchItemId, {
+        body,
+        tags: [...new Set([...item.tags, ...words.tags])],
+        ...(item.source ? {} : { source: words.credit }),
+      }),
+      resultId: item.id,
+      areaName: where.areaName,
+    };
+  }
+  const shelf = shelfIdIn(file, where.shelf ?? { systemKey: 'notes' });
+  const next = addResearchItem(shelf.file, {
+    categoryId: shelf.id,
+    title: words.title,
+    body: words.body,
+    tags: [...words.tags],
+    source: words.credit,
+    origin: 'import',
+  });
+  return {
+    file: next,
+    resultId: next.researchItems[next.researchItems.length - 1]!.id,
+    areaName: `Research › ${next.researchCategories.find((category) => category.id === shelf.id)?.name ?? 'Notes'}`,
+  };
+};
+
 export interface TransferResult {
   /** The target with everything written into it. */
   target: ProjectFile;
@@ -342,32 +389,11 @@ export const applyTransfer = (
         ? `From “${documentTitle(extract)}”`
         : `From “${documentTitle(extract)}” in ${source.project.title}`;
 
-    if (where.area === 'research' && where.into) {
-      // Into an item that is already there: never silently (WP spec §9), so
-      // the dialog has asked, and the receipt says which.
-      const item = next.researchItems.find((one) => one.id === where.into!.itemId)!;
-      const body =
-        where.into.mode === 'replace'
-          ? extract.textPlain
-          : [item.body.trimEnd(), extract.textPlain].filter((part) => part.length > 0).join('\n\n');
-      next = updateResearchItem(next, item.id as ResearchItemId, {
-        body,
-        tags: [...new Set([...item.tags, ...extract.tags])],
-        ...(item.source ? {} : { source: credit }),
-      });
-      resultId = item.id;
-    } else if (where.area === 'research') {
-      const shelf = shelfIdIn(next, where.shelf ?? { systemKey: 'notes' });
-      next = addResearchItem(shelf.file, {
-        categoryId: shelf.id,
-        title: extract.title,
-        body: extract.textPlain,
-        tags: extract.tags,
-        source: credit,
-        origin: 'import',
-      });
-      resultId = next.researchItems[next.researchItems.length - 1]!.id;
-      areaName = `Research › ${next.researchCategories.find((category) => category.id === shelf.id)?.name ?? 'Notes'}`;
+    if (where.area === 'research') {
+      const written = writeResearch(next, where, { title: extract.title, body: extract.textPlain, tags: extract.tags, credit });
+      next = written.file;
+      resultId = written.resultId;
+      areaName = written.areaName;
     } else {
       let unit = where.area === 'beat' ? (next.units.find((one) => one.id === where.unitId) ?? lastUnit(next)) : null;
       if (unit === null) {
@@ -417,4 +443,22 @@ export const recordTransfer = (
         : extract;
     }),
   };
+};
+
+/**
+ * The pieces of a send that outline rows share with extracts
+ * (`outline-transfer.ts`): one name, so the domain's public surface does not
+ * grow a `lastUnit` that means something only here.
+ */
+export const transferInternals = {
+  liveShelf,
+  takesScenes,
+  lastUnit,
+  researchTo,
+  sceneTo,
+  beatTo,
+  shelfIdIn,
+  segmentOf,
+  writeResearch,
+  SHELF_NAMES,
 };

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { Editor } from '@tiptap/core';
 import {
   createProjectFile,
@@ -197,5 +197,44 @@ describe('sending extracts to a project', () => {
     expect(screen.getByText('Added to the outline.')).toBeTruthy();
     fireEvent.click(screen.getByRole('tab', { name: 'Outliner' }));
     expect(screen.getAllByDisplayValue('Arrival')).toHaveLength(2);
+  });
+});
+
+describe('sending outline rows (addendum 42 §13)', () => {
+  it('sends a chosen row to another project as a scene, says so, and keeps the receipt on the row', async () => {
+    const target = createProjectFile({ title: 'The Lamp', format: 'screenplay' });
+    const sendIntoProject = vi.fn(async () => ({ ok: true, data: { contentHash: 'h2' } }));
+    (window as unknown as { vcwriter: unknown }).vcwriter = {
+      listProjects: async () => ({ ok: true, data: [{ path: '/p/lamp.vcw', title: 'The Lamp', savedAt: null, sizeBytes: null, missing: false }] }),
+      readProject: async () => ({ ok: true, data: { path: '/p/lamp.vcw', file: target, contentHash: 'h1' } }),
+      sendIntoProject,
+    };
+    await open();
+    fireEvent.click(screen.getByRole('tab', { name: 'Outliner' }));
+    const send = screen.getByRole('button', { name: 'Send…' }) as HTMLButtonElement;
+    expect(send.disabled).toBe(true);
+    fireEvent.pointerDown(screen.getByDisplayValue('Departure').closest('[role="treeitem"], li, .outline-row') ?? screen.getByDisplayValue('Departure'));
+    fireEvent.click(send);
+    expect(screen.getByRole('dialog', { name: 'Send rows' })).toBeTruthy();
+    expect(screen.getByText('Send “Departure”')).toBeTruthy();
+    // A row is copied, never moved: there is no Move to choose.
+    expect(screen.queryByRole('radio', { name: /Move/ })).toBeNull();
+
+    await screen.findByRole('option', { name: 'The Lamp' });
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Destination project'), { target: { value: '/p/lamp.vcw' } });
+    });
+    await screen.findByText('Into The Lamp');
+    expect((screen.getByLabelText('Where Departure goes') as HTMLSelectElement).selectedOptions[0]!.text).toBe('A new scene');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Send 1' }));
+    });
+
+    const written = (sendIntoProject.mock.calls[0] as unknown as [{ file: ProjectFile }])[0].file;
+    const scene = written.units.find((unit) => unit.title === 'Departure')!;
+    expect(written.beats.filter((beat) => beat.unitId === scene.id).flatMap((beat) => beat.manuscript.elements.map((element) => element.text))).toEqual(['She leaves.']);
+    expect(screen.getByText('Sent 1 row to The Lamp.')).toBeTruthy();
+    expect(within(screen.getByRole('list', { name: 'Sent to' })).getByText('Sent to The Lamp › A new scene')).toBeTruthy();
+    expect(mainDocument(latest!)!.rowReceipts).toHaveLength(1);
   });
 });
