@@ -51,7 +51,7 @@ export const REFERENCE_TYPE_NAMES: Record<ReferenceType, string> = {
   other: 'Other',
 };
 
-export type ReferenceField = Exclude<keyof Reference, 'id' | 'projectId' | 'type' | 'archivedAt' | 'createdAt' | 'updatedAt' | 'tags' | 'notes' | 'shortCode'>;
+export type ReferenceField = Exclude<keyof Reference, 'id' | 'projectId' | 'type' | 'archivedAt' | 'createdAt' | 'updatedAt' | 'tags' | 'notes' | 'shortCode' | 'asWritten'>;
 
 /** The fields each kind of source shows, in the order a reader fills them in (spec §3: *show/hide fields by source type*). */
 export const REFERENCE_FIELDS: Record<ReferenceType, ReferenceField[]> = {
@@ -181,9 +181,15 @@ export const referenceProblems = (reference: Reference): Partial<Record<Referenc
     const digits = reference.isbn.replace(/[\s-]/g, '');
     if (!/^(\d{9}[\dXx]|\d{13})$/.test(digits)) problems.isbn = 'An ISBN has 10 or 13 digits.';
   }
-  if (!reference.title.trim()) problems.title = 'A source needs a title.';
+  if (flattened(reference)) {
+    problems.title = 'Brought in from Word as one line. Separate it into author, title, publisher and the rest, so the style can set it; until then it prints as written.';
+  } else if (!reference.title.trim()) problems.title = 'A source needs a title.';
   return problems;
 };
+
+/** A source still as one line of text, brought in from Word with its parts run together (addendum 43 §9). */
+export const flattened = (reference: Pick<Reference, 'asWritten' | 'title'>): boolean =>
+  reference.asWritten.trim().length > 0 && reference.title.trim().length === 0;
 
 /** A DOI as the bare identifier, whatever it was pasted as. */
 export const normalizeDoi = (doi: string): string => doi.trim().replace(/^(https?:\/\/(dx\.)?doi\.org\/|doi:\s*)/i, '');

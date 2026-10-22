@@ -64,5 +64,8 @@ export const readDocxParts = async (buffer: ArrayBuffer): Promise<DocxParts> => 
   if (theme !== undefined) parts.theme = theme;
   const rels = await text('word/_rels/document.xml.rels');
   if (rels !== undefined) parts.rels = rels;
+  // The footnotes, which an instructional book takes in as citations (addendum 43 §9).
+  const footnotes = await text('word/footnotes.xml');
+  if (footnotes !== undefined) parts.footnotes = footnotes;
   return parts;
 };

@@ -72,6 +72,12 @@ export interface ImportedScript {
   warnings: string[];
   /** Which reader produced this, for the note left on the project. */
   source: 'fdx' | 'pdf' | 'text' | 'docx';
+  /**
+   * Footnotes read from Word, each under the key of the citation token its
+   * place in the text was given (addendum 43 §9). The builder makes a source
+   * and a citation of each; present only where the book cites.
+   */
+  notes?: { key: string; text: string }[];
 }
 
 /** Elements in reading order, across every scene. */

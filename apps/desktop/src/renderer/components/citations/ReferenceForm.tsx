@@ -10,6 +10,7 @@ import {
   type ReferenceInput,
   type ReferenceType,
 } from '@vcwriter/domain';
+import { InlineText } from './InlineText';
 
 /**
  * **A source's facts** (addendum 43, spec §3): the form the Reference Library
@@ -83,6 +84,27 @@ export function ReferenceForm({ reference, readOnly = false, onChange }: Referen
 
   return (
     <div className="ref-form">
+      {reference.asWritten.trim() ? (
+        /* A source brought in from Word as one line (addendum 43 §9): shown
+           as it came, so its parts can be copied into the fields below. Once
+           it has a title the style sets it from the fields instead. */
+        <div className="ref-as-written" aria-label="As written in Word">
+          <span className="ref-as-written-name">As written in Word</span>
+          <span className="ref-as-written-text">
+            <InlineText text={reference.asWritten} />
+          </span>
+          <span className="muted small">
+            {reference.title.trim()
+              ? 'The style now sets it from the fields below.'
+              : 'It prints like this until it has a title. Fill in the fields below and the style takes over.'}
+          </span>
+          {reference.title.trim() && !readOnly ? (
+            <button type="button" className="ghost small" onClick={() => onChange({ asWritten: '' })}>
+              Forget the Word text
+            </button>
+          ) : null}
+        </div>
+      ) : null}
       <div className="ref-field type">
         <label htmlFor={`ref-${reference.id}-type`}>Kind of source</label>
         <select

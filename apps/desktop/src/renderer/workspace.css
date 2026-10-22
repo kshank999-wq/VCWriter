@@ -21707,6 +21707,22 @@ dialog.track-dialog.format-inspector {
   border-color: #e06c6c;
 }
 
+.ref-as-written {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px dashed var(--accent, #c9a54a);
+  border-radius: 6px;
+}
+.ref-as-written-name {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent, #c9a54a);
+}
+.ref-as-written button { align-self: flex-start; }
 .ref-problem {
   color: #e06c6c;
   font-size: 11.5px;

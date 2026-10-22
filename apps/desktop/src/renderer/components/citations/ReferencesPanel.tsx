@@ -134,7 +134,7 @@ export function ReferencesPanel({ file, onUpdate, readOnly = false }: References
                 <li key={reference.id}>
                   <button type="button" className={reference.id === chosenId ? 'chosen' : ''} aria-pressed={reference.id === chosenId} onClick={() => setChosenId(reference.id)}>
                     <span className="refs-who">{referenceCreator(reference) || '—'}</span>
-                    <span className="refs-title">{reference.title || 'Untitled source'}</span>
+                    <span className="refs-title">{reference.title || (reference.asWritten ? <InlineText text={reference.asWritten} /> : 'Untitled source')}</span>
                     <span className="muted small">
                       {[REFERENCE_TYPE_NAMES[reference.type], reference.date.slice(0, 4), reference.shortCode, counts.get(reference.id) ? `cited ${counts.get(reference.id)}×` : 'not cited'].filter(Boolean).join(' · ')}
                     </span>

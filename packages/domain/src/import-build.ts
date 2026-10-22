@@ -22,11 +22,14 @@ import type { Character, CharacterCategory } from './entities/character.js';
 import type { ResearchItem } from './entities/research.js';
 import type { ManuscriptElement } from './entities/manuscript.js';
 import type { Asset } from './entities/asset.js';
+import { citationSchema, referenceSchema, type Citation, type Reference } from './entities/reference.js';
 import type {
   AssetId,
   BeatId,
   CharacterCategoryId,
   CharacterId,
+  CitationId,
+  ReferenceId,
   TrackId,
   ManuscriptElementId,
   ProjectId,
@@ -564,8 +567,38 @@ export const buildProjectFromImport = (script: ImportedScript, options: ImportOp
           }),
         );
 
+  // ------------------------------------------------------- the footnotes
+  //
+  // A Word footnote is one line of text, its parts run together (addendum 43
+  // §9). Each distinct note is a source kept as written and flagged for the
+  // writer to separate; each place it was cited is a citation of it, under
+  // the key its token already carries in the text.
+  const sources = new Map<string, Reference>();
+  const citations: Citation[] = [];
+  for (const note of format === 'instructional' ? (script.notes ?? []) : []) {
+    const same = note.text.toLowerCase();
+    let source = sources.get(same);
+    if (!source) {
+      source = referenceSchema.parse({
+        id: newId<ReferenceId>(),
+        projectId,
+        type: 'other',
+        asWritten: note.text,
+        tags: ['From Word'],
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+      sources.set(same, source);
+    }
+    citations.push(
+      citationSchema.parse({ id: newId<CitationId>(), projectId, referenceId: source.id, key: note.key, createdAt: timestamp, updatedAt: timestamp }),
+    );
+  }
+
   const file: ProjectFile = {
     ...base,
+    references: [...sources.values()],
+    citations,
     project: { ...base.project, author, notes: noteFor(script), updatedAt: timestamp },
     // The scene the project was created with is replaced: an import brings
     // its own, and an empty "Opening Scene" ahead of page one is litter.

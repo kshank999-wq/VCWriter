@@ -45,6 +45,8 @@ export interface DocxParts {
   rels?: string;
   /** Pictures by their path in the zip (`word/media/image1.png`) as data URLs. */
   media?: ReadonlyMap<string, string>;
+  /** `word/footnotes.xml`: the notes the document's footnote references name (addendum 43 §9). */
+  footnotes?: string;
 }
 
 export interface DocxParagraph {
@@ -71,10 +73,19 @@ export interface DocxParagraph {
   /** A numbered or bulleted item. */
   list: boolean;
   pictures: DocxPicture[];
+  /**
+   * The words with each footnote's place written in as a citation token
+   * (`[^ab12cd]`), where the paragraph had any (addendum 43 §9). `text` never
+   * carries them, so everything that reads a paragraph for what it is — a
+   * heading, a byline, a note — reads the words alone.
+   */
+  cited?: string;
 }
 
 export interface DocxDocument {
   paragraphs: DocxParagraph[];
+  /** The footnotes, in the order the text refers to them, each under the key its token names. */
+  notes: { key: string; text: string }[];
   /** How many page breaks the document carried, for a script's page count. */
   pages: number;
 }
@@ -342,6 +353,8 @@ interface Run {
   bold: boolean;
   italic: boolean;
   underline: boolean;
+  /** A footnote's reference: the key of the token that stands for it. */
+  note?: string;
 }
 
 /** Runs written back with the editor's marks (§7.2), neighbours alike joined first. */
@@ -349,6 +362,10 @@ const markedText = (runs: readonly Run[]): string => {
   const merged: Run[] = [];
   for (const run of runs) {
     const last = merged[merged.length - 1];
+    if (run.note !== undefined || last?.note !== undefined) {
+      merged.push({ ...run });
+      continue;
+    }
     if (last && last.bold === run.bold && last.italic === run.italic && last.underline === run.underline) {
       last.text += run.text;
     } else {
@@ -357,6 +374,7 @@ const markedText = (runs: readonly Run[]): string => {
   }
   return merged
     .map((run) => {
+      if (run.note !== undefined) return `[^${run.note}]`;
       // The marks go around the words, never around the spaces beside them,
       // or the editor reads `** word**` as a stray asterisk.
       const lead = run.text.match(/^\s*/)?.[0] ?? '';
@@ -388,6 +406,17 @@ export const readDocx = (parts: DocxParts): DocxDocument => {
 
   const paragraphs: DocxParagraph[] = [];
   let pages = 1;
+  // The footnotes, by Word's id, and the keys their references were given.
+  const footnotes = readFootnotes(parts.footnotes, theme);
+  const notes: { key: string; text: string }[] = [];
+  const keys = new Set<string>();
+  const noteKey = (): string => {
+    let key = '';
+    do key = Math.floor(Math.random() * 0x1000000).toString(16).padStart(6, '0');
+    while (keys.has(key));
+    keys.add(key);
+    return key;
+  };
 
   // The paragraph being read, and the run inside it.
   let para: {
@@ -417,7 +446,9 @@ export const readDocx = (parts: DocxParts): DocxDocument => {
     const face = p.runs.length > 0 ? (firstRunFace ?? own.face ?? style.face) : own.face ?? style.face;
     const size = p.runs.length > 0 ? (firstRunSize ?? own.size ?? style.size) : own.size ?? style.size;
     const plain = p.runs.map((one) => one.text).join('').replace(/\s+/g, ' ').trim();
-    const text = markedText(p.runs).trim();
+    const words = p.runs.filter((one) => one.note === undefined);
+    const text = markedText(words).trim();
+    const cited = words.length < p.runs.length ? markedText(p.runs).trim() : undefined;
     const caps = own.caps ?? style.caps ?? false;
     if (plain.length > 0 || p.pictures.length > 0) {
       paragraphs.push({
@@ -435,6 +466,7 @@ export const readDocx = (parts: DocxParts): DocxDocument => {
         pageBreakBefore: breakPending || p.pageBreakBefore || own.pageBreakBefore || style.pageBreakBefore,
         list: p.list,
         pictures: p.pictures,
+        ...(cited !== undefined ? { cited: caps ? cited.replace(/(\[\^[0-9a-f]{6}\])|([^[]+)/g, (all, token: string | undefined) => (token ? all : all.toUpperCase())) : cited } : {}),
       });
       breakPending = false;
     } else if (p.pageBreakBefore) {
@@ -481,6 +513,17 @@ export const readDocx = (parts: DocxParts): DocxDocument => {
         case 'w:t':
           if (run) inText = true;
           break;
+        case 'w:footnotereference': {
+          // A footnote's place in the line: a token here, its words from
+          // footnotes.xml, and a source made of them on the way in.
+          const said = footnotes.get(tag.attributes['w:id'] ?? '');
+          if (para && said !== undefined) {
+            const key = noteKey();
+            notes.push({ key, text: said });
+            para.runs.push({ text: '', bold: false, italic: false, underline: false, note: key });
+          }
+          break;
+        }
         case 'w:tab':
           if (run) run.text += '     ';
           break;
@@ -575,7 +618,79 @@ export const readDocx = (parts: DocxParts): DocxDocument => {
     },
   });
   finishParagraph();
-  return { paragraphs, pages };
+  return { paragraphs, pages, notes };
+};
+
+/**
+ * The footnotes' words, by Word's id (addendum 43 §9): each note's runs with
+ * their bold and italic, its paragraphs run together, the separators and the
+ * note's own number left out.
+ */
+const readFootnotes = (xml: string | undefined, theme: { major: string; minor: string }): Map<string, string> => {
+  const found = new Map<string, string>();
+  if (!xml) return found;
+  let note: { id: string; runs: Run[]; skip: boolean } | null = null;
+  let run: { props: StyleProps; text: string; inProps: boolean; mark: boolean } | null = null;
+  let inText = false;
+  walkXml(xml, {
+    open(tag) {
+      switch (tag.name) {
+        case 'w:footnote':
+          note = { id: tag.attributes['w:id'] ?? '', runs: [], skip: (tag.attributes['w:type'] ?? 'normal') !== 'normal' };
+          break;
+        case 'w:p':
+          if (note && note.runs.length > 0) note.runs.push({ text: ' ', bold: false, italic: false, underline: false });
+          break;
+        case 'w:r':
+          run = { props: emptyStyle(), text: '', inProps: false, mark: false };
+          break;
+        case 'w:rpr':
+          if (run) run.inProps = true;
+          break;
+        case 'w:footnoteref':
+          if (run) run.mark = true;
+          break;
+        case 'w:t':
+          if (run) inText = true;
+          break;
+        case 'w:tab':
+          if (run) run.text += ' ';
+          break;
+        default:
+          if (run?.inProps) readProps(tag, run.props, theme);
+          break;
+      }
+    },
+    close(name) {
+      switch (name) {
+        case 'w:rpr':
+          if (run) run.inProps = false;
+          break;
+        case 'w:t':
+          inText = false;
+          break;
+        case 'w:r':
+          if (run && note && !run.mark && run.text.length > 0) {
+            note.runs.push({ text: run.text, bold: run.props.bold ?? false, italic: run.props.italic ?? false, underline: run.props.underline ?? false });
+          }
+          run = null;
+          break;
+        case 'w:footnote':
+          if (note && !note.skip) {
+            const text = markedText(note.runs).replace(/\s+/g, ' ').trim();
+            if (text.length > 0) found.set(note.id, text);
+          }
+          note = null;
+          break;
+        default:
+          break;
+      }
+    },
+    text(chunk) {
+      if (inText && run) run.text += chunk;
+    },
+  });
+  return found;
 };
 
 // ------------------------------------------------------- what they become
@@ -668,7 +783,7 @@ const kept = (paragraph: DocxParagraph): Record<string, string | number | boolea
  */
 export const docxToProse = (
   doc: DocxDocument,
-  options: { title?: string; marks?: ChapterMarks } = {},
+  options: { title?: string; marks?: ChapterMarks; citations?: boolean } = {},
 ): ImportedScript => {
   const elements: ImportedElement[] = [];
   const warnings: string[] = [];
@@ -676,6 +791,16 @@ export const docxToProse = (
   let author = '';
   // The page numbers the writer typed are not the book's words (§10).
   const pageNumbers = pageNumberParagraphs(doc.paragraphs);
+  // Footnotes come in as citations on a book that cites (addendum 43 §9);
+  // anywhere else they are left out, and the writer is told.
+  const footnotes = doc.notes ?? [];
+  const citing = options.citations === true && footnotes.length > 0;
+  const says = (paragraph: DocxParagraph): string => (citing ? (paragraph.cited ?? paragraph.text) : paragraph.text);
+  if (!citing && footnotes.length > 0) {
+    warnings.push(
+      `${footnotes.length} ${footnotes.length === 1 ? 'footnote was' : 'footnotes were'} left out. Footnotes come in as citations on an instructional book; import into one to keep them.`,
+    );
+  }
   if (pageNumbers.size > 0) {
     warnings.push(`${pageNumbers.size} typed page numbers were left out: a page number is not a line of the book, and each had been reading as a chapter.`);
   }
@@ -717,11 +842,11 @@ export const docxToProse = (
       return;
     }
     if (paragraph.outline !== null) {
-      elements.push({ type: 'heading', text: paragraph.text, ...carry });
+      elements.push({ type: 'heading', text: says(paragraph), ...carry });
       return;
     }
     const quoted = paragraph.styleName.includes('quote') || (paragraph.indentLeft >= 0.45 && paragraph.firstLine <= 0);
-    const text = paragraph.list ? `• ${paragraph.text}` : paragraph.text;
+    const text = paragraph.list ? `• ${says(paragraph)}` : says(paragraph);
     elements.push({ type: quoted ? 'blockquote' : 'paragraph', text, ...carry });
   });
 
@@ -737,6 +862,7 @@ export const docxToProse = (
       scenes: scenesFrom(elements),
       warnings,
       source: 'docx',
+      ...(citing ? { notes: notesKept(footnotes, elements) } : {}),
     }),
     // A chapter heading is not a place: the summary reads a scene's heading
     // as a slugline, and "Chapter One" is nowhere the story happens.
@@ -749,7 +875,14 @@ export const docxToImport = (
   doc: DocxDocument,
   format: ProjectFormat,
   options: { title?: string; marks?: ChapterMarks } = {},
-): ImportedScript => (isProseFormat(format) ? docxToProse(doc, options) : docxToScript(doc, options));
+): ImportedScript =>
+  isProseFormat(format) ? docxToProse(doc, { ...options, citations: format === 'instructional' }) : docxToScript(doc, options);
+
+/** The notes whose tokens made it into the text: a note on a paragraph left out (a page number) goes with it. */
+const notesKept = (notes: { key: string; text: string }[], elements: readonly ImportedElement[]): { key: string; text: string }[] => {
+  const text = elements.map((element) => element.text).join('\n');
+  return notes.filter((note) => text.includes(`[^${note.key}]`));
+};
 
 /**
  * A Word document as markdown, for the note importer (§5): headings become

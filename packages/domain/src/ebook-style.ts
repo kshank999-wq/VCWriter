@@ -196,6 +196,11 @@ h2.heading { font-size: 1.2em; margin: 2em 0 1em; text-align: left; }
 blockquote { margin: 1em 8%; }
 blockquote p { text-indent: 0; }
 p.break { text-align: center; margin: 1.5em 0; text-indent: 0; }
+sup.noteref { font-size: 0.7em; line-height: 0; vertical-align: super; }
+sup.noteref a { text-decoration: none; }
+section.footnotes { margin-top: 2em; font-size: 0.85em; }
+hr.notes-rule { width: 30%; margin: 0 auto 1em 0; border: 0; border-top: 1px solid currentColor; }
+aside.footnote p { text-indent: 0; margin: 0 0 0.5em; text-align: left; }
 figure { margin: 1.5em 0; text-align: center; page-break-inside: avoid; }
 .inset { float: left; margin: 0.2em 1em 0.3em 0; }
 .inset-right { float: right; margin: 0.2em 0 0.3em 1em; }

@@ -47,6 +47,14 @@ export const referenceSchema = z.object({
   accessed: z.string().max(40).default(''),
   isbn: z.string().max(40).default(''),
   notes: z.string().max(20_000).default(''),
+  /**
+   * **A source brought in as one line of text** (addendum 43 §9): a Word
+   * footnote, read back with its parts run together. Kept exactly as it came,
+   * in the inline marks, and printed as written while the source has no
+   * title — a style is a rule about parts, and these have none yet. The
+   * library flags it until the writer has separated them.
+   */
+  asWritten: z.string().max(5000).default(''),
   tags: z.array(z.string().max(80)).default([]),
   /** Set when archived: out of the pickers, kept for every citation already made. */
   archivedAt: z.string().datetime({ offset: true }).nullable().default(null),

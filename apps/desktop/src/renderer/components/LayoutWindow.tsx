@@ -181,6 +181,9 @@ import {
   updateMarker,
   type BlankOffer,
   type BlankSide,
+  DOCX_MEDIA_TYPE,
+  buildBookDocx,
+  suggestedDocxFileName,
 } from '@vcwriter/domain';
 import { readFont } from '../read-font';
 import { PopOutButton } from './PopOutButton';
@@ -800,6 +803,30 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
     // calls the bridge itself, because it hands the book's markup over, and
     // a second copy of the words would be a second answer to what happened.
     if (result.data) setMessage(sayExport(result.data));
+  };
+
+  /**
+   * The book as a Word manuscript (addendum 43 §9): the same blocks, its
+   * citations as Word's own footnotes and its bibliography as the back
+   * matter makes it. Not a page of this room's layout — Word lays its own.
+   */
+  const exportWord = async () => {
+    setBusy(true);
+    setMessage(null);
+    try {
+      const result = await window.vcwriter.saveFile({
+        name: suggestedDocxFileName(file),
+        bytes: await buildBookDocx(file),
+        mediaType: DOCX_MEDIA_TYPE,
+        kind: { name: 'Word document', extension: 'docx' },
+      });
+      if (!result.ok) setMessage(result.error ?? 'The Word document could not be saved');
+      else if (result.data) setMessage(`Exported to ${result.data.path}`);
+    } catch (cause) {
+      setMessage(cause instanceof Error ? cause.message : 'The Word document could not be made');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const figures = bookFigures(file);
@@ -2070,6 +2097,15 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
             nothing about a page survives, and the dialog says what does. */}
         <button type="button" className="tool" title="The book as an EPUB for the eBook stores, checked against the store's rules" onClick={() => setEbookOpen(true)}>
           Export as eBook…
+        </button>
+        <button
+          type="button"
+          className="tool"
+          disabled={busy}
+          title="The book as a Word manuscript, its citations as Word footnotes and its bibliography at the back"
+          onClick={() => void exportWord()}
+        >
+          Export as Word…
         </button>
         {onPopOut ? <PopOutButton what="the Layout room" onPopOut={onPopOut} /> : null}
         {onSaveAs ? <RoomSave file={file} onSaveAs={onSaveAs} /> : null}

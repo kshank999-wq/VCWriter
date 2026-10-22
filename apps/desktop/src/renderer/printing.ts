@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { DOCX_MEDIA_TYPE, buildDocx, suggestedDocxFileName, type PageStamp, type PrintOptions, type ProjectFile } from '@vcwriter/domain';
+import { DOCX_MEDIA_TYPE, buildBookDocx, buildDocx, isProseFormat, suggestedDocxFileName, type PageStamp, type PrintOptions, type ProjectFile } from '@vcwriter/domain';
 import type { PrintSetup } from './components/PageSetup';
 import type { VcWriterApi } from '../preload/index';
 
@@ -132,7 +132,9 @@ export const usePrinting = (options: {
     try {
       // The same page setup the PDF reads: the title page, the cast page,
       // the scene headings and the numbers, so the two exports agree.
-      const bytes = await buildDocx(file, printOptions);
+      // A book is a book's manuscript, its citations as Word's own footnotes
+      // (addendum 43 §9); a script is the script's page.
+      const bytes = isProseFormat(file.project.format) ? await buildBookDocx(file) : await buildDocx(file, printOptions);
       const result = await window.vcwriter.saveFile({
         name: suggestedDocxFileName(file),
         bytes,

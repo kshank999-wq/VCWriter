@@ -1,4 +1,4 @@
-import { citationOccurrences, citationSettingsOf, normalizeDoi, citedReferences, referenceCreator, type CitationOccurrence } from './citations.js';
+import { citationOccurrences, citationSettingsOf, flattened, normalizeDoi, citedReferences, referenceCreator, type CitationOccurrence } from './citations.js';
 import type { Citation, CitationSettings, LocatorKind, Reference } from './entities/reference.js';
 import type { ProjectFile } from './project-file.js';
 
@@ -130,9 +130,21 @@ const link = (reference: Reference): string => doiLink(reference) || reference.u
 /** An article, a chapter, a page or a video is quoted; a book, a report or a journal is in italics. */
 const titleIsPart = (reference: Reference): boolean => ['chapter', 'journal', 'website', 'interview'].includes(reference.type);
 
+/** Words a short title never ends on: *The Moon and the* is not a title. */
+const TRAILING = /^(a|an|and|at|by|for|from|in|of|on|or|the|to|with)$/i;
+
+/**
+ * A short title (Chicago 14.32): the main title, without a leading *A* or
+ * *The* where it is longer than four words, cut to four, and never ending on
+ * an article, a conjunction or a preposition.
+ */
 const shortTitle = (title: string): string => {
-  const words = title.replace(/[:.].*$/, '').trim().split(/\s+/);
-  return words.length > 4 ? words.slice(0, 4).join(' ') : words.join(' ');
+  let words = title.replace(/[:.].*$/, '').trim().split(/\s+/);
+  if (words.length <= 4) return words.join(' ');
+  if (/^(a|an|the)$/i.test(words[0] ?? '')) words = words.slice(1);
+  words = words.slice(0, 4);
+  while (words.length > 1 && TRAILING.test(words[words.length - 1] ?? '')) words = words.slice(0, -1);
+  return words.join(' ');
 };
 
 // ---------------------------------------------------------------- locators
@@ -339,7 +351,9 @@ const mlaInText = (reference: Reference, citation: Pick<Citation, 'locatorKind' 
 
 /** A bibliography entry for a source in a style. */
 export const formatEntry = (reference: Reference, form: NoteForm): string =>
-  form === 'apa' ? apaEntry(reference) : insideQuotes(form === 'mla' ? mlaEntry(reference) : chicagoEntry(reference));
+  flattened(reference)
+    ? stop(reference.asWritten.trim())
+    : form === 'apa' ? apaEntry(reference) : insideQuotes(form === 'mla' ? mlaEntry(reference) : chicagoEntry(reference));
 
 /**
  * A footnote's text: in Chicago, a full note the first time a source is cited
@@ -354,6 +368,13 @@ export const formatNote = (
   first: boolean,
 ): string => {
   const at = locatorText(citation, form);
+  // A source still as Word gave it prints as written, with the pinpoint and
+  // note the writer has added since.
+  if (flattened(reference)) {
+    const own = reference.asWritten.trim().replace(/[.]$/, '');
+    const note = citation.note.trim();
+    return join([stop(at ? `${own}, ${at}` : own), note ? stop(lit(note)) : ''], ' ');
+  }
   const source =
     form === 'chicago'
       ? first
@@ -367,7 +388,9 @@ export const formatNote = (
 
 /** The citation as it stands in the text, for APA and MLA: in parentheses. */
 export const formatInText = (reference: Reference, citation: Pick<Citation, 'locatorKind' | 'locator'>, form: 'apa' | 'mla'): string =>
-  form === 'apa' ? apaInText(reference, citation) : mlaInText(reference, citation);
+  flattened(reference)
+    ? `(${reference.asWritten.trim().replace(/[.]$/, '')})`
+    : form === 'apa' ? apaInText(reference, citation) : mlaInText(reference, citation);
 
 /** One note, as the page prints it: its marker and its text. */
 export interface CitationNote {
@@ -420,7 +443,7 @@ export const referenceBibliography = (file: ProjectFile): { reference: Reference
       ? pool
       : [...pool].sort(
           (a, b) =>
-            (referenceCreator(a) || a.title).localeCompare(referenceCreator(b) || b.title, undefined, { sensitivity: 'base' }) ||
+            (referenceCreator(a) || a.title || a.asWritten).localeCompare(referenceCreator(b) || b.title || b.asWritten, undefined, { sensitivity: 'base' }) ||
             when(a.date).year.localeCompare(when(b.date).year) ||
             a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }),
         );

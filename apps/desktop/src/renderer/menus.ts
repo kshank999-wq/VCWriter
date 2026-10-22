@@ -157,9 +157,9 @@ export const menusFor = (format: ProjectFormat | null): readonly Menu[] => {
       { command: 'file.pageSetup', label: 'Page setup…' },
       { command: 'file.print', label: 'Print…', accelerator: 'CmdOrCtrl+P' },
       { command: 'file.exportPdf', label: 'Export PDF…', accelerator: 'CmdOrCtrl+Shift+P' },
-      // A script as Word, a paragraph style per element (addendum 38 §7).
-      // A book has its own exports in the Layout room.
-      ...(format !== null && exportsDocx(format)
+      // A script as Word, a paragraph style per element (addendum 38 §7); a
+      // book as its manuscript, its citations as Word footnotes (addendum 43 §9).
+      ...(format !== null && (exportsDocx(format) || isProseFormat(format))
         ? [{ command: 'file.exportDocx' as CommandId, label: 'Export Word document…' }]
         : []),
       // The board is a second document, not a second view of the first: the

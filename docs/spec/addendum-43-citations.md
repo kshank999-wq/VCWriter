@@ -12,8 +12,8 @@ kept current, and headers and footers for instructional publishing.
 | --- | --- | --- |
 | 1 | The Reference Library; inserting, changing and removing citations; styles; cloud sync | **built** (§1–§7) |
 | 2 | Footnotes at the foot of each page in Layout; the bibliography generated as back matter | **built** (§8) |
-| 3 | Export: Word footnotes and bibliography, EPUB notes; footnotes read from Word | next |
-| 4 | The header and footer gaps against spec §6 (author, date and custom fields, per-section restart, first page per section) | after |
+| 3 | Export: Word footnotes and bibliography, EPUB notes; footnotes read from Word | **built** (§9) |
+| 4 | The header and footer gaps against spec §6 (author, date and custom fields, per-section restart, first page per section) | next |
 
 **What already existed.** The Layout room (addendum 20) had measured pages,
 running heads (the book's title on the verso, the chapter's on the recto),
@@ -63,10 +63,10 @@ screen. Six characters (16 million keys) are unique in a project;
 `insertCitation` makes sure of it, and the database enforces it.
 
 The inline parser reads a token as one span that prints nothing on its own
-(`citation` on `InlineSpan`). A renderer that does not yet know about
-citations (the eBook, Word, pagination) prints nothing for one rather than
-its characters. Layout and its PDF learned them in phase 2 (§8); the eBook
-and Word learn them in phase 3.
+(`citation` on `InlineSpan`). A renderer that does not know about
+citations prints nothing for one rather than its characters; that is now only
+the manuscript's own print and pagination. Layout and its PDF learned them in
+phase 2 (§8), and the eBook and Word in phase 3 (§9).
 
 ## 2. The library (spec §3)
 
@@ -289,14 +289,100 @@ The Layout room, and the PDF it exports, which is the same pages.
   rule at the foot of the page above the folio, and the bibliography page in
   the back matter.
 
-## 9. Not yet (phases 3–4)
+## 9. Leaving the book, and coming back (phase 3)
 
-- What the eBook and Word make of a citation. Until phase 3 a citation prints
-  **nothing** in the eBook or Word: no marker, no note, no parenthetical. The
-  bibliography page reaches the eBook as the back matter does.
-- Reading Word footnotes back in.
-- A note carried on to the next page when it is too tall for its own.
+**The book in Word** (`book-docx.ts`).
+- A book had no Word export at all; the script's (`docx-export.ts`) is a
+  script's page. A book's is now its manuscript as Word expects one:
+  - Times New Roman at 12 point, double spaced, on a Letter page with 1-inch
+    margins, and page numbers in the footer
+  - the title page, the copyright page and each chapter on a new page, under
+    a *Heading 1* that Word's navigation lists
+  - the front and back matter the book has
+  - pictures, the contents page and the index are left out: Word builds its
+    own contents, and an index is page numbers this document does not have
+- **Chicago and Custom**: each marker is a real Word footnote
+  (`footnotes.xml`), the first citation of a source in full and the rest
+  short, the titles in italic.
+  - Word numbers them in the book's scheme: `decimal`, `lowerLetter`, or
+    `chicago` for *, †, ‡, §.
+  - A book counting per chapter has a section per chapter, so Word restarts
+    at each.
+  - An editor's added note renumbers the rest, as in any manuscript.
+- **APA and MLA**: the parenthetical in the line, and no notes.
+- **The bibliography** is the back matter's page where the book has one,
+  made as Layout makes it. Where the book has none and the library has
+  entries, it is added at the end under the style's heading. Each entry has
+  a hanging indent in Word's *Bibliography* style.
+- It is offered as **Export as Word…** in the Layout room, and as **Export
+  Word document…** on the File menu of every book as well as every script.
+
+**The book as an EPUB.**
+- Chicago and Custom link each marker to its note (EPUB 3's
+  `epub:type="noteref"`, which most readers open as a pop-up), and each note
+  back to its marker.
+- The notes follow their own chapter, under a short rule. A reflowable book
+  has no page foot to put them at.
+- APA and MLA set the parenthetical in the line.
+- The bibliography page reaches the eBook as the back matter does, made from
+  the library.
+
+**Footnotes read from Word.**
+- On importing a Word document as an **instructional book**, each footnote
+  reference becomes a citation token where it stood. Its words come from
+  `footnotes.xml`, with their italic and bold.
+- Each distinct note is a source, and each place it was cited is a citation
+  of it. The same note twice is one source cited twice.
+- A Word footnote is one line of text with its parts run together, so the
+  source is kept **as written** (`asWritten`) and **flagged**:
+  - tagged *From Word*
+  - shown in the library by its text
+  - its form opens with the text as it came, and the Title field carries the
+    flag *Brought in from Word as one line. Separate it into author, title,
+    publisher and the rest…*
+  - until it has a title it prints exactly as written, in notes, in the
+    text and in the bibliography, with any pinpoint or note added since
+  - once it has a title the style sets it from its parts, and *Forget the
+    Word text* clears the original
+- *Ibid.* and other back-references come in as sources of their own, flagged
+  like the rest, for the writer to point at the source they mean.
+- Importing as a novel or a collection leaves the footnotes out and says how
+  many, since only an instructional book cites.
+- The book's own Word export reads back as the same notes.
+
+**A short title** (Chicago 14.32) now drops a leading *A* or *The* on a title
+longer than four words and never ends on a small word: *Moon and the Sea*,
+not *The Moon and the*.
+
+**Proof.**
+- `citation-exports.test.ts` (12 tests) covers:
+  - Word footnotes, the first in full and the rest short, in italic, with
+    Word's separators
+  - the bibliography added once, or taken from the back matter's page
+  - symbol numbering and per-chapter sections
+  - APA in Word, and MLA in the EPUB
+  - the EPUB's linked notes, per chapter, with backlinks
+  - reading notes and tokens from Word, the words kept clean
+  - sources made, merged by text, flagged, and printing as written
+  - the style taking over once a source has a title
+  - a novel leaving the notes out and saying so
+  - the round trip from the book's own Word export
+  - the short title
+- The renderer test adds the Word export on the File menu of a book.
+- Opened in LibreOffice: the exported `.docx` converts with true footnotes
+  at the foot of each page, numbered by Word, and the bibliography at the
+  end.
+- Seen in Chromium: a Word document with three footnotes imported as an
+  instructional book. References lists two flagged sources, one cited twice,
+  each shown as written.
+
+## 10. Not yet
+
+- A note carried on to the next page in Layout when it is too tall for its
+  own.
 - Citations typed into front- or back-matter pages (they are numbered only in
   the story).
-- The spec §6 header and footer gaps.
+- Recognising a Word note's parts (author, title, publisher) automatically.
+  They are kept whole and flagged.
+- The spec §6 header and footer gaps (phase 4).
 - The Document (word-processor) module sharing the library.

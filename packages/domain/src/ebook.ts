@@ -2,6 +2,7 @@ import { isFullPageArt } from './chapter-style.js';
 import { bookBlocks, partsOf, partTitle, type BookBlock } from './book-plan.js';
 import { bookNames, bookSettingsOf } from './book-layout.js';
 import { parseInline, type InlineSpan } from './entities/inline.js';
+import { bookCitationsOf, type BookCitations } from './citation-style.js';
 import { titlePageOf } from './entities/title-page.js';
 import { nowIso } from './entities/common.js';
 import { ebookRulesFor, type EbookRules } from './ebook-presets.js';
@@ -163,17 +164,62 @@ export interface EbookPackage {
 export const escapeXml = (value: string): string =>
   value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-const renderSpans = (spans: InlineSpan[], text: string): string => {
+const styledSpan = (span: InlineSpan, inner: string): string => {
+  if (!span.bold && !span.italic && !span.underline) return inner;
+  const open = `${span.bold ? '<strong>' : ''}${span.italic ? '<em>' : ''}${span.underline ? '<span class="u">' : ''}`;
+  const close = `${span.underline ? '</span>' : ''}${span.italic ? '</em>' : ''}${span.bold ? '</strong>' : ''}`;
+  return `${open}${inner}${close}`;
+};
+
+/**
+ * Where a footnote style's markers are linked from and to (addendum 43 §9):
+ * the keys cited in the section being written, gathered as its markers are
+ * set, so its notes can follow it.
+ */
+interface NoteSink {
+  cites: BookCitations;
+  keys: string[];
+}
+
+const renderSpans = (spans: InlineSpan[], text: string, sink?: NoteSink | null): string => {
   if (spans.length === 0) return escapeXml(text);
+  let before = '';
   return spans
     .map((span) => {
-      const inner = escapeXml(span.text);
-      if (!span.bold && !span.italic && !span.underline) return inner;
-      const open = `${span.bold ? '<strong>' : ''}${span.italic ? '<em>' : ''}${span.underline ? '<span class="u">' : ''}`;
-      const close = `${span.underline ? '</span>' : ''}${span.italic ? '</em>' : ''}${span.bold ? '</strong>' : ''}`;
-      return `${open}${inner}${close}`;
+      if (span.citation !== undefined) {
+        const said = sink?.cites.inText.get(span.citation);
+        if (!said || !sink) return '';
+        const key = escapeXml(span.citation);
+        if (sink.cites.raised) {
+          // A marker linked to its note, and back: EPUB 3's noteref, which
+          // most readers open as a pop-up where the reader is.
+          const first = !sink.keys.includes(span.citation);
+          if (first) sink.keys.push(span.citation);
+          return `<sup class="noteref"><a epub:type="noteref" role="doc-noteref" href="#fn-${key}"${first ? ` id="ref-${key}"` : ''}>${escapeXml(said)}</a></sup>`;
+        }
+        const gap = before.length > 0 && !/[\s(\[“‘—–-]$/.test(before) ? ' ' : '';
+        before = said;
+        return `${gap}${renderSpans(parseInline(said), said)}`;
+      }
+      if (span.text.length > 0) before = span.text;
+      return styledSpan(span, escapeXml(span.text));
     })
     .join('');
+};
+
+/** A section's notes, after its text: each an aside its marker links to, linking back. */
+const notesSection = (sink: NoteSink): string => {
+  if (sink.keys.length === 0) return '';
+  const notes = sink.keys
+    .map((key) => {
+      const note = sink.cites.notes.get(key);
+      if (!note) return '';
+      const id = escapeXml(key);
+      const mark = /^[0-9a-z]+$/.test(note.marker) ? `${note.marker}.` : note.marker;
+      return `<aside epub:type="footnote" role="doc-footnote" id="fn-${id}" class="footnote"><p><a href="#ref-${id}" role="doc-backlink">${escapeXml(mark)}</a> ${renderSpans(parseInline(note.text), note.text)}</p></aside>`;
+    })
+    .join('\n');
+  return `<section class="footnotes" aria-label="Notes">\n<hr class="notes-rule"/>\n${notes}\n</section>`;
 };
 
 /**
@@ -540,6 +586,8 @@ interface Draft {
   kind: EbookSection['kind'];
   epubType: string;
   html: string[];
+  /** The citations whose notes follow this section (addendum 43 §9). */
+  notes: string[];
 }
 
 /**
@@ -582,8 +630,8 @@ export const ebookOf = (file: ProjectFile, options: { modified?: string; target?
    * again as big as the body, whatever the body turns out to be.
    */
   const bodyPt = settings.size > 0 ? settings.size : 11;
-  const begin = (draft: Omit<Draft, 'html'>) => {
-    current = { ...draft, html: [] };
+  const begin = (draft: Omit<Draft, 'html' | 'notes'>) => {
+    current = { ...draft, html: [], notes: [] };
     drafts.push(current);
     return current;
   };
@@ -594,6 +642,11 @@ export const ebookOf = (file: ProjectFile, options: { modified?: string; target?
     }
     return current;
   };
+
+  const cites = bookCitationsOf(file);
+  /** The words of a block, its citations linked to the notes of the section they land in. */
+  const words = (block: BookBlock, draft: Draft): string =>
+    renderSpans(block.spans, block.text, cites ? { cites, keys: draft.notes } : null);
 
   const partOf = (block: BookBlock): BookPart | undefined => (block.partId ? parts.get(block.partId) : undefined);
 
@@ -759,15 +812,19 @@ export const ebookOf = (file: ProjectFile, options: { modified?: string; target?
         // The page's own words where this paragraph belongs to a designed
         // part (§18), the story's own type otherwise.
         const own = lineStyleAttr(block.partStyle?.line, bodyPt, settings.fonts);
-        draft.html.push(`<p class="p${first}${align}"${own}>${inset}${renderSpans(block.spans, block.text)}</p>`);
+        draft.html.push(`<p class="p${first}${align}"${own}>${inset}${words(block, draft)}</p>`);
         break;
       }
-      case 'heading':
-        body().html.push(`<h2 class="heading">${renderSpans(block.spans, block.text)}</h2>`);
+      case 'heading': {
+        const draft = body();
+        draft.html.push(`<h2 class="heading">${words(block, draft)}</h2>`);
         break;
-      case 'blockquote':
-        body().html.push(`<blockquote><p>${renderSpans(block.spans, block.text)}</p></blockquote>`);
+      }
+      case 'blockquote': {
+        const draft = body();
+        draft.html.push(`<blockquote><p>${words(block, draft)}</p></blockquote>`);
         break;
+      }
       case 'scene_break':
         // A separator that reads as one, never an empty paragraph or three.
         current?.html.push(`<p class="break" role="separator" aria-label="Scene break">${escapeXml(ornament)}</p>`);
@@ -813,7 +870,9 @@ export const ebookOf = (file: ProjectFile, options: { modified?: string; target?
         lang: metadata.language,
         title: draft.title,
         css: '../css/book.css',
-        body: `<section epub:type="${draft.epubType}" id="${draft.id}">\n${draft.html.join('\n')}\n</section>`,
+        body:
+          `<section epub:type="${draft.epubType}" id="${draft.id}">\n${draft.html.join('\n')}\n</section>` +
+          (cites ? notesSection({ cites, keys: draft.notes }) : ''),
       }),
     });
   });

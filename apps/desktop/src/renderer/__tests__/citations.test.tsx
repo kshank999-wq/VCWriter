@@ -16,6 +16,7 @@ import {
   type ProjectFormat,
 } from '@vcwriter/domain';
 import { BeatBody } from '../components/BeatBody';
+import { menusFor } from '../menus';
 import { ReferencesPanel } from '../components/citations/ReferencesPanel';
 
 /**
@@ -184,5 +185,16 @@ describe('References, in Research', () => {
     const page = partsOf(latest!).find((part) => part.kind === 'bibliography')!;
     expect(bibliographyOf(page).fromLibrary).toBe(true);
     expect(screen.getByText(/the bibliography page in the back matter prints this list/)).toBeTruthy();
+  });
+});
+
+describe('a book’s Word export', () => {
+  it('is on the File menu of a book as well as a script', () => {
+    const commands = (format: ProjectFormat) =>
+      menusFor(format)
+        .flatMap((menu) => menu.items)
+        .map((item) => item?.command ?? null);
+    expect(commands('instructional')).toContain('file.exportDocx');
+    expect(commands('screenplay')).toContain('file.exportDocx');
   });
 });
