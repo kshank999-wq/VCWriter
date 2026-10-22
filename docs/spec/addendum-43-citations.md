@@ -17,6 +17,7 @@ kept current, and headers and footers for instructional publishing.
 | 5 | The Document (word-processor) module sharing the library | **built** (§11) |
 | 6 | A long note carried on to the next page in Layout | **built** (§12) |
 | 7 | Citations in the front and back matter | **built** (§13) |
+| 8 | Citations in a glossary's definitions | **built** (§14) |
 
 **What already existed.** The Layout room (addendum 20) had measured pages,
 running heads (the book's title on the verso, the chapter's on the recto),
@@ -669,12 +670,48 @@ It works as a chapter's line does:
   page raises marker 1 with the full note, and the story's two citations
   have become notes 2 and 3, both short.
 
-## 14. Not yet
+## 14. Citations in a glossary
+
+From Ken: *build the glossary citations next.* A glossary is a list page:
+its words are not a text but terms, each with a definition
+(`glossarySchema`). A definition is where an instructional book most often
+owes a source — *a spring tide is…, after Jones*.
+
+**Typing one.** Each definition in the glossary's card in the back-matter
+dialog is a `CitableText` (§13), two lines high, with **Cite…** under it,
+Ctrl/Cmd+Shift+C, a click inside a token to open it, and its tokens named by
+their notes. A term itself does not cite; it is a word being defined, and
+the definition is where the claim is.
+
+**Where they count.** In the order the page prints its terms
+(`glossaryEntries`): sorted A to Z where the glossary sorts, in the writer's
+order where it does not. A definition written second but sorted first is
+cited first. The glossary is back matter, so it counts after the story, in
+its place among the other back-matter pages (`wordsOfPart` in
+`citations.ts`).
+
+**On the page.** A definition is already a paragraph of the glossary's page,
+the term set before it, so its marker is raised and its note set at the foot
+as a chapter's are, carried on if long. The eBook and Word read the same
+paragraphs.
+
+**Proof.**
+- `matter-citations.test.ts`:
+  - two definitions numbered in the page's sorted order, after the story
+    and an appendix
+  - the definition drawn with its term, its marker raised, and its note at
+    the page's foot
+- `back-matter-dialog.test.tsx`: citing from a definition in the glossary's
+  card, the token at the cursor and named by its note.
+- Seen in Chromium: a glossary added in Layout, the term *Spring tide*
+  defined and cited after *month*. The page prints marker 3 there and the
+  short note at its foot.
+
+## 15. Not yet
 
 - A page set inside the story is numbered after the story, not where it
   stands.
-- Glossary definitions and other list pages (questions, *also by*) do not
-  cite; only pages of prose do.
+- The other list pages (a reader extra's questions, *also by*) do not cite.
 - Recognising a Word note's parts (author, title, publisher) automatically.
   They are kept whole and flagged.
 - A division's head set to print nothing: an empty box is the book's, and

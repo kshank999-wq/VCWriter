@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
 import { useState } from 'react';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import {
   aboutAuthorOf,
   acknowledgementsOf,
   addPart,
+  addReference,
   backSinkOf,
   bibliographyOf,
   glossaryOf,
@@ -286,5 +287,26 @@ describe('the back matter’s screen', () => {
     expect(screen.queryByRole('switch', { name: 'Sign-off line' })).toBeNull();
     expect(screen.queryByLabelText('Biography')).toBeNull();
     expect(aboutAuthorOf(pageOf(file, 'about_the_author')).photoAssetId).toBeNull();
+  });
+});
+
+describe('a glossary that cites (addendum 43 §14)', () => {
+  it('cites a source from a definition, the token placed at the cursor', () => {
+    const start = () => {
+      let file = createProjectFile({ title: 'The Sea', format: 'instructional' });
+      file = addReference(file, { title: 'On Tides', authors: ['Jones, Robert'] }).file;
+      return addPart(file, 'glossary', { about: { terms: [{ id: 't1', term: 'Tide', definition: 'The sea rising and falling.' }] } }).file;
+    };
+    let seen: ProjectFile | null = null;
+    const first = start();
+    render(<Harness kind={pageOf(first, 'glossary').id as PartKind} start={() => first} onFile={(one) => (seen = one)} />);
+    const box = screen.getByLabelText('What Tide means') as HTMLTextAreaElement;
+    box.setSelectionRange('The sea rising and falling'.length, 'The sea rising and falling'.length);
+    fireEvent.click(screen.getByRole('button', { name: 'Cite…' }));
+    fireEvent.doubleClick(within(screen.getByRole('listbox', { name: 'Sources' })).getByRole('option'));
+    const after = seen as unknown as ProjectFile;
+    const key = after.citations[0]!.key;
+    expect(glossaryOf(pageOf(after, 'glossary')).terms[0]!.definition).toBe(`The sea rising and falling[^${key}].`);
+    expect(screen.getByLabelText('Citations in these words').textContent).toBe(`[^${key}] is note 1`);
   });
 });

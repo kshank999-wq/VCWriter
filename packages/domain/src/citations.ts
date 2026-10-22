@@ -15,6 +15,7 @@ import {
 import { beatsForUnit, unitsInStoryOrder } from './selectors.js';
 import { PART_INFO, halfOf, partsOf } from './book-plan.js';
 import type { BookPart } from './entities/book.js';
+import { glossaryEntries } from './back-matter-pages.js';
 import type { ProjectFile } from './project-file.js';
 import type { BeatId, CitationId, ManuscriptElementId, ReferenceId, StructuralUnitId } from './ids.js';
 
@@ -385,10 +386,10 @@ export const citationOccurrences = (file: ProjectFile): CitationOccurrence[] => 
    * it — and each counts as a division of its own where the count starts
    * again at each chapter. A page set inside the story is read after it.
    */
-  const parts = partsOf(file).filter((part) => PART_INFO[part.kind].carries === 'text' && part.text.includes('[^'));
+  const parts = partsOf(file).filter((part) => PART_INFO[part.kind].carries === 'text' && wordsOfPart(part).includes('[^'));
   const fromPart = (part: BookPart) => {
     inChapter = 0;
-    cite(part.text, { unitId: null, beatId: null, elementId: null, partId: part.id });
+    cite(wordsOfPart(part), { unitId: null, beatId: null, elementId: null, partId: part.id });
   };
   for (const part of parts) if (halfOf(part) === 'front') fromPart(part);
   inChapter = 0;
@@ -429,6 +430,14 @@ export const citationOccurrences = (file: ProjectFile): CitationOccurrence[] => 
   }
   return out;
 };
+
+/**
+ * **The words a page of front or back matter prints, in its order** (§13,
+ * §14): its own text, or — on a glossary — its definitions as the page sets
+ * them, sorted where it sorts. A citation is numbered where it is read.
+ */
+const wordsOfPart = (part: BookPart): string =>
+  part.kind === 'glossary' ? glossaryEntries(part).map((entry) => entry.definition).join('\n') : part.text;
 
 /** The citations of one place: the story (null), or one document. */
 export const occurrencesIn = (file: ProjectFile, documentId: string | null): CitationOccurrence[] =>

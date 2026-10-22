@@ -136,4 +136,53 @@ describe('citations in the front and back matter', () => {
     expect(html).toContain(`id="fn-${key}"`);
     expect(html).not.toContain(`[^${key}]`);
   });
+
+  it('cites from a glossary’s definitions, numbered in the order the page prints its terms', () => {
+    let { file } = book();
+    const source = file.references[0]!.id;
+    const tide = insertCitation(file, { referenceId: source, locator: '40' });
+    file = tide.file;
+    const ebb = insertCitation(file, { referenceId: source, locator: '41' });
+    file = ebb.file;
+    // Written Tide first, Ebb second; the page sorts them, so Ebb prints first.
+    const glossary = addPart(file, 'glossary', {
+      about: {
+        terms: [
+          { id: 't1', term: 'Tide', definition: `The sea rising and falling.${tide.token}` },
+          { id: 't2', term: 'Ebb', definition: `The tide going out.${ebb.token}` },
+        ],
+      },
+    });
+    file = glossary.file;
+    const inGlossary = citationOccurrences(file).filter((one) => one.partId === glossary.partId);
+    expect(inGlossary.map((one) => one.key)).toEqual([ebb.citation.key, tide.citation.key]);
+    // Back matter, after the story and the appendix written before it.
+    expect(citationOccurrences(file).map((one) => one.marker)).toEqual(['1', '2', '3', '4', '5']);
+
+    // The definition is set as a paragraph of the page, its marker raised.
+    const blocks = bookBlocks(file);
+    const entry = blocks.find((block) => block.partId === glossary.partId && block.role === 'glossary' && block.text.includes('going out'))!;
+    expect(entry.lead?.text).toBe('Ebb');
+    const settings = bookSettingsOf(file);
+    const context: BookRenderContext = {
+      settings,
+      geometry: geometryOf(settings, 'instructional', 100),
+      chapterStyle: chapterPageStyleOf(file),
+      paragraphStyle: 'indented',
+      pictures: new Map(),
+      names: bookNames(file),
+      titlePage: titlePageOf(file.project, file.settings),
+      contents: [],
+      index: null,
+      citations: bookCitationsOf(file),
+    };
+    const page: BookPage = {
+      sheet: 20, side: 'recto', numbering: 'arabic', number: 9, folio: '9', counted: '9', runningHead: '', runningFoot: '', chapterTitle: '',
+      display: false, blank: false, opens: false, pieces: [{ blockId: entry.id, from: 0, to: 1 }], notes: [ebb.citation.key], noteParts: [], depth: 1, target: 30,
+    };
+    const html = renderBookPage(page, new Map(blocks.map((block) => [block.id, block])), context);
+    // The foreword's is 1, the story's 2, the appendix's 3: Ebb's is 4.
+    expect(html).toContain(`<span class="bk-lead bk-lead-bold">Ebb</span> — The tide going out.<sup class="bk-cite" data-cite="${ebb.citation.key}">4</sup>`);
+    expect(html).toContain('<span class="bk-note-mark">4.</span> Jones, <i>On Tides</i>, 41.');
+  });
 });

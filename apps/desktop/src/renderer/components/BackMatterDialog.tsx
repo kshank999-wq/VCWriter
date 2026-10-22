@@ -685,12 +685,16 @@ function Card({
           {own.terms.map((one) => (
             <div className="dp-term" key={one.id}>
               <input aria-label="Term" placeholder="Term" value={one.term} onChange={(event) => setTerm(one.id, { term: event.target.value })} />
-              <input
+              {/* A definition may cite its source (addendum 43 §14). */}
+              <CitableText
+                file={file}
+                onUpdate={onUpdate}
                 className="dp-serif-input"
                 aria-label={`What ${one.term || 'it'} means`}
                 placeholder="What it means"
+                rows={2}
                 value={one.definition}
-                onChange={(event) => setTerm(one.id, { definition: event.target.value })}
+                onChange={(definition) => setTerm(one.id, { definition })}
               />
               <button type="button" className="ghost item-x" aria-label={`Remove ${one.term || 'this term'}`} onClick={() => write({ terms: own.terms.filter((two) => two.id !== one.id) })}>
                 ×
