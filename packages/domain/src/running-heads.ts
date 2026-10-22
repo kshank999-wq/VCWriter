@@ -5,7 +5,7 @@ import { faceStackOf } from './book-layout.js';
 import { nounsFor } from './formats.js';
 import type { ProjectFormat } from './entities/project.js';
 import type { BookFont } from './entities/book.js';
-import type { BookFace, BookSettings, FolioPlace, HeadContent, HeadPlace } from './entities/book.js';
+import type { BookFace, BookSettings, FolioPlace, HeadContent, HeadPlace, SectionLayout } from './entities/book.js';
 
 /**
  * The running heads and the folios, and how they are set (addendum 20 §7a,
@@ -104,16 +104,53 @@ export const headTextFor = (
   settings: BookSettings,
   names: RunningNames,
   chapterTitle: string,
+  /** The division's own layout, whose words win where it has any (addendum 43 §10). */
+  section: SectionLayout | null = null,
 ): string => {
+  const own = section ? (side === 'verso' ? section.verso : section.recto) : null;
+  if (own !== null) return fillHeadFields(own.trim(), names, chapterTitle);
   const heads = settings.runningHeads;
   const what: HeadContent = side === 'verso' ? heads.verso : heads.recto;
   const typed = (side === 'verso' ? heads.versoText : heads.rectoText).trim();
   if (what === 'author') return names.author;
   if (what === 'title') return names.title;
   if (what === 'chapter') return chapterTitle;
-  if (what === 'custom') return typed;
+  if (what === 'custom') return fillHeadFields(typed, names, chapterTitle);
   return '';
 };
+
+/** The running foot on a page: the division's own, or the book's, its fields filled but for the page's. */
+export const footTextFor = (settings: BookSettings, names: RunningNames, chapterTitle: string, section: SectionLayout | null = null): string =>
+  fillHeadFields((section?.foot ?? settings.runningHeads.foot).trim(), names, chapterTitle);
+
+// ------------------------------------------------------------------ fields
+
+/**
+ * **The fields a head or a foot may carry** (addendum 43 §10, Ken's spec §6:
+ * *book title, current chapter/section title, author, page number, page
+ * count, date, and custom text*). Typed in braces among the writer's words;
+ * the custom text is everything else.
+ */
+export const HEAD_FIELDS = [
+  { field: '{title}', words: 'Book title' },
+  { field: '{chapter}', words: 'This division’s title' },
+  { field: '{author}', words: 'Author' },
+  { field: '{page}', words: 'Page number' },
+  { field: '{pages}', words: 'Page count' },
+  { field: '{date}', words: 'Date' },
+] as const;
+
+/** The fields the laying knows: the titles and the author. The page's own wait for the page. */
+export const fillHeadFields = (text: string, names: RunningNames, chapterTitle: string): string =>
+  text.replace(/\{title\}/g, names.title).replace(/\{author\}/g, names.author).replace(/\{chapter\}/g, chapterTitle);
+
+/** The fields only a drawn page knows: its number, how many there are, and the day it is printed. */
+export const fillPageFields = (text: string, values: { page: string; pages: number; date: string }): string =>
+  text.replace(/\{page\}/g, values.page).replace(/\{pages\}/g, String(values.pages)).replace(/\{date\}/g, values.date);
+
+/** A division's own layout, where the book has one for it. */
+export const sectionLayoutOf = (settings: BookSettings, id: string | null | undefined): SectionLayout | null =>
+  id ? (settings.sections.find((one) => one.id === id) ?? null) : null;
 
 // ------------------------------------------------------------------ places
 

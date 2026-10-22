@@ -16,6 +16,7 @@ import {
   layPages,
   outOfContents,
   pictureLines,
+  printedDate,
   projectStats,
   renderBookBlock,
   renderNotesForMeasure,
@@ -79,6 +80,8 @@ const contextFor = (file: ProjectFile, settings: BookSettings, geometry: BookGeo
   contents: [],
   index: null,
   citations: bookCitationsOf(file),
+  // What a `{date}` field prints (addendum 43 §10): the day the book is laid.
+  today: printedDate(),
 });
 
 /**

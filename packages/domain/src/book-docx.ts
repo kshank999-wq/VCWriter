@@ -1,6 +1,10 @@
 import { parseInline } from './entities/inline.js';
 import { titlePageOf } from './entities/title-page.js';
 import { bookBlocks, partsOf, type BookBlock } from './book-plan.js';
+import { bookNames, bookSettingsOf } from './book-layout.js';
+import { sectionIdOf } from './book-pages.js';
+import { footTextFor, headTextFor, sectionLayoutOf, type RunningNames } from './running-heads.js';
+import type { BookSettings, HeadPlace, SectionLayout } from './entities/book.js';
 import { bibliographyHeadingOf, bookCitationsOf, referenceBibliography, type BookCitations } from './citation-style.js';
 import { citationSettingsOf } from './citations.js';
 import type { CitationSettings } from './entities/reference.js';
@@ -167,52 +171,205 @@ const blockXml = (block: BookBlock, notes: Notes, title: { title: string; author
   }
 };
 
-/**
- * Where a section ends (Word's `sectPr`): the page, the footer's page number,
- * and how the footnotes are numbered. A book counting its notes per chapter is
- * a section per chapter, numbering restarting at each.
- */
-const sectionXml = (settings: CitationSettings, footer: boolean): string =>
-  '<w:sectPr>' +
-  (footer ? '<w:footerReference w:type="default" r:id="rIdFooter1"/>' : '') +
-  `<w:footnotePr><w:numFmt w:val="${NUMBER_FORMAT[settings.markers]}"/>` +
-  `<w:numRestart w:val="${settings.restartEach === 'chapter' ? 'eachSect' : 'continuous'}"/></w:footnotePr>` +
-  '<w:type w:val="nextPage"/>' +
-  '<w:pgSz w:w="12240" w:h="15840"/>' +
-  `<w:pgMar w:top="${TWIPS_PER_INCH}" w:right="${TWIPS_PER_INCH}" w:bottom="${TWIPS_PER_INCH}" w:left="${TWIPS_PER_INCH}" w:header="720" w:footer="720" w:gutter="0"/>` +
-  '</w:sectPr>';
+// --------------------------------------------------------- headers, footers
 
-/** The document and its notes, as XML. */
-export const bookDocxParts = (file: ProjectFile): { document: string; footnotes: string; noteCount: number } => {
+/** A header or a footer part, by its file name, and the XML in it. */
+interface BandPart {
+  name: string;
+  kind: 'header' | 'footer';
+  xml: string;
+}
+
+/** Where a head's words sit on a side: centred, or at the outer or inner edge. */
+const alignFor = (place: HeadPlace, side: 'verso' | 'recto'): string => {
+  if (place === 'centre') return 'center';
+  const outer = side === 'verso' ? 'left' : 'right';
+  const inner = side === 'verso' ? 'right' : 'left';
+  return place === 'outside' ? outer : inner;
+};
+
+const field = (code: string, shown: string): string =>
+  '<w:r><w:fldChar w:fldCharType="begin"/></w:r>' +
+  `<w:r><w:instrText xml:space="preserve"> ${code} </w:instrText></w:r>` +
+  `<w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>${shown}</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>`;
+
+/**
+ * Words with the page's own fields, as Word's own fields (addendum 43 §10):
+ * *{page}* is PAGE, *{pages}* NUMPAGES and *{date}* DATE, so Word fills them
+ * as it lays the pages, as the Layout room does.
+ */
+const bandRuns = (text: string): string =>
+  text
+    .split(/(\{page\}|\{pages\}|\{date\})/)
+    .map((piece) => {
+      if (piece === '{page}') return field('PAGE', '1');
+      if (piece === '{pages}') return field('NUMPAGES', '1');
+      if (piece === '{date}') return field('DATE \\@ "d MMMM yyyy"', '1 January 2026');
+      return run(piece);
+    })
+    .join('');
+
+const bandParagraph = (body: string, align: string, style: string): string =>
+  `<w:p><w:pPr><w:pStyle w:val="${style}"/><w:jc w:val="${align}"/></w:pPr>${body}</w:p>`;
+
+const bandXml = (kind: 'header' | 'footer', paragraphs: string): string => {
+  const tag = kind === 'header' ? 'w:hdr' : 'w:ftr';
+  return (
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    `<${tag} xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">${paragraphs || '<w:p/>'}</${tag}>`
+  );
+};
+
+/** What a division is, for its section: what its heads read, and how it is numbered. */
+interface Section {
+  /** The front matter takes no heads and no foot, as the printed book's title and copyright pages take none. */
+  front: boolean;
+  chapterTitle: string;
+  layout: SectionLayout | null;
+  /** Whether Word's numbering starts again here, and in what. */
+  restart: boolean;
+  roman: boolean;
+}
+
+/**
+ * **Where a section ends** (Word's `sectPr`): the page, the division's own
+ * headers and footers — a left-hand and a right-hand one, and a first page
+ * of its own where the opening stands clear of them — its numbering, and the
+ * footnotes'. Each band is made once and shared by every section that prints
+ * the same words.
+ */
+const sectionXml = (
+  section: Section,
+  book: BookSettings,
+  cites: CitationSettings,
+  names: RunningNames,
+  band: (kind: 'header' | 'footer', xml: string) => string,
+): string => {
+  const refs: string[] = [];
+  let titlePg = false;
+  if (!section.front) {
+    const footStyle = 'Footer';
+    const folioAt = book.folio;
+    const page = (side: 'verso' | 'recto', align: string) => (folioAt === 'none' ? '' : bandParagraph(field('PAGE', '1'), align, footStyle));
+    const sides = (['recto', 'verso'] as const).map((side) => {
+      const head = headTextFor(side, book, names, section.chapterTitle, section.layout);
+      const foot = footTextFor(book, names, section.chapterTitle, section.layout);
+      const outer = alignFor('outside', side);
+      const header =
+        (head ? bandParagraph(bandRuns(head), alignFor(book.runningHeads.place, side), 'Header') : '') +
+        (folioAt === 'head_outside' ? page(side, outer) : '');
+      const footer =
+        (foot ? bandParagraph(bandRuns(foot), alignFor(book.runningHeads.footPlace, side), footStyle) : '') +
+        (folioAt === 'foot_outside' ? page(side, outer) : folioAt === 'foot_centre' ? page(side, 'center') : '');
+      return { header, footer };
+    });
+    const [recto, verso] = sides as [{ header: string; footer: string }, { header: string; footer: string }];
+    refs.push(`<w:headerReference w:type="default" r:id="${band('header', recto.header)}"/>`);
+    refs.push(`<w:headerReference w:type="even" r:id="${band('header', verso.header)}"/>`);
+    refs.push(`<w:footerReference w:type="default" r:id="${band('footer', recto.footer)}"/>`);
+    refs.push(`<w:footerReference w:type="even" r:id="${band('footer', verso.footer)}"/>`);
+    // The opening page clear of the heads and the foot, but for its number
+    // where the book shows one there (spec §6's first-page-different).
+    if (!section.layout?.headsOnOpening) {
+      titlePg = true;
+      const number = book.folio !== 'none' && book.folioOnOpening ? bandParagraph(field('PAGE', '1'), 'center', footStyle) : '';
+      refs.push(`<w:headerReference w:type="first" r:id="${band('header', '')}"/>`);
+      refs.push(`<w:footerReference w:type="first" r:id="${band('footer', number)}"/>`);
+    }
+  } else {
+    // Bare bands, so the front matter does not inherit the body's.
+    for (const type of ['default', 'even', 'first'] as const) {
+      refs.push(`<w:headerReference w:type="${type}" r:id="${band('header', '')}"/>`);
+      refs.push(`<w:footerReference w:type="${type}" r:id="${band('footer', '')}"/>`);
+    }
+  }
+  const format = section.roman ? 'lowerRoman' : 'decimal';
+  return (
+    '<w:sectPr>' +
+    refs.join('') +
+    `<w:footnotePr><w:numFmt w:val="${NUMBER_FORMAT[cites.markers]}"/>` +
+    `<w:numRestart w:val="${cites.restartEach === 'chapter' ? 'eachSect' : 'continuous'}"/></w:footnotePr>` +
+    '<w:type w:val="nextPage"/>' +
+    '<w:pgSz w:w="12240" w:h="15840"/>' +
+    `<w:pgMar w:top="${TWIPS_PER_INCH}" w:right="${TWIPS_PER_INCH}" w:bottom="${TWIPS_PER_INCH}" w:left="${TWIPS_PER_INCH}" w:header="720" w:footer="720" w:gutter="0"/>` +
+    `<w:pgNumType w:fmt="${format}"${section.restart ? ' w:start="1"' : ''}/>` +
+    (titlePg ? '<w:titlePg/>' : '') +
+    '</w:sectPr>'
+  );
+};
+
+/** The document, its notes, and its header and footer parts, as XML. */
+export const bookDocxParts = (file: ProjectFile): { document: string; footnotes: string; noteCount: number; bands: BandPart[] } => {
   const settings = citationSettingsOf(file);
+  const book = bookSettingsOf(file);
   const notes: Notes = { cites: bookCitationsOf(file), made: [] };
   const page = titlePageOf(file.project, file.settings);
   const title = { title: page.title || file.project.title || 'Untitled', author: (file.project.author ?? '').trim() };
-  const perChapter = settings.restartEach === 'chapter' && (notes.cites?.raised ?? false);
+  const names = bookNames(file);
+
+  const bands: BandPart[] = [];
+  const byXml = new Map<string, string>();
+  const band = (kind: 'header' | 'footer', paragraphs: string): string => {
+    const xml = bandXml(kind, paragraphs);
+    const key = `${kind}:${xml}`;
+    const known = byXml.get(key);
+    if (known) return known;
+    const count = bands.filter((one) => one.kind === kind).length + 1;
+    const id = `rId${kind === 'header' ? 'Header' : 'Footer'}${count}`;
+    bands.push({ name: `${kind}${count}.xml`, kind, xml });
+    byXml.set(key, id);
+    return id;
+  };
+
+  /**
+   * **A section per division** (addendum 43 §10): the front matter one, and
+   * each chapter, part and page-opening heading its own, so each can carry
+   * its own heads, stand its first page clear of them and restart its
+   * numbers — which is how Word does what the Layout room does.
+   */
   const body: string[] = [];
-  let chapters = 0;
+  let section: Section | null = null;
+  let sawBody = false;
+  const close = (next: Section) => {
+    if (section) body.push(`<w:p><w:pPr>${sectionXml(section, book, settings, names, band)}</w:pPr></w:p>`);
+    section = next;
+  };
+  const opening = (id: string | null, chapterTitle: string): Section => {
+    const layout = sectionLayoutOf(book, id);
+    const roman = layout?.numbering === 'roman';
+    // The body's first section starts at 1 whatever the front matter ran to.
+    const restart = !sawBody || (layout?.restart ?? false);
+    sawBody = true;
+    return { front: false, chapterTitle, layout, restart, roman };
+  };
   for (const block of bookBlocks(file)) {
-    const opensChapter = block.kind === 'chapter_opening';
-    if (opensChapter) chapters += 1;
-    // A section break ends the chapter before, so Word restarts the count.
-    const sectionBreak = perChapter && opensChapter && chapters > 1;
-    if (sectionBreak) body.push(`<w:p><w:pPr>${sectionXml(settings, true)}</w:pPr></w:p>`);
-    const out = blockXml(block, notes, title, body.length > 0 && !sectionBreak ? PAGE_BREAK_BEFORE : '');
+    const id = sectionIdOf(block);
+    const front = block.numbering === 'roman';
+    if (section === null) {
+      section = front ? { front: true, chapterTitle: '', layout: null, restart: true, roman: true } : opening(id, block.chapterTitle);
+    } else if (!front && (id !== null || (section as Section).front)) {
+      close(opening(id, block.chapterTitle || block.title || ''));
+    }
+    const fresh = body.length === 0 || body[body.length - 1]!.includes('<w:sectPr>');
+    const out = blockXml(block, notes, title, fresh ? '' : PAGE_BREAK_BEFORE);
     if (out) body.push(out);
   }
   // The bibliography, where the book has no page for it and the library has entries.
   if (!partsOf(file).some((part) => part.kind === 'bibliography')) {
     const entries = referenceBibliography(file);
     if (entries.length > 0) {
-      body.push(paragraph('Heading1', run(bibliographyHeadingOf(settings)), PAGE_BREAK_BEFORE));
+      const heading = bibliographyHeadingOf(settings);
+      close(opening(null, heading));
+      body.push(paragraph('Heading1', run(heading)));
       for (const entry of entries) body.push(paragraph('Bibliography', marked(entry.text)));
     }
   }
+  const last = section ?? { front: false, chapterTitle: '', layout: null, restart: true, roman: false };
   const document =
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
     '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" ' +
     'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
-    `<w:body>${body.join('')}${sectionXml(settings, true)}</w:body></w:document>`;
+    `<w:body>${body.join('')}${sectionXml(last, book, settings, names, band)}</w:body></w:document>`;
   const footnotes =
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
     '<w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
@@ -227,7 +384,7 @@ export const bookDocxParts = (file: ProjectFile): { document: string; footnotes:
       )
       .join('') +
     '</w:footnotes>';
-  return { document, footnotes, noteCount: notes.made.length };
+  return { document, footnotes, noteCount: notes.made.length, bands };
 };
 
 const STYLES =
@@ -249,23 +406,19 @@ const STYLES =
   '<w:style w:type="paragraph" w:styleId="Bibliography"><w:name w:val="Bibliography"/><w:basedOn w:val="Normal"/><w:qFormat/><w:pPr><w:spacing w:after="240" w:line="276" w:lineRule="auto"/><w:ind w:left="720" w:hanging="720"/></w:pPr></w:style>' +
   '<w:style w:type="paragraph" w:styleId="FootnoteText"><w:name w:val="footnote text"/><w:basedOn w:val="Normal"/><w:pPr><w:spacing w:after="80" w:line="240" w:lineRule="auto"/></w:pPr><w:rPr><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr></w:style>' +
   '<w:style w:type="character" w:styleId="FootnoteReference"><w:name w:val="footnote reference"/><w:rPr><w:vertAlign w:val="superscript"/></w:rPr></w:style>' +
+  '<w:style w:type="paragraph" w:styleId="Header"><w:name w:val="header"/><w:basedOn w:val="Normal"/><w:pPr><w:spacing w:line="240" w:lineRule="auto"/></w:pPr><w:rPr><w:i/><w:sz w:val="20"/></w:rPr></w:style>' +
   '<w:style w:type="paragraph" w:styleId="Footer"><w:name w:val="footer"/><w:basedOn w:val="Normal"/><w:pPr><w:jc w:val="center"/><w:spacing w:line="240" w:lineRule="auto"/></w:pPr></w:style>' +
   '</w:styles>';
 
+/** Word's settings: the separators the footnotes need, and a left-hand and a right-hand header. */
 const SETTINGS =
   '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
   '<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+  '<w:evenAndOddHeaders/>' +
   '<w:footnotePr><w:footnote w:id="-1"/><w:footnote w:id="0"/></w:footnotePr>' +
   '</w:settings>';
 
-const FOOTER =
-  '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-  '<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
-  '<w:p><w:pPr><w:pStyle w:val="Footer"/></w:pPr>' +
-  '<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r>' +
-  '<w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>1</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p></w:ftr>';
-
-const CONTENT_TYPES =
+const contentTypes = (bands: readonly BandPart[]): string =>
   '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
   '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
   '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
@@ -274,7 +427,7 @@ const CONTENT_TYPES =
   '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>' +
   '<Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>' +
   '<Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/>' +
-  '<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>' +
+  bands.map((one) => `<Override PartName="/word/${one.name}" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.${one.kind}+xml"/>`).join('') +
   '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>' +
   '</Types>';
 
@@ -285,13 +438,18 @@ const ROOT_RELS =
   '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>' +
   '</Relationships>';
 
-const DOCUMENT_RELS =
+const documentRels = (bands: readonly BandPart[]): string =>
   '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
   '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
   '<Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
   '<Relationship Id="rIdSettings" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>' +
   '<Relationship Id="rIdFootnotes" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/>' +
-  '<Relationship Id="rIdFooter1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>' +
+  bands
+    .map((one) => {
+      const id = `rId${one.kind === 'header' ? 'Header' : 'Footer'}${one.name.replace(/\D/g, '')}`;
+      return `<Relationship Id="${id}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/${one.kind}" Target="${one.name}"/>`;
+    })
+    .join('') +
   '</Relationships>';
 
 const coreXml = (file: ProjectFile): string =>
@@ -308,14 +466,14 @@ const utf8 = (text: string): Uint8Array => new TextEncoder().encode(text);
 export const buildBookDocx = async (file: ProjectFile): Promise<Uint8Array> => {
   const parts = bookDocxParts(file);
   return writeZip([
-    { path: '[Content_Types].xml', data: utf8(CONTENT_TYPES) },
+    { path: '[Content_Types].xml', data: utf8(contentTypes(parts.bands)) },
     { path: '_rels/.rels', data: utf8(ROOT_RELS) },
-    { path: 'word/_rels/document.xml.rels', data: utf8(DOCUMENT_RELS) },
+    { path: 'word/_rels/document.xml.rels', data: utf8(documentRels(parts.bands)) },
     { path: 'word/document.xml', data: utf8(parts.document) },
     { path: 'word/styles.xml', data: utf8(STYLES) },
     { path: 'word/settings.xml', data: utf8(SETTINGS) },
     { path: 'word/footnotes.xml', data: utf8(parts.footnotes) },
-    { path: 'word/footer1.xml', data: utf8(FOOTER) },
+    ...parts.bands.map((one) => ({ path: `word/${one.name}`, data: utf8(one.xml) })),
     { path: 'docProps/core.xml', data: utf8(coreXml(file)) },
   ]);
 };

@@ -3,7 +3,8 @@ import type { BookGeometry } from './book-layout.js';
 import type { BookBlock } from './book-plan.js';
 import { bookIndex, type BookIndex } from './book-index.js';
 import { toRoman } from './markers.js';
-import { headTextFor, showsFolio, type RunningNames } from './running-heads.js';
+import { footTextFor, headTextFor, sectionLayoutOf, showsFolio, type RunningNames } from './running-heads.js';
+import type { SectionLayout } from './entities/book.js';
 import type { ProjectFile } from './project-file.js';
 
 /**
@@ -103,6 +104,8 @@ export interface BookPage {
   /** Which page this is, printed or not (§9l): a picture page still counts. */
   counted: string;
   runningHead: string;
+  /** The running foot, fields for the page itself still to fill (addendum 43 §10). */
+  runningFoot: string;
   /** The chapter in force, for the recto head and the inspector. */
   chapterTitle: string;
   display: boolean;
@@ -192,6 +195,19 @@ interface Filled {
 const linesOf = (measured: Measured, block: BookBlock): number => Math.max(1, measured.get(block.id) ?? 1);
 
 const isFlow = (block: BookBlock): boolean => !block.display;
+
+/**
+ * **The division a block opens, by its record** (addendum 43 §10): a
+ * chapter's marker, a part, or the unit of a heading that opens a page. The
+ * same ids the contents page keys its rows by, so a division's own layout is
+ * found again however often the book is laid.
+ */
+export const sectionIdOf = (block: BookBlock): string | null => {
+  if (block.kind === 'chapter_opening') return block.id;
+  if (block.kind === 'part_opening') return block.partId ?? block.id;
+  if (block.kind === 'heading' && block.starts !== 'none') return block.unitId ?? block.id;
+  return null;
+};
 
 /**
  * **The division in force on a page** (§9y, from Ken: *at the top right-hand
@@ -474,12 +490,40 @@ export const layPages = (
   let roman = 0;
   let arabic = 0;
   let numbering: 'roman' | 'arabic' = 'roman';
+  /** The division in force, and the numbering it asked for (addendum 43 §10). */
+  let section: SectionLayout | null = null;
+  let sectionNumbering: 'roman' | 'arabic' | null = null;
+  /** Where each numbering stands: a division that restarts sets its own back to nought. */
+  let romanAt = 0;
+  let arabicAt = 0;
 
   const record = (filled: Filled, sheet: number, side: 'verso' | 'recto', cut: number): BookPage => {
     if (filled.numbering === 'arabic' && numbering === 'roman' && !filled.blank) numbering = 'arabic';
+    // A division opening on this page brings its own layout with it, or the
+    // book's back again.
+    const head = filled.pieces[0];
+    const opener = head && head.from === 0 ? byId.get(head.blockId) : undefined;
+    const opensSection = opener ? sectionIdOf(opener) : null;
+    if (opensSection !== null && !filled.blank) {
+      section = sectionLayoutOf(settings, opensSection);
+      sectionNumbering = section?.numbering ?? null;
+      if (section?.restart) {
+        if ((sectionNumbering ?? numbering) === 'roman') romanAt = 0;
+        else arabicAt = 0;
+      }
+    }
+    const scheme = sectionNumbering ?? numbering;
     let number = 0;
-    if (numbering === 'roman') number = ++roman;
-    else number = ++arabic;
+    // `roman` and `arabic` count the pages each numbering carries, for the
+    // contents' reading of the book; the numbers printed are where each
+    // numbering stands, which a restart can set back.
+    if (scheme === 'roman') {
+      roman += 1;
+      number = ++romanAt;
+    } else {
+      arabic += 1;
+      number = ++arabicAt;
+    }
     // A book set to carry no page numbers still counts its pages — the
     // contents and the index are read off the count — it just prints none.
     const shows = !filled.blank && filled.folio && showsFolio(settings.folio);
@@ -488,10 +532,10 @@ export const layPages = (
     // and a blank leaf are counted like every other and merely print nothing,
     // so `folio` answers *what appears on the paper* and this answers *which
     // page is this* — the rail needs the second and had only the first.
-    const counted = numbering === 'roman' ? toRoman(number).toLowerCase() : String(number);
+    const counted = scheme === 'roman' ? toRoman(number).toLowerCase() : String(number);
     const folio = shows ? counted : '';
     for (const piece of filled.pieces) {
-      if (!where.has(piece.blockId)) where.set(piece.blockId, { numbering, number });
+      if (!where.has(piece.blockId)) where.set(piece.blockId, { numbering: scheme, number });
     }
     chapterTitle = filled.chapterTitle;
     const first = filled.pieces[0] ? byId.get(filled.pieces[0].blockId) : undefined;
@@ -499,14 +543,18 @@ export const layPages = (
       !filled.display &&
       filled.pieces[0]?.from === 0 &&
       (first?.kind === 'chapter_opening' || first?.kind === 'part_opening');
+    // An opening page stands clear of the heads and the foot unless its
+    // division asks for them (spec §6's *first-page-different*).
+    const clear = filled.blank || filled.display || (opens && !section?.headsOnOpening);
     return {
       sheet,
       side,
-      numbering: filled.blank ? 'none' : numbering,
+      numbering: filled.blank ? 'none' : scheme,
       number,
       folio,
       counted,
-      runningHead: filled.blank || filled.display || opens ? '' : headTextFor(side, settings, names, filled.chapterTitle),
+      runningHead: clear ? '' : headTextFor(side, settings, names, filled.chapterTitle, section),
+      runningFoot: clear ? '' : footTextFor(settings, names, filled.chapterTitle, section),
       chapterTitle: filled.chapterTitle,
       display: filled.display,
       blank: filled.blank,

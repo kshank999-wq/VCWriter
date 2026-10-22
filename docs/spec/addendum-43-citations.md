@@ -13,7 +13,7 @@ kept current, and headers and footers for instructional publishing.
 | 1 | The Reference Library; inserting, changing and removing citations; styles; cloud sync | **built** (§1–§7) |
 | 2 | Footnotes at the foot of each page in Layout; the bibliography generated as back matter | **built** (§8) |
 | 3 | Export: Word footnotes and bibliography, EPUB notes; footnotes read from Word | **built** (§9) |
-| 4 | The header and footer gaps against spec §6 (author, date and custom fields, per-section restart, first page per section) | next |
+| 4 | The header and footer gaps against spec §6 (author, date and custom fields, per-section restart, first page per section) | **built** (§10) |
 
 **What already existed.** The Layout room (addendum 20) had measured pages,
 running heads (the book's title on the verso, the chapter's on the recto),
@@ -376,7 +376,83 @@ not *The Moon and the*.
   instructional book. References lists two flagged sources, one cited twice,
   each shown as written.
 
-## 10. Not yet
+## 10. Headers and footers by division (phase 4)
+
+Spec §6 asks for global, chapter-specific and first-page-different layouts,
+a set of fields, roman or arabic numbers, and numbering that restarts per
+section. The Layout room already had the global half (addendum 20 §7): a
+left-hand and a right-hand top, each the author, the book's title, the
+division's title, words of the writer's own, or nothing; the folio's place;
+no heads on title, copyright or display pages; roman front matter.
+
+**Fields.** Words of the writer's own, in a head or a foot, may carry:
+- `{title}` the book's title, `{chapter}` this division's title and
+  `{author}`, filled as the book is laid
+- `{page}` the page's number as printed (*iv*, *12*), `{pages}` the page
+  count and `{date}` the day it is printed, filled as each page is drawn
+  (`fillHeadFields`, `fillPageFields`)
+- chips under each box type a field in, so nobody has to know the braces
+
+**A running foot.** `runningHeads.foot`, with its own place (centred, outer
+or inner edge), at the foot of every text page in the bottom margin where the
+folio stands. Empty prints none, as every book did before.
+
+**A division of its own** (`settings.book.sections`, `SectionLayout`).
+- It is keyed by the division's record, the way the contents page keys a
+  row: a chapter's marker, a part, a heading's unit (`sectionIdOf`). So it
+  holds however often the book is laid.
+- Each division may set:
+  - its own left-hand and right-hand tops, and its own foot, in words with
+    fields; empty is the book's
+  - whether its opening page carries the heads and foot. By default an
+    opening stands clear of them, as before; this is the spec's
+    *first-page-different*, per division.
+  - page numbers starting again at its opening
+  - roman or arabic numbering; *As the book* follows the book
+- An override belongs to that division only. The next division takes the
+  book's heads and numbering back, its arabic count carrying on from where
+  arabic last stood unless it restarts too.
+- A division set back to the book's in every respect is removed
+  (`setSectionLayout`), not kept as a record that changes nothing.
+- In the room: **Book settings → Heads & numbers by chapter** (the format's
+  own noun) lists the contents page's rows, each saying in a few words how
+  it differs. Opening one shows its controls.
+
+**In Word.** The book's Word export (§9) now has a section per division,
+each with Word's own bands:
+- a right-hand and a left-hand header and footer (`evenAndOddHeaders`),
+  their words the division's or the book's
+- `{page}`, `{pages}` and `{date}` as Word's PAGE, NUMPAGES and DATE fields
+- a first page of its own (`titlePg`) with no head, and its number where the
+  book shows one on an opening, unless the division carries its heads there
+- `pgNumType` lower-roman or decimal, restarting where the division
+  restarts; the body's first section always starts at 1
+- the front matter one section with empty bands, so the title and
+  copyright pages carry nothing
+
+**Proof.**
+- `section-heads.test.ts` (9 tests) covers:
+  - the fields, filled in two stages
+  - division keys
+  - a restart in arabic and in roman
+  - a division's own heads and foot, and the book's back after it
+  - an opening clear of the heads and foot, or carrying them
+  - the drawn foot with page, count and date
+  - Word's sections with left-hand and right-hand headers, NUMPAGES and a
+    first page of its own
+  - a roman restart in Word, with the heads on its first page
+  - a layout set back to the book's being forgotten
+- The Layout room test types a running foot with a field chip and gives a
+  chapter a roman restart with heads on its opening.
+- Seen in Chromium: the Bibliography given its own right-hand head
+  (*Sources · page i of 7*), heads on its opening and a roman restart. The
+  rail numbers it *i*, the page prints the head, the running foot (*The Sea
+  · 22 October 2026*) and the folio *i*.
+- Opened in LibreOffice, the Word export shows *The Sea* on left-hand pages
+  and *The Pull* on right-hand ones, *Page 2 of 11* in the foot, chapter
+  openings clear, and the second chapter numbered from *i*.
+
+## 11. Not yet
 
 - A note carried on to the next page in Layout when it is too tall for its
   own.
@@ -384,5 +460,7 @@ not *The Moon and the*.
   the story).
 - Recognising a Word note's parts (author, title, publisher) automatically.
   They are kept whole and flagged.
-- The spec §6 header and footer gaps (phase 4).
+- A division's head set to print nothing: an empty box is the book's, and
+  *nothing* needs a way to say so.
+- The eBook has no pages, so it carries no heads, feet or page numbers.
 - The Document (word-processor) module sharing the library.

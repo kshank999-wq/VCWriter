@@ -20,7 +20,7 @@ import type { ChapterPageContent } from './markers.js';
 import { FACE_STACKS, faceStackOf, fontFaceCss, type BookGeometry } from './book-layout.js';
 import { partStyleAttr } from './part-style.js';
 import type { AuthorPhotoShape } from './back-matter.js';
-import { headSideClass, runningHeadStyleOf, runningStyleVars } from './running-heads.js';
+import { fillPageFields, headSideClass, runningHeadStyleOf, runningStyleVars } from './running-heads.js';
 import type { BookBlock, FigureFree, FigureInset } from './book-plan.js';
 import type { BookContentsRow, BookPage } from './book-pages.js';
 import { runsText, type BookIndex } from './book-index.js';
@@ -139,6 +139,8 @@ export interface BookRenderContext {
   contents: readonly BookContentsRow[];
   /** The index, once the book is laid; null while measuring or where there is none. */
   index: BookIndex | null;
+  /** The day the book is printed, as a `{date}` field says it (addendum 43 §10). */
+  today?: string;
   /** What the citations print as, in the line and at the foot (addendum 43 §8); absent where the book cites nothing. */
   citations?: BookCitations | null;
 }
@@ -1012,13 +1014,21 @@ export const renderBookPage = (
       return `<div class="${cls}" style="height:${height.toFixed(3)}px"><div class="bk-clip" style="margin-top:-${shift.toFixed(3)}px">${inner}</div></div>`;
     })
     .join('');
-  const head = page.runningHead
-    ? `<div class="bk-running ${page.side} ${headSideClass(context.settings.runningHeads.place, page.side)}">${escapeHtml(page.runningHead)}</div>`
+  // The fields only a drawn page knows (addendum 43 §10): its number, the
+  // book's page count, and the day it is printed.
+  const fields = { page: page.counted ?? page.folio ?? '', pages: context.geometry.pages, date: context.today ?? '' };
+  const headWords = fillPageFields(page.runningHead ?? '', fields);
+  const head = headWords
+    ? `<div class="bk-running ${page.side} ${headSideClass(context.settings.runningHeads.place, page.side)}">${escapeHtml(headWords)}</div>`
+    : '';
+  const footWords = fillPageFields(page.runningFoot ?? '', fields);
+  const foot = footWords
+    ? `<div class="bk-running-foot ${page.side} ${headSideClass(context.settings.runningHeads.footPlace, page.side)}">${escapeHtml(footWords)}</div>`
     : '';
   const folio = page.folio ? `<div class="${folioClass(page, context.settings)}">${escapeHtml(page.folio)}</div>` : '';
   const classes = ['bk-page', page.side, page.blank ? 'blank' : '', page.display ? 'display' : ''].filter(Boolean).join(' ');
   const notes = renderPageNotes(page.notes ?? [], context);
-  return `<section class="${classes}" data-sheet="${page.sheet}">${head}<div class="${textClass(context)}">${pieces}</div>${notes}${folio}</section>`;
+  return `<section class="${classes}" data-sheet="${page.sheet}">${head}<div class="${textClass(context)}">${pieces}</div>${notes}${foot}${folio}</section>`;
 };
 
 /** The stylesheet the pages read; the custom properties come from `bookVars`. */
@@ -1252,6 +1262,12 @@ ${CHAPTER_STYLES}
      capitals against the recto's italic — is the writer's now. */
   .bk-running { position: absolute; top: var(--bk-head); left: var(--bk-outside); right: var(--bk-outside); line-height: 1; font-family: var(--bk-run-face, var(--bk-face)); }
   .bk-running.centre { text-align: center; }
+  /* The running foot (addendum 43 §10): the head's twin, in the bottom margin
+     where the folio stands, set like the left-hand head. */
+  .bk-running-foot { position: absolute; bottom: var(--bk-foot); left: var(--bk-outside); right: var(--bk-outside); line-height: 1; font-family: var(--bk-run-face, var(--bk-face)); font-size: var(--bk-run-verso-size); font-style: var(--bk-run-verso-style); letter-spacing: var(--bk-run-verso-tracking); }
+  .bk-running-foot.centre { text-align: center; }
+  .bk-running-foot.left { text-align: left; }
+  .bk-running-foot.right { text-align: right; }
   .bk-running.left { text-align: left; }
   .bk-running.right { text-align: right; }
   .bk-running.verso { font-size: var(--bk-run-verso-size); text-transform: var(--bk-run-verso-case); font-variant-caps: var(--bk-run-verso-variant); font-weight: var(--bk-run-verso-weight); font-style: var(--bk-run-verso-style); letter-spacing: var(--bk-run-verso-tracking); }

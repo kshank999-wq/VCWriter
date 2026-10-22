@@ -74,7 +74,7 @@ describe('the book as a Word document', () => {
     // The separators Word needs.
     expect(footnotes).toContain('w:type="separator" w:id="-1"');
     // No bibliography page in the back matter: one is added from the library.
-    expect(document).toContain('<w:pStyle w:val="Heading1"/><w:pageBreakBefore/></w:pPr><w:r><w:t xml:space="preserve">Bibliography</w:t>');
+    expect(document).toContain('<w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t xml:space="preserve">Bibliography</w:t>');
     expect(document).toContain('<w:pStyle w:val="Bibliography"/>');
     expect(document).toContain('<w:numFmt w:val="decimal"/><w:numRestart w:val="continuous"/>');
   });
@@ -90,8 +90,8 @@ describe('the book as a Word document', () => {
     const file = setCitationSettings(book([['One@.'], ['Two@.']]), { markers: 'symbol', restartEach: 'chapter' });
     const { document } = bookDocxParts(file);
     expect(document).toContain('<w:numFmt w:val="chicago"/><w:numRestart w:val="eachSect"/>');
-    // The second chapter opens a section of its own.
-    expect(count(document, /<w:sectPr>/g)).toBe(2);
+    // Each division is a section of its own, so Word can restart the count.
+    expect(count(document, /<w:sectPr>/g)).toBe(5);
   });
 
   it('sets APA’s parenthetical in the line, with no footnotes', () => {

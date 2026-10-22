@@ -136,6 +136,31 @@ export const HEAD_PLACES = ['centre', 'outside', 'inside'] as const;
 export const headPlaceSchema = z.enum(HEAD_PLACES);
 export type HeadPlace = z.infer<typeof headPlaceSchema>;
 
+/**
+ * **One division's own heads, foot and numbering** (addendum 43 §10, Ken's
+ * citations spec §6: *chapter/section-specific and first-page-different
+ * layouts… restart per section*). Keyed by the division's record — a chapter's
+ * marker, a part, a section's unit — which is what the contents page keys a
+ * row by, so it survives the book being laid again.
+ *
+ * Every override is null where the division takes the book's own.
+ */
+export const sectionLayoutSchema = z.object({
+  id: z.string(),
+  /** What the left-hand and right-hand tops say here: words with fields, or null for the book's. */
+  verso: z.string().nullable().default(null),
+  recto: z.string().nullable().default(null),
+  /** The running foot here, or null for the book's. */
+  foot: z.string().nullable().default(null),
+  /** The opening page carries the heads and the foot too, rather than standing clear of them. */
+  headsOnOpening: z.boolean().default(false),
+  /** Page numbers start again at 1 (or i) where this division opens. */
+  restart: z.boolean().default(false),
+  /** Numbered in roman or arabic from here; null follows the book. */
+  numbering: z.enum(['roman', 'arabic']).nullable().default(null),
+});
+export type SectionLayout = z.infer<typeof sectionLayoutSchema>;
+
 /** Where the page number sits (§7). `none` prints no folio at all. */
 export const FOLIO_PLACES = ['foot_outside', 'foot_centre', 'head_outside', 'none'] as const;
 export const folioPlaceSchema = z.enum(FOLIO_PLACES);
@@ -501,8 +526,17 @@ export const bookSettingsSchema = z.object({
       rectoText: z.string().default(''),
       /** Where the head sits across the page, the folio's place's counterpart. */
       place: headPlaceSchema.default('centre'),
+      /**
+       * **A running foot** (addendum 43 §10): a line at the foot of every
+       * text page, in words with fields — *{title}*, *{chapter}*,
+       * *{author}*, *{page}*, *{pages}*, *{date}*. Empty prints none.
+       */
+      foot: z.string().default(''),
+      footPlace: headPlaceSchema.default('centre'),
     })
     .default({}),
+  /** Divisions laid out differently from the book (addendum 43 §10). */
+  sections: z.array(sectionLayoutSchema).default([]),
   folio: folioPlaceSchema.default('foot_outside'),
   /** A chapter opening carries its number at the foot, whatever the folio's place. */
   folioOnOpening: z.boolean().default(true),

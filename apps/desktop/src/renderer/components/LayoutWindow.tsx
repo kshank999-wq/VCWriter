@@ -184,6 +184,11 @@ import {
   DOCX_MEDIA_TYPE,
   buildBookDocx,
   suggestedDocxFileName,
+  HEAD_FIELDS,
+  sectionLayoutOf,
+  setSectionLayout,
+  type BookContentsRow,
+  type SectionLayout,
 } from '@vcwriter/domain';
 import { readFont } from '../read-font';
 import { PopOutButton } from './PopOutButton';
@@ -3655,6 +3660,12 @@ function BookSettingsDialog({
               separates={holdsWholeWorks(file.project.format)}
             />
           </Fold>
+          {/* A division laid out on its own terms (addendum 43 §10, Ken's
+              spec §6: chapter-specific heads, a first page different, page
+              numbers restarting per section). */}
+          <Fold id="by-division" title={`Heads & numbers by ${noun.toLowerCase()}`}>
+            <SectionsSection settings={settings} rows={laying.context.contents} noun={noun} onUpdate={onUpdate} />
+          </Fold>
           {/* How a division's heading is set (§6a, from Ken: *the story titles
               should be adjustable with a setting*). It used to be a sentence
               pointing at another dialog, which is not a setting. The fields
@@ -5534,6 +5545,10 @@ function HeadTopsRow({
               placeholder="What these pages should say"
               onChange={(event) => setHeads({ [`${which}Text`]: event.target.value } as Partial<BookSettings['runningHeads']>)}
             />
+            <FieldChips
+              noun={noun}
+              onField={(field) => setHeads({ [`${which}Text`]: `${typed}${typed && !typed.endsWith(' ') ? ' ' : ''}${field}` } as Partial<BookSettings['runningHeads']>)}
+            />
           </label>
         ) : null}
       </div>
@@ -5551,6 +5566,116 @@ function HeadTopsRow({
       </div>
       <p className="field-note">{tops}</p>
     </>
+  );
+}
+
+/**
+ * **The fields a head or foot may carry**, as chips that type one in
+ * (addendum 43 §10): the book's title, this division's, the author, the page,
+ * the count and the date. Typed by hand they work the same; the chips are so
+ * nobody has to know the braces.
+ */
+function FieldChips({ noun, onField }: { noun: string; onField(field: string): void }) {
+  return (
+    <span className="layout-field-chips" aria-label="Insert a field">
+      {HEAD_FIELDS.map((one) => (
+        <button key={one.field} type="button" className="ghost small" title={`Put ${one.field} in: printed as ${one.words.toLowerCase()}`} onClick={() => onField(one.field)}>
+          {one.field === '{chapter}' ? `${noun}’s title` : one.words}
+        </button>
+      ))}
+    </span>
+  );
+}
+
+/**
+ * **Heads and numbers by division** (addendum 43 §10, Ken's spec §6): each
+ * chapter, part or section may carry its own tops and foot, carry them on its
+ * opening page too, start its page numbers again, or number in roman. A row
+ * is the contents page's own, so it names the division the way the book does.
+ */
+function SectionsSection({
+  settings,
+  rows,
+  noun,
+  onUpdate,
+}: {
+  settings: BookSettings;
+  rows: readonly BookContentsRow[];
+  noun: string;
+  onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
+}) {
+  const [openId, setOpenId] = useState<string | null>(null);
+  const set = (id: string, patch: Partial<Omit<SectionLayout, 'id'>>) => onUpdate((current) => setSectionLayout(current, id, patch));
+  if (rows.length === 0) return <p className="muted small">The book has no {noun.toLowerCase()}s or pages of its own yet.</p>;
+  /** Empty words are the book's own, not nothing. */
+  const words = (value: string): string | null => (value.length > 0 ? value : null);
+  return (
+    <div className="layout-sections">
+      <p className="muted small">
+        Each {noun.toLowerCase()} takes the book’s heads, foot and numbering unless it is given its own here. An opening page stands clear of the heads and foot unless it asks for them.
+      </p>
+      {rows.map((row) => {
+        const own = sectionLayoutOf(settings, row.id);
+        const name = [row.label, row.title].filter(Boolean).join(' · ') || 'Untitled';
+        const summary = own
+          ? [
+              own.verso !== null || own.recto !== null ? 'own heads' : '',
+              own.foot !== null ? 'own foot' : '',
+              own.headsOnOpening ? 'heads on its opening' : '',
+              own.restart ? 'numbers restart' : '',
+              own.numbering === 'roman' ? 'roman' : own.numbering === 'arabic' ? 'arabic' : '',
+            ]
+              .filter(Boolean)
+              .join(' · ')
+          : 'as the book';
+        const opened = openId === row.id;
+        return (
+          <div key={row.id} className={`layout-section-row${row.depth ? ' under' : ''}`}>
+            <button type="button" className="ghost layout-section-name" aria-expanded={opened} onClick={() => setOpenId(opened ? null : row.id)}>
+              <span>{name}</span>
+              <span className="muted small">{summary}</span>
+            </button>
+            {opened ? (
+              <div className="layout-section-body" aria-label={`Layout of ${name}`}>
+                <div className="layout-two">
+                  <label className="field">
+                    <span>Top of left-hand pages</span>
+                    <input type="text" aria-label="This division’s left-hand head" value={own?.verso ?? ''} placeholder="As the book" onChange={(event) => set(row.id, { verso: words(event.target.value) })} />
+                  </label>
+                  <label className="field">
+                    <span>Top of right-hand pages</span>
+                    <input type="text" aria-label="This division’s right-hand head" value={own?.recto ?? ''} placeholder="As the book" onChange={(event) => set(row.id, { recto: words(event.target.value) })} />
+                  </label>
+                </div>
+                <label className="field">
+                  <span>Running foot</span>
+                  <input type="text" aria-label="This division’s running foot" value={own?.foot ?? ''} placeholder="As the book" onChange={(event) => set(row.id, { foot: words(event.target.value) })} />
+                </label>
+                <p className="field-note">Fields work here too: {HEAD_FIELDS.map((one) => one.field).join(' ')}.</p>
+                <label className="check">
+                  <input type="checkbox" checked={own?.headsOnOpening ?? false} onChange={(event) => set(row.id, { headsOnOpening: event.target.checked })} /> Its opening page carries the heads and foot too
+                </label>
+                <label className="check">
+                  <input type="checkbox" checked={own?.restart ?? false} onChange={(event) => set(row.id, { restart: event.target.checked })} /> Page numbers start again at its opening
+                </label>
+                <label className="field">
+                  <span>Numbered</span>
+                  <select
+                    aria-label="This division’s numbering"
+                    value={own?.numbering ?? 'book'}
+                    onChange={(event) => set(row.id, { numbering: event.target.value === 'book' ? null : (event.target.value as 'roman' | 'arabic') })}
+                  >
+                    <option value="book">As the book</option>
+                    <option value="arabic">1, 2, 3</option>
+                    <option value="roman">i, ii, iii</option>
+                  </select>
+                </label>
+              </div>
+            ) : null}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -5624,6 +5749,31 @@ function FurnitureSection({
           </select>
         </label>
       </div>
+      {/* The running foot (addendum 43 §10, Ken's spec §6): a line at the
+          foot of every text page, typed with the fields the chips put in. */}
+      <div className="layout-two">
+        <label className="field">
+          <span>Running foot</span>
+          <input
+            type="text"
+            aria-label="Running foot"
+            value={heads.foot}
+            placeholder="Nothing, or e.g. {title} · page {page} of {pages}"
+            onChange={(event) => setHeads({ foot: event.target.value })}
+          />
+        </label>
+        <label className="field">
+          <span>The foot sits</span>
+          <select aria-label="Running foot place" value={heads.footPlace} onChange={(event) => setHeads({ footPlace: event.target.value as BookSettings['runningHeads']['footPlace'] })}>
+            {HEAD_PLACES.map((place) => (
+              <option key={place} value={place}>
+                {HEAD_PLACE_WORDS[place]}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <FieldChips noun={noun} onField={(field) => setHeads({ foot: `${heads.foot}${heads.foot && !heads.foot.endsWith(' ') ? ' ' : ''}${field}` })} />
       <label className="field">
         <span>Set in</span>
         <select

@@ -6,6 +6,8 @@ import {
   type BookPart,
   type PartInset,
   type PartKind,
+  sectionLayoutSchema,
+  type SectionLayout,
 } from './entities/book.js';
 import type { ManuscriptElement } from './entities/manuscript.js';
 import { parseInline, type InlineSpan } from './entities/inline.js';
@@ -198,6 +200,20 @@ const writeParts = (file: ProjectFile, parts: BookPart[]): ProjectFile => setBoo
 
 /** The heading a part prints, the kind's name where the writer gave none. */
 export const partTitle = (part: BookPart): string => part.title.trim() || PART_INFO[part.kind].name;
+
+/**
+ * **One division laid out on its own terms** (addendum 43 §10): its own heads
+ * and foot, the heads on its opening page, a restart of the page numbers, or
+ * roman numbers. A layout put back to the book's in every respect is removed
+ * rather than kept as a record that changes nothing.
+ */
+export const setSectionLayout = (file: ProjectFile, id: string, patch: Partial<Omit<SectionLayout, 'id'>>): ProjectFile => {
+  const settings = bookSettingsOf(file);
+  const now = sectionLayoutSchema.parse({ ...(settings.sections.find((one) => one.id === id) ?? { id }), ...patch, id });
+  const plain = now.verso === null && now.recto === null && now.foot === null && !now.headsOnOpening && !now.restart && now.numbering === null;
+  const others = settings.sections.filter((one) => one.id !== id);
+  return setBookSettings(file, { sections: plain ? others : [...others, now] });
+};
 
 /**
  * **What a bibliography page prints** (addendum 43 §8): the References

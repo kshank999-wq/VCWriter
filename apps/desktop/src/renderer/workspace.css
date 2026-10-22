@@ -21871,3 +21871,12 @@ dialog.track-dialog.format-inspector {
   padding-left: 2em;
   text-indent: -2em;
 }
+
+/* Heads and numbers by division, and the field chips (addendum 43 §10). */
+.layout-field-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.layout-field-chips button { font-size: 11px; padding: 2px 6px; border: 1px solid var(--line, #333); border-radius: 10px; }
+.layout-sections { display: flex; flex-direction: column; gap: 4px; }
+.layout-section-row { border: 1px solid var(--line, #333); border-radius: 6px; }
+.layout-section-row.under { margin-left: 16px; }
+.layout-section-name { display: flex; justify-content: space-between; gap: 12px; width: 100%; text-align: left; padding: 6px 10px; }
+.layout-section-body { padding: 4px 10px 10px; display: flex; flex-direction: column; gap: 6px; }

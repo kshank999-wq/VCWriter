@@ -2332,3 +2332,27 @@ describe('designing a blank page, from the rail', () => {
     expect(partsOf(latest as ProjectFile).some((one) => one.kind === 'leaf')).toBe(true);
   });
 });
+
+describe('heads, feet and numbers by division (addendum 43 §10)', () => {
+  it('sets a running foot with fields, and lets a chapter restart its numbers and carry its heads on its opening', () => {
+    render(<Harness initial={novel()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Book settings…' }));
+    const dialog = screen.getByRole('dialog', { name: 'Book settings' });
+    const furniture = within(dialog).getByRole('button', { name: 'Running heads & page numbers' }).closest('.layout-fold') as HTMLElement;
+    fireEvent.change(within(furniture).getByLabelText('Running foot'), { target: { value: '{title} ·' } });
+    fireEvent.click(within(within(furniture).getAllByLabelText('Insert a field').at(-1)!).getByRole('button', { name: 'Page number' }));
+    expect(bookSettingsOf(latest!).runningHeads.foot).toBe('{title} · {page}');
+
+    const fold = within(dialog).getByRole('button', { name: 'Heads & numbers by chapter' }).closest('.layout-fold') as HTMLElement;
+    fireEvent.click(within(fold).getByRole('button', { name: /The Return/ }));
+    const own = within(fold).getByLabelText(/^Layout of .*The Return/);
+    fireEvent.click(within(own).getByLabelText('Page numbers start again at its opening'));
+    fireEvent.click(within(own).getByLabelText('Its opening page carries the heads and foot too'));
+    fireEvent.change(within(own).getByLabelText('This division’s numbering'), { target: { value: 'roman' } });
+    const marker = latest!.markers.find((one) => one.title === 'The Return')!;
+    expect(bookSettingsOf(latest!).sections).toEqual([
+      { id: marker.id, verso: null, recto: null, foot: null, headsOnOpening: true, restart: true, numbering: 'roman' },
+    ]);
+    expect(within(fold).getByRole('button', { name: /The Return/ }).textContent).toContain('numbers restart');
+  });
+});
