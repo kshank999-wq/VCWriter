@@ -21513,3 +21513,345 @@ dialog.track-dialog.format-inspector {
 .format-line {
   box-sizing: border-box;
 }
+
+/* ------------------------------------------------ citations (addendum 43) */
+
+/* A citation's token keeps its characters' room, so the box above it lines up
+   to the letter, and shows only its marker: a chip in the gold, the number
+   raised at its start as the printed page raises it. */
+.element .ink .cite-chip {
+  position: relative;
+  color: transparent;
+  background: color-mix(in srgb, var(--gold) 16%, transparent);
+  border-radius: 3px;
+}
+
+.element .ink .cite-chip::after {
+  content: attr(data-marker);
+  position: absolute;
+  left: 2px;
+  top: -0.5em;
+  font-size: 0.72em;
+  font-weight: 700;
+  color: var(--gold);
+}
+
+.element .ink .cite-chip.missing {
+  background: color-mix(in srgb, #e06c6c 22%, transparent);
+}
+
+.element .ink .cite-chip.missing::after {
+  color: #e06c6c;
+}
+
+.wt-cite {
+  font-size: 12px;
+  padding: 2px 8px;
+}
+
+.cite-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.cite-dialog {
+  width: min(640px, calc(100vw - 32px));
+  max-height: calc(100vh - 64px);
+  overflow: auto;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  /* Opened from inside the writing sheet, whose type is the manuscript's:
+     the dialog is the application's, and wears its face. */
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 13px;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.cite-dialog :is(input, select, textarea, button) {
+  font-family: inherit;
+}
+
+.cite-dialog header,
+.cite-dialog footer,
+.cite-search,
+.cite-pin,
+.cite-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cite-dialog header h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 15px;
+}
+
+.cite-dialog footer .spacer {
+  flex: 1;
+}
+
+.cite-search input {
+  flex: 1;
+}
+
+.cite-results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 240px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.cite-results li > button {
+  display: grid;
+  grid-template-columns: 9em 1fr auto;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  padding: 6px 8px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.cite-results li > button.chosen {
+  background: color-mix(in srgb, var(--gold) 18%, transparent);
+}
+
+.cite-who {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cite-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cite-pin label,
+.cite-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.cite-note textarea {
+  flex: 1;
+}
+
+.cite-preview {
+  margin: 0;
+  padding: 8px 10px;
+  border-left: 3px solid var(--gold);
+  background: color-mix(in srgb, var(--gold) 8%, transparent);
+  font-size: 13px;
+}
+
+.cite-warning,
+.refs-warning {
+  color: #e06c6c;
+  margin: 0;
+}
+
+/* The source form, in the dialog and in References. */
+.ref-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 14px;
+}
+
+.ref-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+}
+
+.ref-field.title,
+.ref-field.container,
+.ref-field.authors,
+.ref-field.editors,
+.ref-field.url,
+.ref-field.notes,
+.ref-field.tags {
+  grid-column: 1 / -1;
+}
+
+.ref-field label {
+  color: var(--muted, var(--text));
+}
+
+.ref-field.wrong input {
+  border-color: #e06c6c;
+}
+
+.ref-problem {
+  color: #e06c6c;
+  font-size: 11.5px;
+}
+
+/* References, in Research. */
+.refs {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+.refs-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.refs-tabs button {
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 3px 3px 0 0;
+  padding: 5px 12px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.refs-tabs button.on {
+  border-color: var(--border);
+  color: var(--gold);
+}
+
+.refs-library {
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) 1fr;
+  gap: 16px;
+  min-height: 0;
+}
+
+.refs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.refs-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.refs-filters input[type='search'] {
+  flex: 1 1 100%;
+}
+
+.refs-archived {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.refs-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+}
+
+.refs-list li > button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  padding: 6px 8px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.refs-list li > button.chosen {
+  background: color-mix(in srgb, var(--gold) 16%, transparent);
+}
+
+.refs-who {
+  font-weight: 600;
+}
+
+.refs-dupes h4 {
+  margin: 6px 0 4px;
+  font-size: 12px;
+}
+
+.refs-dupe {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  margin-bottom: 6px;
+}
+
+.refs-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.refs-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 520px;
+}
+
+.refs-settings label {
+  display: grid;
+  grid-template-columns: 11em 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.refs-preview {
+  display: grid;
+  gap: 18px;
+}
+
+.refs-notes,
+.refs-bibliography {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* A bibliography sets its entries with a hanging indent, as print does. */
+.refs-bibliography li {
+  padding-left: 2em;
+  text-indent: -2em;
+}

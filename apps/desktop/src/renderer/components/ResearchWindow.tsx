@@ -71,6 +71,7 @@ import { RelatedPanel } from './RelatedPanel';
 import { SetupsPanel } from './SetupsPanel';
 import { GraphicsPanel } from './GraphicsPanel';
 import { ContentsPanel } from './ContentsPanel';
+import { ReferencesPanel } from './citations/ReferencesPanel';
 import { NoteDialog } from './NoteDialog';
 import { ChapterPageDialog } from './ChapterPageDialog';
 import { GraveyardPanel } from './GraveyardPanel';
@@ -146,6 +147,8 @@ type Selection =
    * the chapters are the Outliner's and this is a reading of them.
    */
   | { kind: 'contents' }
+  /** The Reference Library (addendum 43): an instructional book's sources and how it cites them. */
+  | { kind: 'references' }
   /**
    * Somebody open in the Character Creator (addendum 08 §5).
    *
@@ -582,6 +585,8 @@ export function ResearchBody({
       ? 'Graveyard'
       : selection.kind === 'contents'
       ? 'Table of contents'
+      : selection.kind === 'references'
+      ? 'References'
       : selection.kind === 'charmap'
         ? 'Character map'
         : selection.kind === 'review'
@@ -639,6 +644,7 @@ export function ResearchBody({
           selection.kind === 'importer' ||
           selection.kind === 'charmap' ||
           selection.kind === 'contents' ||
+          selection.kind === 'references' ||
           selection.kind === 'review' ||
           selection.kind === 'mobile'
             ? 'research-body creating'
@@ -665,6 +671,19 @@ export function ResearchBody({
                 >
                   <span className="folder-name">Table of contents</span>
                   <span className="count muted">{contentsShelf(file).length}</span>
+                </button>
+              </li>
+              {/* The Reference Library (addendum 43, spec §2: *References >
+                  Manage Library*), beside the contents on a book alone. */}
+              <li>
+                <button
+                  type="button"
+                  className={selection.kind === 'references' ? 'folder-row selected' : 'folder-row'}
+                  title="The sources the book cites: enter each once, cite it as often as you like"
+                  onClick={() => setSelection({ kind: 'references' })}
+                >
+                  <span className="folder-name">References</span>
+                  <span className="count muted">{file.references.filter((reference) => !reference.archivedAt).length}</span>
                 </button>
               </li>
             </ul>
@@ -1078,6 +1097,7 @@ export function ResearchBody({
             // themselves; the room's own figure is the *folder's*, so beside
             // boxes reading 1 note each it drew a contradictory 0.
             selection.kind === 'contents' ||
+            selection.kind === 'references' ||
             // A count of *notes* means nothing on a screen that is not notes.
             selection.kind === 'graveyard' ? null : (
               <span className="muted">
@@ -1174,6 +1194,10 @@ export function ResearchBody({
             />
           ) : selection.kind === 'plots' ? (
             <Plots file={file} onUpdate={onUpdate} />
+          ) : selection.kind === 'references' ? (
+            <div className="research-embedded">
+              <ReferencesPanel file={file} onUpdate={onUpdate} />
+            </div>
           ) : selection.kind === 'contents' ? (
             <div className="research-embedded">
               <ContentsPanel

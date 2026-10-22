@@ -2,6 +2,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { WritingToolbar } from './WritingToolbar';
 import { ContextMenu, type MenuEntry } from './ContextMenu';
+import { CitationDialog, type CitationChoice } from './citations/CitationDialog';
 import {
   dictationKind,
   startDictation,
@@ -102,6 +103,11 @@ import {
   describePassageMarks,
   passageMarks,
   workingCast,
+  citationByKey,
+  citationOccurrences,
+  insertCitation,
+  tokensIn,
+  updateCitation,
 } from '@vcwriter/domain';
 
 interface BeatBodyProps {
@@ -308,8 +314,16 @@ export function BeatBody({
     y: number;
     elementId: ManuscriptElementId;
     text: string;
+    /** Where the cursor was, or the end of what was picked: where a citation goes. */
+    at?: number;
   } | null>(null);
   const [filing, setFiling] = useState<{ elementId: ManuscriptElementId; text: string } | null>(null);
+  /**
+   * A citation being inserted at a place in a line, or one already there being
+   * changed (addendum 43). `at` is where the marker goes: after what was
+   * picked. A citation already in the line is known by its token's span.
+   */
+  const [citing, setCiting] = useState<{ elementId: ManuscriptElementId; at: number; key?: string; start?: number; end?: number } | null>(null);
   /** The same passage, on its way into the book's index (addendum 10 §6). */
   const [indexing, setIndexing] = useState<{ elementId: ManuscriptElementId; text: string } | null>(null);
   /** *Add to the glossary* / *to the appendix* (§17b), the index's two fellows. */
@@ -663,6 +677,66 @@ export function BeatBody({
    * rather than a range the marks go round nothing and the caret lands
    * between them, which is what somebody pressing **B** before typing means.
    */
+  // Citations, on a book that cites (addendum 43): each token drawn as its marker.
+  const cites = isInstructional(file.project.format);
+  const markers = useMemo(() => {
+    if (!cites) return null;
+    // The first place each token stands decides its marker; one whose citation
+    // or source has gone is marked as needing attention.
+    const out = new Map<string, string>();
+    for (const occurrence of citationOccurrences(file)) {
+      if (!out.has(occurrence.key)) out.set(occurrence.key, occurrence.citation && occurrence.reference ? occurrence.marker : '');
+    }
+    return out;
+  }, [cites, file]);
+
+  /** Open Insert Citation for the line the cursor is in, at the cursor or after what is picked. */
+  const citeHere = () => {
+    const id = atLine;
+    const input = id ? inputs.current.get(id) : undefined;
+    if (!id || !input || readOnly) return;
+    setCiting({ elementId: id, at: input.selectionEnd });
+  };
+
+  /** The citation the cursor is inside, if it is inside one: a click on a marker opens it. */
+  const citationAtCaret = (element: ManuscriptElement, caret: number) =>
+    tokensIn(element.text).find((token) => caret > token.start && caret < token.end) ?? null;
+
+  const placeCitation = (choice: CitationChoice) => {
+    if (!citing) return;
+    const element = latest.current.find((one) => one.id === citing.elementId);
+    if (!element) {
+      setCiting(null);
+      return;
+    }
+    const existing = citing.key ? citationByKey(file, citing.key) : null;
+    if (existing) {
+      onUpdate((current) => updateCitation(current, existing.id, choice));
+    } else {
+      // A new record, made here so its token is known now; a token whose record
+      // was lost gets a new one in the same place.
+      const made = insertCitation(file, choice);
+      onUpdate((current) => ({ ...current, citations: [...current.citations, made.citation] }));
+      const start = citing.start ?? citing.at;
+      const end = citing.end ?? citing.at;
+      const text = `${element.text.slice(0, start)}${made.token}${element.text.slice(end)}`;
+      updateElement(element.id, { text });
+      setSelection({ id: element.id, start: start + made.token.length, end: start + made.token.length });
+    }
+    setCiting(null);
+  };
+
+  /** Take a citation's marker out of its line; the source stays in the library. */
+  const removeCitation = () => {
+    if (!citing || citing.start === undefined || citing.end === undefined) return;
+    const element = latest.current.find((one) => one.id === citing.elementId);
+    if (element) {
+      updateElement(element.id, { text: `${element.text.slice(0, citing.start)}${element.text.slice(citing.end)}` });
+      setSelection({ id: element.id, start: citing.start, end: citing.start });
+    }
+    setCiting(null);
+  };
+
   const markLine = (mark: InlineMark) => {
     const id = atLine;
     const element = id ? latest.current.find((one) => one.id === id) : undefined;
@@ -700,6 +774,13 @@ export function BeatBody({
     if (chord && event.altKey && event.key.toLowerCase() === 'd') {
       event.preventDefault();
       toggleDual(index);
+      return;
+    }
+
+    // Ctrl/Cmd+Shift+C cites a source here (addendum 43).
+    if (chord && event.shiftKey && !event.altKey && event.key.toLowerCase() === 'c' && cites && !readOnly) {
+      event.preventDefault();
+      setCiting({ elementId: element.id, at: input.selectionEnd });
       return;
     }
 
@@ -912,7 +993,7 @@ export function BeatBody({
             {/* The same characters as the box above it, styled: what is typed
                 is what will print, marks and all, in place. */}
             <div className="ink" aria-hidden="true">
-              <Marked text={element.text} />
+              <Marked text={element.text} markers={markers} />
             </div>
             <textarea
               ref={(node) => {
@@ -948,6 +1029,16 @@ export function BeatBody({
                 onUpdate((current) => notedCast(current));
               }}
               onChange={(event) => writeText(element, event.target.value)}
+              // A click on a citation's marker opens it (spec §4: *click
+              // marker … Edit Source or Change Source*). The marker is drawn
+              // under the box, so the click lands in the box, inside the token.
+              onClick={(event) => {
+                if (!cites) return;
+                const input = event.currentTarget;
+                if (input.selectionStart !== input.selectionEnd) return;
+                const token = citationAtCaret(element, input.selectionStart);
+                if (token) setCiting({ elementId: element.id, at: token.end, key: token.key, start: token.start, end: token.end });
+              }}
               onPaste={(event) => handlePaste(event, element, index)}
               onKeyDown={(event) => handleKeyDown(event, element, index)}
               // Story → plan (addendum 08 §7): right-click the writing and it
@@ -961,7 +1052,7 @@ export function BeatBody({
                 // An empty line still opens the menu: the splits are about
                 // where the line stands, not what is on it.
                 event.preventDefault();
-                setCaught({ x: event.clientX, y: event.clientY, elementId: element.id, text });
+                setCaught({ x: event.clientX, y: event.clientY, elementId: element.id, text, at: input.selectionEnd });
               }}
             />
           </div>
@@ -994,7 +1085,7 @@ export function BeatBody({
    * screenplay's; *Split the passage here* cuts the beat. Both are greyed
    * with the reason on a line that already opens its scene or its beat.
    */
-  const writingMenu = (at: { elementId: ManuscriptElementId; text: string }): MenuEntry[] => {
+  const writingMenu = (at: { elementId: ManuscriptElementId; text: string; at?: number }): MenuEntry[] => {
     const nouns = nounsFor(format);
     const place = locateElement(file, at.elementId as string);
     const firstOfUnit = place ? place.beatIndex === 0 && place.index === 0 : true;
@@ -1035,6 +1126,13 @@ export function BeatBody({
     // has been here since addendum 10 §6 and is the better half of the three,
     // its page number being read off the pagination; the other two are built
     // to its shape. All three are a book's, so a screenplay is offered none.
+    if (cites) {
+      entries.push({
+        label: 'Insert citation…',
+        note: 'a source from the References library, its marker here',
+        onPick: () => setCiting({ elementId: at.elementId, at: at.at ?? (latest.current.find((one) => one.id === at.elementId)?.text.length ?? 0) }),
+      });
+    }
     if (hasBookIndex(file.project.format)) {
       entries.push(
         { label: 'Add to the index…', disabled: none, onPick: () => setIndexing({ elementId: at.elementId, text: at.text }) },
@@ -1113,6 +1211,7 @@ export function BeatBody({
                 noun={nounsFor(format).sub}
                 onMark={markLine}
                 onType={typeLine}
+                {...(cites && !readOnly ? { onCite: citeHere } : {})}
               />
             );
             return dictationSlot ? createPortal(control, dictationSlot) : control;
@@ -1200,6 +1299,17 @@ export function BeatBody({
         />
       ) : null}
 
+      {citing ? (
+        <CitationDialog
+          file={file}
+          onUpdate={onUpdate}
+          citation={citing.key ? citationByKey(file, citing.key) : null}
+          missingKey={citing.key && !citationByKey(file, citing.key) ? citing.key : null}
+          onDone={placeCitation}
+          {...(citing.key ? { onRemove: removeCitation } : {})}
+          onClose={() => setCiting(null)}
+        />
+      ) : null}
       {indexing ? (
         <FileInIndex
           file={file}
@@ -1276,12 +1386,12 @@ const dualStyle = (layout: PageLayoutSpec): React.CSSProperties =>
  * capitals a cue or a slugline is printed in come from the stylesheet, which
  * dresses this and the box above it alike, so the two never drift apart.
  */
-function Marked({ text }: { text: string }) {
+function Marked({ text, markers = null }: { text: string; markers?: ReadonlyMap<string, string> | null }) {
   const spans = useMemo(() => parseInlineMarks(text), [text]);
   return (
     <>
       {spans.map((span, position) => (
-        <Emphasis key={position} span={span} />
+        <Emphasis key={position} span={span} markers={markers} />
       ))}
       {/* A zero-width space keeps an empty line the height of a full one. */}
       {'​'}
@@ -1289,7 +1399,17 @@ function Marked({ text }: { text: string }) {
   );
 }
 
-function Emphasis({ span }: { span: InlineSpan }) {
+function Emphasis({ span, markers = null }: { span: InlineSpan; markers?: ReadonlyMap<string, string> | null }) {
+  // A citation token keeps its characters' room, so the box above lines up,
+  // and wears its marker as a chip (addendum 43). One with no record says so.
+  if (span.citation && markers) {
+    const marker = markers.get(span.citation);
+    return (
+      <span className={marker ? 'cite-chip' : 'cite-chip missing'} data-marker={marker || '?'}>
+        {span.text}
+      </span>
+    );
+  }
   let node: React.ReactNode = span.marker ? <span className="mark">{span.text}</span> : span.text;
   if (span.underline) node = <u>{node}</u>;
   if (span.italic) node = <i>{node}</i>;

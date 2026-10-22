@@ -38,6 +38,8 @@ export interface WritingToolbarProps {
   noun: string;
   onMark(mark: InlineMark): void;
   onType(patch: Partial<LineType>): void;
+  /** Insert a citation at the cursor (addendum 43). Given on a book that cites; absent elsewhere. */
+  onCite?(): void;
 }
 
 const MARKS: ReadonlyArray<{ mark: InlineMark; label: string; glyph: string; key: string }> = [
@@ -69,7 +71,7 @@ const AlignGlyph = ({ align }: { align: ParagraphAlign }) => (
   </svg>
 );
 
-export function WritingToolbar({ type, line, noun, onMark, onType }: WritingToolbarProps) {
+export function WritingToolbar({ type, line, noun, onMark, onType, onCite }: WritingToolbarProps) {
   const customId = useId();
   const [custom, setCustom] = useState('#b4232a');
   /**
@@ -102,6 +104,21 @@ export function WritingToolbar({ type, line, noun, onMark, onType }: WritingTool
           </button>
         ))}
       </div>
+
+      {onCite ? (
+        <div className="wt-group" role="group" aria-label="Citations">
+          <button
+            type="button"
+            className="wt-cite"
+            title="Cite a source here — Ctrl/Cmd+Shift+C. The marker goes after the words you have picked, and its note at the foot of the page."
+            aria-label="Insert citation"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={onCite}
+          >
+            Cite
+          </button>
+        </div>
+      ) : null}
 
       {type ? (
         <>
