@@ -105,6 +105,24 @@ describe('the Outliner tab', () => {
     expect(marks).toEqual(['I.', 'II.']);
     expect(headingsOf(mainDocument(latest!)!.content).map((one) => one.text)).toEqual(['Arrival', 'Departure']);
   });
+
+  it('puts the numbers on the printed page and in the PDF (addendum 42 §14)', async () => {
+    const exportPdf = vi.fn(async () => ({ ok: true, data: { path: '/p/Notes.pdf', pageCount: 1 } }));
+    (window as unknown as { vcwriter: unknown }).vcwriter = { exportPdf };
+    await open();
+    fireEvent.click(screen.getByRole('tab', { name: 'Outliner' }));
+    fireEvent.change(screen.getByLabelText('Heading numbering'), { target: { value: 'decimal' } });
+    fireEvent.click(screen.getByRole('tab', { name: 'Document' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'File' }));
+    await act(async () => {
+      const pdf = screen.getByRole('button', { name: 'PDF' });
+      fireEvent.mouseDown(pdf);
+      fireEvent.click(pdf);
+    });
+    const html = (exportPdf.mock.calls[0] as unknown as [{ html: string }])[0].html;
+    expect(html).toMatch(/<h1[^>]*data-heading-id="[^"]+"[^>]*><span class="wp-heading-number">1<\/span>Arrival<\/h1>/);
+    expect(html).toMatch(/<span class="wp-heading-number">2<\/span>Departure/);
+  });
 });
 
 describe('sending extracts to a project', () => {

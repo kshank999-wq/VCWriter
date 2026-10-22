@@ -2,6 +2,7 @@ import { newId } from './ids.js';
 import { nowIso } from './entities/common.js';
 import { initialOrderKeys } from './ordering.js';
 import { addItem, createOutline, findOutline, madeItem, outlineChildren } from './outline.js';
+import { docPlainText } from './document.js';
 import type { DocNode, DocumentOutlineLink, WpDocument } from './entities/document.js';
 import type { Outline, OutlineItem } from './entities/outline.js';
 import type { ProjectFile } from './project-file.js';
@@ -549,4 +550,17 @@ export const headingSection = (content: DocNode, headingId: string): { own: DocN
   let wholeEnd = start + 1;
   while (wholeEnd < blocks.length && !(blocks[wholeEnd]!.type === 'heading' && levelOf(blocks[wholeEnd]!) <= level)) wholeEnd += 1;
   return { own: blocks.slice(start + 1, ownEnd), whole: blocks.slice(start, wholeEnd) };
+};
+
+/** The document as plain text with its heading numbers in front, for a .txt export (addendum 42 §14). */
+export const numberedPlainText = (document: WpDocument): string => {
+  const numbers = headingNumbers(document.content, document.headingNumbering);
+  return (document.content.content ?? [])
+    .map((block) => {
+      const text = docPlainText({ type: 'doc', content: [block] });
+      const number = numbers.get(headingIdOf(block) ?? '');
+      return number && text ? `${number} ${text}` : text;
+    })
+    .filter((text) => text.length > 0)
+    .join('\n');
 };

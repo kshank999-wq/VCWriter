@@ -1,4 +1,5 @@
 import { pageSize } from './document.js';
+import { headingNumbers } from './document-outline.js';
 import type { WpDocument } from './entities/document.js';
 
 /**
@@ -40,6 +41,7 @@ export const DOCUMENT_CONTENT_CSS = `
 .wp-doc th { background: #f2f2f2; font-weight: 700; text-align: left; }
 .wp-doc th > p, .wp-doc td > p { margin: 0; }
 .wp-doc mark { padding: 0; }
+.wp-doc .wp-heading-number { margin-right: 0.5em; }
 .wp-doc .wp-page-break { break-after: page; page-break-after: always; height: 0; border: none; margin: 0; }
 `;
 
@@ -61,6 +63,21 @@ export const suggestedPdfName = (title: string): string => {
  * begins. A page break the writer asked for is honoured; a heading is kept
  * off the foot of a page.
  */
+/**
+ * The heading numbers set into the editor's HTML (addendum 42 §14), in front
+ * of each heading as the page shows them. The editor draws them as
+ * decorations, which its HTML does not carry, so they are put back here from
+ * the same numbering.
+ */
+export const numberHeadingsHtml = (document: WpDocument, html: string): string => {
+  const numbers = headingNumbers(document.content, document.headingNumbering);
+  if (numbers.size === 0) return html;
+  return html.replace(/<h([1-6])\b([^>]*\sdata-heading-id="([^"]+)"[^>]*)>/g, (whole, _level: string, _attrs: string, id: string) => {
+    const number = numbers.get(id);
+    return number ? `${whole}<span class="wp-heading-number">${escape(number)}</span>` : whole;
+  });
+};
+
 export const documentPrintHtml = (document: WpDocument, bodyHtml: string): string => {
   const { width, height } = pageSize(document.pageSetup);
   const m = document.pageSetup.margins;
@@ -73,6 +90,6 @@ export const documentPrintHtml = (document: WpDocument, bodyHtml: string): strin
     '* { -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
     DOCUMENT_CONTENT_CSS +
     '</style></head>' +
-    `<body><div class="wp-doc">${bodyHtml}</div></body></html>`
+    `<body><div class="wp-doc">${numberHeadingsHtml(document, bodyHtml)}</div></body></html>`
   );
 };

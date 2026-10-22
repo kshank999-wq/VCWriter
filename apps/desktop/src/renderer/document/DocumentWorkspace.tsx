@@ -24,6 +24,7 @@ import {
   headingOfRow,
   linkExtractToOutline,
   outlineFromDocument,
+  numberedPlainText,
   rowReceipts,
   setHeadingNumbering,
   HEADING_NUMBERINGS,
@@ -298,7 +299,8 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
   }, [docOf, file.project.author, baseName]);
 
   const exportText = useCallback(async () => {
-    const text = docPlainText(docOf().content);
+    // With the heading numbers in front, as the page shows them (addendum 42 §14).
+    const text = numberedPlainText(docOf());
     const result = await download(`${baseName}.txt`, new TextEncoder().encode(text), 'text/plain', { name: 'Text', extension: 'txt' });
     if (!result.ok) setMessage(result.error ?? 'The text file could not be saved');
     else if (result.data?.path) setMessage(`Saved ${result.data.path}`);

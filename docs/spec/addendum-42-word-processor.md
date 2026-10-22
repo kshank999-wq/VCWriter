@@ -380,7 +380,7 @@ history and selection survive the trip.
 - The number comes from the nesting, so the page and the outline agree.
 - On the page the number is drawn in front of each heading as a widget,
   never typed into it, so the heading's words stay the writer's.
-- **Not yet:** the numbers do not print or go into the Word file.
+- The numbers print, and go into the PDF, the Word file and a text export (§14).
 
 **Extracts into the outline:** *Add to outline* on an extract makes a linked
 Note (an Idea for an idea) carrying its words (`linkExtractToOutline`). A
@@ -659,3 +659,40 @@ its receipts show under its notes: *Sent to The Lamp › A new scene*.
 - Renderer (`document-outliner.test.tsx`, 1 new): Send… off until a row is
   chosen; no Move; the row lands as a scene in another project; the
   message; the receipt under the row.
+
+## 14. Heading numbers on paper
+
+From Ken: *build printing the heading numbers next.*
+
+§9's numbering was drawn on the screen only. The numbers now go everywhere
+the document goes, and all from the one numbering (`headingNumbers`), so
+paper, file and screen cannot disagree:
+
+- **Print and PDF** (`numberHeadingsHtml`, called by `documentPrintHtml`).
+  - The editor draws its numbers as decorations, which its HTML does not
+    carry, so they are set back into that HTML by heading id.
+  - The number goes in front of the heading's words with the same space the
+    screen leaves (`.wp-heading-number`, now in the shared stylesheet).
+- **The Word file** (`documentBodyXml`).
+  - Each numbered heading starts with its number and a tab, then its words,
+    in its Heading style.
+  - The numbers are typed text, not a Word multilevel list. Word numbers a
+    list by style level, so a Heading 3 straight under a Heading 1 would be
+    1.0.1 there and 1.1 here. Typed numbers keep the file as the writer saw
+    it. Moving a heading in Word does not renumber it.
+- **Plain text** (`numberedPlainText`): each heading line starts with its
+  number.
+
+The heading's own words never change. The numbers are put in on the way out.
+Word counts and search use the words without numbers, as before.
+
+**Proof:**
+
+- Domain (`heading-numbers-output.test.ts`, 4 tests):
+  - numbers in front of each heading in the print HTML, both schemes, and
+    none when unnumbered
+  - number and tab in the Word XML
+  - the text export
+- Renderer (`document-outliner.test.tsx`, 1 new): with 1.1.1 numbering
+  chosen, the HTML the real editor hands to the PDF carries each heading's
+  number.

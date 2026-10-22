@@ -1,5 +1,6 @@
 import { writeZip } from './zip-write.js';
 import { pageSize } from './document.js';
+import { headingNumbers } from './document-outline.js';
 import type { DocMark, DocNode, WpDocument } from './entities/document.js';
 
 /**
@@ -57,6 +58,8 @@ interface Context {
   /** One Word list instance per list in the document, so each numbers from 1. */
   lists: { numId: number; abstract: ListKind; start: number }[];
   contentWidthIn: number;
+  /** Each heading's number under the document's scheme, by heading id (addendum 42 §14). */
+  headingNumbers: ReadonlyMap<string, string>;
 }
 
 type ListKind = 'bullet' | 'decimal' | 'lowerLetter' | 'upperLetter' | 'lowerRoman' | 'upperRoman';
@@ -271,6 +274,8 @@ interface ParagraphOptions {
   list?: { numId: number; level: number };
   /** Extra left indent in inches, for a list item's second paragraph. */
   hanging?: number;
+  /** Text set before the words, then a tab: a heading's number. */
+  prefix?: string;
 }
 
 const ALIGN: Record<string, string> = { left: 'left', center: 'center', right: 'right', justify: 'both' };
@@ -304,7 +309,9 @@ const paragraphProperties = (node: DocNode, options: ParagraphOptions): string =
 };
 
 const paragraphXml = (node: DocNode, context: Context, options: ParagraphOptions = {}): string =>
-  `<w:p>${paragraphProperties(node, options)}${inlineXml(node.content ?? [], context)}</w:p>`;
+  `<w:p>${paragraphProperties(node, options)}` +
+  (options.prefix ? `${textRun(options.prefix, [])}<w:r><w:tab/></w:r>` : '') +
+  `${inlineXml(node.content ?? [], context)}</w:p>`;
 
 const listXml = (node: DocNode, context: Context, level: number, inherited?: number): string => {
   const kind: ListKind = node.type === 'bulletList' ? 'bullet' : orderedKind(node.attrs?.['type']);
@@ -377,7 +384,10 @@ const blockXml = (node: DocNode, context: Context): string => {
       return paragraphXml(node, context);
     case 'heading': {
       const level = Math.min(6, Math.max(1, Number(node.attrs?.['level'] ?? 1)));
-      return paragraphXml(node, context, { style: `Heading${level}` });
+      // The number as the page shows it, typed in front: Word's own multilevel
+      // lists number by style level, not by nesting, and would disagree.
+      const number = context.headingNumbers.get(String(node.attrs?.['headingId'] ?? ''));
+      return paragraphXml(node, context, { style: `Heading${level}`, ...(number ? { prefix: number } : {}) });
     }
     case 'blockquote':
       return (node.content ?? [])
@@ -507,6 +517,7 @@ export const documentBodyXml = (document: WpDocument): { xml: string; context: C
     links: [],
     lists: [],
     contentWidthIn: Math.max(1, width - document.pageSetup.margins.left - document.pageSetup.margins.right),
+    headingNumbers: headingNumbers(document.content, document.headingNumbering),
   };
   const body = (document.content.content ?? []).map((block) => blockXml(block, context)).join('');
   return {
