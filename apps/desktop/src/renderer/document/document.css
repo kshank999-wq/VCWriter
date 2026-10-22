@@ -1033,3 +1033,16 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Citations and the bibliography in the page (addendum 43 §11). The node is
+   empty; its marker, worked out from where it stands, is drawn over it. */
+.ProseMirror sup.wp-cite { font-size: 0.7em; line-height: 0; vertical-align: super; color: #8a6d1f; cursor: pointer; padding: 0 1px; border-radius: 3px; }
+.ProseMirror sup.wp-cite::after { content: attr(data-marker); }
+.ProseMirror sup.wp-cite.in-text { font-size: inherit; vertical-align: baseline; line-height: inherit; }
+.ProseMirror sup.wp-cite.in-text::after { content: ' ' attr(data-marker); }
+.ProseMirror sup.wp-cite.missing { color: #c0392b; }
+.ProseMirror sup.wp-cite.ProseMirror-selectednode { background: rgba(201, 165, 74, 0.25); outline: none; }
+.ProseMirror .wp-bibliography-block { margin: 1.2em 0; padding: 4px 8px; border-left: 2px solid rgba(201, 165, 74, 0.6); cursor: default; }
+.ProseMirror .wp-bibliography-block h2 { font-size: 1.1em; margin: 0 0 0.6em; }
+.ProseMirror .wp-bibliography-block.ProseMirror-selectednode { outline: 2px solid rgba(201, 165, 74, 0.6); }
+.ProseMirror .wp-bibliography-empty { color: #888; font-style: italic; }

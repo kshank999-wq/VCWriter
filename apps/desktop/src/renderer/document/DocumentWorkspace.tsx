@@ -50,9 +50,22 @@ import {
   type ExtractPaletteId,
   type ProjectFile,
   type WpDocument,
+  DOCUMENT_CITATION_CSS,
+  REFERENCE_STYLE_NAMES,
+  bibliographyHtml,
+  citationByKey,
+  citationSettingsOf,
+  citeDocumentHtml,
+  documentCitations,
+  insertCitation,
+  plainInline,
+  updateCitation,
 } from '@vcwriter/domain';
 import { readDocxParts } from '../read-docx';
-import { documentExtensions, extractRange, findMatches, headingPosition, type SearchState } from './extensions';
+import { documentExtensions, extractRange, findMatches, headingPosition, type CitationStorage, type SearchState } from './extensions';
+import { CitationDialog, type CitationChoice } from '../components/citations/CitationDialog';
+import { ReferencesPanel } from '../components/citations/ReferencesPanel';
+import { BringInSourcesDialog } from '../components/citations/BringInSourcesDialog';
 import { OutlinerWindow } from '../components/OutlinerWindow';
 import { SendExtractsDialog, type SendSubject } from './SendExtractsDialog';
 import { HeaderFooterBar } from './HeaderFooterBar';
@@ -71,6 +84,16 @@ import './document.css';
  * through the same `onUpdate` every other edit uses, so saving, autosave,
  * recovery points and sync see a document exactly as they see a beat.
  */
+
+/** The citations' keys in an editor, in order (addendum 43 §11). */
+const citeKeysOf = (editor: Editor | null): string[] => {
+  const keys: string[] = [];
+  editor?.state.doc.descendants((node) => {
+    if (node.type.name === 'citation') keys.push(String(node.attrs['key'] ?? ''));
+    return true;
+  });
+  return keys;
+};
 
 interface DocumentWorkspaceProps {
   file: ProjectFile;
@@ -120,6 +143,11 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
   const [sending, setSending] = useState<SendSubject | null>(null);
   // Headers, footers and page numbers (addendum 42 §15).
   const [headerFooterOpen, setHeaderFooterOpen] = useState(false);
+  // Citations and the Reference Library (addendum 43 §11): the dialog for a
+  // citation (its key, or null to insert one), the library, and bringing in.
+  const [citing, setCiting] = useState<{ key: string | null } | null>(null);
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [bringing, setBringing] = useState(false);
 
   const documentId = document.id;
   // What this editor last handed the project, so an echo of it is not taken
@@ -157,6 +185,15 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
       // A picture pasted or dropped from another program comes in as a picture.
       handlePaste: (_view, event) => insertPictures(event.clipboardData?.files),
       handleDrop: (_view, event) => insertPictures((event as DragEvent).dataTransfer?.files),
+      // Insert Citation, on the key the manuscript uses (addendum 43 §4).
+      handleKeyDown: (_view, event) => {
+        if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'c' && !readOnly) {
+          event.preventDefault();
+          setCiting({ key: null });
+          return true;
+        }
+        return false;
+      },
     },
     onUpdate: ({ editor: current }) => {
       if (timer.current !== null) window.clearTimeout(timer.current);
@@ -169,6 +206,72 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
 
   // Dictate and read aloud (addendum 42 §15).
   const speech = useDocumentSpeech(editor, setMessage);
+
+  // ------------------------------------------------------- citations
+
+  /**
+   * The citations as the editor holds them now, in order (addendum 43 §11).
+   * Read off the editor rather than the project, which takes the tree a
+   * moment after typing settles — a marker drawn from that would be the
+   * order of a moment ago.
+   */
+  const citeKeys: string[] = [];
+  editor?.state.doc.descendants((node) => {
+    if (node.type.name === 'citation') citeKeys.push(String(node.attrs['key'] ?? ''));
+    return node.isBlock || node.type.name === 'doc';
+  });
+  const citeOrder = citeKeys.join(' ');
+  /** The project with this document's citations in the editor's order: all the reading needs. */
+  const withEditorOrder = useCallback(
+    (current: ProjectFile, keys: readonly string[]): ProjectFile => ({
+      ...current,
+      documents: current.documents.map((one) =>
+        one.id === documentId ? { ...one, content: { type: 'doc', content: keys.map((key) => ({ type: 'citation', attrs: { key } })) } } : one,
+      ),
+    }),
+    [documentId],
+  );
+  const cites = useMemo(
+    () => documentCitations(withEditorOrder(file, citeOrder ? citeOrder.split(' ') : []), documentId),
+    // The library, the citations, the style and the order are all it reads.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [citeOrder, file.references, file.citations, file.settings.citations, documentId, withEditorOrder],
+  );
+
+  useEffect(() => {
+    if (!editor) return;
+    const markers = new Map<string, string>();
+    for (const occurrence of cites.occurrences) {
+      if (markers.has(occurrence.key)) continue;
+      markers.set(occurrence.key, occurrence.citation && occurrence.reference ? plainInline(cites.inText.get(occurrence.key) ?? '') : '');
+    }
+    editor.commands.setCitationView({ markers, raised: cites.raised, bibliographyHtml: bibliographyHtml(cites) });
+  }, [editor, cites]);
+
+  useEffect(() => {
+    if (!editor) return undefined;
+    const storage = (editor.storage as unknown as { citation: CitationStorage }).citation;
+    storage.onOpen = readOnly ? null : (key) => setCiting({ key });
+    return () => {
+      storage.onOpen = null;
+    };
+  }, [editor, readOnly]);
+
+  /** The dialog's choice: a new citation at the cursor, or the one opened changed. */
+  const placeCitation = (choice: CitationChoice) => {
+    const opened = citing?.key ? citationByKey(file, citing.key) : null;
+    if (opened) {
+      onUpdate((current) => updateCitation(current, opened.id, choice));
+    } else {
+      const made = insertCitation(file, choice);
+      // A citation whose record had gone takes the new record under its own
+      // key, so the marker in the text stands where it stood.
+      const record = citing?.key ? { ...made.citation, key: citing.key } : made.citation;
+      onUpdate((current) => ({ ...current, citations: [...current.citations, record] }));
+      if (!citing?.key) editor?.chain().focus().insertCitation(record.key).run();
+    }
+    setCiting(null);
+  };
 
   function insertPictures(files: FileList | undefined | null): boolean {
     const pictures = Array.from(files ?? []).filter((one) => /^image\/(png|jpeg|gif)$/.test(one.type));
@@ -281,13 +384,16 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
     return { ...document, content };
   }, [document, flush]);
 
+  /** This document's citations as print and Word set them, from the editor as it stands. */
+  const citesNow = useCallback(() => documentCitations(withEditorOrder(file, citeKeysOf(editorRef.current)), documentId), [file, documentId, withEditorOrder]);
+
   const printable = useCallback(() => {
     const current = docOf();
     return {
-      html: documentPrintHtml(current, editorRef.current?.getHTML() ?? ''),
+      html: documentPrintHtml(current, citeDocumentHtml(citesNow(), editorRef.current?.getHTML() ?? '')),
       paper: pageSize(current.pageSetup),
     };
-  }, [docOf]);
+  }, [docOf, citesNow]);
 
   const print = useCallback(async () => {
     const { html, paper } = printable();
@@ -305,11 +411,11 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
   const baseName = (document.title || file.project.title || 'Untitled').replace(/[^\w\-. ]+/g, '').trim() || 'Untitled';
 
   const exportDocx = useCallback(async () => {
-    const bytes = await buildDocumentDocx(docOf(), { author: file.project.author ?? '' });
+    const bytes = await buildDocumentDocx(docOf(), { author: file.project.author ?? '', citations: citesNow() });
     const result = await download(`${baseName}.docx`, bytes, DOCX_MEDIA_TYPE, { name: 'Word document', extension: 'docx' });
     if (!result.ok) setMessage(result.error ?? 'The Word file could not be saved');
     else if (result.data?.path) setMessage(`Saved ${result.data.path}`);
-  }, [docOf, file.project.author, baseName]);
+  }, [docOf, file.project.author, baseName, citesNow]);
 
   const exportText = useCallback(async () => {
     // With the heading numbers in front, as the page shows them (addendum 42 §14).
@@ -593,7 +699,7 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
 
   return (
     <div className={`wp-workspace${view.marks ? ' show-marks' : ''} extracts-${display}`}>
-      <style>{DOCUMENT_CONTENT_CSS}</style>
+      <style>{DOCUMENT_CONTENT_CSS + DOCUMENT_CITATION_CSS}</style>
       <Ribbon
         editor={editor}
         tab={tab}
@@ -613,6 +719,15 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
           onPageNumbers: (preset) => onUpdate((current) => setPageNumbers(current, documentId, preset)),
         }}
         speech={speech}
+        references={{
+          style: REFERENCE_STYLE_NAMES[citationSettingsOf(file).style],
+          cited: cites.occurrences.length,
+          library: file.references.filter((one) => one.archivedAt === null).length,
+          onCite: () => !readOnly && setCiting({ key: null }),
+          onBibliography: () => !readOnly && editor?.chain().focus().insertBibliography().run(),
+          onLibrary: () => setLibraryOpen(true),
+          onBringIn: () => !readOnly && setBringing(true),
+        }}
         onSay={setMessage}
         painting={painter !== null}
         onPaint={startPainter}
@@ -822,6 +937,40 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
           />
         ) : null}
       </div>
+
+      {citing ? (
+        <CitationDialog
+          file={withEditorOrder(file, citeKeys)}
+          onUpdate={onUpdate}
+          citation={citing.key ? citationByKey(file, citing.key) : null}
+          missingKey={citing.key && !citationByKey(file, citing.key) ? citing.key : null}
+          documentId={documentId}
+          onDone={placeCitation}
+          onRemove={
+            citing.key
+              ? () => {
+                  editor?.commands.removeCitation(citing.key as string);
+                  setCiting(null);
+                }
+              : undefined
+          }
+          onClose={() => setCiting(null)}
+        />
+      ) : null}
+      {libraryOpen ? (
+        <div className="cite-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setLibraryOpen(false)}>
+          <div className="cite-dialog refs-modal" role="dialog" aria-modal="true" aria-label="Sources and style">
+            <header>
+              <h2>Sources &amp; style</h2>
+              <button type="button" className="ghost" aria-label="Close" onClick={() => setLibraryOpen(false)}>
+                ×
+              </button>
+            </header>
+            <ReferencesPanel file={withEditorOrder(file, citeKeys)} onUpdate={onUpdate} readOnly={readOnly} documentId={documentId} projectPath={projectPath} />
+          </div>
+        </div>
+      ) : null}
+      {bringing ? <BringInSourcesDialog file={file} projectPath={projectPath} onUpdate={onUpdate} onClose={() => setBringing(false)} /> : null}
 
       {sending ? (
         <SendExtractsDialog

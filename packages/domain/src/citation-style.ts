@@ -1,4 +1,4 @@
-import { citationOccurrences, citationSettingsOf, flattened, normalizeDoi, citedReferences, referenceCreator, type CitationOccurrence } from './citations.js';
+import { citationOccurrences, citationSettingsOf, flattened, occurrencesIn, normalizeDoi, citedReferences, referenceCreator, type CitationOccurrence } from './citations.js';
 import type { Citation, CitationSettings, LocatorKind, Reference } from './entities/reference.js';
 import type { ProjectFile } from './project-file.js';
 
@@ -404,11 +404,11 @@ export interface CitationNote {
  * has gone is a note that says so, rather than a marker with nothing under
  * it.
  */
-export const citationNotes = (file: ProjectFile): CitationNote[] => {
+export const citationNotes = (file: ProjectFile, occurrences: readonly CitationOccurrence[] = occurrencesIn(file, null)): CitationNote[] => {
   const settings = citationSettingsOf(file);
   if (!usesFootnotes(settings)) return [];
   const form = noteFormOf(settings);
-  return citationOccurrences(file).map((occurrence) => ({
+  return occurrences.map((occurrence) => ({
     occurrence,
     marker: occurrence.marker,
     text:
@@ -430,10 +430,14 @@ export const citationInText = (file: ProjectFile, occurrence: CitationOccurrence
  * The bibliography (spec §5): one entry per source, however often it is cited;
  * the cited ones or the whole library; by author, or in the order first cited.
  */
-export const referenceBibliography = (file: ProjectFile): { reference: Reference; text: string }[] => {
+export const referenceBibliography = (
+  file: ProjectFile,
+  /** The citations it lists the sources of: the story's by default, or one document's. */
+  occurrences: readonly CitationOccurrence[] = occurrencesIn(file, null),
+): { reference: Reference; text: string }[] => {
   const settings = citationSettingsOf(file);
   const form: NoteForm = settings.style === 'custom' ? settings.customNoteForm : settings.style === 'chicago' ? 'chicago' : settings.style;
-  const cited = citedReferences(file);
+  const cited = citedReferences(file, occurrences);
   const pool =
     settings.bibliographyScope === 'all'
       ? [...cited, ...file.references.filter((reference) => reference.archivedAt === null && !cited.includes(reference))]
@@ -468,13 +472,13 @@ export interface BookCitations {
 }
 
 /** The book's citations, read once per laying; null where the book cites nothing. */
-export const bookCitationsOf = (file: ProjectFile): BookCitations | null => {
-  const occurrences = citationOccurrences(file);
+export const bookCitationsOf = (file: ProjectFile, documentId: string | null = null): BookCitations | null => {
+  const occurrences = occurrencesIn(file, documentId);
   if (occurrences.length === 0) return null;
   const raised = usesFootnotes(citationSettingsOf(file));
   const inText = new Map<string, string>();
   for (const occurrence of occurrences) if (!inText.has(occurrence.key)) inText.set(occurrence.key, citationInText(file, occurrence));
   const notes = new Map<string, { marker: string; text: string }>();
-  for (const note of citationNotes(file)) if (!notes.has(note.occurrence.key)) notes.set(note.occurrence.key, { marker: note.marker, text: note.text });
+  for (const note of citationNotes(file, occurrences)) if (!notes.has(note.occurrence.key)) notes.set(note.occurrence.key, { marker: note.marker, text: note.text });
   return { raised, inText, notes };
 };

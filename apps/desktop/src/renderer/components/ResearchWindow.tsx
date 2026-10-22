@@ -64,6 +64,7 @@ import {
   WORK_STANDING_WORDS,
   reviewRows,
   type SaveKind,
+  isWordProcessor,
 } from '@vcwriter/domain';
 import { PopOutButton } from './PopOutButton';
 import { InlineText } from './InlineText';
@@ -303,6 +304,8 @@ export function ResearchBody({
    * A professor is not offered a Character Creator to ignore.
    */
   const instructional = isInstructional(file.project.format);
+  /** A Document project keeps a Reference Library too (addendum 43 §11). */
+  const wordProcessor = isWordProcessor(file.project.format);
   const prose = isProseFormat(file.project.format);
   const views = useMemo(() => viewsFor(file.project.format), [file.project.format]);
   const [query, setQuery] = useState('');
@@ -660,8 +663,9 @@ export function ResearchBody({
               a note goes is the question, and which shelf it is on is the
               filing. Absent rather than greyed elsewhere: a screenplay has no
               chapters to file against. */}
-          {instructional ? (
+          {instructional || wordProcessor ? (
             <ul className="research-views">
+              {instructional ? (
               <li>
                 <button
                   type="button"
@@ -673,8 +677,10 @@ export function ResearchBody({
                   <span className="count muted">{contentsShelf(file).length}</span>
                 </button>
               </li>
+              ) : null}
               {/* The Reference Library (addendum 43, spec §2: *References >
-                  Manage Library*), beside the contents on a book alone. */}
+                  Manage Library*), beside the contents on a book, and on a
+                  Document project, whose documents cite it too (§11). */}
               <li>
                 <button
                   type="button"
@@ -1196,7 +1202,7 @@ export function ResearchBody({
             <Plots file={file} onUpdate={onUpdate} />
           ) : selection.kind === 'references' ? (
             <div className="research-embedded">
-              <ReferencesPanel file={file} onUpdate={onUpdate} />
+              <ReferencesPanel file={file} onUpdate={onUpdate} documentId={wordProcessor ? (file.documents[0]?.id ?? null) : null} />
             </div>
           ) : selection.kind === 'contents' ? (
             <div className="research-embedded">

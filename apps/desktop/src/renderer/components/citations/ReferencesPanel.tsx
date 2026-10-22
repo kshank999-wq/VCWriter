@@ -29,9 +29,11 @@ import {
   addPart,
   bibliographyOf,
   partsOf,
+  occurrencesIn,
 } from '@vcwriter/domain';
 import { InlineText } from './InlineText';
 import { ReferenceForm } from './ReferenceForm';
+import { BringInSourcesDialog } from './BringInSourcesDialog';
 
 /**
  * **References** (addendum 43, spec §3 and §5): the instructional book's
@@ -49,11 +51,19 @@ interface ReferencesPanelProps {
   file: ProjectFile;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
   readOnly?: boolean;
+  /**
+   * A word-processor document the notes and bibliography are previewed for
+   * (addendum 43 §11); absent on a book, which previews its story.
+   */
+  documentId?: string | null;
+  /** Where the open project is kept, so Bring in does not offer it as its own source. */
+  projectPath?: string | null;
 }
 
 type View = 'library' | 'settings' | 'preview';
 
-export function ReferencesPanel({ file, onUpdate, readOnly = false }: ReferencesPanelProps) {
+export function ReferencesPanel({ file, onUpdate, readOnly = false, documentId = null, projectPath = null }: ReferencesPanelProps) {
+  const [bringing, setBringing] = useState(false);
   const [view, setView] = useState<View>('library');
   const [query, setQuery] = useState('');
   const [type, setType] = useState<ReferenceType | 'all'>('all');
@@ -79,10 +89,11 @@ export function ReferencesPanel({ file, onUpdate, readOnly = false }: References
 
   return (
     <div className="refs">
+      {bringing ? <BringInSourcesDialog file={file} projectPath={projectPath} onUpdate={onUpdate} onClose={() => setBringing(false)} /> : null}
       <nav className="refs-tabs" role="tablist" aria-label="References">
         {(['library', 'settings', 'preview'] as const).map((one) => (
           <button key={one} type="button" role="tab" aria-selected={view === one} className={view === one ? 'on' : ''} onClick={() => setView(one)}>
-            {one === 'library' ? `Library (${file.references.filter((reference) => !reference.archivedAt).length})` : one === 'settings' ? 'How the book cites' : 'Notes & bibliography'}
+            {one === 'library' ? `Library (${file.references.filter((reference) => !reference.archivedAt).length})` : one === 'settings' ? (documentId !== null ? 'How it cites' : 'How the book cites') : 'Notes & bibliography'}
           </button>
         ))}
       </nav>
@@ -127,6 +138,10 @@ export function ReferencesPanel({ file, onUpdate, readOnly = false }: References
             </div>
             <button type="button" className="primary" disabled={readOnly} onClick={add}>
               Add reference
+            </button>
+            {/* Another project's library, shared into this one (addendum 43 §11). */}
+            <button type="button" className="ghost small" disabled={readOnly} onClick={() => setBringing(true)}>
+              Bring in sources from another project…
             </button>
             <ul aria-label="Sources">
               {list.length === 0 ? <li className="muted small">{archived ? 'Nothing archived.' : file.references.length ? 'Nothing matches.' : 'No sources yet. Add the first.'}</li> : null}
@@ -214,7 +229,7 @@ export function ReferencesPanel({ file, onUpdate, readOnly = false }: References
 
       {view === 'settings' ? <CitationSettingsForm settings={settings} readOnly={readOnly} onChange={(patch) => onUpdate((current) => setCitationSettings(current, patch))} /> : null}
 
-      {view === 'preview' ? <Preview file={file} readOnly={readOnly} onUpdate={onUpdate} /> : null}
+      {view === 'preview' ? <Preview file={file} readOnly={readOnly} onUpdate={onUpdate} documentId={documentId} /> : null}
     </div>
   );
 }
@@ -293,14 +308,24 @@ function CitationSettingsForm({ settings, readOnly, onChange }: { settings: Cita
   );
 }
 
-function Preview({ file, readOnly, onUpdate }: { file: ProjectFile; readOnly: boolean; onUpdate(mutate: (current: ProjectFile) => ProjectFile): void }) {
+function Preview({
+  file,
+  readOnly,
+  onUpdate,
+  documentId,
+}: {
+  file: ProjectFile;
+  readOnly: boolean;
+  onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
+  documentId: string | null;
+}) {
   const settings = citationSettingsOf(file);
+  const occurrences = occurrencesIn(file, documentId);
   // The page in the book that prints this list (addendum 43 §8): the back
   // matter's bibliography, made from the library unless it was told not to be.
   const page = partsOf(file).find((part) => part.kind === 'bibliography') ?? null;
-  const notes = citationNotes(file);
-  const occurrences = citationOccurrences(file);
-  const entries = referenceBibliography(file);
+  const notes = citationNotes(file, occurrences);
+  const entries = referenceBibliography(file, occurrences);
   return (
     <div className="refs-preview">
       <section aria-label="Notes">
@@ -323,7 +348,9 @@ function Preview({ file, readOnly, onUpdate }: { file: ProjectFile; readOnly: bo
       <section aria-label="Bibliography">
         <h4>{bibliographyHeadingOf(settings)}</h4>
         <p className="muted small refs-in-book">
-          {page === null ? (
+          {documentId !== null ? (
+            'In the document: put a Bibliography where it goes from References on the ribbon, and it lists these.'
+          ) : page === null ? (
             <>
               Not in the book yet.{' '}
               <button type="button" className="ghost small" disabled={readOnly} onClick={() => onUpdate((current) => addPart(current, 'bibliography').file)}>

@@ -1,3 +1,4 @@
+import { DOCUMENT_CITATION_CSS } from './document-citations.js';
 import { pageSize } from './document.js';
 import { headingNumbers } from './document-outline.js';
 import { headerFooterCss, printedDate } from './document-pages.js';
@@ -92,6 +93,7 @@ export const documentPrintHtml = (document: WpDocument, bodyHtml: string): strin
     'html, body { margin: 0; padding: 0; background: #fff; }' +
     '* { -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
     DOCUMENT_CONTENT_CSS +
+    DOCUMENT_CITATION_CSS +
     '</style></head>' +
     `<body><div class="wp-doc">${numberHeadingsHtml(document, bodyHtml)}</div></body></html>`
   );

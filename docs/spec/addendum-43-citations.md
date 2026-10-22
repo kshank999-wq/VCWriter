@@ -14,6 +14,7 @@ kept current, and headers and footers for instructional publishing.
 | 2 | Footnotes at the foot of each page in Layout; the bibliography generated as back matter | **built** (§8) |
 | 3 | Export: Word footnotes and bibliography, EPUB notes; footnotes read from Word | **built** (§9) |
 | 4 | The header and footer gaps against spec §6 (author, date and custom fields, per-section restart, first page per section) | **built** (§10) |
+| 5 | The Document (word-processor) module sharing the library | **built** (§11) |
 
 **What already existed.** The Layout room (addendum 20) had measured pages,
 running heads (the book's title on the verso, the chapter's on the recto),
@@ -452,7 +453,99 @@ each with Word's own bands:
   and *The Pull* on right-hand ones, *Page 2 of 11* in the foot, chapter
   openings clear, and the second chapter numbered from *i*.
 
-## 11. Not yet
+## 11. The library in the Document module
+
+From the plan: *share the library with the Document module.* A Document
+project (addendum 42) already carried `references` and `citations`, as every
+project file does, and nothing used them. Now it cites exactly as a book
+does: the same styles, markers, notes and bibliography, the same dialog, and
+the same References panel.
+
+**Where a citation stands.** In the word processor a citation is an inline
+node, `citation`, holding its key (`Citation` in `document/extensions.ts`).
+The manuscript's `[^key]` token is a token because a manuscript line is
+text; the editor keeps a tree, and a node moves, copies and undoes with its
+words in the same way. Its HTML is an empty `<sup data-cite>`, and the screen
+draws its marker over it as a decoration, worked out from where it stands
+every time.
+
+**Each document counts on its own** (`citationOccurrences` walks the story,
+then each document, `documentId` set and the unit, beat and element null).
+A letter and a report in one project are two pieces of writing: each numbers
+its notes from 1 and cites a source in full the first time.
+`occurrencesIn(file, documentId)` reads one place, and `citationNotes`,
+`referenceBibliography` and `bookCitationsOf` take it. The story's own
+numbering is unchanged.
+
+**On the ribbon: References**, as Word has it:
+- **Insert citation**, and **Ctrl/Cmd+Shift+C** in the page, open the
+  manuscript's dialog. In it a source can be searched, made, and given a
+  pinpoint and a note. The preview counts this document's citations only.
+- A click on a marker opens it, to change or remove.
+- **Bibliography** puts a block where the cursor is. It holds nothing typed:
+  it lists the sources the document cites, in the style's order under the
+  style's heading, and draws itself again as they change.
+- **Sources & style** opens the References panel over the page. Its preview
+  is this document's notes and bibliography, and its settings tab is *How it
+  cites*.
+- **Bring in sources…** (below).
+- A line says the style, how many citations the document has, and how many
+  sources the library holds.
+
+**Research → References** is offered on a Document project too.
+
+**Leaving the page.**
+- **Word**: Chicago and Custom citations are Word's own footnotes, the first
+  in full and the rest short, and APA and MLA set the parenthetical in the
+  line. The bibliography block becomes a heading and *Bibliography*-style
+  paragraphs with hanging indents.
+- **Print and PDF**: a document is laid out by the browser, which cannot put
+  a note at the foot of the page it falls on. So the notes are set as
+  endnotes under *Notes*, each linked to its marker, before the bibliography
+  where the document has one (`citeDocumentHtml`).
+
+**Bring in sources from another project** (`bringInReferences`,
+`BringInSourcesDialog`). This is the sharing:
+- The library a book was cited from can be brought into the report written
+  about it, or the other way round.
+- It is offered on the ribbon of a document and in every References panel,
+  a book's included.
+- Choose a project from the list or browse to a `.vcw`. Its live sources are
+  listed with the ones this library already has marked, and the rest ticked.
+- Each comes in as a copy with an id of this project's. A project file is a
+  whole thing of its own, kept and synced on its own, so two files cannot
+  share one record.
+- A source this library already has is never brought in twice: the same
+  DOI (however it was pasted), the same ISBN, the same title by the same
+  first author, or the same Word text.
+- Archived sources stay where they are.
+
+**Proof.**
+- `document-citations.test.ts` (7 tests) covers:
+  - each document counting on its own, with full and short notes
+  - print's markers, endnotes before the bibliography, and the bibliography
+    block filled
+  - APA in a document
+  - Word footnotes and the bibliography block in Word
+  - the story's numbering untouched
+  - bringing in: copies with new ids, duplicates by DOI and title left
+    out, archived skipped, twice the same as once, and only the picked
+- `document-citations.test.tsx` (4 tests) covers:
+  - inserting from the ribbon with a source made in the dialog, and the
+    marker drawn
+  - renumbering by place and Ctrl+Shift+C
+  - the bibliography block filling itself
+  - a marker opened and removed, the words and the source kept
+  - bringing in another project's library, the shared source left out
+- Seen in Chromium: a new Document project with two citations (markers 1
+  and 2), a bibliography block listing the source, and Sources & style with
+  the document's full and short notes.
+- Opened in LibreOffice: the document's Word file has its two footnotes and
+  the bibliography.
+- Rendered by Chromium to PDF: the print has its markers, *Notes* and the
+  bibliography.
+
+## 12. Not yet
 
 - A note carried on to the next page in Layout when it is too tall for its
   own.
@@ -463,4 +556,8 @@ each with Word's own bands:
 - A division's head set to print nothing: an empty box is the book's, and
   *nothing* needs a way to say so.
 - The eBook has no pages, so it carries no heads, feet or page numbers.
-- The Document (word-processor) module sharing the library.
+- Footnotes in a Word file inserted into a document: Insert → From file
+  brings the words in without them.
+- A document's print sets its notes at the end, not at the foot of each page.
+- One library held live between projects: sources are brought in as copies,
+  and a change in one project does not reach the other.

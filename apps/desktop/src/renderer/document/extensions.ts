@@ -40,6 +40,17 @@ declare module '@tiptap/core' {
       /** How the headings are numbered on the page: drawn, never typed (addendum 42 §9). */
       setHeadingNumbering: (scheme: HeadingNumbering) => ReturnType;
     };
+    citation: {
+      /** A citation at the cursor, after anything picked (addendum 43 §11). */
+      insertCitation: (key: string) => ReturnType;
+      /** Takes a citation out by its key, leaving the words. */
+      removeCitation: (key: string) => ReturnType;
+      /** What the markers say and what the bibliography lists, for the screen. */
+      setCitationView: (view: CitationView) => ReturnType;
+    };
+    bibliography: {
+      insertBibliography: () => ReturnType;
+    };
   }
 }
 
@@ -497,6 +508,195 @@ export const headingPosition = (doc: PmNode, headingId: string): number | null =
   return found;
 };
 
+// -------------------------------------------------------------- citations
+
+/** What the page draws for the citations: each key's marker, and the bibliography's markup. */
+export interface CitationView {
+  /** By key: the raised marker, or the parenthetical; empty where its source has gone. */
+  markers: ReadonlyMap<string, string>;
+  /** Whether the markers are raised (a footnote style) or set in the line (APA, MLA). */
+  raised: boolean;
+  /** The bibliography block's markup, as print sets it. */
+  bibliographyHtml: string;
+}
+
+/** What the workspace hands the citation node: the bibliography's markup, and what a click on a marker does. */
+export interface CitationStorage {
+  bibliographyHtml: string;
+  onOpen: ((key: string) => void) | null;
+}
+
+export const citationViewKey = new PluginKey<{ view: CitationView; decorations: DecorationSet; version: number }>('wpCitations');
+
+const EMPTY_VIEW: CitationView = { markers: new Map(), raised: true, bibliographyHtml: '' };
+
+/**
+ * Each citation drawn as its marker, worked out from where it stands every
+ * time (addendum 43 §4), and each bibliography block told the view has moved
+ * on so it draws itself again.
+ */
+const citationDecorations = (doc: PmNode, view: CitationView, version: number): DecorationSet => {
+  const decorations: Decoration[] = [];
+  doc.descendants((node, pos) => {
+    if (node.type.name === 'citation') {
+      const said = view.markers.get(String(node.attrs['key'] ?? '')) ?? '';
+      decorations.push(
+        Decoration.node(pos, pos + node.nodeSize, {
+          'data-marker': said || '?',
+          class: `wp-cite${said ? '' : ' missing'}${view.raised ? '' : ' in-text'}`,
+        }),
+      );
+      return false;
+    }
+    if (node.type.name === 'bibliography') {
+      decorations.push(Decoration.node(pos, pos + node.nodeSize, { 'data-version': String(version) }));
+      return false;
+    }
+    return true;
+  });
+  return DecorationSet.create(doc, decorations);
+};
+
+/**
+ * **A citation in a document** (addendum 43 §11): an inline node holding the
+ * key of its record, so it moves, copies and undoes with the words around it.
+ * Its HTML is an empty `<sup data-cite>`; the screen draws its marker over
+ * it, and print sets the marker or the parenthetical in its place.
+ */
+export const Citation = Node.create({
+  name: 'citation',
+  group: 'inline',
+  inline: true,
+  atom: true,
+  selectable: true,
+  addAttributes() {
+    return {
+      key: {
+        default: '',
+        parseHTML: (element: HTMLElement) => element.getAttribute('data-cite') ?? '',
+        renderHTML: (attributes: Record<string, unknown>) => ({ 'data-cite': attributes['key'] }),
+      },
+    };
+  },
+  parseHTML() {
+    return [{ tag: 'sup[data-cite]' }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ['sup', mergeAttributes({ class: 'wp-cite' }, HTMLAttributes)];
+  },
+  addCommands() {
+    return {
+      insertCitation:
+        (key: string) =>
+        ({ state, chain }) =>
+          chain()
+            .setTextSelection(state.selection.to)
+            .insertContent({ type: this.name, attrs: { key } })
+            .run(),
+      removeCitation:
+        (key: string) =>
+        ({ state, dispatch }) => {
+          const found: number[] = [];
+          state.doc.descendants((node, pos) => {
+            if (node.type.name === 'citation' && node.attrs['key'] === key) found.push(pos);
+          });
+          if (found.length === 0) return false;
+          if (dispatch) {
+            const tr = state.tr;
+            for (const pos of found.reverse()) tr.delete(pos, pos + 1);
+            dispatch(tr);
+          }
+          return true;
+        },
+      setCitationView:
+        (view: CitationView) =>
+        ({ tr, dispatch }) => {
+          if (dispatch) tr.setMeta(citationViewKey, view);
+          return true;
+        },
+    };
+  },
+  addStorage(): CitationStorage {
+    return { bibliographyHtml: '', onOpen: null };
+  },
+  addProseMirrorPlugins() {
+    const storage = this.storage as CitationStorage;
+    return [
+      new Plugin<{ view: CitationView; decorations: DecorationSet; version: number }>({
+        key: citationViewKey,
+        state: {
+          init: (_config, state) => ({ view: EMPTY_VIEW, decorations: citationDecorations(state.doc, EMPTY_VIEW, 0), version: 0 }),
+          apply: (tr, value, _old, state) => {
+            const asked = tr.getMeta(citationViewKey) as CitationView | undefined;
+            if (asked === undefined && !tr.docChanged) return value;
+            const view = asked ?? value.view;
+            const version = asked ? value.version + 1 : value.version;
+            if (asked) storage.bibliographyHtml = asked.bibliographyHtml;
+            return { view, version, decorations: citationDecorations(state.doc, view, version) };
+          },
+        },
+        props: {
+          decorations: (state) => citationViewKey.getState(state)?.decorations ?? null,
+          // A click on a marker opens its citation, as in the manuscript.
+          handleClickOn: (_view, _pos, node) => {
+            if (node.type.name !== 'citation' || !storage.onOpen) return false;
+            storage.onOpen(String(node.attrs['key'] ?? ''));
+            return true;
+          },
+        },
+      }),
+    ];
+  },
+});
+
+/**
+ * **A bibliography where the writer puts it** (addendum 43 §11): a block with
+ * nothing typed in it, filled from the sources the document cites and drawn
+ * again as they change. Print and Word set the same list in its place.
+ */
+export const Bibliography = Node.create({
+  name: 'bibliography',
+  group: 'block',
+  atom: true,
+  selectable: true,
+  parseHTML() {
+    return [{ tag: 'div[data-bibliography]' }];
+  },
+  renderHTML() {
+    return ['div', { 'data-bibliography': '', class: 'wp-bibliography-block' }];
+  },
+  addCommands() {
+    return {
+      insertBibliography:
+        () =>
+        ({ commands }) =>
+          commands.insertContent({ type: this.name }),
+    };
+  },
+  addNodeView() {
+    return ({ editor }) => {
+      const dom = document.createElement('div');
+      dom.className = 'wp-bibliography-block';
+      dom.contentEditable = 'false';
+      dom.setAttribute('data-bibliography', '');
+      const draw = () => {
+        dom.innerHTML = (editor.storage as unknown as { citation?: { bibliographyHtml: string } }).citation?.bibliographyHtml ?? '';
+      };
+      draw();
+      return {
+        dom,
+        // Each new view of the citations comes as a decoration change, which
+        // is what calls this: draw the list again.
+        update: (node) => {
+          if (node.type.name !== 'bibliography') return false;
+          draw();
+          return true;
+        },
+      };
+    };
+  },
+});
+
 /** Everything the document editor is built from. */
 export const documentExtensions = () => [
   StarterKit.configure({
@@ -517,4 +717,6 @@ export const documentExtensions = () => [
   Search,
   ExtractMark,
   HeadingIds,
+  Citation,
+  Bibliography,
 ];

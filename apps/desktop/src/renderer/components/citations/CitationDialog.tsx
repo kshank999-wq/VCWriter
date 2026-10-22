@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   REFERENCE_TYPE_NAMES,
   addReference,
-  citationOccurrences,
+  occurrencesIn,
   citationSettingsOf,
   formatNote,
   locatorKindSchema,
@@ -55,12 +55,14 @@ interface CitationDialogProps {
   citation?: Citation | null;
   /** Its key, when the citation's record is missing: the token is shown as needing a source. */
   missingKey?: string | null;
+  /** The word-processor document being cited in (addendum 43 §11); absent in the story. */
+  documentId?: string | null;
   onDone(choice: CitationChoice): void;
   onRemove?(): void;
   onClose(): void;
 }
 
-export function CitationDialog({ file, onUpdate, citation = null, missingKey = null, onDone, onRemove, onClose }: CitationDialogProps) {
+export function CitationDialog({ file, onUpdate, citation = null, missingKey = null, documentId = null, onDone, onRemove, onClose }: CitationDialogProps) {
   const [query, setQuery] = useState('');
   const [referenceId, setReferenceId] = useState<ReferenceId | null>((citation?.referenceId as ReferenceId | undefined) ?? null);
   const [locatorKind, setLocatorKind] = useState<LocatorKind>(citation?.locatorKind ?? 'page');
@@ -85,9 +87,10 @@ export function CitationDialog({ file, onUpdate, citation = null, missingKey = n
     if (!chosen) return null;
     const pin = { locatorKind, locator, note };
     if (!usesFootnotes(settings)) return formatInText(chosen, pin, settings.style === 'apa' ? 'apa' : 'mla');
-    const earlier = citationOccurrences(file).some((occurrence) => occurrence.reference?.id === chosen.id && occurrence.citation?.id !== citation?.id);
+    // A document counts its notes on its own, so only its own citations come earlier.
+    const earlier = occurrencesIn(file, documentId).some((occurrence) => occurrence.reference?.id === chosen.id && occurrence.citation?.id !== citation?.id);
     return formatNote(chosen, pin, noteFormOf(settings), !earlier);
-  }, [chosen, locatorKind, locator, note, settings, file, citation]);
+  }, [chosen, locatorKind, locator, note, settings, file, citation, documentId]);
 
   const newSource = () => {
     // Made here, so it can be chosen at once; the same record goes into the project.

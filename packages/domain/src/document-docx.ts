@@ -3,6 +3,8 @@ import { pageSize } from './document.js';
 import { headingNumbers } from './document-outline.js';
 import { BAND_SLOTS, printedDate } from './document-pages.js';
 import type { DocMark, DocNode, DocumentBand, WpDocument } from './entities/document.js';
+import { parseInline } from './entities/inline.js';
+import type { DocumentCitations } from './document-citations.js';
 
 /**
  * **A document as a Word file** (addendum 42 §4, spec §4.1 and §7.2).
@@ -61,6 +63,10 @@ interface Context {
   contentWidthIn: number;
   /** Each heading's number under the document's scheme, by heading id (addendum 42 §14). */
   headingNumbers: ReadonlyMap<string, string>;
+  /** What the document's citations print as (addendum 43 §11); null where it cites nothing. */
+  cites: DocumentCitations | null;
+  /** Word footnotes made so far, in order: one per citation in a footnote style. */
+  footnotes: string[];
 }
 
 type ListKind = 'bullet' | 'decimal' | 'lowerLetter' | 'upperLetter' | 'lowerRoman' | 'upperRoman';
@@ -155,6 +161,36 @@ const runProperties = (marks: readonly DocMark[]): string => {
 
 const textRun = (text: string, marks: readonly DocMark[]): string =>
   `<w:r>${runProperties(marks)}<w:t xml:space="preserve">${xml(text)}</w:t></w:r>`;
+
+/** Words in the inline marks (a style's italics) as runs. */
+const markedRuns = (text: string): string =>
+  parseInline(text)
+    .map((span) =>
+      textRun(span.text, [
+        ...(span.bold ? [{ type: 'bold' }] : []),
+        ...(span.italic ? [{ type: 'italic' }] : []),
+        ...(span.underline ? [{ type: 'underline' }] : []),
+      ]),
+    )
+    .join('');
+
+/**
+ * A citation (addendum 43 §11): a Word footnote in a footnote style, its note
+ * the next of the document's in order, or the parenthetical in the line.
+ */
+const citationRun = (node: DocNode, context: Context): string => {
+  const cites = context.cites;
+  const key = String(node.attrs?.['key'] ?? '');
+  const said = cites?.inText.get(key);
+  if (!cites || !said) return '';
+  if (cites.raised) {
+    const note = cites.notes[context.footnotes.length];
+    if (!note) return '';
+    context.footnotes.push(note.text);
+    return `<w:r><w:rPr><w:rStyle w:val="FootnoteReference"/></w:rPr><w:footnoteReference w:id="${context.footnotes.length}"/></w:r>`;
+  }
+  return textRun(' ', []) + markedRuns(said);
+};
 
 /** Reads the pixel size a PNG, GIF or JPEG declares, so a picture keeps its shape. */
 export const pictureSize = (bytes: Uint8Array): { width: number; height: number } | null => {
@@ -263,6 +299,7 @@ const inlineXml = (nodes: readonly DocNode[], context: Context): string => {
     if (node.type === 'text') out += textRun(node.text ?? '', node.marks ?? []);
     else if (node.type === 'hardBreak') out += '<w:r><w:br/></w:r>';
     else if (node.type === 'image') out += pictureRun(node, context);
+    else if (node.type === 'citation') out += citationRun(node, context);
     index += 1;
   }
   return out;
@@ -409,6 +446,13 @@ const blockXml = (node: DocNode, context: Context): string => {
       return tableXml(node, context);
     case 'image':
       return `<w:p>${pictureRun(node, context)}</w:p>`;
+    case 'bibliography': {
+      // Filled from the sources the document cites, as the page shows it.
+      const cites = context.cites;
+      if (!cites) return '';
+      const heading = `<w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr>${textRun(cites.heading, [])}</w:p>`;
+      return heading + cites.bibliography.map((entry) => `<w:p><w:pPr><w:pStyle w:val="Bibliography"/></w:pPr>${markedRuns(entry)}</w:p>`).join('');
+    }
     default:
       // A node this writer does not know still has words in it, and they go.
       return node.content ? (node.content.some((child) => child.type === 'text') ? paragraphXml(node, context) : node.content.map((child) => blockXml(child, context)).join('')) : '';
@@ -511,6 +555,11 @@ export const DOCUMENT_STYLES_XML =
   '<w:pPr><w:ind w:left="720"/><w:contextualSpacing/></w:pPr></w:style>' +
   '<w:style w:type="paragraph" w:styleId="Code"><w:name w:val="Code"/><w:basedOn w:val="Normal"/>' +
   '<w:pPr><w:spacing w:after="0"/></w:pPr><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:sz w:val="20"/></w:rPr></w:style>' +
+  '<w:style w:type="paragraph" w:styleId="Bibliography"><w:name w:val="Bibliography"/><w:basedOn w:val="Normal"/><w:qFormat/>' +
+  '<w:pPr><w:ind w:left="720" w:hanging="720"/></w:pPr></w:style>' +
+  '<w:style w:type="paragraph" w:styleId="FootnoteText"><w:name w:val="footnote text"/><w:basedOn w:val="Normal"/>' +
+  '<w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:rPr><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr></w:style>' +
+  '<w:style w:type="character" w:styleId="FootnoteReference"><w:name w:val="footnote reference"/><w:rPr><w:vertAlign w:val="superscript"/></w:rPr></w:style>' +
   '<w:style w:type="table" w:styleId="TableGrid"><w:name w:val="Table Grid"/><w:tblPr><w:tblBorders>' +
   ['top', 'left', 'bottom', 'right', 'insideH', 'insideV']
     .map((side) => `<w:${side} w:val="single" w:sz="4" w:space="0" w:color="auto"/>`)
@@ -559,7 +608,7 @@ const numberingXml = (lists: Context['lists']): string =>
   '</w:numbering>';
 
 /** The `word/document.xml` of a document, with what the package must carry beside it. */
-export const documentBodyXml = (document: WpDocument): { xml: string; context: Context } => {
+export const documentBodyXml = (document: WpDocument, cites: DocumentCitations | null = null): { xml: string; context: Context } => {
   const { width } = pageSize(document.pageSetup);
   const context: Context = {
     pictures: [],
@@ -567,6 +616,8 @@ export const documentBodyXml = (document: WpDocument): { xml: string; context: C
     lists: [],
     contentWidthIn: Math.max(1, width - document.pageSetup.margins.left - document.pageSetup.margins.right),
     headingNumbers: headingNumbers(document.content, document.headingNumbering),
+    cites,
+    footnotes: [],
   };
   const body = (document.content.content ?? []).map((block) => blockXml(block, context)).join('');
   return {
@@ -577,11 +628,30 @@ export const documentBodyXml = (document: WpDocument): { xml: string; context: C
   };
 };
 
+/** The document's notes as Word's own footnotes, after the two separators Word needs. */
+const footnotesXml = (notes: readonly string[]): string =>
+  '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+  '<w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+  '<w:footnote w:type="separator" w:id="-1"><w:p><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:r><w:separator/></w:r></w:p></w:footnote>' +
+  '<w:footnote w:type="continuationSeparator" w:id="0"><w:p><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:r><w:continuationSeparator/></w:r></w:p></w:footnote>' +
+  notes
+    .map(
+      (text, index) =>
+        `<w:footnote w:id="${index + 1}"><w:p><w:pPr><w:pStyle w:val="FootnoteText"/></w:pPr>` +
+        `<w:r><w:rPr><w:rStyle w:val="FootnoteReference"/></w:rPr><w:footnoteRef/></w:r>${textRun(' ', [])}${markedRuns(text)}</w:p></w:footnote>`,
+    )
+    .join('') +
+  '</w:footnotes>';
+
 const MEDIA_TYPES: Record<string, string> = { png: 'image/png', jpeg: 'image/jpeg', gif: 'image/gif' };
 
 /** The whole `.docx`, as bytes (spec §7.2: *a conventional editable word-processing file*). */
-export const buildDocumentDocx = async (document: WpDocument, options: { author?: string } = {}): Promise<Uint8Array> => {
-  const { xml: body, context } = documentBodyXml(document);
+export const buildDocumentDocx = async (
+  document: WpDocument,
+  options: { author?: string; citations?: DocumentCitations | null } = {},
+): Promise<Uint8Array> => {
+  const { xml: body, context } = documentBodyXml(document, options.citations ?? null);
+  const notes = context.footnotes.length > 0;
   const extensions = [...new Set(context.pictures.map((picture) => picture.extension))];
   const contentTypes =
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
@@ -592,6 +662,10 @@ export const buildDocumentDocx = async (document: WpDocument, options: { author?
     '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
     '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>' +
     '<Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>' +
+    (notes
+      ? '<Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/>' +
+        '<Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>'
+      : '') +
     (bandUsed(document.headerFooter.header)
       ? '<Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>'
       : '') +
@@ -611,6 +685,10 @@ export const buildDocumentDocx = async (document: WpDocument, options: { author?
     '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
     '<Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
     '<Relationship Id="rIdNumbering" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>' +
+    (notes
+      ? '<Relationship Id="rIdFootnotes" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/>' +
+        '<Relationship Id="rIdSettings" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>'
+      : '') +
     (bandUsed(document.headerFooter.header)
       ? '<Relationship Id="rIdHeader1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>'
       : '') +
@@ -644,6 +722,18 @@ export const buildDocumentDocx = async (document: WpDocument, options: { author?
     { path: 'word/document.xml', data: utf8(body) },
     { path: 'word/styles.xml', data: utf8(DOCUMENT_STYLES_XML) },
     { path: 'word/numbering.xml', data: utf8(numberingXml(context.lists)) },
+    ...(notes
+      ? [
+          { path: 'word/footnotes.xml', data: utf8(footnotesXml(context.footnotes)) },
+          {
+            path: 'word/settings.xml',
+            data: utf8(
+              '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+                '<w:footnotePr><w:footnote w:id="-1"/><w:footnote w:id="0"/></w:footnotePr></w:settings>',
+            ),
+          },
+        ]
+      : []),
     ...(bandUsed(document.headerFooter.header) ? [{ path: 'word/header1.xml', data: utf8(bandXml(document, 'header')) }] : []),
     ...(bandUsed(document.headerFooter.footer) ? [{ path: 'word/footer1.xml', data: utf8(bandXml(document, 'footer')) }] : []),
     ...context.pictures.map((picture) => ({ path: `word/${picture.path}`, data: picture.data })),

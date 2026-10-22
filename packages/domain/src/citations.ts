@@ -304,10 +304,13 @@ export interface CitationOccurrence {
   key: string;
   citation: Citation | null;
   reference: Reference | null;
-  unitId: StructuralUnitId;
-  beatId: BeatId;
-  elementId: ManuscriptElementId;
-  /** Its place in the whole book, from 1. */
+  /** Where it stands in the story; null in a document (addendum 43 §11). */
+  unitId: StructuralUnitId | null;
+  beatId: BeatId | null;
+  elementId: ManuscriptElementId | null;
+  /** The word-processor document it stands in, or null in the story. */
+  documentId: string | null;
+  /** Its place in the whole book, from 1 — or in its document, which counts on its own. */
   index: number;
   /** Its place within its chapter, from 1: what a per-chapter count prints. */
   inChapter: number;
@@ -367,6 +370,7 @@ export const citationOccurrences = (file: ProjectFile): CitationOccurrence[] => 
             unitId: unit.id,
             beatId: beat.id,
             elementId: element.id,
+            documentId: null,
             index,
             inChapter,
             firstOfSource,
@@ -376,6 +380,54 @@ export const citationOccurrences = (file: ProjectFile): CitationOccurrence[] => 
       }
     }
   }
+  // Each word-processor document counts on its own (addendum 43 §11): a
+  // letter and a report in one project are two pieces of writing, each with
+  // its notes from 1 and each citing a source in full the first time.
+  for (const document of file.documents ?? []) {
+    const seen = new Set<string>();
+    let at = 0;
+    for (const key of citationKeysInDoc(document.content)) {
+      const citation = byKey.get(key) ?? null;
+      const reference = citation ? (byId.get(citation.referenceId) ?? null) : null;
+      at += 1;
+      const firstOfSource = reference ? !seen.has(reference.id) : false;
+      if (reference) seen.add(reference.id);
+      out.push({
+        key,
+        citation,
+        reference,
+        unitId: null,
+        beatId: null,
+        elementId: null,
+        documentId: document.id as string,
+        index: at,
+        inChapter: at,
+        firstOfSource,
+        marker: markerLabel(at, settings.markers, settings.symbolOverflow),
+      });
+    }
+  }
+  return out;
+};
+
+/** The citations of one place: the story (null), or one document. */
+export const occurrencesIn = (file: ProjectFile, documentId: string | null): CitationOccurrence[] =>
+  citationOccurrences(file).filter((occurrence) => occurrence.documentId === documentId);
+
+/**
+ * The keys of a document's citations, in reading order (addendum 43 §11).
+ * In the word processor a citation is an inline node of its own, `citation`
+ * with its key, rather than a token in the text: the editor keeps a tree, and
+ * a node moves, copies and undoes with its words as a token does in a line.
+ */
+export const citationKeysInDoc = (node: { type?: string; attrs?: Record<string, unknown>; content?: readonly unknown[] } | null | undefined): string[] => {
+  const out: string[] = [];
+  const walk = (one: { type?: string; attrs?: Record<string, unknown>; content?: readonly unknown[] } | null | undefined) => {
+    if (!one) return;
+    if (one.type === 'citation' && typeof one.attrs?.['key'] === 'string') out.push(one.attrs['key']);
+    for (const child of one.content ?? []) walk(child as typeof one);
+  };
+  walk(node);
   return out;
 };
 
@@ -387,10 +439,10 @@ export const citationMarkers = (file: ProjectFile): Map<string, string> => {
 };
 
 /** The sources cited somewhere in the text, each once (spec §4: *one bibliography entry*). */
-export const citedReferences = (file: ProjectFile): Reference[] => {
+export const citedReferences = (file: ProjectFile, occurrences: readonly CitationOccurrence[] = citationOccurrences(file)): Reference[] => {
   const seen = new Set<string>();
   const out: Reference[] = [];
-  for (const occurrence of citationOccurrences(file)) {
+  for (const occurrence of occurrences) {
     if (occurrence.reference && !seen.has(occurrence.reference.id)) {
       seen.add(occurrence.reference.id);
       out.push(occurrence.reference);

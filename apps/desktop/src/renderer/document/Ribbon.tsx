@@ -19,13 +19,14 @@ import type { DocumentSpeech } from './speech';
  * writer select a word and press Bold without the word being deselected.
  */
 
-export type RibbonTab = 'file' | 'home' | 'insert' | 'layout' | 'review' | 'view';
+export type RibbonTab = 'file' | 'home' | 'insert' | 'layout' | 'references' | 'review' | 'view';
 
 const TABS: { id: RibbonTab; label: string }[] = [
   { id: 'file', label: 'File' },
   { id: 'home', label: 'Home' },
   { id: 'insert', label: 'Insert' },
   { id: 'layout', label: 'Layout' },
+  { id: 'references', label: 'References' },
   { id: 'review', label: 'Review' },
   { id: 'view', label: 'View' },
 ];
@@ -128,6 +129,18 @@ interface RibbonProps {
     onPageNumbers(preset: PageNumberPreset | 'none'): void;
   };
   speech: DocumentSpeech;
+  /** Citations and the library (addendum 43 §11), as Word's References tab has them. */
+  references: {
+    /** The style the project cites in, in words. */
+    style: string;
+    /** How many places this document cites, and how many sources the library has. */
+    cited: number;
+    library: number;
+    onCite(): void;
+    onBibliography(): void;
+    onLibrary(): void;
+    onBringIn(): void;
+  };
   /** A line for the writer, where something did not work. */
   onSay(message: string): void;
 }
@@ -274,6 +287,7 @@ export function Ribbon(ribbon: RibbonProps) {
         {tab === 'home' ? <HomeTab {...props} editor={editor} /> : null}
         {tab === 'insert' ? <InsertTab {...props} /> : null}
         {tab === 'layout' ? <LayoutTab {...props} /> : null}
+        {tab === 'references' ? <ReferencesTab {...props} /> : null}
         {tab === 'review' ? <ReviewTab {...props} /> : null}
         {tab === 'view' ? <ViewTab {...props} /> : null}
       </div>
@@ -774,6 +788,40 @@ function LayoutTab({ pageSetup, onPageSetup, editor }: TabProps) {
       </Group>
       <Group label="Breaks">
         <Tool label="Page break" onPress={() => editor.chain().focus().setPageBreak().run()} wide />
+      </Group>
+    </>
+  );
+}
+
+/**
+ * **References** (addendum 43 §11): Word's tab of the same name, on the
+ * project's own Reference Library — insert a citation, put a bibliography
+ * where the cursor is, open the library and the style, or bring in another
+ * project's sources.
+ */
+function ReferencesTab({ references }: TabProps) {
+  return (
+    <>
+      <Group label="Citations">
+        <Tool label="Insert citation" title="Cite a source from the library at the cursor (Ctrl+Shift+C)" onPress={references.onCite} wide>
+          Insert citation
+        </Tool>
+        <Tool label="Bibliography" title="A bibliography here, listing the sources this document cites; it keeps itself current" onPress={references.onBibliography} wide>
+          Bibliography
+        </Tool>
+      </Group>
+      <Group label="Library">
+        <Tool label="Sources & style" title="The Reference Library, and how this project cites" onPress={references.onLibrary} wide>
+          Sources &amp; style
+        </Tool>
+        <Tool label="Bring in sources" title="Copy sources from another project's library into this one" onPress={references.onBringIn} wide>
+          Bring in sources…
+        </Tool>
+      </Group>
+      <Group label="This document">
+        <span className="wp-ribbon-note">
+          {references.style} · {references.cited === 1 ? '1 citation' : `${references.cited} citations`} · {references.library === 1 ? '1 source' : `${references.library} sources`} in the library
+        </span>
       </Group>
     </>
   );
