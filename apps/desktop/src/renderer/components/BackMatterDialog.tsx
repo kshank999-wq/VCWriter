@@ -910,11 +910,15 @@ function Card({
               {own.questions.map((one, at) => (
                 <div className="dp-term" key={one.id}>
                   <span className="dp-row-label">{own.numbering === 'numbers' ? `${at + 1}.` : '•'}</span>
-                  <input
+                  {/* A question may cite what it asks about (addendum 43 §15). */}
+                  <CitableText
+                    file={file}
+                    onUpdate={onUpdate}
                     className="dp-serif-input"
                     aria-label={`Question ${at + 1}`}
+                    rows={2}
                     value={one.text}
-                    onChange={(event) => write({ questions: own.questions.map((two) => (two.id === one.id ? { ...two, text: event.target.value } : two)) })}
+                    onChange={(text) => write({ questions: own.questions.map((two) => (two.id === one.id ? { ...two, text } : two)) })}
                   />
                   <button type="button" className="ghost item-x" aria-label={`Remove question ${at + 1}`} onClick={() => write({ questions: own.questions.filter((two) => two.id !== one.id) })}>
                     ×

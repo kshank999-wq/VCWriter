@@ -15,7 +15,7 @@ import {
 import { beatsForUnit, unitsInStoryOrder } from './selectors.js';
 import { PART_INFO, halfOf, partsOf } from './book-plan.js';
 import type { BookPart } from './entities/book.js';
-import { glossaryEntries } from './back-matter-pages.js';
+import { glossaryEntries, readerExtraOf } from './back-matter-pages.js';
 import type { ProjectFile } from './project-file.js';
 import type { BeatId, CitationId, ManuscriptElementId, ReferenceId, StructuralUnitId } from './ids.js';
 
@@ -433,11 +433,18 @@ export const citationOccurrences = (file: ProjectFile): CitationOccurrence[] => 
 
 /**
  * **The words a page of front or back matter prints, in its order** (§13,
- * §14): its own text, or — on a glossary — its definitions as the page sets
- * them, sorted where it sorts. A citation is numbered where it is read.
+ * §14, §15): its own text; on a glossary, its definitions as the page sets
+ * them, sorted where it sorts; on a reader extra of discussion questions, its
+ * questions in order. A citation is numbered where it is read.
  */
-const wordsOfPart = (part: BookPart): string =>
-  part.kind === 'glossary' ? glossaryEntries(part).map((entry) => entry.definition).join('\n') : part.text;
+const wordsOfPart = (part: BookPart): string => {
+  if (part.kind === 'glossary') return glossaryEntries(part).map((entry) => entry.definition).join('\n');
+  if (part.kind === 'reader_extra') {
+    const own = readerExtraOf(part);
+    if (own.kind === 'questions') return own.questions.map((one) => one.text).join('\n');
+  }
+  return part.text;
+};
 
 /** The citations of one place: the story (null), or one document. */
 export const occurrencesIn = (file: ProjectFile, documentId: string | null): CitationOccurrence[] =>

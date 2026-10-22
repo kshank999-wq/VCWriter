@@ -309,4 +309,21 @@ describe('a glossary that cites (addendum 43 §14)', () => {
     expect(glossaryOf(pageOf(after, 'glossary')).terms[0]!.definition).toBe(`The sea rising and falling[^${key}].`);
     expect(screen.getByLabelText('Citations in these words').textContent).toBe(`[^${key}] is note 1`);
   });
+
+  it('cites a source from a discussion question', () => {
+    const first = (() => {
+      let file = createProjectFile({ title: 'The Sea', format: 'instructional' });
+      file = addReference(file, { title: 'On Tides', authors: ['Jones, Robert'] }).file;
+      return addPart(file, 'reader_extra', { about: { kind: 'questions', questions: [{ id: 'q1', text: 'What did Jones get wrong?' }] } }).file;
+    })();
+    let seen: ProjectFile | null = null;
+    render(<Harness kind={pageOf(first, 'reader_extra').id as PartKind} start={() => first} onFile={(one) => (seen = one)} />);
+    const box = screen.getByLabelText('Question 1') as HTMLTextAreaElement;
+    box.setSelectionRange(box.value.length, box.value.length);
+    fireEvent.keyDown(box, { key: 'C', ctrlKey: true, shiftKey: true });
+    fireEvent.doubleClick(within(screen.getByRole('listbox', { name: 'Sources' })).getByRole('option'));
+    const after = seen as unknown as ProjectFile;
+    const key = after.citations[0]!.key;
+    expect(readerExtraOf(pageOf(after, 'reader_extra')).questions[0]!.text).toBe(`What did Jones get wrong?[^${key}]`);
+  });
 });

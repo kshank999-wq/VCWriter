@@ -18,6 +18,7 @@ kept current, and headers and footers for instructional publishing.
 | 6 | A long note carried on to the next page in Layout | **built** (§12) |
 | 7 | Citations in the front and back matter | **built** (§13) |
 | 8 | Citations in a glossary's definitions | **built** (§14) |
+| 9 | Citations in a reader extra's discussion questions | **built** (§15) |
 
 **What already existed.** The Layout room (addendum 20) had measured pages,
 running heads (the book's title on the verso, the chapter's on the recto),
@@ -707,11 +708,39 @@ paragraphs.
   defined and cited after *month*. The page prints marker 3 there and the
   short note at its foot.
 
-## 15. Not yet
+## 15. Citations in discussion questions
+
+From Ken: *build the reader extra questions citations next.* A reader extra
+set to *Discussion questions* is a list of questions for a reading group, and
+in an instructional book a question often points at a source — *Jones says
+the spring tides run a foot higher in the north. Why might the Admiralty
+disagree?*
+
+- **Typing one.** Each question in the reader extra's card is a
+  `CitableText` (§13), two lines high, with **Cite…**, Ctrl/Cmd+Shift+C, a
+  click inside a token to open it, and its tokens named by their notes.
+- **Where they count.** In the order of the questions, in the reader
+  extra's place in the back matter (`wordsOfPart`). The other kinds of
+  reader extra (a newsletter, a preview, *also by*) do not cite.
+- **On the page.** A question is already a paragraph of the page with its
+  number before it, so its marker is raised and its note set at the foot,
+  carried on if long; the eBook and Word read the same paragraphs.
+
+**Proof.**
+- `matter-citations.test.ts`: two questions numbered in order after the
+  story and an appendix, and the second drawn with its number, its marker
+  raised and its note at the page's foot.
+- `back-matter-dialog.test.tsx`: citing from a question by Ctrl+Shift+C,
+  the token at the end of its words.
+- Seen in Chromium: a reader extra set to discussion questions, its first
+  question cited after *north*. The page prints *1.*, the question with
+  marker 3, and the short note at its foot.
+
+## 16. Not yet
 
 - A page set inside the story is numbered after the story, not where it
   stands.
-- The other list pages (a reader extra's questions, *also by*) do not cite.
+- A newsletter's message and an *also by* list do not cite.
 - Recognising a Word note's parts (author, title, publisher) automatically.
   They are kept whole and flagged.
 - A division's head set to print nothing: an empty box is the book's, and

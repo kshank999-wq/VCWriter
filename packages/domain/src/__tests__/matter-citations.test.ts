@@ -185,4 +185,53 @@ describe('citations in the front and back matter', () => {
     expect(html).toContain(`<span class="bk-lead bk-lead-bold">Ebb</span> — The tide going out.<sup class="bk-cite" data-cite="${ebb.citation.key}">4</sup>`);
     expect(html).toContain('<span class="bk-note-mark">4.</span> Jones, <i>On Tides</i>, 41.');
   });
+
+  it('cites from a reader extra’s discussion questions, in their order, each set with its number', () => {
+    let { file } = book();
+    const source = file.references[0]!.id;
+    const first = insertCitation(file, { referenceId: source, locator: '50' });
+    file = first.file;
+    const second = insertCitation(file, { referenceId: source, locator: '51' });
+    file = second.file;
+    const extra = addPart(file, 'reader_extra', {
+      about: {
+        kind: 'questions',
+        numbering: 'numbers',
+        questions: [
+          { id: 'q1', text: `Why does the harbour empty twice a day?${first.token}` },
+          { id: 'q2', text: `What did Jones get wrong?${second.token}` },
+        ],
+      },
+    });
+    file = extra.file;
+    const inExtra = citationOccurrences(file).filter((one) => one.partId === extra.partId);
+    // After the foreword (1), the story (2) and the appendix (3).
+    expect(inExtra.map((one) => [one.key, one.marker])).toEqual([
+      [first.citation.key, '4'],
+      [second.citation.key, '5'],
+    ]);
+    const blocks = bookBlocks(file);
+    const question = blocks.find((block) => block.partId === extra.partId && block.role === 'question' && block.text.includes('Jones'))!;
+    expect(question.lead?.text).toBe('2.');
+    const settings = bookSettingsOf(file);
+    const context: BookRenderContext = {
+      settings,
+      geometry: geometryOf(settings, 'instructional', 100),
+      chapterStyle: chapterPageStyleOf(file),
+      paragraphStyle: 'indented',
+      pictures: new Map(),
+      names: bookNames(file),
+      titlePage: titlePageOf(file.project, file.settings),
+      contents: [],
+      index: null,
+      citations: bookCitationsOf(file),
+    };
+    const page: BookPage = {
+      sheet: 22, side: 'recto', numbering: 'arabic', number: 11, folio: '11', counted: '11', runningHead: '', runningFoot: '', chapterTitle: '',
+      display: false, blank: false, opens: false, pieces: [{ blockId: question.id, from: 0, to: 1 }], notes: [second.citation.key], noteParts: [], depth: 1, target: 30,
+    };
+    const html = renderBookPage(page, new Map(blocks.map((block) => [block.id, block])), context);
+    expect(html).toContain(`What did Jones get wrong?<sup class="bk-cite" data-cite="${second.citation.key}">5</sup>`);
+    expect(html).toContain('<span class="bk-note-mark">5.</span> Jones, <i>On Tides</i>, 51.');
+  });
 });
