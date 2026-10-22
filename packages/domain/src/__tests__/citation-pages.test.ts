@@ -183,8 +183,94 @@ const pageWith = (blockId: string, keys: string[]): BookPage => ({
   opens: false,
   pieces: [{ blockId, from: 0, to: 3 }],
   notes: keys,
+  noteParts: [],
   depth: 3,
   target: 30,
+});
+
+describe('a note too long for its page (§12)', () => {
+  /** Note lines from each page's parts of one note. */
+  const partsOf = (pages: BookPage[], key: string) =>
+    pages.flatMap((page, at) => page.noteParts.filter((part) => part.key === key).map((part) => ({ at, from: part.from, to: part.to })));
+
+  it('breaks: at least two lines under its marker, the rest carried to the head of the next page’s notes', () => {
+    const marker = LINES - 5;
+    const laid = layPages([para('p')], new Map([['p', LINES * 2]]), geometry, settings, names, undefined, notes({ p: [{ key: 'a', line: marker }] }, { a: 12 }));
+    const [first, second] = laid.pages;
+    // The marker's line stays on the first page, with the text under it.
+    expect(first!.pieces[0]!.to).toBeGreaterThan(marker);
+    const parts = partsOf(laid.pages, 'a');
+    expect(parts[0]).toMatchObject({ at: 0, from: 0 });
+    expect(parts[0]!.to).toBeGreaterThanOrEqual(2);
+    expect(parts[1]).toMatchObject({ at: 1, from: parts[0]!.to, to: 12 });
+    // Every line of the note is set once.
+    expect(parts.reduce((sum, part) => sum + part.to - part.from, 0)).toBe(12);
+    // Each page is full and no fuller: text and notes, rule and all.
+    for (const page of [first!, second!]) {
+      const text = page.pieces.reduce((sum, piece) => sum + piece.to - piece.from, 0);
+      expect(text + Math.ceil(0.6 + page.noteParts.reduce((sum, part) => sum + part.to - part.from, 0) - 0.02)).toBeLessThanOrEqual(LINES);
+    }
+  });
+
+  it('keeps a short note whole: its line goes over with it', () => {
+    const last = LINES - 1;
+    const laid = layPages([para('p')], new Map([['p', LINES * 2]]), geometry, settings, names, undefined, notes({ p: [{ key: 'a', line: last }] }, { a: 4 }));
+    expect(partsOf(laid.pages, 'a')).toEqual([{ at: 1, from: 0, to: 4 }]);
+  });
+
+  it('keeps the notes in order: a later note waits until the broken one has finished', () => {
+    const laid = layPages(
+      [para('p')],
+      new Map([['p', LINES * 4]]),
+      geometry,
+      settings,
+      names,
+      undefined,
+      notes({ p: [{ key: 'a', line: 3 }, { key: 'b', line: 6 }] }, { a: LINES * 2, b: 2 }),
+    );
+    const a = partsOf(laid.pages, 'a');
+    const b = partsOf(laid.pages, 'b');
+    expect(a.length).toBeGreaterThan(2);
+    expect(b).toHaveLength(1);
+    expect(b[0]!.at).toBeGreaterThanOrEqual(a[a.length - 1]!.at);
+    // And b's marker went over with it, past the page the note finished on.
+    const page = laid.pages[b[0]!.at]!;
+    expect(page.pieces.some((piece) => piece.from <= 6 && piece.to > 6)).toBe(true);
+  });
+
+  it('carries a note past the end of the text onto a page of its own', () => {
+    const laid = layPages([para('p')], new Map([['p', 5]]), geometry, settings, names, undefined, notes({ p: [{ key: 'a', line: 1 }] }, { a: LINES + 10 }));
+    const parts = partsOf(laid.pages, 'a');
+    expect(parts.reduce((sum, part) => sum + part.to - part.from, 0)).toBe(LINES + 10);
+    const lastPage = laid.pages[parts[parts.length - 1]!.at]!;
+    expect(lastPage.pieces).toEqual([]);
+  });
+
+  it('carries on the blank left-hand page before a chapter that opens on the right', () => {
+    const opening = (id: string): BookBlock => ({ ...para(id), kind: 'chapter_opening', starts: 'recto', unbreakable: true, keepWithNext: true });
+    const blocks = [opening('c1'), para('p'), opening('c2'), para('q')];
+    // Chapter one ends on its first page, a recto, with a note too long for it.
+    const laid = layPages(blocks, new Map([['c1', 4], ['p', LINES - 10], ['c2', 4], ['q', 5]]), geometry, settings, names, undefined, notes({ p: [{ key: 'a', line: LINES - 12 }] }, { a: 20 }));
+    const parts = partsOf(laid.pages, 'a');
+    expect(parts.length).toBe(2);
+    const verso = laid.pages[parts[1]!.at]!;
+    expect(verso.side).toBe('verso');
+    expect(verso.pieces).toEqual([]);
+    expect(verso.blank).toBe(false);
+    // And chapter two still opens on the recto after it.
+    const next = laid.pages[parts[1]!.at + 1]!;
+    expect(next.pieces[0]!.blockId).toBe('c2');
+  });
+
+  it('draws the rest under a rule the width of the measure, clipped to its lines', () => {
+    const { file, elements } = book(['Tides follow@ the moon.']);
+    const key = file.citations[0]!.key;
+    const blocks = new Map(bookBlocks(file).map((block) => [block.id, block]));
+    const page = { ...pageWith(elements[0]!.id, [key]), noteParts: [{ key, from: 2, to: 4, lines: 4 }] };
+    const html = renderBookPage(page, blocks, contextOf(file));
+    expect(html).toContain('<div class="bk-notes continues"><div class="bk-note-part" style="height:');
+    expect(html).toMatch(/<div style="margin-top:-[\d.]+px"><p class="bk-note"/);
+  });
 });
 
 describe('the citation on the page', () => {

@@ -22,7 +22,7 @@ import { partStyleAttr } from './part-style.js';
 import type { AuthorPhotoShape } from './back-matter.js';
 import { fillPageFields, headSideClass, runningHeadStyleOf, runningStyleVars } from './running-heads.js';
 import type { BookBlock, FigureFree, FigureInset } from './book-plan.js';
-import type { BookContentsRow, BookPage } from './book-pages.js';
+import type { BookContentsRow, BookPage, NotePart } from './book-pages.js';
 import { runsText, type BookIndex } from './book-index.js';
 import type { TitlePage } from './entities/title-page.js';
 
@@ -96,18 +96,39 @@ const noteMark = (marker: string): string => (/^[0-9a-z]+$/.test(marker) ? `${ma
 const noteMarkup = (key: string, note: { marker: string; text: string }): string =>
   `<p class="bk-note" data-note="${escapeHtml(key)}"><span class="bk-note-mark">${escapeHtml(noteMark(note.marker))}</span> ${renderNoteText(note.text)}</p>`;
 
+/** A note's type against the body's: smaller, and set closer (addendum 43 §8). */
+const NOTE_SIZE = 0.8;
+const NOTE_LEADING = 1.3;
+
+/** One line of a note, in CSS pixels: what a note breaks by (§12). */
+export const noteLinePx = (geometry: BookGeometry): number => bookMetrics(geometry).sizePx * NOTE_SIZE * NOTE_LEADING;
+
 /**
  * The notes at the foot of a page, under a short rule (addendum 43 §8). The
  * cutter has already kept their lines free; this only draws them.
+ *
+ * **A note broken across pages** (§12) is drawn whole and clipped to its lines
+ * on each, the way a paragraph split across pages is, so its words wrap
+ * exactly as they were measured. The page its rest carries on at opens its
+ * notes with a rule the width of the measure, which is how a reader knows the
+ * note there is not a new one.
  */
-export const renderPageNotes = (keys: readonly string[], context: BookRenderContext): string => {
+export const renderPageNotes = (parts: readonly (string | NotePart)[], context: BookRenderContext): string => {
   const notes = context.citations?.notes;
-  if (!notes || keys.length === 0) return '';
-  const set = keys.map((key) => {
+  if (!notes || parts.length === 0) return '';
+  const linePx = noteLinePx(context.geometry);
+  const set = parts.map((part) => {
+    const key = typeof part === 'string' ? part : part.key;
     const note = notes.get(key);
-    return note ? noteMarkup(key, note) : '';
+    if (!note) return '';
+    const whole = noteMarkup(key, note);
+    if (typeof part === 'string' || (part.from === 0 && part.to >= part.lines)) return whole;
+    const height = (part.to - part.from) * linePx;
+    return `<div class="bk-note-part" style="height:${height.toFixed(3)}px"><div style="margin-top:-${(part.from * linePx).toFixed(3)}px">${whole}</div></div>`;
   });
-  return `<div class="bk-notes">${set.join('')}</div>`;
+  const first = parts[0];
+  const continues = first !== undefined && typeof first !== 'string' && first.from > 0;
+  return `<div class="bk-notes${continues ? ' continues' : ''}">${set.join('')}</div>`;
 };
 
 /** Every note in the book, for the measuring box: each is read back for its height. */
@@ -1027,7 +1048,7 @@ export const renderBookPage = (
     : '';
   const folio = page.folio ? `<div class="${folioClass(page, context.settings)}">${escapeHtml(page.folio)}</div>` : '';
   const classes = ['bk-page', page.side, page.blank ? 'blank' : '', page.display ? 'display' : ''].filter(Boolean).join(' ');
-  const notes = renderPageNotes(page.notes ?? [], context);
+  const notes = renderPageNotes(page.noteParts?.length ? page.noteParts : (page.notes ?? []), context);
   return `<section class="${classes}" data-sheet="${page.sheet}">${head}<div class="${textClass(context)}">${pieces}</div>${notes}${foot}${folio}</section>`;
 };
 
@@ -1286,7 +1307,10 @@ ${CHAPTER_STYLES}
   .bk-cite { font-size: 0.68em; line-height: 0; vertical-align: super; padding-left: 0.05em; }
   /* The notes sit on the foot of the text block, above the folio in the
      margin, on lines the cutter kept free for them; a short rule above. */
-  .bk-notes { position: absolute; bottom: var(--bk-bottom); width: var(--bk-measure); font-size: 0.8em; line-height: 1.3; text-align: left; hyphens: auto; -webkit-hyphens: auto; }
+  .bk-notes { position: absolute; bottom: var(--bk-bottom); width: var(--bk-measure); font-size: ${NOTE_SIZE}em; line-height: ${NOTE_LEADING}; text-align: left; hyphens: auto; -webkit-hyphens: auto; }
+  /* The rest of a note from the page before: the rule runs the full measure (§12). */
+  .bk-notes.continues::before { width: 100%; }
+  .bk-note-part { overflow: hidden; }
   .bk-notes::before { content: ''; display: block; width: 30%; border-top: 0.5pt solid currentColor; margin-bottom: calc(var(--bk-lead) * 0.4); }
   .bk-page.recto .bk-notes { left: var(--bk-inside); }
   .bk-page.verso .bk-notes { left: var(--bk-outside); }

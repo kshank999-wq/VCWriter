@@ -20,6 +20,7 @@ import {
   projectStats,
   renderBookBlock,
   renderNotesForMeasure,
+  noteLinePx,
   textClass,
   titlePageOf,
   type BookBlock,
@@ -221,7 +222,8 @@ export const measureBlocks = (
     }
   }
   box.innerHTML = '';
-  return { measured, wraps, notes: { anchors, heights } };
+  // One line of a note, which is what a long note breaks by (addendum 43 §12).
+  return { measured, wraps, notes: { anchors, heights, line: noteLinePx(context.geometry) / leadPx } };
 };
 
 /** The whole laying, from a file, measuring in `box`. Pure but for the box. */

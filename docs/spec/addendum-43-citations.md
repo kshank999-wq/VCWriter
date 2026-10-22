@@ -15,6 +15,7 @@ kept current, and headers and footers for instructional publishing.
 | 3 | Export: Word footnotes and bibliography, EPUB notes; footnotes read from Word | **built** (§9) |
 | 4 | The header and footer gaps against spec §6 (author, date and custom fields, per-section restart, first page per section) | **built** (§10) |
 | 5 | The Document (word-processor) module sharing the library | **built** (§11) |
+| 6 | A long note carried on to the next page in Layout | **built** (§12) |
 
 **What already existed.** The Layout room (addendum 20) had measured pages,
 running heads (the book's title on the verso, the chapter's on the recto),
@@ -252,9 +253,8 @@ The Layout room, and the PDF it exports, which is the same pages.
   line.
 - A page's depth counts its notes, so a spread is balanced on what each page
   holds.
-- A note taller than a whole page is set and clipped on its marker's page,
-  rather than turning pages for ever. Chicago would carry it on to the next
-  page; that is not built.
+- A note too long to stand whole under its marker breaks across pages
+  (§12).
 - The note's head is *1.* or *a.*, and a symbol prints bare (*, †).
 
 **The bibliography page.**
@@ -545,10 +545,67 @@ numbering is unchanged.
 - Rendered by Chromium to PDF: the print has its markers, *Notes* and the
   bibliography.
 
-## 12. Not yet
+## 12. A note carried on to the next page
 
-- A note carried on to the next page in Layout when it is too tall for its
-  own.
+From Ken, after phase 4: *build the note carrying on to the next page next.*
+Until now a note too long for the room under its marker was set whole and
+clipped on that page, so its last lines were lost. A note now breaks the way
+Word breaks one, and as Chicago allows (14.47).
+
+**When a note breaks** (`layPages`, `fillPage`):
+- A short note never breaks. Where it will not fit under its marker's line,
+  that line goes over with it, as before (§8).
+- A note breaks only where standing whole would push its own marker's line
+  off the page. Then the text runs on down the page with the marker in it,
+  and at least two lines of the note stand under it. A note of one line
+  never breaks.
+- The rest carries on at the head of the next page's notes, under a rule
+  the full width of the measure (Word's continuation separator), so a reader
+  knows it is not a new note. As much as fits goes there while leaving the
+  text two lines. A note longer than that carries on again.
+- **Notes keep their order.** While a note is still carrying on, no later
+  note may start: a line whose marker would bring one in waits for the page
+  after the carried note ends.
+- A carried note does not wait for text:
+  - it carries on the blank left-hand page before a chapter that opens on
+    the right
+  - past the end of the text, onto a page of its own
+  - but not on a picture page, which it waits beyond
+- A page's depth counts its carried lines, so spreads still balance.
+
+**Measured, not guessed.** A note breaks between its own lines, never through
+one. The typesetter already reads each note's height; it now also says how
+tall one line of a note is (`noteLinePx`, from the same size and leading the
+stylesheet sets them in), and the cutter counts each note in those lines
+(`linesOfNote`, `notePartsCost`).
+
+**Drawn the way a split paragraph is.** Each part of a broken note is the
+whole note clipped to its lines (`NotePart`, `BookPage.noteParts`,
+`renderPageNotes`). Its words therefore wrap exactly as they were measured,
+and the second page picks up mid-sentence where the first left off. The PDF
+is the same pages.
+
+**Word and the eBook** need nothing. Word breaks its own footnotes, and an
+eBook has no page foot.
+
+**Proof.**
+- In `citation-pages.test.ts`, six more tests:
+  - a long note breaking, with at least two lines under its marker, the
+    rest at the head of the next page, every line set once, and each page
+    full and no fuller
+  - a short note kept whole, its line going over with it
+  - a later note waiting until the broken one has finished
+  - a note carried past the end of the text onto a page of its own
+  - a note carried on the blank left-hand page before a chapter, the
+    chapter still opening on the right
+  - the continuation drawn under the full-width rule, clipped to its lines
+- Seen in Chromium: a chapter with a long note on a citation two-thirds of
+  the way down a page. Three lines of the note stand under the text; the
+  rest carries on at the foot of the facing page under a full-width rule,
+  continuing mid-sentence.
+
+## 13. Not yet
+
 - Citations typed into front- or back-matter pages (they are numbered only in
   the story).
 - Recognising a Word note's parts (author, title, publisher) automatically.

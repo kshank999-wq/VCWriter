@@ -46,13 +46,27 @@ const NO_WRAPS: Wraps = new Map();
  * - `anchors`: by block, the line each citation's marker fell on, and its key
  * - `heights`: by key, how tall its note sets, in lines of the body's leading
  *   (a fraction: a note is set smaller and closer than the text)
+ * - `line`: one line of a note, in the same units — what a note is broken by
  *
- * A note goes on the page its marker is on — the whole of it, never carried
- * to the next — so a line whose note will not fit goes over with it.
+ * A note goes on the page its marker is on. A short one goes whole, so a line
+ * whose note will not fit under it goes over with it. **A long one breaks**
+ * (§12): where it cannot stand whole with its marker's line, at least two of
+ * its lines stay under the text there and the rest carries on at the foot of
+ * the next page, above that page's own notes, under a rule the width of the
+ * measure — as Word does it and as Chicago allows (14.47).
  */
 export interface NotePlacements {
   anchors: ReadonlyMap<string, readonly { key: string; line: number }[]>;
   heights: ReadonlyMap<string, number>;
+  line?: number;
+}
+
+/** Lines `from` up to `to` of a note that is `lines` long, on one page (§12). */
+export interface NotePart {
+  key: string;
+  from: number;
+  to: number;
+  lines: number;
 }
 
 const NO_NOTES: NotePlacements = { anchors: new Map(), heights: new Map() };
@@ -60,13 +74,29 @@ const NO_NOTES: NotePlacements = { anchors: new Map(), heights: new Map() };
 /** The rule over the notes and the space around it, in lines. */
 const NOTE_RULE = 0.6;
 
-/** The whole lines a page's notes take, rule and all: nothing where it has none. */
-export const noteLines = (notes: NotePlacements, keys: readonly string[]): number => {
-  if (keys.length === 0) return 0;
-  const tall = keys.reduce((sum, key) => sum + (notes.heights.get(key) ?? 1), NOTE_RULE);
+/** One line of a note, in lines of the body. */
+const noteLineOf = (notes: NotePlacements): number => (notes.line && notes.line > 0 ? notes.line : 1);
+
+/** How many lines a note sets in. */
+export const linesOfNote = (notes: NotePlacements, key: string): number =>
+  Math.max(1, Math.round((notes.heights.get(key) ?? noteLineOf(notes)) / noteLineOf(notes)));
+
+const wholeNote = (notes: NotePlacements, key: string): NotePart => {
+  const lines = linesOfNote(notes, key);
+  return { key, from: 0, to: lines, lines };
+};
+
+/** The whole lines of the body a page's notes take, rule and all: nothing where it has none. */
+export const notePartsCost = (notes: NotePlacements, parts: readonly NotePart[]): number => {
+  if (parts.length === 0) return 0;
+  const tall = parts.reduce((sum, part) => sum + (part.to - part.from) * noteLineOf(notes), NOTE_RULE);
   // A hair of slack, as the measuring itself allows, so 2.0001 is two.
   return Math.ceil(tall - 0.02);
 };
+
+/** The lines a set of whole notes takes. */
+export const noteLines = (notes: NotePlacements, keys: readonly string[]): number =>
+  notePartsCost(notes, keys.map((key) => wholeNote(notes, key)));
 
 /** The notes whose markers fall on lines `from` up to `to` of a block. */
 const notesIn = (notes: NotePlacements, blockId: string, from: number, to: number, total: number): string[] =>
@@ -119,6 +149,8 @@ export interface BookPage {
   pieces: PagePiece[];
   /** The citations whose notes this page carries at its foot, in order (addendum 43 §8). */
   notes: string[];
+  /** Which lines of each it carries: a part where a note breaks across pages (§12). */
+  noteParts: NotePart[];
   /** Lines used, notes included, and the depth the page was cut to. */
   depth: number;
   target: number;
@@ -154,6 +186,8 @@ interface Cursor {
    * illustrated book does and what a reader expects.
    */
   held?: readonly number[];
+  /** The rest of a note broken at the foot of the last page, to carry on at this one's (§12). */
+  carry?: { key: string; from: number; lines: number };
 }
 
 /**
@@ -190,6 +224,8 @@ interface Filled {
   continued: boolean;
   /** The citations whose notes stand at this page's foot, in order (addendum 43 §8). */
   notes: string[];
+  /** Which lines of each, where a note breaks across pages (§12). */
+  noteParts: NotePart[];
 }
 
 const linesOf = (measured: Measured, block: BookBlock): number => Math.max(1, measured.get(block.id) ?? 1);
@@ -256,7 +292,7 @@ const fillPage = (
 ): Filled | null => {
   const first = blocks[start.index];
   const waiting = start.held ?? [];
-  if (!first && waiting.length === 0) return null;
+  if (!first && waiting.length === 0 && !start.carry) return null;
   const empty: Filled = {
     pieces: [],
     depth: 0,
@@ -268,6 +304,7 @@ const fillPage = (
     numbering: null,
     continued: false,
     notes: [],
+    noteParts: [],
   };
 
   /**
@@ -283,7 +320,8 @@ const fillPage = (
     return {
       pieces: [{ blockId: held.id, from: 0, to: linesOf(measured, held) }],
       depth: target,
-      cursor: { index: start.index, offset: start.offset, held: waiting.slice(1) },
+      // A note still carrying on waits for a page of text.
+      cursor: { index: start.index, offset: start.offset, held: waiting.slice(1), ...(start.carry ? { carry: start.carry } : {}) },
       display: true,
       blank: false,
       folio: held.folio,
@@ -291,20 +329,22 @@ const fillPage = (
       numbering: held.numbering,
       continued: false,
       notes: [],
+      noteParts: [],
     };
   }
-  if (!first) return null;
 
-  // A block that must open on the other side leaves this one blank.
-  if (start.offset === 0 && first.starts === 'recto' && side === 'verso') return empty;
-  if (start.offset === 0 && first.starts === 'verso' && side === 'recto') return empty;
+  // A block that must open on the other side leaves this one blank — but for
+  // the rest of a note, which carries on there rather than waiting a leaf.
+  const otherSide =
+    first !== undefined && start.offset === 0 && ((first.starts === 'recto' && side === 'verso') || (first.starts === 'verso' && side === 'recto'));
+  if (otherSide && !start.carry) return empty;
 
   // A display page: a leaf to itself, whatever it measured.
-  if (start.offset === 0 && first.display) {
+  if (first && !otherSide && start.offset === 0 && first.display) {
     return {
       pieces: [{ blockId: first.id, from: 0, to: linesOf(measured, first) }],
       depth: target,
-      cursor: { index: start.index + 1, offset: 0 },
+      cursor: { index: start.index + 1, offset: 0, ...(start.carry ? { carry: start.carry } : {}) },
       display: true,
       blank: false,
       folio: first.folio,
@@ -312,30 +352,53 @@ const fillPage = (
       numbering: first.numbering,
       continued: false,
       notes: [],
+      noteParts: [],
     };
   }
 
   const pieces: PagePiece[] = [];
   let depth = 0;
-  let cursor = { ...start };
+  let cursor: Cursor = { index: start.index, offset: start.offset };
   /**
    * The notes this page carries so far (addendum 43 §8). `depth` counts the
    * text's lines only; what is left for text is the target less the text
    * and less the lines the notes take, rule and all.
    */
-  const keys: string[] = [];
-  const noted = (): number => noteLines(notes, keys);
-  /** The extra lines the notes of lines `from` to `to` would cost this page. */
-  const costOf = (blockId: string, from: number, to: number, total: number): { keys: string[]; extra: number } => {
-    const more = notesIn(notes, blockId, from, to, total);
-    if (more.length === 0) return { keys: more, extra: 0 };
-    return { keys: more, extra: noteLines(notes, [...keys, ...more]) - noted() };
+  const parts: NotePart[] = [];
+  /** The rest of a note broken on this page, for the next. */
+  let carryOut: Cursor['carry'];
+  /** No new note may follow one that is still carrying on: notes keep their order. */
+  let closed = false;
+  /**
+   * **The rest of a note broken on the page before** (§12) takes the head of
+   * this page's notes, as much as fits while leaving the text two lines; a
+   * note longer than that carries on again.
+   */
+  if (start.carry) {
+    const carried = start.carry;
+    const textAfter = !otherSide && start.index < blocks.length;
+    const room = Math.max(1, target - (textAfter ? KEEP : 0));
+    let take = carried.lines - carried.from;
+    while (take > 1 && notePartsCost(notes, [{ key: carried.key, from: carried.from, to: carried.from + take, lines: carried.lines }]) > room) take -= 1;
+    parts.push({ key: carried.key, from: carried.from, to: carried.from + take, lines: carried.lines });
+    if (carried.from + take < carried.lines) {
+      carryOut = { key: carried.key, from: carried.from + take, lines: carried.lines };
+      closed = true;
+    }
+  }
+  const noted = (): number => notePartsCost(notes, parts);
+  /** The extra lines the notes of lines `from` to `to` would cost this page, each whole. */
+  const costOf = (blockId: string, from: number, to: number, total: number): { parts: NotePart[]; extra: number } => {
+    const more = notesIn(notes, blockId, from, to, total).map((key) => wholeNote(notes, key));
+    if (more.length === 0) return { parts: more, extra: 0 };
+    if (closed) return { parts: more, extra: Number.POSITIVE_INFINITY };
+    return { parts: more, extra: notePartsCost(notes, [...parts, ...more]) - noted() };
   };
   let chapterTitle = chapterInForce;
   let numbering: 'roman' | 'arabic' | null = null;
 
   const held: number[] = [];
-  while (cursor.index < blocks.length) {
+  while (!otherSide && cursor.index < blocks.length) {
     const block = blocks[cursor.index] as BookBlock;
     if (!isFlow(block)) {
       /**
@@ -392,19 +455,19 @@ const fillPage = (
       // Whole, and with room under it where it keeps the next. A block that
       // would fit an empty page but for its notes goes on one anyway, or the
       // page would come back empty and the cutter would never move on.
-      if (remaining + whole.extra <= available || (pieces.length === 0 && remaining <= target)) {
+      if (remaining + whole.extra <= available || (pieces.length === 0 && parts.length === 0 && remaining <= target)) {
         if (keepsNext && available - remaining - whole.extra < KEEP && pieces.length > 0) break;
         pieces.push({ blockId: block.id, from: cursor.offset, to: total });
-        keys.push(...whole.keys);
+        parts.push(...whole.parts);
         depth += remaining;
         cursor = { index: cursor.index + 1, offset: 0 };
         continue;
       }
       // Taller than a page: nothing else to do but run it over.
-      if (pieces.length === 0 && remaining > target) {
+      if (pieces.length === 0 && parts.length === 0 && remaining > target) {
         const run = costOf(block.id, cursor.offset, cursor.offset + available, total);
         pieces.push({ blockId: block.id, from: cursor.offset, to: cursor.offset + available, cut: true });
-        keys.push(...run.keys);
+        if (Number.isFinite(run.extra)) parts.push(...run.parts);
         depth += available;
         cursor = { index: cursor.index, offset: cursor.offset + available };
         continue;
@@ -415,7 +478,7 @@ const fillPage = (
     if (remaining + whole.extra <= available) {
       if (keepsNext && available - remaining - whole.extra < KEEP && pieces.length > 0) break;
       pieces.push({ blockId: block.id, from: cursor.offset, to: total, cut: cursor.offset > 0 });
-      keys.push(...whole.keys);
+      parts.push(...whole.parts);
       depth += remaining;
       cursor = { index: cursor.index + 1, offset: 0 };
       continue;
@@ -426,24 +489,69 @@ const fillPage = (
     // (an orphan).
     let take = Math.min(available, remaining);
     while (take > 0 && take + costOf(block.id, cursor.offset, cursor.offset + take, total).extra > available) take -= 1;
+
+    /**
+     * **Or the last note breaks** (§12). Where its marker's line would have
+     * to go over for the note to stand whole, more of the text stays here and
+     * the note breaks under it: at least two of its lines on this page, the
+     * rest carried to the next. A note of a line or two never breaks — its
+     * line goes over with it, which is the better page.
+     */
+    let broke = false;
+    if (!closed) {
+      const room = target - depth;
+      // The notes whose lines stand here whole already: none of those breaks.
+      const standing = new Set(notesIn(notes, block.id, cursor.offset, cursor.offset + take, total));
+      for (let lines = Math.min(available, remaining); lines > take; lines -= 1) {
+        const more = notesIn(notes, block.id, cursor.offset, cursor.offset + lines, total);
+        if (more.length === 0) continue;
+        const last = more[more.length - 1] as string;
+        if (standing.has(last)) continue;
+        const length = linesOfNote(notes, last);
+        const before = more.slice(0, -1).map((key) => wholeNote(notes, key));
+        let kept = 0;
+        for (let here = length - 1; here >= Math.min(2, length); here -= 1) {
+          if (lines + notePartsCost(notes, [...parts, ...before, { key: last, from: 0, to: here, lines: length }]) <= room) {
+            kept = here;
+            break;
+          }
+        }
+        if (kept < 2) continue;
+        const to = cursor.offset + lines;
+        pieces.push({ blockId: block.id, from: cursor.offset, to, cut: cursor.offset > 0 || to < total });
+        parts.push(...before, { key: last, from: 0, to: kept, lines: length });
+        depth += lines;
+        cursor = to >= total ? { index: cursor.index + 1, offset: 0 } : { index: cursor.index, offset: to };
+        carryOut = { key: last, from: kept, lines: length };
+        closed = true;
+        broke = true;
+        break;
+      }
+    }
+    if (broke) break;
+
     if (remaining - take === 1) take -= 1;
+    // A page whose notes are the rest of one from before has already moved
+    // the book on, so it need not force a line of text onto itself.
+    const forced = pieces.length === 0 && parts.length === 0;
     if (cursor.offset === 0 && take < KEEP) {
-      if (pieces.length === 0) take = Math.max(1, take);
+      if (forced) take = Math.max(1, take);
       else break;
     }
     // An empty page always takes something: a note taller than the page is
     // set and clipped rather than turning pages for ever.
-    if (pieces.length === 0) take = Math.max(1, take);
+    if (forced) take = Math.max(1, take);
     if (take <= 0) break;
     const split = costOf(block.id, cursor.offset, cursor.offset + take, total);
     pieces.push({ blockId: block.id, from: cursor.offset, to: cursor.offset + take, cut: true });
-    keys.push(...split.keys);
+    if (Number.isFinite(split.extra)) parts.push(...split.parts);
     depth += take;
     cursor = { index: cursor.index, offset: cursor.offset + take };
     break;
   }
 
-  if (pieces.length === 0) return empty;
+  // A page holding only the rest of a note is still a page (§12).
+  if (pieces.length === 0 && parts.length === 0) return empty;
   const after = blocks[cursor.index];
   const continued =
     after !== undefined && isFlow(after) && (cursor.offset > 0 || after.starts === 'none');
@@ -454,14 +562,15 @@ const fillPage = (
     depth: depth + noted(),
     // The plates this page set aside travel with the cursor (§9q), so the
     // leaves after it draw them before the text goes on.
-    cursor: held.length > 0 ? { ...cursor, held } : cursor,
+    cursor: { ...cursor, ...(held.length > 0 ? { held } : {}), ...(carryOut ? { carry: carryOut } : {}) },
     display: false,
     blank: false,
     folio: true,
     chapterTitle,
     numbering,
     continued,
-    notes: keys,
+    notes: [...new Set(parts.map((part) => part.key))],
+    noteParts: parts,
   };
 };
 
@@ -561,6 +670,7 @@ export const layPages = (
       opens,
       pieces: filled.pieces,
       notes: filled.notes,
+      noteParts: filled.noteParts,
       depth: filled.depth,
       target: cut,
     };
@@ -573,7 +683,7 @@ export const layPages = (
   cursor = opening.cursor;
 
   let sheet = 2;
-  while (cursor.index < blocks.length || (cursor.held?.length ?? 0) > 0) {
+  while (cursor.index < blocks.length || (cursor.held?.length ?? 0) > 0 || cursor.carry !== undefined) {
     const before = cursor;
     const titleBefore = chapterTitle;
     let verso = fillPage(blocks, measured, cursor, target, 'verso', chapterTitle, wraps, notes);
