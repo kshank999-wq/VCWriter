@@ -21,6 +21,14 @@ import type { ProjectFile } from './project-file.js';
 
 export type NoteForm = 'chicago' | 'apa' | 'mla';
 
+/** A style's name, as a sentence says it. */
+export const REFERENCE_STYLE_NAMES: Record<CitationSettings['style'], string> = {
+  chicago: 'Chicago',
+  apa: 'APA',
+  mla: 'MLA',
+  custom: 'your custom style',
+};
+
 /** Whether this style cites with markers and notes at the foot of the page. */
 export const usesFootnotes = (settings: CitationSettings): boolean => settings.style === 'chicago' || settings.style === 'custom';
 
@@ -417,4 +425,33 @@ export const referenceBibliography = (file: ProjectFile): { reference: Reference
             a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }),
         );
   return ordered.map((reference) => ({ reference, text: formatEntry(reference, form) }));
+};
+
+/**
+ * What the printed book needs to set the citations (addendum 43 §8, phase 2):
+ * what each token prints as in the line, and the note under each marker.
+ *
+ * Keyed by the token's key, because that is what a block's spans carry. A key
+ * typed twice (a paste) prints its first marker both times rather than
+ * nothing the second.
+ */
+export interface BookCitations {
+  /** Footnote markers to raise (Chicago, custom), or parentheticals set in the line (APA, MLA). */
+  raised: boolean;
+  /** By key: the marker, or the parenthetical in inline marks. */
+  inText: ReadonlyMap<string, string>;
+  /** By key: the note at the foot of the page, in inline marks. Empty for APA and MLA. */
+  notes: ReadonlyMap<string, { marker: string; text: string }>;
+}
+
+/** The book's citations, read once per laying; null where the book cites nothing. */
+export const bookCitationsOf = (file: ProjectFile): BookCitations | null => {
+  const occurrences = citationOccurrences(file);
+  if (occurrences.length === 0) return null;
+  const raised = usesFootnotes(citationSettingsOf(file));
+  const inText = new Map<string, string>();
+  for (const occurrence of occurrences) if (!inText.has(occurrence.key)) inText.set(occurrence.key, citationInText(file, occurrence));
+  const notes = new Map<string, { marker: string; text: string }>();
+  for (const note of citationNotes(file)) if (!notes.has(note.occurrence.key)) notes.set(note.occurrence.key, { marker: note.marker, text: note.text });
+  return { raised, inText, notes };
 };

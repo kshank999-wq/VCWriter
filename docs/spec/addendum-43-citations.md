@@ -11,8 +11,8 @@ kept current, and headers and footers for instructional publishing.
 | Phase | What | Status |
 | --- | --- | --- |
 | 1 | The Reference Library; inserting, changing and removing citations; styles; cloud sync | **built** (§1–§7) |
-| 2 | Footnotes at the foot of each page in Layout; the bibliography generated as back matter | next |
-| 3 | Export: Word footnotes and bibliography, PDF through Layout, EPUB notes; footnotes read from Word | after |
+| 2 | Footnotes at the foot of each page in Layout; the bibliography generated as back matter | **built** (§8) |
+| 3 | Export: Word footnotes and bibliography, EPUB notes; footnotes read from Word | next |
 | 4 | The header and footer gaps against spec §6 (author, date and custom fields, per-section restart, first page per section) | after |
 
 **What already existed.** The Layout room (addendum 20) had measured pages,
@@ -63,9 +63,10 @@ screen. Six characters (16 million keys) are unique in a project;
 `insertCitation` makes sure of it, and the database enforces it.
 
 The inline parser reads a token as one span that prints nothing on its own
-(`citation` on `InlineSpan`). Every renderer that does not yet know about
-citations — print, eBook, Word, pagination — therefore prints nothing for
-one, rather than its characters, until phases 2 and 3 teach them.
+(`citation` on `InlineSpan`). A renderer that does not yet know about
+citations (the eBook, Word, pagination) prints nothing for one rather than
+its characters. Layout and its PDF learned them in phase 2 (§8); the eBook
+and Word learn them in phase 3.
 
 ## 2. The library (spec §3)
 
@@ -219,14 +220,83 @@ sync too, or another device would read citations of nothing.
   - References: adding and checking a source, the preview of notes and
     bibliography, and a change of style re-rendering it
 
-## 8. Not yet (phases 2–4)
+## 8. In the printed book (phase 2)
 
-- Footnotes at the foot of the page in Layout, above the footer, following
-  their markers as pages reflow.
-- The bibliography generated as back matter from the library.
-- What print, the eBook and Word make of a citation. Until phase 2 a
-  citation prints **nothing** in Layout, the PDF, the eBook and Word, so a
-  book should not be published with citations until then.
+The Layout room, and the PDF it exports, which is the same pages.
+
+**In the line.**
+- Chicago and Custom raise the marker where the token stands
+  (`<sup class="bk-cite">`). It is set at `line-height: 0`, so the line it is
+  in keeps the leading and stays on the grid the cutter counted.
+- APA and MLA set the parenthetical there instead. Where the token was typed
+  against the word before it, a space comes first.
+- The markers are in the markup the measuring box sets, so a line that a
+  marker or a parenthetical pushes over is measured as pushed over.
+
+**At the foot of the page.**
+- A page's notes sit on the foot of the text block, above the folio in the
+  margin, under a short rule. The type is smaller and closer than the text.
+- Their place is measured, not guessed. The typesetter reads two things back
+  (`book-typeset.ts`, `NotePlacements`):
+  - the line of its block each marker fell on, from the raised marker's own
+    box
+  - how tall each note sets at the measure, as a fraction of the body's
+    leading
+- The cutter (`layPages`) keeps the lines a page's notes need, rule and all.
+  A page's notes are added up before rounding to whole lines (`noteLines`),
+  so three short notes are not three lines.
+- A note goes on the page its marker is on, whole. When a marker's line would
+  leave its note no room, the line goes over to the next page and the note
+  with it. When a paragraph breaks across pages, each note follows its own
+  line.
+- A page's depth counts its notes, so a spread is balanced on what each page
+  holds.
+- A note taller than a whole page is set and clipped on its marker's page,
+  rather than turning pages for ever. Chicago would carry it on to the next
+  page; that is not built.
+- The note's head is *1.* or *a.*, and a symbol prints bare (*, †).
+
+**The bibliography page.**
+- The back matter's *Bibliography* is made from the References library
+  (`bibliographyLines`), in the book's style and order, with hanging indents,
+  and kept current as sources and citations change.
+- It is headed as the style heads it (*Bibliography*, *References*, *Works
+  Cited*, or the writer's heading), unless the page was given a title of its
+  own.
+- The page's card in Layout has **From the References library**, on by
+  default. Off, or with nothing in the library, the page prints the sources
+  typed on it, as it always did. Those typed sources wait unprinted while the
+  library is used, and the card says so.
+- References → *Notes & bibliography* says whether the book prints the list,
+  with **Add it to the back matter** where it has no bibliography page.
+
+**Proof.**
+- `citation-pages.test.ts` (12 tests) covers:
+  - the lines kept for notes, and notes added up before rounding
+  - a note following its marker's line onto the second page
+  - a marker's line sent over when its note will not fit under it
+  - a note taller than a page not stranding the cutter
+  - a book with no citations laid exactly as before
+  - the raised marker and the first full note and second short note in the
+    page's markup
+  - APA's parenthetical with its space, and no notes
+  - symbol markers
+  - the library's bibliography in Chicago and APA with the APA heading,
+    current after an edit, and the typed sources when switched off or with
+    an empty library
+- The renderer test adds the bibliography to the back matter from References.
+- Seen in Chromium: two citations raised in the line, their notes under the
+  rule at the foot of the page above the folio, and the bibliography page in
+  the back matter.
+
+## 9. Not yet (phases 3–4)
+
+- What the eBook and Word make of a citation. Until phase 3 a citation prints
+  **nothing** in the eBook or Word: no marker, no note, no parenthetical. The
+  bibliography page reaches the eBook as the back matter does.
 - Reading Word footnotes back in.
+- A note carried on to the next page when it is too tall for its own.
+- Citations typed into front- or back-matter pages (they are numbered only in
+  the story).
 - The spec §6 header and footer gaps.
 - The Document (word-processor) module sharing the library.

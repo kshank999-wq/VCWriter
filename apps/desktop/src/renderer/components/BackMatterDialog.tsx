@@ -62,6 +62,9 @@ import {
   type BookPart,
   type PartStyle,
   type ProjectFile,
+  REFERENCE_STYLE_NAMES,
+  citationSettingsOf,
+  referenceBibliography,
 } from '@vcwriter/domain';
 import { readPdfPages } from '../read-vector';
 import { LineFields } from './LineFields';
@@ -722,6 +725,7 @@ function Card({
 
   if (part.kind === 'bibliography') {
     const own = bibliographyOf(part);
+    const library = referenceBibliography(file);
     const write = (patch: Partial<typeof own>) => onWriteAbout({ ...own, ...patch });
     const setSource = (id: string, patch: Partial<Source>) =>
       write({ sources: own.sources.map((one) => (one.id === id ? { ...one, ...patch } : one)) });
@@ -729,8 +733,18 @@ function Card({
       <section className="dp-card">
         <h3>
           <span className="dp-num">1</span> Sources
-          <span className="muted small dp-tally">{own.sources.length} on the page</span>
+          <span className="muted small dp-tally">{library.length > 0 && own.fromLibrary ? `${library.length} from the library` : `${own.sources.length} on the page`}</span>
         </h3>
+        {library.length > 0 ? (
+          <div className="dp-library" aria-label="From the References library">
+            <Switch on={own.fromLibrary} label="From the References library" onToggle={() => write({ fromLibrary: !own.fromLibrary })} />
+            <p className="muted small">
+              {own.fromLibrary
+                ? `The page prints the library’s ${library.length === 1 ? 'one source' : `${library.length} sources`} in ${REFERENCE_STYLE_NAMES[citationSettingsOf(file).style]}, kept current as you cite. Style, order and heading are set in Research → References.${own.sources.length > 0 ? ' The sources typed below wait unprinted.' : ''}`
+                : 'Off: the page prints the sources typed below, and the library is left out.'}
+            </p>
+          </div>
+        ) : null}
         <Pull file={file} part={part} onUpdate={onUpdate} />
         <div className="dp-terms">
           {own.sources.map((one) => (

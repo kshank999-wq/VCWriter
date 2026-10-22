@@ -3880,7 +3880,7 @@ function PartPictures({
    * count, which is the reading `partOwnBlocks`' comment already said the
    * panel must share.
    */
-  const paragraphs = partParagraphs(part);
+  const paragraphs = partParagraphs(part, file);
   const picker = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const partId = part.id;

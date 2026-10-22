@@ -1,5 +1,6 @@
 import type { BookFont, BookSettings } from './entities/book.js';
-import type { InlineSpan } from './entities/inline.js';
+import { parseInline, type InlineSpan } from './entities/inline.js';
+import type { BookCitations } from './citation-style.js';
 import {
   chapterPageStyleSchema,
   chapterStyleAttr,
@@ -52,17 +53,68 @@ const escapeHtml = (value: string): string =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
-const renderSpans = (spans: InlineSpan[], text: string): string => {
+const styled = (span: InlineSpan, inner: string): string => {
+  if (!span.bold && !span.italic && !span.underline) return inner;
+  const open = `${span.bold ? '<b>' : ''}${span.italic ? '<i>' : ''}${span.underline ? '<u>' : ''}`;
+  const close = `${span.underline ? '</u>' : ''}${span.italic ? '</i>' : ''}${span.bold ? '</b>' : ''}`;
+  return `${open}${inner}${close}`;
+};
+
+/**
+ * The words of a block, with its emphasis — and its citations (addendum 43
+ * §8): a footnote style raises the marker where the token stands; APA and MLA
+ * set the parenthetical there, after a space where the token was typed
+ * against the word before it. Without the book's citations a token prints
+ * nothing, as it always has.
+ */
+const renderSpans = (spans: InlineSpan[], text: string, cites?: BookCitations | null): string => {
   if (spans.length === 0) return escapeHtml(text);
+  let before = '';
   return spans
     .map((span) => {
-      const inner = escapeHtml(span.text);
-      if (!span.bold && !span.italic && !span.underline) return inner;
-      const open = `${span.bold ? '<b>' : ''}${span.italic ? '<i>' : ''}${span.underline ? '<u>' : ''}`;
-      const close = `${span.underline ? '</u>' : ''}${span.italic ? '</i>' : ''}${span.bold ? '</b>' : ''}`;
-      return `${open}${inner}${close}`;
+      if (span.citation !== undefined) {
+        const said = cites?.inText.get(span.citation);
+        if (!said || !cites) return '';
+        if (cites.raised) return `<sup class="bk-cite" data-cite="${escapeHtml(span.citation)}">${escapeHtml(said)}</sup>`;
+        const gap = before.length > 0 && !/[\s(\[“‘—–-]$/.test(before) ? ' ' : '';
+        before = said;
+        return `${gap}<span class="bk-cite-text">${renderSpans(parseInline(said), said)}</span>`;
+      }
+      if (span.text.length > 0) before = span.text;
+      return styled(span, escapeHtml(span.text));
     })
     .join('');
+};
+
+/** A note's own words, which carry the style's italics as inline marks. */
+const renderNoteText = (text: string): string => renderSpans(parseInline(text), text);
+
+/** How a note's marker prints at its head: *1.*, *a.*, but a symbol bare (Chicago 14.24). */
+const noteMark = (marker: string): string => (/^[0-9a-z]+$/.test(marker) ? `${marker}.` : marker);
+
+/** One note, as the foot of the page sets it. */
+const noteMarkup = (key: string, note: { marker: string; text: string }): string =>
+  `<p class="bk-note" data-note="${escapeHtml(key)}"><span class="bk-note-mark">${escapeHtml(noteMark(note.marker))}</span> ${renderNoteText(note.text)}</p>`;
+
+/**
+ * The notes at the foot of a page, under a short rule (addendum 43 §8). The
+ * cutter has already kept their lines free; this only draws them.
+ */
+export const renderPageNotes = (keys: readonly string[], context: BookRenderContext): string => {
+  const notes = context.citations?.notes;
+  if (!notes || keys.length === 0) return '';
+  const set = keys.map((key) => {
+    const note = notes.get(key);
+    return note ? noteMarkup(key, note) : '';
+  });
+  return `<div class="bk-notes">${set.join('')}</div>`;
+};
+
+/** Every note in the book, for the measuring box: each is read back for its height. */
+export const renderNotesForMeasure = (context: BookRenderContext): string => {
+  const notes = context.citations?.notes;
+  if (!notes || notes.size === 0) return '';
+  return `<div class="bk-notes bk-notes-measure">${[...notes].map(([key, note]) => noteMarkup(key, note)).join('')}</div>`;
 };
 
 /** A picture the book may draw, by asset id. */
@@ -87,6 +139,8 @@ export interface BookRenderContext {
   contents: readonly BookContentsRow[];
   /** The index, once the book is laid; null while measuring or where there is none. */
   index: BookIndex | null;
+  /** What the citations print as, in the line and at the foot (addendum 43 §8); absent where the book cites nothing. */
+  citations?: BookCitations | null;
 }
 
 /** The leading and size in CSS pixels, and the width of the text block. */
@@ -497,15 +551,15 @@ const slotMarkup = (
  * starting at nought), the plain text is used for the part taken, which is
  * what a drop cap is: one letter, set large, in the body's own ink.
  */
-const firstLineMarkup = (block: BookBlock, first: 'drop_cap' | 'lead_in'): string => {
+const firstLineMarkup = (block: BookBlock, first: 'drop_cap' | 'lead_in', cites?: BookCitations | null): string => {
   const text = block.text;
-  if (text.trim().length === 0) return renderSpans(block.spans, block.text);
+  if (text.trim().length === 0) return renderSpans(block.spans, block.text, cites);
   // The same cut the preview sheet takes, so a writer choosing a drop cap
   // sees the letter the book will set (§14).
   const cut = firstLineCut(text, first);
-  if (cut <= 0 || cut >= text.length) return renderSpans(block.spans, block.text);
+  if (cut <= 0 || cut >= text.length) return renderSpans(block.spans, block.text, cites);
   const taken = escapeHtml(text.slice(0, cut));
-  const rest = renderSpans(spansAfter(block.spans, cut), text.slice(cut));
+  const rest = renderSpans(spansAfter(block.spans, cut), text.slice(cut), cites);
   return first === 'drop_cap'
     ? `<span class="bk-drop-cap">${taken}</span>${rest}`
     : `<span class="bk-lead-in">${taken}</span>${rest}`;
@@ -762,7 +816,7 @@ const blockInner = (block: BookBlock, context: BookRenderContext): string => {
       ]
         .filter(Boolean)
         .join(' ');
-      const words = first === 'plain' ? renderSpans(block.spans, block.text) : firstLineMarkup(block, first);
+      const words = first === 'plain' ? renderSpans(block.spans, block.text, context.citations) : firstLineMarkup(block, first, context.citations);
       // A run set apart at the head of the paragraph (§17): a glossary term,
       // a question's number. The words after it are the writer's prose and
       // keep their own marks, which is why this is not an inline span.
@@ -781,13 +835,13 @@ const blockInner = (block: BookBlock, context: BookRenderContext): string => {
       if (block.starts !== 'none') {
         return (
           `<div class="bk-opening" style="text-align:center;${chapterStyleFor(context)}">` +
-          `<div class="bk-chapter-head"><p class="bk-chapter-label">${renderSpans(block.spans, block.text)}</p></div>` +
+          `<div class="bk-chapter-head"><p class="bk-chapter-label">${renderSpans(block.spans, block.text, context.citations)}</p></div>` +
           '</div>'
         );
       }
-      return `<p class="bk-heading"${style}>${renderSpans(block.spans, block.text)}</p>`;
+      return `<p class="bk-heading"${style}>${renderSpans(block.spans, block.text, context.citations)}</p>`;
     case 'blockquote':
-      return `<p class="bk-quote"${style}>${renderSpans(block.spans, block.text)}</p>`;
+      return `<p class="bk-quote"${style}>${renderSpans(block.spans, block.text, context.citations)}</p>`;
     case 'scene_break': {
       const ornament = context.settings.ornament.trim();
       return `<p class="bk-break">${ornament ? escapeHtml(ornament) : '&nbsp;'}</p>`;
@@ -963,7 +1017,8 @@ export const renderBookPage = (
     : '';
   const folio = page.folio ? `<div class="${folioClass(page, context.settings)}">${escapeHtml(page.folio)}</div>` : '';
   const classes = ['bk-page', page.side, page.blank ? 'blank' : '', page.display ? 'display' : ''].filter(Boolean).join(' ');
-  return `<section class="${classes}" data-sheet="${page.sheet}">${head}<div class="${textClass(context)}">${pieces}</div>${folio}</section>`;
+  const notes = renderPageNotes(page.notes ?? [], context);
+  return `<section class="${classes}" data-sheet="${page.sheet}">${head}<div class="${textClass(context)}">${pieces}</div>${notes}${folio}</section>`;
 };
 
 /** The stylesheet the pages read; the custom properties come from `bookVars`. */
@@ -1209,6 +1264,20 @@ ${CHAPTER_STYLES}
   .bk-page.verso .bk-folio.left { left: var(--bk-outside); }
   .bk-page.recto .bk-folio.right { right: var(--bk-outside); }
   .bk-folio.centre { left: 0; right: 0; text-align: center; }
+  /* Citations (addendum 43 §8). The raised marker sets no line of its own:
+     line-height 0 keeps it from opening the leading of the line it is in,
+     which would move every line after it off the grid the cutter counted. */
+  .bk-cite { font-size: 0.68em; line-height: 0; vertical-align: super; padding-left: 0.05em; }
+  /* The notes sit on the foot of the text block, above the folio in the
+     margin, on lines the cutter kept free for them; a short rule above. */
+  .bk-notes { position: absolute; bottom: var(--bk-bottom); width: var(--bk-measure); font-size: 0.8em; line-height: 1.3; text-align: left; hyphens: auto; -webkit-hyphens: auto; }
+  .bk-notes::before { content: ''; display: block; width: 30%; border-top: 0.5pt solid currentColor; margin-bottom: calc(var(--bk-lead) * 0.4); }
+  .bk-page.recto .bk-notes { left: var(--bk-inside); }
+  .bk-page.verso .bk-notes { left: var(--bk-outside); }
+  .bk-notes.bk-notes-measure { position: static; }
+  .bk-notes.bk-notes-measure::before { display: none; }
+  .bk-note { margin: 0; text-indent: 1em; }
+  .bk-note-mark { padding-right: 0.1em; }
 `;
 
 /** The whole book as a document: every page at the trim, for the PDF. */

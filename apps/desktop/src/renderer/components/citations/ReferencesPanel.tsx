@@ -26,6 +26,9 @@ import {
   type ProjectFile,
   type ReferenceId,
   type ReferenceType,
+  addPart,
+  bibliographyOf,
+  partsOf,
 } from '@vcwriter/domain';
 import { InlineText } from './InlineText';
 import { ReferenceForm } from './ReferenceForm';
@@ -211,7 +214,7 @@ export function ReferencesPanel({ file, onUpdate, readOnly = false }: References
 
       {view === 'settings' ? <CitationSettingsForm settings={settings} readOnly={readOnly} onChange={(patch) => onUpdate((current) => setCitationSettings(current, patch))} /> : null}
 
-      {view === 'preview' ? <Preview file={file} /> : null}
+      {view === 'preview' ? <Preview file={file} readOnly={readOnly} onUpdate={onUpdate} /> : null}
     </div>
   );
 }
@@ -290,8 +293,11 @@ function CitationSettingsForm({ settings, readOnly, onChange }: { settings: Cita
   );
 }
 
-function Preview({ file }: { file: ProjectFile }) {
+function Preview({ file, readOnly, onUpdate }: { file: ProjectFile; readOnly: boolean; onUpdate(mutate: (current: ProjectFile) => ProjectFile): void }) {
   const settings = citationSettingsOf(file);
+  // The page in the book that prints this list (addendum 43 §8): the back
+  // matter's bibliography, made from the library unless it was told not to be.
+  const page = partsOf(file).find((part) => part.kind === 'bibliography') ?? null;
   const notes = citationNotes(file);
   const occurrences = citationOccurrences(file);
   const entries = referenceBibliography(file);
@@ -316,6 +322,20 @@ function Preview({ file }: { file: ProjectFile }) {
       </section>
       <section aria-label="Bibliography">
         <h4>{bibliographyHeadingOf(settings)}</h4>
+        <p className="muted small refs-in-book">
+          {page === null ? (
+            <>
+              Not in the book yet.{' '}
+              <button type="button" className="ghost small" disabled={readOnly} onClick={() => onUpdate((current) => addPart(current, 'bibliography').file)}>
+                Add it to the back matter
+              </button>
+            </>
+          ) : bibliographyOf(page).fromLibrary ? (
+            'In the book: the bibliography page in the back matter prints this list, and Layout sets the notes at the foot of each page.'
+          ) : (
+            'The bibliography page in the back matter is set to print its own typed sources instead. Turn on From the References library there to print this list.'
+          )}
+        </p>
         {entries.length === 0 ? <p className="muted small">The bibliography lists sources once they are cited{settings.bibliographyScope === 'all' ? ', and every source in the library' : ''}.</p> : null}
         <ul className="refs-bibliography">
           {entries.map((entry) => (

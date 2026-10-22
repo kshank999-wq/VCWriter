@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   bookBlocks,
+  bookCitationsOf,
   bookContentsOf,
   bookIndexFor,
   bookMetrics,
@@ -17,6 +18,7 @@ import {
   pictureLines,
   projectStats,
   renderBookBlock,
+  renderNotesForMeasure,
   textClass,
   titlePageOf,
   type BookBlock,
@@ -26,6 +28,7 @@ import {
   type BookSettings,
   type LaidBook,
   type Measured,
+  type NotePlacements,
   type Wraps,
   type ProjectFile,
 } from '@vcwriter/domain';
@@ -75,6 +78,7 @@ const contextFor = (file: ProjectFile, settings: BookSettings, geometry: BookGeo
   titlePage: titlePageOf(file.project, file.settings),
   contents: [],
   index: null,
+  citations: bookCitationsOf(file),
 });
 
 /**
@@ -117,7 +121,7 @@ export const measureBlocks = (
   box: HTMLElement,
   blocks: readonly BookBlock[],
   context: BookRenderContext,
-): { measured: Measured; wraps: Wraps } => {
+): { measured: Measured; wraps: Wraps; notes: NotePlacements } => {
   const { leadPx, measurePx } = bookMetrics(context.geometry);
   const linesPerPage = context.geometry.linesPerPage;
   const vars = bookVars(context);
@@ -142,6 +146,12 @@ export const measureBlocks = (
    * measure full measure, which is the page the fix is about.
    */
   const wraps = new Map<string, number>();
+  /**
+   * Where each citation's marker fell, by line of its block (addendum 43 §8):
+   * the cutter puts the note on the page that line is on. Read off the raised
+   * marker's own box — its middle, since a superscript reaches above its line.
+   */
+  const anchors = new Map<string, { key: string; line: number }[]>();
   const items = box.querySelectorAll<HTMLElement>('.bk-item');
   blocks.forEach((block, index) => {
     if (block.display) {
@@ -178,9 +188,37 @@ export const measureBlocks = (
       const reach = picture ? picture.getBoundingClientRect().height : 0;
       if (reach > 0) wraps.set(block.id, Math.max(1, Math.ceil(reach / leadPx - 0.1)));
     }
+    if (element && context.citations?.raised) {
+      const marks = element.querySelectorAll<HTMLElement>('.bk-cite[data-cite]');
+      if (marks.length > 0) {
+        const top = element.getBoundingClientRect().top;
+        anchors.set(
+          block.id,
+          [...marks].map((mark) => {
+            const box = mark.getBoundingClientRect();
+            return { key: mark.dataset.cite ?? '', line: Math.max(0, Math.floor(((box.top + box.bottom) / 2 - top) / leadPx)) };
+          }),
+        );
+      }
+    }
   });
+  /**
+   * And how tall each note sets (addendum 43 §8), in the notes' own smaller
+   * type at the measure, as a fraction of the body's leading: the cutter adds
+   * a page's notes up before rounding, so three short notes are not three
+   * whole lines.
+   */
+  const heights = new Map<string, number>();
+  const notesMarkup = context.citations?.raised ? renderNotesForMeasure(context) : '';
+  if (notesMarkup) {
+    box.innerHTML = notesMarkup;
+    for (const note of box.querySelectorAll<HTMLElement>('.bk-note[data-note]')) {
+      const height = note.getBoundingClientRect().height;
+      heights.set(note.dataset.note ?? '', height > 0 ? height / leadPx : 1);
+    }
+  }
   box.innerHTML = '';
-  return { measured, wraps };
+  return { measured, wraps, notes: { anchors, heights } };
 };
 
 /** The whole laying, from a file, measuring in `box`. Pure but for the box. */
@@ -207,8 +245,8 @@ export const layBook = (file: ProjectFile, box: HTMLElement): Laying => {
       contents: rows,
       index: bookIndexFor(file, { pages: [], where: new Map(), roman: 0, arabic: 0 }),
     };
-    const { measured, wraps } = measureBlocks(box, blocks, preliminary);
-    const laid = layPages(blocks, measured, geometry, settings, context.names, wraps);
+    const { measured, wraps, notes } = measureBlocks(box, blocks, preliminary);
+    const laid = layPages(blocks, measured, geometry, settings, context.names, wraps, notes);
     const final: BookRenderContext = {
       ...context,
       contents: bookContentsOf(blocks, laid, out),
@@ -289,6 +327,11 @@ const layingReads = (file: ProjectFile): readonly unknown[] => [
   file.assets,
   file.indexMarks,
   file.indexRefs,
+  // The citations print in the text and at the foot (addendum 43 §8), and the
+  // bibliography page is made from the library.
+  file.references,
+  file.citations,
+  file.settings.citations,
 ];
 
 /** A number that changes when any of them does, so an effect can depend on it. */

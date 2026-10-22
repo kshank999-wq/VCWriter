@@ -22,7 +22,9 @@ import { placeFigure } from './instructional.js';
 import { copyrightLines, copyrightOf, type CopyrightLine } from './copyright-page.js';
 import { titlePageContent, titlePageFieldsOf, type TitlePageContent } from './title-page.js';
 import { aboutAuthorOf, acknowledgementsOf, authorLinksShown, type AuthorPhotoShape } from './back-matter.js';
-import { bibliographyEntries, glossaryEntries, glossaryLetter, glossaryOf, readerExtraOf } from './back-matter-pages.js';
+import { bibliographyEntries, bibliographyOf, glossaryEntries, glossaryLetter, glossaryOf, readerExtraOf } from './back-matter-pages.js';
+import { bibliographyHeadingOf, referenceBibliography } from './citation-style.js';
+import { citationSettingsOf } from './citations.js';
 import type { BookPage } from './book-pages.js';
 import type { ProjectFile } from './project-file.js';
 
@@ -196,6 +198,26 @@ const writeParts = (file: ProjectFile, parts: BookPart[]): ProjectFile => setBoo
 
 /** The heading a part prints, the kind's name where the writer gave none. */
 export const partTitle = (part: BookPart): string => part.title.trim() || PART_INFO[part.kind].name;
+
+/**
+ * **What a bibliography page prints** (addendum 43 §8): the References
+ * library's bibliography, in the book's citation style, where the page is set
+ * to take it and the library has anything to give — otherwise the sources
+ * typed on the page. `fromLibrary` says which, so the screen can say it.
+ */
+export const bibliographyLines = (part: BookPart, file?: ProjectFile): { fromLibrary: boolean; lines: string[]; heading: string } => {
+  if (file && bibliographyOf(part).fromLibrary) {
+    const library = referenceBibliography(file);
+    if (library.length > 0) {
+      return {
+        fromLibrary: true,
+        lines: library.map((entry) => entry.text),
+        heading: part.title.trim() || bibliographyHeadingOf(citationSettingsOf(file)),
+      };
+    }
+  }
+  return { fromLibrary: false, lines: bibliographyEntries(part).map((entry) => entry.text), heading: partTitle(part) };
+};
 
 /**
  * Add a part. A kind the book has one of already is refused — a second
@@ -375,12 +397,12 @@ export const partCarriesOwnWords = (kind: PartKind): boolean =>
  *
  * This is that count, said in one place so the two really cannot disagree.
  */
-export const partParagraphs = (part: BookPart): string[] => {
+export const partParagraphs = (part: BookPart, file?: ProjectFile): string[] => {
   const listed: string[] = [];
   if (part.kind === 'glossary') {
     for (const entry of glossaryEntries(part)) listed.push(entry.definition);
   } else if (part.kind === 'bibliography') {
-    for (const entry of bibliographyEntries(part)) listed.push(entry.text);
+    listed.push(...bibliographyLines(part, file).lines);
   } else if (part.kind === 'reader_extra') {
     const own = readerExtraOf(part);
     if (own.kind === 'newsletter') {
@@ -852,7 +874,9 @@ const partOwnBlocks = (
   // pages being a mistake rather than a design.
   plan: readonly BookPart[] = [],
 ): BookBlock[] => {
-  const title = partTitle(part);
+  // A bibliography made from the library is headed as its style heads it:
+  // *References* in APA, *Works Cited* in MLA (addendum 43 §3).
+  const title = part.kind === 'bibliography' ? bibliographyLines(part, file).heading : partTitle(part);
   /**
    * **A page of art replaces the page, not the kind** (§9y, from Ken: *instead
    * of the table of contents, I want a contents page that is a full page piece
@@ -1114,7 +1138,7 @@ const partOwnBlocks = (
           });
         }
       } else if (part.kind === 'bibliography') {
-        for (const one of bibliographyEntries(part)) listed.push({ text: one.text, role: 'source' });
+        for (const text of bibliographyLines(part, file).lines) listed.push({ text, role: 'source' });
       } else if (part.kind === 'reader_extra') {
         const own = readerExtraOf(part);
         if (own.kind === 'newsletter') {

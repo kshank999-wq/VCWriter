@@ -5,6 +5,8 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import {
   addBeat,
   addReference,
+  bibliographyOf,
+  partsOf,
   addUnit,
   createProjectFile,
   insertCitation,
@@ -171,5 +173,16 @@ describe('References, in Research', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Notes & bibliography' }));
     expect(within(screen.getByLabelText('Notes')).getByRole('listitem').textContent).toBe('(Jones, 2019, p. 12)');
     expect(screen.getByRole('heading', { name: 'References' })).toBeTruthy();
+  });
+
+  it('puts the bibliography into the back matter, made from the library', () => {
+    const start = book();
+    render(<Panel start={addReference(start.file, { title: 'On Tides' }).file} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Notes & bibliography' }));
+    expect(screen.getByText(/Not in the book yet/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Add it to the back matter' }));
+    const page = partsOf(latest!).find((part) => part.kind === 'bibliography')!;
+    expect(bibliographyOf(page).fromLibrary).toBe(true);
+    expect(screen.getByText(/the bibliography page in the back matter prints this list/)).toBeTruthy();
   });
 });
