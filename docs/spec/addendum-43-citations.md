@@ -16,6 +16,7 @@ kept current, and headers and footers for instructional publishing.
 | 4 | The header and footer gaps against spec §6 (author, date and custom fields, per-section restart, first page per section) | **built** (§10) |
 | 5 | The Document (word-processor) module sharing the library | **built** (§11) |
 | 6 | A long note carried on to the next page in Layout | **built** (§12) |
+| 7 | Citations in the front and back matter | **built** (§13) |
 
 **What already existed.** The Layout room (addendum 20) had measured pages,
 running heads (the book's title on the verso, the chapter's on the recto),
@@ -604,10 +605,76 @@ eBook has no page foot.
   rest carries on at the foot of the facing page under a full-width rule,
   continuing mid-sentence.
 
-## 13. Not yet
+## 13. Citations in the front and back matter
 
-- Citations typed into front- or back-matter pages (they are numbered only in
-  the story).
+From Ken: *build the front matter citations next.* A foreword, a preface, an
+introduction, an epigraph, an appendix: the pages an instructional book most
+often cites from outside the chapters. Their words are typed into the page
+itself (`part.text`), not the manuscript, so until now they could not cite.
+
+**Typing one.** The text box of every page that carries prose is now
+`CitableText`:
+- the part's text in the Layout room's column
+- an appendix, and the other pages of words, in the back-matter dialog
+- the words of a designed page (an epigraph, a dedication, a page of your
+  own)
+
+It works as a chapter's line does:
+- **Cite…** under the box, or Ctrl/Cmd+Shift+C in it, opens the same
+  dialog and puts the `[^key]` token at the cursor
+- a click inside a token opens that citation, to change its source,
+  pinpoint or note, or to remove it
+- under the box, each token is named by its note (*[^ab12cd] is note 1*), or
+  by its missing source, so a writer can see which token is which
+- on a book that does not cite, it is the plain box it was
+
+**Where they count** (`citationOccurrences`): where the book prints them.
+- The front matter's pages come first, in the order the writer arranged
+  them, then the story, then the back matter.
+- A foreword that cites a source first therefore takes note 1 and the full
+  note, and the chapters' notes of that source are short.
+- Where the count starts again at each chapter, each page of front or back
+  matter is a division of its own and starts at 1.
+- A page set inside the story is read after it, an approximation for a rare
+  case.
+- An occurrence carries `partId` for the page it stands on.
+
+**On the page.**
+- A page that runs as paragraphs (a foreword, an appendix) is set like a
+  chapter: the marker raised, the note at the foot, measured and carried on
+  if long.
+- A page of words standing alone (an epigraph, a dedication) is drawn by
+  the display page. It now renders its lines with their marks and markers,
+  and sets its notes at its own foot, whole. Such a page is a few lines a
+  third of the way down, and the rest of it is room.
+- The eBook links an epigraph's marker to its note, as it does a chapter's.
+  The Word export already reads the parts' words through the citation
+  writer.
+
+**Proof.**
+- `matter-citations.test.ts` (4 tests) covers:
+  - order: foreword, story, appendix, with the foreword's note full and the
+    rest short
+  - each page as its own division where the count restarts
+  - the foreword's page raising its marker and setting its note
+  - an epigraph's page of words placed after the foreword it was added
+    behind, carrying its note, and linked in the eBook with no token left in
+    its text
+- `citable-text.test.tsx` (2 tests) covers:
+  - placing a citation at the cursor and by Ctrl+Shift+C
+  - naming it by its note
+  - opening it from a click inside it and taking it out
+  - the plain box on a novel
+- Seen in Chromium: a foreword added in Layout and cited after *hours*. Its
+  page raises marker 1 with the full note, and the story's two citations
+  have become notes 2 and 3, both short.
+
+## 14. Not yet
+
+- A page set inside the story is numbered after the story, not where it
+  stands.
+- Glossary definitions and other list pages (questions, *also by*) do not
+  cite; only pages of prose do.
 - Recognising a Word note's parts (author, title, publisher) automatically.
   They are kept whole and flagged.
 - A division's head set to print nothing: an empty box is the book's, and

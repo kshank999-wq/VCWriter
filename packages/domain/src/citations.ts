@@ -13,6 +13,8 @@ import {
   type ReferenceType,
 } from './entities/reference.js';
 import { beatsForUnit, unitsInStoryOrder } from './selectors.js';
+import { PART_INFO, halfOf, partsOf } from './book-plan.js';
+import type { BookPart } from './entities/book.js';
 import type { ProjectFile } from './project-file.js';
 import type { BeatId, CitationId, ManuscriptElementId, ReferenceId, StructuralUnitId } from './ids.js';
 
@@ -310,6 +312,8 @@ export interface CitationOccurrence {
   elementId: ManuscriptElementId | null;
   /** The word-processor document it stands in, or null in the story. */
   documentId: string | null;
+  /** The front- or back-matter page it stands in (§13), or null. */
+  partId: string | null;
   /** Its place in the whole book, from 1 — or in its document, which counts on its own. */
   index: number;
   /** Its place within its chapter, from 1: what a per-chapter count prints. */
@@ -350,36 +354,51 @@ export const citationOccurrences = (file: ProjectFile): CitationOccurrence[] => 
   const seenSources = new Set<string>();
   const out: CitationOccurrence[] = [];
   let inChapter = 0;
+  /** Every token in a run of words, in order, credited to where it stands. */
+  const cite = (text: string, where: Pick<CitationOccurrence, 'unitId' | 'beatId' | 'elementId' | 'partId'>) => {
+    if (!text.includes('[^')) return;
+    for (const span of parseInline(text)) {
+      if (!span.citation) continue;
+      const citation = byKey.get(span.citation) ?? null;
+      const reference = citation ? (byId.get(citation.referenceId) ?? null) : null;
+      inChapter += 1;
+      const index = out.length + 1;
+      const firstOfSource = reference ? !seenSources.has(reference.id) : false;
+      if (reference) seenSources.add(reference.id);
+      out.push({
+        key: span.citation,
+        citation,
+        reference,
+        ...where,
+        documentId: null,
+        index,
+        inChapter,
+        firstOfSource,
+        marker: markerLabel(settings.restartEach === 'chapter' ? inChapter : index, settings.markers, settings.symbolOverflow),
+      });
+    }
+  };
+  /**
+   * **The front and back matter cite too** (addendum 43 §13): a foreword, an
+   * introduction, an epigraph, an appendix. They are read where the book
+   * prints them — the front matter before the story, the back matter after
+   * it — and each counts as a division of its own where the count starts
+   * again at each chapter. A page set inside the story is read after it.
+   */
+  const parts = partsOf(file).filter((part) => PART_INFO[part.kind].carries === 'text' && part.text.includes('[^'));
+  const fromPart = (part: BookPart) => {
+    inChapter = 0;
+    cite(part.text, { unitId: null, beatId: null, elementId: null, partId: part.id });
+  };
+  for (const part of parts) if (halfOf(part) === 'front') fromPart(part);
+  inChapter = 0;
   for (const unit of unitsInStoryOrder(file)) {
     if (chapterStarts.has(unit.id)) inChapter = 0;
     for (const beat of beatsForUnit(file, unit.id)) {
-      for (const element of beat.manuscript.elements) {
-        if (!element.text.includes('[^')) continue;
-        for (const span of parseInline(element.text)) {
-          if (!span.citation) continue;
-          const citation = byKey.get(span.citation) ?? null;
-          const reference = citation ? (byId.get(citation.referenceId) ?? null) : null;
-          inChapter += 1;
-          const index = out.length + 1;
-          const firstOfSource = reference ? !seenSources.has(reference.id) : false;
-          if (reference) seenSources.add(reference.id);
-          out.push({
-            key: span.citation,
-            citation,
-            reference,
-            unitId: unit.id,
-            beatId: beat.id,
-            elementId: element.id,
-            documentId: null,
-            index,
-            inChapter,
-            firstOfSource,
-            marker: markerLabel(settings.restartEach === 'chapter' ? inChapter : index, settings.markers, settings.symbolOverflow),
-          });
-        }
-      }
+      for (const element of beat.manuscript.elements) cite(element.text, { unitId: unit.id, beatId: beat.id, elementId: element.id, partId: null });
     }
   }
+  for (const part of parts) if (halfOf(part) !== 'front') fromPart(part);
   // Each word-processor document counts on its own (addendum 43 §11): a
   // letter and a report in one project are two pieces of writing, each with
   // its notes from 1 and each citing a source in full the first time.
@@ -399,6 +418,7 @@ export const citationOccurrences = (file: ProjectFile): CitationOccurrence[] => 
         unitId: null,
         beatId: null,
         elementId: null,
+        partId: null,
         documentId: document.id as string,
         index: at,
         inChapter: at,

@@ -51,6 +51,7 @@ import {
   type ProjectFile,
   type TitlePageElement,
 } from '@vcwriter/domain';
+import { CitableText } from './citations/CitableText';
 import { LineFields } from './LineFields';
 import { useModal } from '../use-modal';
 
@@ -677,7 +678,9 @@ function Body({
                */
               <label className="field dp-words">
                 <span>{wordsName}</span>
-                <textarea
+                <CitableText
+                  file={file}
+                  onUpdate={onUpdate}
                   aria-label="The words on this page"
                   rows={4}
                   /* **A placeholder names its own page's question** (§9ar).
@@ -694,7 +697,7 @@ function Body({
                         : 'Whatever this page says.'
                   }
                   value={part.text}
-                  onChange={(event) => onUpdate((current) => updatePart(current, part.id, { text: event.target.value }))}
+                  onChange={(text) => onUpdate((current) => updatePart(current, part.id, { text }))}
                 />
                 {/* **A picture stands with the words rather than instead of
                     them** (§19, from Ken: *you can add a graphic at the top,

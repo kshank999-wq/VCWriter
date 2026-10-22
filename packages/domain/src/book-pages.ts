@@ -98,6 +98,9 @@ export const notePartsCost = (notes: NotePlacements, parts: readonly NotePart[])
 export const noteLines = (notes: NotePlacements, keys: readonly string[]): number =>
   notePartsCost(notes, keys.map((key) => wholeNote(notes, key)));
 
+/** The keys of the citations written in some words: a page of words is not measured line by line (§13). */
+const tokenKeys = (text: string): string[] => [...text.matchAll(/\[\^([0-9a-f]{6})\]/g)].map((match) => match[1] as string);
+
 /** The notes whose markers fall on lines `from` up to `to` of a block. */
 const notesIn = (notes: NotePlacements, blockId: string, from: number, to: number, total: number): string[] =>
   (notes.anchors.get(blockId) ?? [])
@@ -340,6 +343,7 @@ const fillPage = (
   if (otherSide && !start.carry) return empty;
 
   // A display page: a leaf to itself, whatever it measured.
+  const displayNotes = first?.display && first.kind === 'part_opening' ? tokenKeys(first.text).filter((key) => notes.heights.has(key)) : [];
   if (first && !otherSide && start.offset === 0 && first.display) {
     return {
       pieces: [{ blockId: first.id, from: 0, to: linesOf(measured, first) }],
@@ -351,8 +355,11 @@ const fillPage = (
       chapterTitle: divisionOf(first, chapterInForce),
       numbering: first.numbering,
       continued: false,
-      notes: [],
-      noteParts: [],
+      // A page of words — an epigraph, a dedication — sets its own notes at
+      // its foot, whole: such a page is a few lines a third of the way down,
+      // and the rest of it is room (addendum 43 §13).
+      notes: displayNotes,
+      noteParts: displayNotes.map((key) => wholeNote(notes, key)),
     };
   }
 

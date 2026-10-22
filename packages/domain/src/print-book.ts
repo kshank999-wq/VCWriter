@@ -451,7 +451,8 @@ const displayInner = (block: BookBlock, context: BookRenderContext): string => {
         .map((line, index) =>
           line.trim().length === 0
             ? '<p class="bk-words-gap"></p>'
-            : `<p${index === 0 ? '' : ' class="bk-words-under"'}>${escapeHtml(line)}</p>`,
+            : // The words' own marks, and a citation's marker (addendum 43 §13).
+              `<p${index === 0 ? '' : ' class="bk-words-under"'}>${renderSpans(parseInline(line), line, context.citations)}</p>`,
         )
         .join('');
       /**

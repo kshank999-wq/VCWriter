@@ -21880,3 +21880,8 @@ dialog.track-dialog.format-inspector {
 .layout-section-row.under { margin-left: 16px; }
 .layout-section-name { display: flex; justify-content: space-between; gap: 12px; width: 100%; text-align: left; padding: 6px 10px; }
 .layout-section-body { padding: 4px 10px 10px; display: flex; flex-direction: column; gap: 6px; }
+
+/* A page's words with citations in them (addendum 43 §13). */
+.citable { display: flex; flex-direction: column; gap: 4px; }
+.citable > textarea { width: 100%; }
+.citable-bar { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }

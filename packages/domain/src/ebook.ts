@@ -237,7 +237,7 @@ const notesSection = (sink: NoteSink): string => {
  * of a page rather than a gap between two lines, and a reflowable book has no
  * use for air above its first words.
  */
-const lines = (text: string, style = ''): string => {
+const lines = (text: string, style = '', render: (line: string) => string = escapeXml): string => {
   const all = text.split(/\n/).map((line) => line.trim());
   let from = 0;
   let to = all.length;
@@ -245,7 +245,7 @@ const lines = (text: string, style = ''): string => {
   while (to > from && all[to - 1]!.length === 0) to -= 1;
   return all
     .slice(from, to)
-    .map((line) => (line.length === 0 ? '<p class="gap"></p>' : `<p${style}>${escapeXml(line)}</p>`))
+    .map((line) => (line.length === 0 ? '<p class="gap"></p>' : `<p${style}>${render(line)}</p>`))
     .join('');
 };
 
@@ -730,7 +730,10 @@ export const ebookOf = (file: ProjectFile, options: { modified?: string; target?
         if (block.display) {
           const words = lineStyleAttr(own?.line, bodyPt, settings.fonts);
           const ranged = own?.align ? ` style="text-align:${own.align}"` : '';
-          current?.html.push(`<div class="words"${ranged}>${lines(block.text, words)}</div>`);
+          // A page of words cites too (addendum 43 §13): an epigraph's source.
+          const draft = current as Draft | null;
+          const said = (line: string) => (cites && draft ? renderSpans(parseInline(line), line, { cites, keys: draft.notes }) : escapeXml(line));
+          current?.html.push(`<div class="words"${ranged}>${lines(block.text, words, said)}</div>`);
         } else {
           current?.html.push(
             `<h1 class="part-title"${lineStyleAttr(own?.title, bodyPt, settings.fonts)}>${escapeXml(block.title ?? current.title)}</h1>`,

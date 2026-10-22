@@ -66,6 +66,7 @@ import {
   citationSettingsOf,
   referenceBibliography,
 } from '@vcwriter/domain';
+import { CitableText } from './citations/CitableText';
 import { readPdfPages } from '../read-vector';
 import { LineFields } from './LineFields';
 import { useModal } from '../use-modal';
@@ -652,12 +653,14 @@ function Card({
         <Switch on={own.ownPage} label="Each appendix starts a new page" onToggle={() => onWriteAbout({ ownPage: !own.ownPage })} />
         <label className="field">
           <span>Words</span>
-          <textarea
+          <CitableText
+            file={file}
+            onUpdate={onUpdate}
             className="dp-serif-input"
             aria-label="Appendix text"
             rows={7}
             value={part.text}
-            onChange={(event) => onUpdate((current) => updatePart(current, partId, { text: event.target.value }))}
+            onChange={(text) => onUpdate((current) => updatePart(current, partId, { text }))}
           />
         </label>
         <Import file={file} part={part} onUpdate={onUpdate} />
@@ -994,12 +997,14 @@ function Card({
       <h3>
         <span className="dp-num">1</span> {PART_INFO[part.kind].name}
       </h3>
-      <textarea
+      <CitableText
+        file={file}
+        onUpdate={onUpdate}
         className="dp-serif-input"
         aria-label="The page’s words"
         rows={10}
         value={part.text}
-        onChange={(event) => onUpdate((current) => updatePart(current, partId, { text: event.target.value }))}
+        onChange={(text) => onUpdate((current) => updatePart(current, partId, { text }))}
       />
     </section>
   );

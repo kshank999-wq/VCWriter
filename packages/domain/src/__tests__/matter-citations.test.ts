@@ -1,0 +1,139 @@
+import { describe, expect, it } from 'vitest';
+import {
+  addBeat,
+  addMarker,
+  addPart,
+  addReference,
+  addUnit,
+  bookBlocks,
+  bookCitationsOf,
+  bookNames,
+  bookSettingsOf,
+  bookSettingsSchema,
+  chapterPageStyleOf,
+  citationNotes,
+  citationOccurrences,
+  createProjectFile,
+  ebookOf,
+  geometryOf,
+  insertCitation,
+  layPages,
+  renderBookPage,
+  setCitationSettings,
+  titlePageOf,
+  updateBeat,
+  type BookPage,
+  type BookRenderContext,
+  type ManuscriptElementId,
+  type ProjectFile,
+} from '../index.js';
+
+/**
+ * Citations in the front and back matter (addendum 43 §13): a foreword, an
+ * epigraph and an appendix cite as a chapter does, numbered where the book
+ * prints them.
+ */
+
+/** A book citing one source in its foreword, its one chapter and an appendix. */
+const book = (): { file: ProjectFile; keys: { foreword: string; story: string; appendix: string }; parts: { foreword: string; appendix: string } } => {
+  let file: ProjectFile = createProjectFile({ title: 'The Sea', format: 'instructional' });
+  const made = addReference(file, { title: 'On Tides', authors: ['Jones, Robert'], date: '2019', publisher: 'Sea Press', place: 'Boston' });
+  file = made.file;
+  const cite = (locator: string) => {
+    const cited = insertCitation(file, { referenceId: made.reference.id, locator });
+    file = cited.file;
+    return cited.citation.key;
+  };
+  const keys = { story: cite('20'), appendix: cite('30'), foreword: cite('10') };
+  const unit = addUnit(file, { trackId: file.tracks[0]!.id, title: 'One' });
+  file = addMarker(unit.file, { unitId: unit.unit.id, kind: 'chapter', title: 'Chapter 1' }).file;
+  const beat = addBeat(file, { unitId: unit.unit.id });
+  file = updateBeat(beat.file, beat.beat.id, {
+    manuscript: { elements: [{ id: crypto.randomUUID() as ManuscriptElementId, type: 'paragraph', text: `Tides follow the moon.[^${keys.story}]`, characterId: null, attributes: {} }] },
+  });
+  const foreword = addPart(file, 'foreword', { text: `A word first.[^${keys.foreword}]` });
+  file = foreword.file;
+  const appendix = addPart(file, 'appendix', { text: `The tables.[^${keys.appendix}]` });
+  file = appendix.file;
+  return { file, keys, parts: { foreword: foreword.partId!, appendix: appendix.partId! } };
+};
+
+describe('citations in the front and back matter', () => {
+  it('numbers them where the book prints them: the foreword before the story, the appendix after', () => {
+    const { file, keys, parts } = book();
+    const occurrences = citationOccurrences(file);
+    expect(occurrences.map((one) => [one.key, one.marker])).toEqual([
+      [keys.foreword, '1'],
+      [keys.story, '2'],
+      [keys.appendix, '3'],
+    ]);
+    expect(occurrences[0]).toMatchObject({ partId: parts.foreword, unitId: null });
+    expect(occurrences[2]).toMatchObject({ partId: parts.appendix });
+    // The foreword cites the source first, so its note is the full one.
+    expect(citationNotes(file).map((note) => note.text)).toEqual([
+      'Robert Jones, *On Tides* (Boston: Sea Press, 2019), 10.',
+      'Jones, *On Tides*, 20.',
+      'Jones, *On Tides*, 30.',
+    ]);
+  });
+
+  it('counts each page as a division of its own where the count starts again at each chapter', () => {
+    const { file } = book();
+    const restarted = setCitationSettings(file, { restartEach: 'chapter' });
+    expect(citationOccurrences(restarted).map((one) => one.marker)).toEqual(['1', '1', '1']);
+  });
+
+  it('raises the marker on the foreword’s page and sets its note there', () => {
+    const { file, keys, parts } = book();
+    const blocks = bookBlocks(file);
+    const words = blocks.find((block) => block.partId === parts.foreword && block.kind === 'paragraph')!;
+    const settings = bookSettingsOf(file);
+    const context: BookRenderContext = {
+      settings,
+      geometry: geometryOf(settings, 'instructional', 100),
+      chapterStyle: chapterPageStyleOf(file),
+      paragraphStyle: 'indented',
+      pictures: new Map(),
+      names: bookNames(file),
+      titlePage: titlePageOf(file.project, file.settings),
+      contents: [],
+      index: null,
+      citations: bookCitationsOf(file),
+    };
+    const page: BookPage = {
+      sheet: 5, side: 'recto', numbering: 'roman', number: 5, folio: 'v', counted: 'v', runningHead: '', runningFoot: '', chapterTitle: '',
+      display: false, blank: false, opens: false, pieces: [{ blockId: words.id, from: 0, to: 1 }], notes: [keys.foreword], noteParts: [], depth: 1, target: 30,
+    };
+    const html = renderBookPage(page, new Map(blocks.map((block) => [block.id, block])), context);
+    expect(html).toContain(`A word first.<sup class="bk-cite" data-cite="${keys.foreword}">1</sup>`);
+    expect(html).toContain('<span class="bk-note-mark">1.</span> Robert Jones,');
+  });
+
+  it('cites from an epigraph’s page of words, its note at the page’s foot', () => {
+    let { file } = book();
+    const cited = insertCitation(file, { referenceId: file.references[0]!.id, locator: '5' });
+    file = cited.file;
+    const key = cited.citation.key;
+    const epigraph = addPart(file, 'epigraph', { text: `The sea is patient.${cited.token}\n— R. Jones` });
+    file = epigraph.file;
+    const blocks = bookBlocks(file);
+    const page = blocks.find((block) => block.partId === epigraph.partId && block.display)!;
+    expect(page).toBeTruthy();
+    // Front matter, after the foreword it was added behind and before the story.
+    expect(citationOccurrences(file).map((one) => one.partId)).toEqual([expect.any(String), epigraph.partId, null, expect.any(String)]);
+    expect(citationOccurrences(file)[1]).toMatchObject({ key, marker: '2' });
+    const settings = bookSettingsSchema.parse({ trim: { width: 6, height: 9 } });
+    const laid = layPages(blocks, new Map(), geometryOf(settings, 'instructional', 100), settings, { title: 'The Sea', author: '' }, undefined, {
+      anchors: new Map(),
+      heights: new Map([[key, 2]]),
+    });
+    const leaf = laid.pages.find((one) => one.pieces.some((piece) => piece.blockId === page.id))!;
+    expect(leaf.notes).toEqual([key]);
+    // And in the eBook the marker links to its note.
+    const pkg = ebookOf(file, { modified: '2026-01-01T00:00:00Z' });
+    const html = pkg.entries.map((one) => (typeof one.data === 'string' ? one.data : '')).join('\n');
+    expect(html).toContain(`The sea is patient.<sup class="noteref"><a epub:type="noteref" role="doc-noteref" href="#fn-${key}"`);
+    expect(html).toContain(`id="fn-${key}"`);
+    expect(html).not.toContain(`[^${key}]`);
+  });
+});

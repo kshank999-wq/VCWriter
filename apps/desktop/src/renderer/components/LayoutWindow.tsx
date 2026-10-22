@@ -190,6 +190,7 @@ import {
   type BookContentsRow,
   type SectionLayout,
 } from '@vcwriter/domain';
+import { CitableText } from './citations/CitableText';
 import { readFont } from '../read-font';
 import { PopOutButton } from './PopOutButton';
 import { ChapterPageDialog, ChapterStyleFields } from './ChapterPageDialog';
@@ -5976,12 +5977,14 @@ function PartFields({
       {info.carries === 'text' && !(part.kind === 'copyright' && copyrightOf(part)) ? (
         <label className="field">
           <span>Text</span>
-          <textarea
+          <CitableText
+            file={file}
+            onUpdate={onUpdate}
             aria-label="The part's text"
             rows={part.kind === 'dedication' || part.kind === 'epigraph' || part.kind === 'copyright' ? 6 : 14}
             placeholder={part.kind === 'copyright' ? `Copyright © ${file.project.author}` : 'A blank line between paragraphs.'}
             value={part.text}
-            onChange={(event) => patch({ text: event.target.value })}
+            onChange={(text) => patch({ text })}
           />
         </label>
       ) : null}
