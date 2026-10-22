@@ -14,6 +14,7 @@ import {
 import { researchCategorySchema, researchItemSchema } from './entities/research.js';
 import { setupPayoffSchema } from './entities/setups.js';
 import { indexMarkSchema, indexRefSchema } from './entities/book-index.js';
+import { citationSchema, referenceSchema } from './entities/reference.js';
 import {
   researchMotifSchema,
   researchThemeSchema,
@@ -85,6 +86,11 @@ export const SYNC_TABLES = {
   // deletes the server's rows.
   indexMarks: 'index_marks',
   indexRefs: 'index_refs',
+  // The Reference Library (addendum 43): the sources before the citations of
+  // them, because a citation's row names its source's. `references` is a word
+  // SQL keeps for itself, so the table is `reference_sources`.
+  references: 'reference_sources',
+  citations: 'citations',
   // Themes and motifs (addendum 12). Two collections, for the reason §2 gives:
   // the one place that blurred them is the place the interface would start to.
   themes: 'research_themes',
@@ -597,6 +603,7 @@ export const toRows = (file: ProjectFile): ProjectRows => ({
   ...planRows(file),
   ...characterCreatorRows(file),
   ...bookIndexRows(file),
+  ...referenceRows(file),
   ...thematicRows(file),
   noteSessions: (file.noteSessions ?? []).map((one) => ({
     id: one.id,
@@ -771,6 +778,66 @@ const bookIndexRows = (file: ProjectFile): Pick<ProjectRows, 'indexMarks' | 'ind
     created_at: one.createdAt,
     updated_at: one.updatedAt,
   })),
+});
+
+/** The fields of a source that are its facts, kept together as the row's `metadata` (spec §7). */
+const REFERENCE_METADATA = [
+  'authors', 'editors', 'organization', 'title', 'container', 'publisher', 'place', 'edition', 'date',
+  'volume', 'issue', 'pages', 'doi', 'url', 'accessed', 'isbn', 'notes',
+] as const;
+
+const referenceRows = (file: ProjectFile): Pick<ProjectRows, 'references' | 'citations'> => ({
+  references: (file.references ?? []).map((one) => ({
+    id: one.id,
+    project_id: one.projectId,
+    type: one.type,
+    short_code: one.shortCode,
+    metadata: Object.fromEntries(REFERENCE_METADATA.map((field) => [field, one[field]])),
+    tags: one.tags,
+    archived_at: one.archivedAt,
+    created_at: one.createdAt,
+    updated_at: one.updatedAt,
+  })),
+  citations: (file.citations ?? []).map((one) => ({
+    id: one.id,
+    project_id: one.projectId,
+    reference_id: one.referenceId,
+    key: one.key,
+    locator_kind: one.locatorKind,
+    locator: one.locator,
+    note: one.note,
+    created_at: one.createdAt,
+    updated_at: one.updatedAt,
+  })),
+});
+
+const referencesFromRows = (rows: ProjectRows): Pick<ProjectFile, 'references' | 'citations'> => ({
+  references: (rows.references ?? []).map((row) =>
+    referenceSchema.parse({
+      ...((row['metadata'] as Record<string, unknown> | null) ?? {}),
+      id: row['id'],
+      projectId: row['project_id'],
+      type: row['type'] ?? 'book',
+      shortCode: row['short_code'] ?? '',
+      tags: row['tags'] ?? [],
+      archivedAt: row['archived_at'] ?? null,
+      createdAt: row['created_at'],
+      updatedAt: row['updated_at'],
+    }),
+  ),
+  citations: (rows.citations ?? []).map((row) =>
+    citationSchema.parse({
+      id: row['id'],
+      projectId: row['project_id'],
+      referenceId: row['reference_id'],
+      key: row['key'],
+      locatorKind: row['locator_kind'] ?? 'page',
+      locator: row['locator'] ?? '',
+      note: row['note'] ?? '',
+      createdAt: row['created_at'],
+      updatedAt: row['updated_at'],
+    }),
+  ),
 });
 
 const bookIndexFromRows = (rows: ProjectRows): Pick<ProjectFile, 'indexMarks' | 'indexRefs'> => ({
@@ -1404,6 +1471,7 @@ export const fromRows = (rows: ProjectRows): ProjectFile =>
     ...plansFromRows(rows),
     ...characterCreatorFromRows(rows),
     ...bookIndexFromRows(rows),
+    ...referencesFromRows(rows),
     ...thematicFromRows(rows),
     noteSessions: (rows.noteSessions ?? []).map((row) =>
       noteSessionSchema.parse({

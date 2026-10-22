@@ -298,6 +298,8 @@ export const projectSettingsSchema = z.object({
    * here rather than in the manuscript (§2).
    */
   book: z.record(z.unknown()).default({}),
+  /** How citations, notes and the bibliography are written (addendum 43); read through `citationSettingsOf`. */
+  citations: z.record(z.unknown()).default({}),
 });
 export type ProjectSettings = z.infer<typeof projectSettingsSchema>;
 

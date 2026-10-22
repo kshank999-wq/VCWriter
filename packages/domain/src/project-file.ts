@@ -44,6 +44,7 @@ import { emptyDocContent, wpDocumentSchema } from './entities/document.js';
 import { extractCategorySchema, extractPaletteSchema, extractSchema } from './entities/extract.js';
 import { setupPayoffSchema } from './entities/setups.js';
 import { indexMarkSchema, indexRefSchema } from './entities/book-index.js';
+import { citationSchema, referenceSchema } from './entities/reference.js';
 import { snapshotSchema } from './entities/revision.js';
 import { writingSessionSchema } from './sessions.js';
 import {
@@ -163,6 +164,9 @@ export const projectFileSchema = z.object({
    */
   indexMarks: z.array(indexMarkSchema).default([]),
   indexRefs: z.array(indexRefSchema).default([]),
+  /** The Reference Library and its citations (addendum 43). */
+  references: z.array(referenceSchema).default([]),
+  citations: z.array(citationSchema).default([]),
   links: z.array(storyLinkSchema).default([]),
   /**
    * Narrative threads (addendum 15). One collection, because a thread's

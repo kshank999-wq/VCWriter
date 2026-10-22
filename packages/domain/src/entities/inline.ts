@@ -22,7 +22,16 @@ export interface InlineSpan extends InlineStyle {
   text: string;
   /** The marks themselves. They are shown while writing and never printed. */
   marker?: boolean;
+  /**
+   * A citation's place in the text (addendum 43): the `[^ab12cd]` token, by
+   * its key. Printed as its marker, never as its characters, so where nothing
+   * knows how to number it yet the span prints nothing at all.
+   */
+  citation?: string;
 }
+
+/** A citation token at the start of `text`: `[^` and six hex characters and `]` (addendum 43). */
+export const CITATION_TOKEN = /^\[\^([0-9a-f]{6})\]/;
 
 const MARKS = ['***', '**', '*', '_'] as const;
 
@@ -76,6 +85,17 @@ const walk = (text: string, style: InlineStyle, keepMarks: boolean, out: InlineS
       continue;
     }
 
+    // A citation token is one thing, wherever it stands, and never emphasis.
+    if (character === '[' && text[index + 1] === '^') {
+      const token = CITATION_TOKEN.exec(text.slice(index));
+      if (token) {
+        flush();
+        out.push({ text: keepMarks ? token[0] : '', ...style, citation: token[1]!, ...(keepMarks ? { marker: true } : {}) });
+        index += token[0].length;
+        continue;
+      }
+    }
+
     const mark = MARKS.find((candidate) => text.startsWith(candidate, index));
     if (mark) {
       const close = closerFor(text, mark, index + mark.length);
@@ -99,7 +119,7 @@ const merged = (spans: InlineSpan[]): InlineSpan[] => {
   const out: InlineSpan[] = [];
   for (const span of spans) {
     const last = out[out.length - 1];
-    if (last && !last.marker && !span.marker && sameStyle(last, span)) last.text += span.text;
+    if (last && !last.marker && !span.marker && !last.citation && !span.citation && sameStyle(last, span)) last.text += span.text;
     else out.push({ ...span });
   }
   return out;
