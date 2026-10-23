@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   REFERENCE_TYPE_NAMES,
   addReference,
@@ -31,6 +31,11 @@ import {
   partsOf,
   occurrencesIn,
   fromWordReadable,
+  linkedLibraries,
+  settleLink,
+  syncLinkedLibrary,
+  unlinkReference,
+  type LinkConflict,
   fromWordUnread,
   recogniseFromWord,
 } from '@vcwriter/domain';
@@ -98,6 +103,75 @@ export function ReferencesPanel({ file, onUpdate, readOnly = false, documentId =
     );
   };
 
+  /**
+   * **The linked sources brought back into step** (addendum 43 §29), once
+   * each time the library is opened: every project this one's sources are
+   * linked to is read, a change on either side goes to the other, and where
+   * both changed the writer is asked. A change for another project is only
+   * counted as sent once it is written there; where that project has changed
+   * meanwhile, nothing moves and the next opening tries again.
+   */
+  const [conflicts, setConflicts] = useState<LinkConflict[]>([]);
+  const fileNow = useRef(file);
+  fileNow.current = file;
+  useEffect(() => {
+    const libraries = linkedLibraries(file);
+    if (readOnly || libraries.length === 0 || !window.vcwriter?.readProject) return undefined;
+    let live = true;
+    void (async () => {
+      const read = new Map<string, ProjectFile | null>();
+      const hashes = new Map<string, string>();
+      for (const library of libraries) {
+        const result = await window.vcwriter.readProject(library.path);
+        read.set(library.path, result.ok && result.data ? result.data.file : null);
+        if (result.ok && result.data) hashes.set(library.path, result.data.contentHash);
+      }
+      if (!live) return;
+      const first = syncLinkedLibrary(fileNow.current, read);
+      for (const [path, library] of first.origins) {
+        const sent = window.vcwriter.sendIntoProject
+          ? await window.vcwriter.sendIntoProject({ path, file: library, expectedHash: hashes.get(path) ?? '' })
+          : { ok: false as const, error: 'Not here' };
+        if (!sent.ok) read.set(path, null);
+      }
+      if (!live) return;
+      const done = syncLinkedLibrary(fileNow.current, read);
+      if (done.file !== fileNow.current) onUpdate((current) => syncLinkedLibrary(current, read).file);
+      setConflicts(done.conflicts);
+      const unread = libraries.filter((library) => read.get(library.path) === null).map((library) => library.title || 'a project');
+      const said = [
+        done.pulled ? `${done.pulled === 1 ? 'One source' : `${done.pulled} sources`} took a change from where ${done.pulled === 1 ? 'it is' : 'they are'} linked` : '',
+        done.pushed ? `${done.pushed === 1 ? 'one change' : `${done.pushed} changes`} sent to the linked library` : '',
+        done.gone ? `${done.gone === 1 ? 'one source' : `${done.gone} sources`} unlinked, gone from the library ${done.gone === 1 ? 'it' : 'they'} came from` : '',
+        unread.length ? `${unread.join(', ')} could not be read; the links there wait for next time` : '',
+      ].filter(Boolean);
+      if (said.length) setMessage(`${said.join('; ')}.`.replace(/^./, (first) => first.toUpperCase()));
+    })();
+    return () => {
+      live = false;
+    };
+    // Once per opening of the library.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const settle = async (conflict: LinkConflict, keep: 'ours' | 'theirs') => {
+    const read = await window.vcwriter.readProject(conflict.path);
+    if (!read.ok || !read.data) {
+      setMessage(`${conflict.title || 'That project'} could not be read.`);
+      return;
+    }
+    const settled = settleLink(fileNow.current, conflict, read.data.file, keep);
+    if (settled.library) {
+      const sent = await window.vcwriter.sendIntoProject({ path: conflict.path, file: settled.library, expectedHash: read.data.contentHash });
+      if (!sent.ok) {
+        setMessage(sent.error ?? `${conflict.title || 'That project'} could not be written.`);
+        return;
+      }
+    }
+    onUpdate((current) => settleLink(current, conflict, read.data!.file, keep).file);
+    setConflicts((current) => current.filter((one) => one.referenceId !== conflict.referenceId));
+  };
+
   const add = () => {
     const made = addReference(file, { type: type === 'all' ? 'book' : type });
     onUpdate((current) => ({ ...current, references: [...current.references, made.reference] }));
@@ -126,6 +200,32 @@ export function ReferencesPanel({ file, onUpdate, readOnly = false, documentId =
         <p className="muted small" role="status">
           {message}
         </p>
+      ) : null}
+
+      {conflicts.length > 0 ? (
+        <section className="refs-conflicts" aria-label="Changed in both projects">
+          <p className="refs-warning">
+            {conflicts.length === 1 ? 'One linked source was' : `${conflicts.length} linked sources were`} changed here and in the library {conflicts.length === 1 ? 'it is' : 'they are'} linked to. Which stands?
+          </p>
+          {conflicts.map((conflict) => (
+            <div key={conflict.referenceId} className="refs-conflict">
+              <span>
+                <strong>Here:</strong> {[referenceCreator(conflict.ours), conflict.ours.title, conflict.ours.date].filter(Boolean).join(' · ')}
+              </span>
+              <span>
+                <strong>In {conflict.title || 'the library'}:</strong> {[referenceCreator(conflict.theirs), conflict.theirs.title, conflict.theirs.date].filter(Boolean).join(' · ')}
+              </span>
+              <span className="refs-conflict-acts">
+                <button type="button" className="ghost small" disabled={readOnly} onClick={() => void settle(conflict, 'ours')}>
+                  Keep this project’s
+                </button>
+                <button type="button" className="ghost small" disabled={readOnly} onClick={() => void settle(conflict, 'theirs')}>
+                  Take {conflict.title || 'the library'}’s
+                </button>
+              </span>
+            </div>
+          ))}
+        </section>
       ) : null}
 
       {view === 'library' ? (
@@ -175,7 +275,15 @@ export function ReferencesPanel({ file, onUpdate, readOnly = false, documentId =
                     <span className="refs-who">{referenceCreator(reference) || '—'}</span>
                     <span className="refs-title">{reference.title || (reference.asWritten ? <InlineText text={reference.asWritten} /> : 'Untitled source')}</span>
                     <span className="muted small">
-                      {[REFERENCE_TYPE_NAMES[reference.type], reference.date.slice(0, 4), reference.shortCode, counts.get(reference.id) ? `cited ${counts.get(reference.id)}×` : 'not cited'].filter(Boolean).join(' · ')}
+                      {[
+                        REFERENCE_TYPE_NAMES[reference.type],
+                        reference.date.slice(0, 4),
+                        reference.shortCode,
+                        counts.get(reference.id) ? `cited ${counts.get(reference.id)}×` : 'not cited',
+                        reference.link ? `linked to ${reference.link.title || 'another project'}` : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
                     </span>
                   </button>
                 </li>
@@ -242,6 +350,16 @@ export function ReferencesPanel({ file, onUpdate, readOnly = false, documentId =
                   </button>
                   <span className="muted small">{counts.get(chosen.id) ? `Cited ${counts.get(chosen.id)} ${counts.get(chosen.id) === 1 ? 'time' : 'times'}` : 'Not cited yet'}</span>
                 </div>
+                {chosen.link ? (
+                  // A source that follows the library it came from (addendum 43 §29).
+                  <p className="refs-linked muted small" aria-label="Linked">
+                    Linked to {chosen.link.title || 'another project'}: a change made here goes there, and one made there comes here, when either library is
+                    opened.{' '}
+                    <button type="button" className="ghost small" disabled={readOnly} onClick={() => onUpdate((current) => unlinkReference(current, chosen.id))}>
+                      Unlink
+                    </button>
+                  </p>
+                ) : null}
                 <ReferenceForm reference={chosen} readOnly={readOnly} onChange={(patch) => onUpdate((current) => updateReference(current, chosen.id, patch))} />
               </>
             ) : (

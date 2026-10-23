@@ -54,7 +54,7 @@ export const REFERENCE_TYPE_NAMES: Record<ReferenceType, string> = {
   other: 'Other',
 };
 
-export type ReferenceField = Exclude<keyof Reference, 'id' | 'projectId' | 'type' | 'archivedAt' | 'createdAt' | 'updatedAt' | 'tags' | 'notes' | 'shortCode' | 'asWritten'>;
+export type ReferenceField = Exclude<keyof Reference, 'id' | 'projectId' | 'type' | 'archivedAt' | 'createdAt' | 'updatedAt' | 'tags' | 'notes' | 'shortCode' | 'asWritten' | 'link'>;
 
 /** The fields each kind of source shows, in the order a reader fills them in (spec §3: *show/hide fields by source type*). */
 export const REFERENCE_FIELDS: Record<ReferenceType, ReferenceField[]> = {
@@ -118,7 +118,8 @@ export const updateReference = (file: ProjectFile, id: ReferenceId, patch: Refer
 export const duplicateReference = (file: ProjectFile, id: ReferenceId): { file: ProjectFile; reference: Reference | null } => {
   const source = file.references.find((reference) => reference.id === id);
   if (!source) return { file, reference: null };
-  const { id: _id, projectId: _project, createdAt: _created, updatedAt: _updated, archivedAt: _archived, ...rest } = source;
+  // A copy is a source of its own: not linked where the original was (§29).
+  const { id: _id, projectId: _project, createdAt: _created, updatedAt: _updated, archivedAt: _archived, link: _link, ...rest } = source;
   return addReference(file, { ...rest, shortCode: rest.shortCode ? `${rest.shortCode}-copy`.slice(0, 40) : '', title: rest.title });
 };
 

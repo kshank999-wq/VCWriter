@@ -56,6 +56,22 @@ export const referenceSchema = z.object({
    */
   asWritten: z.string().max(5000).default(''),
   tags: z.array(z.string().max(80)).default([]),
+  /**
+   * **Linked to the source it was brought in from** (addendum 43 §29): the
+   * project it came from, that project's own record of it, and the facts as
+   * they stood when the two last agreed (a fingerprint), so a change on
+   * either side can be told from a change on both. Null where the source is
+   * this project's own.
+   */
+  link: z
+    .object({
+      path: z.string().max(2000),
+      title: z.string().max(300).default(''),
+      referenceId: z.string().max(80),
+      base: z.string().max(80),
+    })
+    .nullable()
+    .default(null),
   /** Set when archived: out of the pickers, kept for every citation already made. */
   archivedAt: z.string().datetime({ offset: true }).nullable().default(null),
   ...timestamps,

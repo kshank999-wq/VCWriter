@@ -38,6 +38,7 @@ export * from './document-pages.js';
 export * from './citations.js';
 export * from './citation-style.js';
 export * from './note-parts.js';
+export * from './library-links.js';
 export * from './document.js';
 export * from './document-docx.js';
 export * from './document-import.js';

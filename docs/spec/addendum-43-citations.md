@@ -1204,7 +1204,48 @@ an EPUB with 11 page-list entries (i–vi, 1–5). The marker for page 3 stands
 at "because the chart tells him…", mid-paragraph, the first words of page 3
 in the Layout room.
 
-## 29. Not yet
+## 29. One library, live between projects
+
+Sources brought in from another project (§11) were copies; a change in one
+project never reached the other. Each project still keeps its own copies,
+so a file is whole on its own and opens, syncs and prints without the
+other. But the copies are now **linked**, and the project they came from
+acts as the library.
+
+- **Linking.** *Bring in sources* links what it brings, unless the writer
+  unticks "Keep them linked". A linked source remembers the project's path
+  and name, that project's own record of it, and a fingerprint of its
+  facts as they stood when the two last agreed (`link.base`). The facts are
+  who, what, where, when, the identifiers, the note and the Word text. A
+  short code and tags are each project's own and never travel. A duplicate
+  is not linked.
+- **In step, each time the library opens** (`syncLinkedLibrary`, in
+  `library-links.ts`). Every linked project is read, and each linked source
+  compared with its original:
+  - **Changed there only:** the change comes here.
+  - **Changed here only:** the change goes there, written into that project
+    only if it hasn't changed since it was read (the same guard as sending
+    extracts). The browser preview keeps a recovery point of it first.
+  - **Changed on both:** nothing moves, and the writer chooses: *Keep this
+    project's* (sent there) or *Take The Sea's* (`settleLink`).
+  - **Gone there** (deleted or archived): the copy stays, unlinked, this
+    project's own.
+  - **There unreadable** (moved, deleted, offline): the link waits for next
+    time.
+- **A send counts only once it's written.** Where writing into the other
+  project fails, nothing here is marked as sent, so the next opening sees
+  the same change and tries again. An edit can't be lost to a failed send.
+- **Shown.** The list says "linked to The Sea" beside each linked source,
+  the source says what being linked means and offers *Unlink*, and the
+  status line says what came, what went, and what couldn't be read.
+- **In the cloud.** The link travels in the source's metadata, like
+  everything else about it.
+
+Checked end to end in the browser preview: two sources brought from The
+Sea into a Document project, linked; a title changed in the Document's
+library reached The Sea when the library was next opened.
+
+## 30. Not yet
 
 - A Word note in a form other than Chicago's, APA's or MLA's (Harvard's
   author-date notes beyond "(Smith 2019)", a legal citation), or one that
@@ -1212,5 +1253,12 @@ in the Layout room.
 - A reflowable eBook exported without the Layout room open carries no print
   page numbers: the pages are only known once the room has laid them.
 - The fixed-layout eBook is unchanged: its pages are the laid pages already.
-- One library held live between projects: sources are brought in as copies,
-  and a change in one project does not reach the other.
+- A linked library is found by its file's path. Moved or renamed, or on
+  another computer where the path does not exist, the links wait (nothing
+  is lost) until the writer brings the sources in again from the new place.
+- A change is sent into a project's file on disk. If that project is open
+  in another window at the time, its next save puts back what it had, and
+  the change is then taken back here at the next opening. (Sending extracts,
+  addendum 42 §10, has the same limit.)
+- Sources already in this library when another is brought in are not
+  linked: linking two that differ would make one overwrite the other.

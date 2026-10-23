@@ -15,8 +15,9 @@ import { InlineText } from './InlineText';
  *
  * Choose a project — one on the list, or any `.vcw` on the computer — and its
  * library is shown with what this one already has marked, every other live
- * source ticked. *Bring in* copies the ticked ones into this library, where
- * they are this project's own from then on.
+ * source ticked. *Bring in* copies the ticked ones into this library — linked
+ * to the one they came from, unless the writer says otherwise, so a change
+ * on either side reaches the other (§29).
  */
 
 interface ProjectEntry {
@@ -38,6 +39,8 @@ export function BringInSourcesDialog({ file, projectPath = null, onUpdate, onClo
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
+  /** Whether the copies stay linked to the library they came from (addendum 43 §29). */
+  const [linked, setLinked] = useState(true);
 
   useEffect(() => {
     let live = true;
@@ -96,8 +99,10 @@ export function BringInSourcesDialog({ file, projectPath = null, onUpdate, onClo
     if (!source || !offered) return;
     const wanted = new Set(offered.fresh.filter((one) => picked.has(one.id)).map((one) => one.id));
     const count = wanted.size;
-    onUpdate((current) => bringInReferences(current, source.file.references, wanted).file);
-    setDone(`${count} ${count === 1 ? 'source' : 'sources'} brought in from ${source.file.project.title || 'that project'}.`);
+    const title = source.file.project.title || 'that project';
+    const link = linked ? { path: source.path, title: source.file.project.title } : null;
+    onUpdate((current) => bringInReferences(current, source.file.references, wanted, link).file);
+    setDone(`${count} ${count === 1 ? 'source' : 'sources'} brought in from ${title}${linked ? `, linked: a change to ${count === 1 ? 'it' : 'them'} here or there reaches the other` : ''}.`);
   };
 
   const row = (reference: Reference, have: boolean) => (
@@ -134,7 +139,10 @@ export function BringInSourcesDialog({ file, projectPath = null, onUpdate, onClo
             ×
           </button>
         </header>
-        <p className="muted small">Each source comes in as a copy of its own. A source this library already has is not brought in twice.</p>
+        <p className="muted small">
+          Each source comes in as a copy of its own, linked to the library it came from unless you say otherwise. A source this library already has is not
+          brought in twice.
+        </p>
         <div className="refs-bring-from">
           <select
             aria-label="Project to bring sources from"
@@ -166,6 +174,13 @@ export function BringInSourcesDialog({ file, projectPath = null, onUpdate, onClo
               {offered.already.map((one) => row(one, true))}
             </ul>
           )
+        ) : null}
+        {offered && offered.fresh.length > 0 ? (
+          <label className="check refs-bring-link">
+            <input type="checkbox" checked={linked} onChange={(event) => setLinked(event.target.checked)} /> Keep them linked to{' '}
+            {source?.file.project.title || 'that project'}: a change made to a source in either project reaches the other when its library is next
+            opened
+          </label>
         ) : null}
         {done ? (
           <p className="muted small" role="status">

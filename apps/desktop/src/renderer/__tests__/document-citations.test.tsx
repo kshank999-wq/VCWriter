@@ -5,6 +5,8 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import type { Editor } from '@tiptap/core';
 import {
   addReference,
+  bringInReferences,
+  updateReference,
   addBeat,
   addUnit,
   buildBookDocx,
@@ -155,7 +157,9 @@ describe('another project’s library', () => {
     await waitFor(() => expect(within(dialog).getByText('already in this library')).toBeTruthy());
     fireEvent.click(within(dialog).getByRole('button', { name: 'Bring in 1 source' }));
     expect(latest!.references.map((one) => one.title)).toEqual(['On Tides', 'The Moon']);
-    expect(within(dialog).getByRole('status').textContent).toBe('1 source brought in from The Sea.');
+    expect(within(dialog).getByRole('status').textContent).toBe('1 source brought in from The Sea, linked: a change to it here or there reaches the other.');
+    // Linked to the library it came from (§29).
+    expect(latest!.references[1]!.link).toMatchObject({ path: '/sea.vcw', title: 'The Sea' });
   });
 });
 
@@ -229,5 +233,64 @@ describe('the page view’s notes (§25)', () => {
     expect(editorOf().getHTML()).not.toContain('wp-page-gap');
     expect(JSON.stringify(latest!.documents[0]!.content)).not.toContain('gap');
     expect(screen.getByText('1 page')).toBeTruthy();
+  });
+});
+
+describe('a library linked between projects (§29)', () => {
+  const linkedPair = () => {
+    let book = createProjectFile({ title: 'The Sea', format: 'instructional' });
+    const made = addReference(book, { title: 'On Tides', authors: ['Jones, Robert'], date: '2019' });
+    book = made.file;
+    const letters = bringInReferences(letter(), book.references, null, { path: '/sea.vcw', title: 'The Sea' }).file;
+    return { book, letters, sourceId: made.reference.id };
+  };
+  const bridge = (book: ProjectFile) => {
+    const sendIntoProject = vi.fn(async () => ({ ok: true, data: { contentHash: 'y' } }));
+    (window as unknown as { vcwriter: unknown }).vcwriter = {
+      readProject: vi.fn(async () => ({ ok: true, data: { path: '/sea.vcw', file: book, contentHash: 'x' } })),
+      sendIntoProject,
+      listProjects: vi.fn(async () => ({ ok: true, data: [] })),
+    };
+    return sendIntoProject;
+  };
+  const openLibrary = () => {
+    fireEvent.click(screen.getByRole('tab', { name: 'References' }));
+    press('Sources & style');
+  };
+
+  it('takes a change made in the library it is linked to, when the library is opened', async () => {
+    const { book, letters, sourceId } = linkedPair();
+    bridge(updateReference(book, sourceId, { publisher: 'Sea Press' }));
+    render(<Harness start={letters} />);
+    openLibrary();
+    await waitFor(() => expect(latest!.references[0]!.publisher).toBe('Sea Press'));
+    expect(screen.getByRole('status').textContent).toBe('One source took a change from where it is linked.');
+  });
+
+  it('sends a change made here to the library, and says so', async () => {
+    const { book, letters } = linkedPair();
+    const send = bridge(book);
+    const copy = letters.references[0]!;
+    render(<Harness start={updateReference(letters, copy.id, { title: 'On Tides and Harbours' })} />);
+    openLibrary();
+    await waitFor(() => expect(send).toHaveBeenCalled());
+    const sent = (send.mock.calls[0] as unknown as [{ path: string; file: ProjectFile; expectedHash: string }])[0];
+    expect(sent.path).toBe('/sea.vcw');
+    expect(sent.expectedHash).toBe('x');
+    expect(sent.file.references[0]!.title).toBe('On Tides and Harbours');
+    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('One change sent to the linked library.'));
+  });
+
+  it('asks which stands where both changed, and takes the library’s when told', async () => {
+    const { book, letters, sourceId } = linkedPair();
+    bridge(updateReference(book, sourceId, { date: '2020' }));
+    const copy = letters.references[0]!;
+    render(<Harness start={updateReference(letters, copy.id, { date: '2021' })} />);
+    openLibrary();
+    const conflicts = await screen.findByLabelText('Changed in both projects');
+    expect(within(conflicts).getByText(/In The Sea:/).parentElement!.textContent).toContain('2020');
+    fireEvent.click(within(conflicts).getByRole('button', { name: 'Take The Sea’s' }));
+    await waitFor(() => expect(latest!.references[0]!.date).toBe('2020'));
+    expect(screen.queryByLabelText('Changed in both projects')).toBeNull();
   });
 });

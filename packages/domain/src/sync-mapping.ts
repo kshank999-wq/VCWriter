@@ -783,7 +783,7 @@ const bookIndexRows = (file: ProjectFile): Pick<ProjectRows, 'indexMarks' | 'ind
 /** The fields of a source that are its facts, kept together as the row's `metadata` (spec §7). */
 const REFERENCE_METADATA = [
   'authors', 'editors', 'organization', 'title', 'container', 'publisher', 'place', 'edition', 'date',
-  'volume', 'issue', 'pages', 'doi', 'url', 'accessed', 'isbn', 'notes', 'asWritten',
+  'volume', 'issue', 'pages', 'doi', 'url', 'accessed', 'isbn', 'notes', 'asWritten', 'link',
 ] as const;
 
 const referenceRows = (file: ProjectFile): Pick<ProjectRows, 'references' | 'citations'> => ({

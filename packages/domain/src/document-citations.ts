@@ -1,4 +1,5 @@
 import { newId } from './ids.js';
+import { linkedCopy } from './library-links.js';
 import { nowIso } from './entities/common.js';
 import { parseInline } from './entities/inline.js';
 import { referenceSchema, type Reference } from './entities/reference.js';
@@ -167,6 +168,12 @@ export const bringInReferences = (
   from: readonly Reference[],
   /** Only these, where the writer picked; every live source otherwise. */
   only: ReadonlySet<string> | null = null,
+  /**
+   * The project they come from, where they are to stay linked to it (§29):
+   * each copy then follows that library, and a change on either side reaches
+   * the other when the library is next opened.
+   */
+  linkTo: { path: string; title: string } | null = null,
 ): { file: ProjectFile; added: Reference[]; already: Reference[] } => {
   const known = new Set(file.references.flatMap(sameSourceKeys));
   const added: Reference[] = [];
@@ -181,15 +188,15 @@ export const bringInReferences = (
       continue;
     }
     for (const key of keys) known.add(key);
-    added.push(
-      referenceSchema.parse({
-        ...source,
-        id: newId<ReferenceId>(),
-        projectId: file.project.id,
-        createdAt: timestamp,
-        updatedAt: timestamp,
-      }),
-    );
+    const copy = referenceSchema.parse({
+      ...source,
+      id: newId<ReferenceId>(),
+      projectId: file.project.id,
+      link: null,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    });
+    added.push(linkTo ? linkedCopy(copy, source, linkTo.path, linkTo.title) : copy);
   }
   return { file: added.length > 0 ? { ...file, references: [...file.references, ...added] } : file, added, already };
 };
