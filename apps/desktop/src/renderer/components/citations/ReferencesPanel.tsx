@@ -30,6 +30,9 @@ import {
   bibliographyOf,
   partsOf,
   occurrencesIn,
+  fromWordReadable,
+  fromWordUnread,
+  recogniseFromWord,
 } from '@vcwriter/domain';
 import { InlineText } from './InlineText';
 import { ReferenceForm } from './ReferenceForm';
@@ -78,6 +81,22 @@ export function ReferencesPanel({ file, onUpdate, readOnly = false, documentId =
   const dangling = useMemo(() => danglingCitations(file), [file]);
   const chosen = file.references.find((reference) => reference.id === chosenId) ?? null;
   const settings = citationSettingsOf(file);
+  const unread = fromWordUnread(file);
+  const readable = fromWordReadable(file);
+
+  /** The sources still one line from Word, read into their parts where they can be (addendum 43 §20). */
+  const readFromWord = () => {
+    const before = unread;
+    const done = recogniseFromWord(file);
+    if (done.read > 0) onUpdate((current) => recogniseFromWord(current).file);
+    const left = fromWordUnread(done.file);
+    const parted = before - left;
+    setMessage(
+      parted > 0
+        ? `${parted === 1 ? 'One source' : `${parted} sources`} read into ${parted === 1 ? 'its' : 'their'} parts.${left ? ` ${left === 1 ? 'One is' : `${left} are`} kept as written: fill in the fields for ${left === 1 ? 'it' : 'those'}.` : ''}`
+        : 'None of these could be read with confidence. Fill in their fields by hand.',
+    );
+  };
 
   const add = () => {
     const made = addReference(file, { type: type === 'all' ? 'book' : type });
@@ -143,6 +162,11 @@ export function ReferencesPanel({ file, onUpdate, readOnly = false, documentId =
             <button type="button" className="ghost small" disabled={readOnly} onClick={() => setBringing(true)}>
               Bring in sources from another project…
             </button>
+            {readable > 0 ? (
+              <button type="button" className="ghost small" disabled={readOnly} onClick={readFromWord} title="Read the author, title, publisher and year out of each source kept as one line from Word">
+                Read the parts of {readable === 1 ? 'the source' : `${readable} sources`} from Word
+              </button>
+            ) : null}
             <ul aria-label="Sources">
               {list.length === 0 ? <li className="muted small">{archived ? 'Nothing archived.' : file.references.length ? 'Nothing matches.' : 'No sources yet. Add the first.'}</li> : null}
               {list.map((reference) => (

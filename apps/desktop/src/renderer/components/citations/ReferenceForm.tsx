@@ -87,7 +87,8 @@ export function ReferenceForm({ reference, readOnly = false, onChange }: Referen
       {reference.asWritten.trim() ? (
         /* A source brought in from Word as one line (addendum 43 §9): shown
            as it came, so its parts can be copied into the fields below. Once
-           it has a title the style sets it from the fields instead. */
+           it has a title the style sets it from the fields instead — and a
+           note whose parts were read (§20) keeps it to check them by. */
         <div className="ref-as-written" aria-label="As written in Word">
           <span className="ref-as-written-name">As written in Word</span>
           <span className="ref-as-written-text">
@@ -95,7 +96,7 @@ export function ReferenceForm({ reference, readOnly = false, onChange }: Referen
           </span>
           <span className="muted small">
             {reference.title.trim()
-              ? 'The style now sets it from the fields below.'
+              ? 'The style now sets it from the fields below. Check them against this.'
               : 'It prints like this until it has a title. Fill in the fields below and the style takes over.'}
           </span>
           {reference.title.trim() && !readOnly ? (

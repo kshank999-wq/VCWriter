@@ -171,36 +171,40 @@ describe('footnotes read from Word', () => {
     expect(cited.cited).toBe(`Tides follow the moon.[^${doc.notes![0]!.key}] Twice a day.[^${doc.notes![1]!.key}]`);
   });
 
-  it('makes a source of each distinct note, kept as written and flagged, and a citation of each place', () => {
+  it('reads a note’s parts into one source, with Ibid. and the repeat cited at their own pages (§20)', () => {
     const doc = fromWord();
     const built = buildProjectFromImport(docxToImport(doc, 'instructional'), { format: 'instructional' }).file;
-    // The same note twice is one source cited twice; Ibid. is its own, to be sorted out.
-    expect(built.references).toHaveLength(2);
-    expect(built.citations.map((one) => one.key)).toEqual(doc.notes!.map((one) => one.key));
+    expect(built.references).toHaveLength(1);
     const [jones] = built.references;
-    expect(flattened(jones!)).toBe(true);
-    expect(jones!.tags).toEqual(['From Word']);
-    expect(referenceProblems(jones!).title).toMatch(/^Brought in from Word as one line/);
+    expect(jones).toMatchObject({ type: 'book', authors: ['Jones, Robert'], title: 'On Tides', place: 'Boston', publisher: 'Sea Press', date: '2019', tags: ['From Word'] });
+    expect(flattened(jones!)).toBe(false);
+    // The Word text is kept beside the fields, for the writer to check them by.
+    expect(jones!.asWritten).toBe('Robert Jones, *On Tides* (Boston: Sea Press, 2019), 12.');
+    expect(built.citations.map((one) => [one.key, one.locator])).toEqual(doc.notes!.map((one, at) => [one.key, ['12', '14', '12'][at]]));
     const text = built.beats.flatMap((beat) => beat.manuscript.elements).map((element) => element.text).join('\n');
     for (const one of doc.notes!) expect(text).toContain(`[^${one.key}]`);
-    // It prints as it was written, in every place it is cited.
+    // The style sets them now: in full the first time, short after.
     expect(citationNotes(built).map((one) => one.text)).toEqual([
       'Robert Jones, *On Tides* (Boston: Sea Press, 2019), 12.',
-      'Ibid., 14.',
-      'Robert Jones, *On Tides* (Boston: Sea Press, 2019), 12.',
+      'Jones, *On Tides*, 14.',
+      'Jones, *On Tides*, 12.',
     ]);
-    expect(referenceBibliography(built).map((one) => one.text)).toContain('Robert Jones, *On Tides* (Boston: Sea Press, 2019), 12.');
+    expect(referenceBibliography(built).map((one) => one.text)).toEqual(['Jones, Robert. *On Tides*. Boston: Sea Press, 2019.']);
   });
 
-  it('lets the style take over once the source has its parts', () => {
-    const doc = fromWord();
-    const built = buildProjectFromImport(docxToImport(doc, 'instructional'), { format: 'instructional' }).file;
-    const jones = { ...built.references[0]!, title: 'On Tides', authors: ['Jones, Robert'], date: '2019' };
+  it('keeps a note it cannot read as written, flagged, until the source has its parts', () => {
+    let file = createProjectFile({ title: 'x', format: 'instructional' });
+    const made = addReference(file, { type: 'other', asWritten: 'Jones told me this on the quay, 2019.', tags: ['From Word'] });
+    file = made.file;
+    const kept = made.reference;
+    expect(flattened(kept)).toBe(true);
+    expect(referenceProblems(kept).title).toMatch(/^Brought in from Word as one line/);
+    expect(formatNote(kept, { locatorKind: 'page', locator: '', note: 'See also chapter 3' }, 'chicago', true)).toBe(
+      'Jones told me this on the quay, 2019. See also chapter 3.',
+    );
+    const jones = { ...kept, title: 'On Tides', authors: ['Jones, Robert'], date: '2019' };
     expect(flattened(jones)).toBe(false);
     expect(formatEntry(jones, 'chicago')).toBe('Jones, Robert. *On Tides*. 2019.');
-    expect(formatNote(built.references[0]!, { locatorKind: 'page', locator: '', note: 'See also chapter 3' }, 'chicago', true)).toBe(
-      'Robert Jones, *On Tides* (Boston: Sea Press, 2019), 12. See also chapter 3.',
-    );
   });
 
   it('leaves footnotes out of a novel, and says so', () => {

@@ -882,10 +882,66 @@ prints.
 The test compares the numbering with the order the citation tokens come out
 of `bookBlocks`, so the numbers and the printed pages can't drift apart.
 
-## 20. Not yet
+## 20. A Word note's parts, read
 
-- Recognising a Word note's parts (author, title, publisher) automatically.
-  They are kept whole and flagged.
+A Word footnote came in as one line, kept as written and flagged (§9). Most
+notes a writer types follow Chicago's note form, and that's regular enough
+to read back. `recogniseNote` (`note-parts.ts`) reads these shapes:
+
+| Shape | Example |
+| --- | --- |
+| Book | `Robert Jones, *On Tides*, 2nd ed. (Boston: Sea Press, 2019), 12.` |
+| Edited book | `Bo Kim, ed., *The Sea Book* (London: Wave, 2010), 3–5.` |
+| Chapter | `Ann Hall, "Charts," in *The Sea Book*, ed. Bo Kim (London: Wave, 2010), 45.` |
+| Article | `Ada Lee, "The Pull," *Journal of Tides* 4, no. 2 (2018): 33.` |
+| Web page | `"Tide Tables," Harbour Board, accessed May 1, 2024, https://…` |
+| Short note | `Jones, *On Tides*, 20.` |
+| Ibid. | `Ibid., 14.` |
+
+- **All or nothing.** A note is read only when the whole of it fits one
+  shape. Anything else is kept as written and flagged, as before: a title
+  split in the wrong place is worse than a line kept whole.
+- **People and bodies.** Names are turned round ("Jones, Robert"). A name
+  with a word like Board, Society, Ministry or University is an
+  organisation.
+- **The page belongs to the citation.** The pinpoint comes off the note
+  onto the citation, with its kind: 12 a page, 12–14 pages, chap. 3 a
+  chapter, at 1:02 a time.
+- **A DOI or address** at the end of any note goes to the source.
+
+**Reading a run of notes.** `readNotes` reads a Word file's notes in order:
+
+- A full note gives a source. The same author and title in two full notes is
+  one source.
+- A short note cites the latest source by that author whose title holds the
+  short title.
+- *Ibid.* cites the source of the note before it, read or not.
+- A note that can't be read, or a short note with nothing to point at, is a
+  source of its own kept as written. The same words twice are one source,
+  as before.
+
+The import uses it, so a book with its notes in Chicago's form comes in with
+a library of real sources, each cited at its own pages. The style then sets
+the notes: the first in full, the later ones short (Chicago's own rule, so
+*Ibid.* prints as a short note). A read source keeps its Word text beside
+the fields, for the writer to check them by.
+
+**Books imported before this.** Their sources are each one line. The
+References library offers *Read the parts of N sources from Word*.
+`recogniseFromWord` walks the citations in the order the book prints them,
+so short notes and Ibid.s find the source before them as the import does:
+
+- A full note fills its source's fields and puts its page on the citation,
+  where the citation has none of its own.
+- A short note or an Ibid. moves its citation onto the source it names.
+- A line left citing nothing is taken out of the library.
+- A note it can't read is left as it was.
+- Running it twice does nothing the second time.
+
+## 21. Not yet
+
+- A Word note in a form other than Chicago's (APA's or MLA's parentheses, a
+  note that says something besides its source) is kept whole and flagged.
 - A division's head set to print nothing: an empty box is the book's, and
   *nothing* needs a way to say so.
 - The eBook has no pages, so it carries no heads, feet or page numbers.

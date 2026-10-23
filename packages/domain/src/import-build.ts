@@ -23,6 +23,7 @@ import type { ResearchItem } from './entities/research.js';
 import type { ManuscriptElement } from './entities/manuscript.js';
 import type { Asset } from './entities/asset.js';
 import { citationSchema, referenceSchema, type Citation, type Reference } from './entities/reference.js';
+import { readNotes } from './note-parts.js';
 import type {
   AssetId,
   BeatId,
@@ -570,34 +571,40 @@ export const buildProjectFromImport = (script: ImportedScript, options: ImportOp
   // ------------------------------------------------------- the footnotes
   //
   // A Word footnote is one line of text, its parts run together (addendum 43
-  // §9). Each distinct note is a source kept as written and flagged for the
-  // writer to separate; each place it was cited is a citation of it, under
-  // the key its token already carries in the text.
-  const sources = new Map<string, Reference>();
-  const citations: Citation[] = [];
-  for (const note of format === 'instructional' ? (script.notes ?? []) : []) {
-    const same = note.text.toLowerCase();
-    let source = sources.get(same);
-    if (!source) {
-      source = referenceSchema.parse({
-        id: newId<ReferenceId>(),
-        projectId,
-        type: 'other',
-        asWritten: note.text,
-        tags: ['From Word'],
-        createdAt: timestamp,
-        updatedAt: timestamp,
-      });
-      sources.set(same, source);
-    }
-    citations.push(
-      citationSchema.parse({ id: newId<CitationId>(), projectId, referenceId: source.id, key: note.key, createdAt: timestamp, updatedAt: timestamp }),
-    );
-  }
+  // §9). A note in Chicago's form is read into its parts, its page kept on the
+  // citation, and the short notes and Ibid.s after it cite the same source
+  // (§20); a note that is not read is a source kept as written and flagged for
+  // the writer to separate. Each place cited is a citation, under the key its
+  // token already carries in the text.
+  const read = readNotes(format === 'instructional' ? (script.notes ?? []) : []);
+  const sources = read.sources.map((one) =>
+    referenceSchema.parse({
+      id: newId<ReferenceId>(),
+      projectId,
+      type: 'other',
+      ...(one.source ?? {}),
+      asWritten: one.asWritten,
+      tags: ['From Word'],
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    }),
+  );
+  const citations: Citation[] = read.cited.map((one) =>
+    citationSchema.parse({
+      id: newId<CitationId>(),
+      projectId,
+      referenceId: (sources[one.source] as Reference).id,
+      key: one.key,
+      locatorKind: one.locatorKind,
+      locator: one.locator,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    }),
+  );
 
   const file: ProjectFile = {
     ...base,
-    references: [...sources.values()],
+    references: sources,
     citations,
     project: { ...base.project, author, notes: noteFor(script), updatedAt: timestamp },
     // The scene the project was created with is replaced: an import brings

@@ -188,6 +188,36 @@ describe('References, in Research', () => {
   });
 });
 
+describe('sources from Word, read into their parts', () => {
+  function Panel({ start }: { start: ProjectFile }) {
+    const [file, setFile] = useState(start);
+    latest = file;
+    return <ReferencesPanel file={file} onUpdate={(mutate) => setFile((current) => mutate(current))} />;
+  }
+
+  it('offers to read the sources kept as one line, reads those it can, and says what is left', () => {
+    const start = book('instructional', ['One.', 'Two.', 'Three.']);
+    let file = start.file;
+    const tokens: string[] = [];
+    for (const text of ['Robert Jones, *On Tides* (Boston: Sea Press, 2019), 12.', 'Jones, *On Tides*, 20.', 'Told me on the quay.']) {
+      const made = addReference(file, { type: 'other', asWritten: text, tags: ['From Word'] });
+      const cited = insertCitation(made.file, { referenceId: made.reference.id });
+      file = cited.file;
+      tokens.push(cited.token);
+    }
+    const elements = file.beats.find((one) => one.id === start.beatId)!.manuscript.elements;
+    file = updateBeat(file, start.beatId, { manuscript: { elements: elements.map((element, at) => ({ ...element, text: `${element.text}${tokens[at]}` })) } });
+    render(<Panel start={file} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Read the parts of 2 sources from Word' }));
+    expect(screen.getByRole('status').textContent).toBe('2 sources read into their parts. One is kept as written: fill in the fields for it.');
+    expect(latest!.references.map((one) => one.title || one.asWritten)).toEqual(['On Tides', 'Told me on the quay.']);
+    expect(latest!.citations.map((one) => one.locator)).toEqual(['12', '20', '']);
+    // What is left cannot be read, so nothing is offered for it.
+    expect(screen.queryByRole('button', { name: /Read the parts/ })).toBeNull();
+  });
+});
+
 describe('a book’s Word export', () => {
   it('is on the File menu of a book as well as a script', () => {
     const commands = (format: ProjectFormat) =>
