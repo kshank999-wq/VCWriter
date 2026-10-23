@@ -981,23 +981,29 @@ function Card({
           <>
             <label className="field">
               <span>Lead-in line</span>
-              <input
+              {/* The lead-in and the extract may cite (addendum 43 §18). */}
+              <CitableText
+                file={file}
+                onUpdate={onUpdate}
                 className="dp-serif-input"
                 aria-label="Lead-in line"
                 placeholder="Turn the page for the opening of…"
+                rows={1}
                 value={own.leadIn}
-                onChange={(event) => write({ leadIn: event.target.value })}
+                onChange={(leadIn) => write({ leadIn })}
               />
             </label>
             <p className="muted small">
               The extract itself is set here for now — bringing a chapter in from another project is its own stage.
             </p>
-            <textarea
+            <CitableText
+              file={file}
+              onUpdate={onUpdate}
               className="dp-serif-input"
               aria-label="The extract"
               rows={6}
               value={part.text}
-              onChange={(event) => onUpdate((current) => updatePart(current, partId, { text: event.target.value }))}
+              onChange={(text) => onUpdate((current) => updatePart(current, partId, { text }))}
             />
           </>
         ) : null}

@@ -451,8 +451,10 @@ export const partParagraphs = (part: BookPart, file?: ProjectFile): string[] => 
       for (const one of own.questions.filter((two) => two.text.trim().length > 0)) listed.push(one.text);
     } else if (own.kind === 'also_by') {
       for (const one of own.titles.filter((two) => two.title.trim().length > 0)) listed.push(one.title);
-    } else if (own.leadIn.trim()) {
-      listed.push(own.leadIn.trim());
+    } else {
+      // A preview: its lead-in, then the extract (addendum 43 §18).
+      if (own.leadIn.trim()) listed.push(own.leadIn.trim());
+      listed.push(...paragraphsOf(part.text));
     }
   }
   return listed.length > 0 ? listed : paragraphsOf(part.text);
@@ -1197,8 +1199,16 @@ const partOwnBlocks = (
           for (const one of own.titles.filter((two) => two.title.trim().length > 0)) {
             listed.push({ text: one.series.trim() ? `${one.title} — ${one.series}` : one.title, role: 'also' });
           }
-        } else if (own.leadIn.trim()) {
-          listed.push({ text: own.leadIn.trim(), role: 'extra' });
+        } else {
+          /**
+           * **A preview chapter: the lead-in, and then the extract** (addendum
+           * 43 §18). It was the lead-in or the extract: a page with a lead-in
+           * read only that, and the chapter the page was for never printed.
+           * The extract follows as the book's own paragraphs, a chapter's
+           * opening as it would stand in the next book.
+           */
+          if (own.leadIn.trim()) listed.push({ text: own.leadIn.trim(), role: 'extra' });
+          for (const line of paragraphsOf(part.text)) listed.push({ text: line });
         }
       }
       const words = listed.length > 0 ? listed : paragraphsOf(part.text).map((text) => ({ text }) as (typeof listed)[number]);

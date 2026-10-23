@@ -21,6 +21,7 @@ kept current, and headers and footers for instructional publishing.
 | 9 | Citations in a reader extra's discussion questions | **built** (§15) |
 | 10 | A reader extra's heading as its card promises | **fixed** (§16) |
 | 11 | Citations in a newsletter's message and beside the author's other titles | **built** (§17) |
+| 12 | Citations in a preview chapter's lead-in and extract; the extract printed | **built** (§18) |
 
 **What already existed.** The Layout room (addendum 20) had measured pages,
 running heads (the book's title on the verso, the chapter's on the recto),
@@ -817,11 +818,42 @@ space left hanging after it (`extraHeading`).
   guide, after Jones's tables*, marker 3 after *tables*, and its note at the
   foot.
 
-## 18. Not yet
+## 18. A preview chapter: its lead-in, its extract, and their citations
+
+From Ken: *build the preview chapter lead-in citations next.*
+
+**A fault found first.** A preview chapter is a lead-in line (*Turn the page
+for the opening of…*) and an extract, the opening of the next book. The page
+read the lead-in **or** the extract: a page with a lead-in printed only the
+lead-in, and the chapter it was there to show never printed. Without a
+lead-in the extract printed, so the fault showed only once a lead-in was
+typed. A citation in the extract would have been numbered and never printed.
+The page now prints the lead-in, then the extract as the book's own
+paragraphs (`partOwnBlocks`), and `partParagraphs` counts both. The eBook
+and Word read the same paragraphs, so they print the extract too.
+
+**Citing.**
+- The lead-in and the extract are each a `CitableText` in the reader
+  extra's card: the lead-in one line high, the extract as it was.
+- Both count in the reader extra's place in the back matter, the lead-in
+  first (`wordsOfPart`).
+- Their markers are raised and their notes set at the foot, as on any page
+  of paragraphs.
+
+**Proof.**
+- `matter-citations.test.ts`: a preview with a lead-in printing the lead-in
+  and then both paragraphs of its extract, and its two citations numbered
+  in order after the story and an appendix.
+- `back-matter-dialog.test.tsx`: citing from the extract by Ctrl+Shift+C,
+  and a Cite… under the lead-in too.
+- Seen in Chromium: a preview headed *A Sneak Peek*, its lead-in centred
+  above the extract's three paragraphs, the last cited after *shape* with
+  marker 3 and its note at the foot.
+
+## 19. Not yet
 
 - A page set inside the story is numbered after the story, not where it
   stands.
-- A preview chapter's lead-in does not cite.
 - Recognising a Word note's parts (author, title, publisher) automatically.
   They are kept whole and flagged.
 - A division's head set to print nothing: an empty box is the book's, and

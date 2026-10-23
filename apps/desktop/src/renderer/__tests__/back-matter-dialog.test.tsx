@@ -353,4 +353,22 @@ describe('a glossary that cites (addendum 43 §14)', () => {
     after = seen as unknown as ProjectFile;
     expect(readerExtraOf(pageOf(after, 'reader_extra')).titles[0]!.series).toBe(`after Jones[^${after.citations[0]!.key}]`);
   });
+
+  it('cites from a preview chapter’s lead-in and its extract', () => {
+    const first = (() => {
+      let file = createProjectFile({ title: 'The Sea', format: 'instructional' });
+      file = addReference(file, { title: 'On Tides', authors: ['Jones, Robert'] }).file;
+      return addPart(file, 'reader_extra', { about: { kind: 'preview', leadIn: 'Turn the page.' }, text: 'The tide came in.' }).file;
+    })();
+    let seen: ProjectFile | null = null;
+    render(<Harness kind={pageOf(first, 'reader_extra').id as PartKind} start={() => first} onFile={(one) => (seen = one)} />);
+    const extract = screen.getByLabelText('The extract') as HTMLTextAreaElement;
+    extract.setSelectionRange('The tide came in'.length, 'The tide came in'.length);
+    fireEvent.keyDown(extract, { key: 'C', ctrlKey: true, shiftKey: true });
+    fireEvent.doubleClick(within(screen.getByRole('listbox', { name: 'Sources' })).getByRole('option'));
+    const after = seen as unknown as ProjectFile;
+    expect(pageOf(after, 'reader_extra').text).toBe(`The tide came in[^${after.citations[0]!.key}].`);
+    // The lead-in cites as well.
+    expect(screen.getAllByRole('button', { name: 'Cite…' })).toHaveLength(2);
+  });
 });

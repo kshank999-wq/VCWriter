@@ -283,4 +283,30 @@ describe('citations in the front and back matter', () => {
     expect(html).toContain(`The Moon’s Hours — after Jones’s tables<sup class="bk-cite" data-cite="${note.citation.key}">5</sup>`);
     expect(html).toContain('<span class="bk-note-mark">5.</span> Jones, <i>On Tides</i>, 61.');
   });
+
+  it('prints a preview chapter’s extract after its lead-in, and cites from both', () => {
+    let { file } = book();
+    const source = file.references[0]!.id;
+    const lead = insertCitation(file, { referenceId: source, locator: '70' });
+    file = lead.file;
+    const extract = insertCitation(file, { referenceId: source, locator: '71' });
+    file = extract.file;
+    const preview = addPart(file, 'reader_extra', {
+      about: { kind: 'preview', leadIn: `Turn the page for the opening of The Moon’s Hours.${lead.token}` },
+      text: `Chapter One. The tide came in.\n\nIt went out again, as Jones says it must.${extract.token}`,
+    });
+    file = preview.file;
+    // The extract used to vanish behind a lead-in: both print now, in order.
+    const words = bookBlocks(file).filter((block) => block.partId === preview.partId && block.kind === 'paragraph');
+    expect(words.map((block) => [block.role ?? null, block.text.replace(/\[\^[0-9a-f]{6}\]/g, '')])).toEqual([
+      ['extra', 'Turn the page for the opening of The Moon’s Hours.'],
+      [null, 'Chapter One. The tide came in.'],
+      [null, 'It went out again, as Jones says it must.'],
+    ]);
+    // After the foreword (1), the story (2) and the appendix (3): the lead-in's, then the extract's.
+    expect(citationOccurrences(file).filter((one) => one.partId === preview.partId).map((one) => [one.key, one.marker])).toEqual([
+      [lead.citation.key, '4'],
+      [extract.citation.key, '5'],
+    ]);
+  });
 });

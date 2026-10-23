@@ -447,6 +447,8 @@ const wordsOfPart = (part: BookPart): string => {
     // author has written, in the order the page lists them.
     if (own.kind === 'newsletter') return own.message;
     if (own.kind === 'also_by') return own.titles.filter((one) => one.title.trim().length > 0).map((one) => one.series).join('\n');
+    // A preview's lead-in, then its extract (§18).
+    if (own.kind === 'preview') return `${own.leadIn}\n${part.text}`;
   }
   return part.text;
 };
