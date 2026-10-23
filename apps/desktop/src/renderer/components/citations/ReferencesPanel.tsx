@@ -114,43 +114,47 @@ export function ReferencesPanel({ file, onUpdate, readOnly = false, documentId =
   const [conflicts, setConflicts] = useState<LinkConflict[]>([]);
   const fileNow = useRef(file);
   fileNow.current = file;
+  const mounted = useRef(true);
+  useEffect(
+    () => () => {
+      mounted.current = false;
+    },
+    [],
+  );
+  const syncLinks = async () => {
+    const libraries = linkedLibraries(fileNow.current);
+    if (readOnly || libraries.length === 0 || !window.vcwriter?.readProject) return;
+    const read = new Map<string, ProjectFile | null>();
+    const hashes = new Map<string, string>();
+    for (const library of libraries) {
+      const result = await window.vcwriter.readProject(library.path);
+      read.set(library.path, result.ok && result.data ? result.data.file : null);
+      if (result.ok && result.data) hashes.set(library.path, result.data.contentHash);
+    }
+    if (!mounted.current) return;
+    const first = syncLinkedLibrary(fileNow.current, read);
+    for (const [path, library] of first.origins) {
+      const sent = window.vcwriter.sendIntoProject
+        ? await window.vcwriter.sendIntoProject({ path, file: library, expectedHash: hashes.get(path) ?? '' })
+        : { ok: false as const, error: 'Not here' };
+      if (!sent.ok) read.set(path, null);
+    }
+    if (!mounted.current) return;
+    const done = syncLinkedLibrary(fileNow.current, read);
+    if (done.file !== fileNow.current) onUpdate((current) => syncLinkedLibrary(current, read).file);
+    setConflicts(done.conflicts);
+    const unread = libraries.filter((library) => read.get(library.path) === null).map((library) => library.title || 'a project');
+    const said = [
+      done.pulled ? `${done.pulled === 1 ? 'One source' : `${done.pulled} sources`} took a change from where ${done.pulled === 1 ? 'it is' : 'they are'} linked` : '',
+      done.pushed ? `${done.pushed === 1 ? 'one change' : `${done.pushed} changes`} sent to the linked library` : '',
+      done.gone ? `${done.gone === 1 ? 'one source' : `${done.gone} sources`} unlinked, gone from the library ${done.gone === 1 ? 'it' : 'they'} came from` : '',
+      unread.length ? `${unread.join(', ')} could not be read; the links there wait for next time` : '',
+    ].filter(Boolean);
+    if (said.length) setMessage(`${said.join('; ')}.`.replace(/^./, (first) => first.toUpperCase()));
+  };
+  // Once per opening of the library, and again when sources have been brought in or linked (§30).
   useEffect(() => {
-    const libraries = linkedLibraries(file);
-    if (readOnly || libraries.length === 0 || !window.vcwriter?.readProject) return undefined;
-    let live = true;
-    void (async () => {
-      const read = new Map<string, ProjectFile | null>();
-      const hashes = new Map<string, string>();
-      for (const library of libraries) {
-        const result = await window.vcwriter.readProject(library.path);
-        read.set(library.path, result.ok && result.data ? result.data.file : null);
-        if (result.ok && result.data) hashes.set(library.path, result.data.contentHash);
-      }
-      if (!live) return;
-      const first = syncLinkedLibrary(fileNow.current, read);
-      for (const [path, library] of first.origins) {
-        const sent = window.vcwriter.sendIntoProject
-          ? await window.vcwriter.sendIntoProject({ path, file: library, expectedHash: hashes.get(path) ?? '' })
-          : { ok: false as const, error: 'Not here' };
-        if (!sent.ok) read.set(path, null);
-      }
-      if (!live) return;
-      const done = syncLinkedLibrary(fileNow.current, read);
-      if (done.file !== fileNow.current) onUpdate((current) => syncLinkedLibrary(current, read).file);
-      setConflicts(done.conflicts);
-      const unread = libraries.filter((library) => read.get(library.path) === null).map((library) => library.title || 'a project');
-      const said = [
-        done.pulled ? `${done.pulled === 1 ? 'One source' : `${done.pulled} sources`} took a change from where ${done.pulled === 1 ? 'it is' : 'they are'} linked` : '',
-        done.pushed ? `${done.pushed === 1 ? 'one change' : `${done.pushed} changes`} sent to the linked library` : '',
-        done.gone ? `${done.gone === 1 ? 'one source' : `${done.gone} sources`} unlinked, gone from the library ${done.gone === 1 ? 'it' : 'they'} came from` : '',
-        unread.length ? `${unread.join(', ')} could not be read; the links there wait for next time` : '',
-      ].filter(Boolean);
-      if (said.length) setMessage(`${said.join('; ')}.`.replace(/^./, (first) => first.toUpperCase()));
-    })();
-    return () => {
-      live = false;
-    };
-    // Once per opening of the library.
+    void syncLinks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -182,7 +186,18 @@ export function ReferencesPanel({ file, onUpdate, readOnly = false, documentId =
 
   return (
     <div className="refs">
-      {bringing ? <BringInSourcesDialog file={file} projectPath={projectPath} onUpdate={onUpdate} onClose={() => setBringing(false)} /> : null}
+      {bringing ? (
+        <BringInSourcesDialog
+          file={file}
+          projectPath={projectPath}
+          onUpdate={onUpdate}
+          onClose={() => {
+            setBringing(false);
+            // What was just linked is brought into step now, not at the next opening.
+            window.setTimeout(() => void syncLinks(), 0);
+          }}
+        />
+      ) : null}
       <nav className="refs-tabs" role="tablist" aria-label="References">
         {(['library', 'settings', 'preview'] as const).map((one) => (
           <button key={one} type="button" role="tab" aria-selected={view === one} className={view === one ? 'on' : ''} onClick={() => setView(one)}>

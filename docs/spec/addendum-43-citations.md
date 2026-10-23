@@ -1245,7 +1245,32 @@ Checked end to end in the browser preview: two sources brought from The
 Sea into a Document project, linked; a title changed in the Document's
 library reached The Sea when the library was next opened.
 
-## 30. Not yet
+## 30. Linking a source this library already has
+
+Bringing in (§29) linked only what it brought. A source this library
+already had (the same DOI, ISBN, or title by the same first author) was
+marked "already in this library" and left unlinked, because linking two
+copies that differ makes one overwrite the other. It can be linked now,
+with the writer saying which stands.
+
+- **The same facts.** Where the two agree (`referenceFingerprint`), the row
+  says "already here, the same: link the two", ticked. Linking changes
+  nothing but the link.
+- **Different facts.** The row says what differs (`factDifferences`, for
+  example "date 2021 here, 2019 there") and offers *Leave it unlinked* (the
+  default), *Link, keeping this project's*, or *Link, taking The Sea's*.
+  - Taking the other's sets this copy's facts to the library's now.
+  - Keeping this project's links the copy as though the library hadn't yet
+    heard of the change. So the ordinary sync (§29) sends it there, with the
+    same guard against writing over a project changed since it was read
+    (`linkExisting`).
+- **Already linked** (to this project or another) stays as it is, and says
+  so.
+- **Brought into step at once.** Closing the dialog syncs the library then,
+  not at the next opening. The button says what it will do: "Bring in 1
+  source and link 1 already here".
+
+## 31. Not yet
 
 - A Word note in a form other than Chicago's, APA's or MLA's (Harvard's
   author-date notes beyond "(Smith 2019)", a legal citation), or one that
@@ -1260,5 +1285,3 @@ library reached The Sea when the library was next opened.
   in another window at the time, its next save puts back what it had, and
   the change is then taken back here at the next opening. (Sending extracts,
   addendum 42 §10, has the same limit.)
-- Sources already in this library when another is brought in are not
-  linked: linking two that differ would make one overwrite the other.

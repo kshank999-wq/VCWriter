@@ -2,6 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   REFERENCE_TYPE_NAMES,
   bringInReferences,
+  factDifferences,
+  linkExisting,
+  referenceFingerprint,
+  sameSourceIn,
   referenceCreator,
   type ProjectFile,
   type Reference,
@@ -41,6 +45,12 @@ export function BringInSourcesDialog({ file, projectPath = null, onUpdate, onClo
   const [done, setDone] = useState<string | null>(null);
   /** Whether the copies stay linked to the library they came from (addendum 43 §29). */
   const [linked, setLinked] = useState(true);
+  /**
+   * **What to do with each source this library already has** (§30), by the
+   * other library's id: leave it, or link it — keeping this project's facts,
+   * or taking the other's. One that agrees is linked as it stands.
+   */
+  const [linking, setLinking] = useState<Map<string, 'no' | 'ours' | 'theirs'>>(new Map());
 
   useEffect(() => {
     let live = true;
@@ -70,7 +80,21 @@ export function BringInSourcesDialog({ file, projectPath = null, onUpdate, onClo
     return { fresh: live.filter((one) => !here.has(one.id)), already: live.filter((one) => here.has(one.id)) };
   }, [source, file]);
 
+  /** Each source this library already has, matched to its copy here, and how the two stand. */
+  const matches = useMemo(() => {
+    if (!source || !offered) return [];
+    return offered.already.map((there) => {
+      const here = sameSourceIn(file, there);
+      const agree = here ? referenceFingerprint(here) === referenceFingerprint(there) : false;
+      return { there, here, agree, differences: here && !agree ? factDifferences(here, there) : [] };
+    });
+  }, [source, offered, file]);
+  const choiceFor = (match: (typeof matches)[number]): 'no' | 'ours' | 'theirs' =>
+    linking.get(match.there.id) ?? (match.agree && !match.here?.link ? 'ours' : 'no');
+  const toLink = matches.filter((match) => match.here && !match.here.link && choiceFor(match) !== 'no');
+
   const read = async (path: string) => {
+
     setError(null);
     setDone(null);
     const result = await window.vcwriter.readProject(path);
@@ -100,9 +124,21 @@ export function BringInSourcesDialog({ file, projectPath = null, onUpdate, onClo
     const wanted = new Set(offered.fresh.filter((one) => picked.has(one.id)).map((one) => one.id));
     const count = wanted.size;
     const title = source.file.project.title || 'that project';
-    const link = linked ? { path: source.path, title: source.file.project.title } : null;
-    onUpdate((current) => bringInReferences(current, source.file.references, wanted, link).file);
-    setDone(`${count} ${count === 1 ? 'source' : 'sources'} brought in from ${title}${linked ? `, linked: a change to ${count === 1 ? 'it' : 'them'} here or there reaches the other` : ''}.`);
+    const library = { path: source.path, title: source.file.project.title };
+    const link = linked ? library : null;
+    const links = toLink.map((match) => ({ localId: (match.here as Reference).id, there: match.there, keep: choiceFor(match) as 'ours' | 'theirs' }));
+    onUpdate((current) =>
+      links.reduce(
+        (sofar, one) => linkExisting(sofar, one.localId, one.there, library, one.keep),
+        count > 0 ? bringInReferences(current, source.file.references, wanted, link).file : current,
+      ),
+    );
+    const said = [
+      count > 0 ? `${count} ${count === 1 ? 'source' : 'sources'} brought in from ${title}${linked ? `, linked: a change to ${count === 1 ? 'it' : 'them'} here or there reaches the other` : ''}` : '',
+      links.length > 0 ? `${links.length === 1 ? 'one source' : `${links.length} sources`} already here linked to ${title}` : '',
+    ].filter(Boolean);
+    setDone(`${said.join('; ')}.`.replace(/^./, (first) => first.toUpperCase()));
+    setLinking(new Map());
   };
 
   const row = (reference: Reference, have: boolean) => (
@@ -171,7 +207,45 @@ export function BringInSourcesDialog({ file, projectPath = null, onUpdate, onClo
           ) : (
             <ul className="refs-bring-list" aria-label="Sources in that library">
               {offered.fresh.map((one) => row(one, false))}
-              {offered.already.map((one) => row(one, true))}
+              {matches.map((match) => (
+                <li key={match.there.id} className="refs-have">
+                  <span>
+                    <span className="cite-who">{referenceCreator(match.there) || '—'}</span>{' '}
+                    <span className="cite-title">{match.there.title || (match.there.asWritten ? <InlineText text={match.there.asWritten} /> : 'Untitled source')}</span>
+                  </span>
+                  {match.here?.link ? (
+                    <span className="muted small">
+                      already here,{' '}
+                      {match.here.link.path === source?.path ? 'linked to it' : `linked to ${match.here.link.title || 'another project'}`}
+                    </span>
+                  ) : match.agree ? (
+                    <label className="muted small">
+                      <input
+                        type="checkbox"
+                        checked={choiceFor(match) !== 'no'}
+                        onChange={(event) => setLinking((current) => new Map(current).set(match.there.id, event.target.checked ? 'ours' : 'no'))}
+                      />{' '}
+                      already here, the same: link the two
+                    </label>
+                  ) : (
+                    <span className="refs-have-differs">
+                      <span className="muted small">
+                        already here, but not the same:{' '}
+                        {match.differences.map((one) => `${one.field} ${one.here || '(none)'} here, ${one.there || '(none)'} there`).join('; ')}
+                      </span>
+                      <select
+                        aria-label={`Link ${match.there.title || 'this source'}`}
+                        value={choiceFor(match)}
+                        onChange={(event) => setLinking((current) => new Map(current).set(match.there.id, event.target.value as 'no' | 'ours' | 'theirs'))}
+                      >
+                        <option value="no">Leave it unlinked</option>
+                        <option value="ours">Link, keeping this project’s</option>
+                        <option value="theirs">Link, taking {source?.file.project.title || 'that project'}’s</option>
+                      </select>
+                    </span>
+                  )}
+                </li>
+              ))}
             </ul>
           )
         ) : null}
@@ -192,8 +266,10 @@ export function BringInSourcesDialog({ file, projectPath = null, onUpdate, onClo
           <button type="button" className="ghost" onClick={onClose}>
             {done ? 'Done' : 'Cancel'}
           </button>
-          <button type="button" className="primary" disabled={ticked === 0} onClick={bring}>
-            Bring in {ticked > 0 ? ticked : ''} {ticked === 1 ? 'source' : 'sources'}
+          <button type="button" className="primary" disabled={ticked === 0 && toLink.length === 0} onClick={bring}>
+            {ticked > 0 || toLink.length === 0 ? `Bring in ${ticked > 0 ? `${ticked} ` : ''}${ticked === 1 ? 'source' : 'sources'}` : ''}
+            {ticked > 0 && toLink.length > 0 ? ' and ' : ''}
+            {toLink.length > 0 ? `${ticked > 0 ? 'link' : 'Link'} ${toLink.length} already here` : ''}
           </button>
         </footer>
       </div>

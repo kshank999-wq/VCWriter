@@ -154,12 +154,15 @@ describe('another project’s library', () => {
     const dialog = screen.getByRole('dialog', { name: 'Bring in sources' });
     await waitFor(() => expect(within(dialog).getByRole('option', { name: 'The Sea' })).toBeTruthy());
     fireEvent.change(within(dialog).getByLabelText('Project to bring sources from'), { target: { value: '/sea.vcw' } });
-    await waitFor(() => expect(within(dialog).getByText('already in this library')).toBeTruthy());
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Bring in 1 source' }));
+    await waitFor(() => expect(within(dialog).getByText(/already here, the same: link the two/)).toBeTruthy());
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Bring in 1 source and link 1 already here' }));
     expect(latest!.references.map((one) => one.title)).toEqual(['On Tides', 'The Moon']);
-    expect(within(dialog).getByRole('status').textContent).toBe('1 source brought in from The Sea, linked: a change to it here or there reaches the other.');
-    // Linked to the library it came from (§29).
+    expect(within(dialog).getByRole('status').textContent).toBe(
+      '1 source brought in from The Sea, linked: a change to it here or there reaches the other; one source already here linked to The Sea.',
+    );
+    // Linked to the library it came from (§29), and the one already here too (§30).
     expect(latest!.references[1]!.link).toMatchObject({ path: '/sea.vcw', title: 'The Sea' });
+    expect(latest!.references[0]!.link).toMatchObject({ path: '/sea.vcw', title: 'The Sea' });
   });
 });
 
@@ -292,5 +295,31 @@ describe('a library linked between projects (§29)', () => {
     fireEvent.click(within(conflicts).getByRole('button', { name: 'Take The Sea’s' }));
     await waitFor(() => expect(latest!.references[0]!.date).toBe('2020'));
     expect(screen.queryByLabelText('Changed in both projects')).toBeNull();
+  });
+});
+
+describe('a source already here, linked when brought in (§30)', () => {
+  it('shows what differs, and links it taking the other project’s facts when told', async () => {
+    let book = createProjectFile({ title: 'The Sea', format: 'instructional' });
+    book = addReference(book, { title: 'On Tides', authors: ['Jones, Robert'], date: '2019' }).file;
+    (window as unknown as { vcwriter: unknown }).vcwriter = {
+      listProjects: vi.fn(async () => ({ ok: true, data: [{ path: '/sea.vcw', title: 'The Sea', savedAt: null, sizeBytes: null, missing: false }] })),
+      readProject: vi.fn(async () => ({ ok: true, data: { path: '/sea.vcw', file: book, contentHash: 'x' } })),
+      sendIntoProject: vi.fn(async () => ({ ok: true, data: { contentHash: 'y' } })),
+      pickProject: vi.fn(async () => ({ ok: true, data: null })),
+    };
+    const start = addReference(letter(), { title: 'On Tides', authors: ['Jones, Robert'], date: '2021' }).file;
+    render(<Harness start={start} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'References' }));
+    press('Bring in sources');
+    const dialog = screen.getByRole('dialog', { name: 'Bring in sources' });
+    await waitFor(() => expect(within(dialog).getByRole('option', { name: 'The Sea' })).toBeTruthy());
+    fireEvent.change(within(dialog).getByLabelText('Project to bring sources from'), { target: { value: '/sea.vcw' } });
+    await waitFor(() => expect(within(dialog).getByText(/already here, but not the same: date 2021 here, 2019 there/)).toBeTruthy());
+    // Left unlinked unless the writer says otherwise.
+    expect((within(dialog).getByRole('button', { name: /^Bring in/ }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.change(within(dialog).getByLabelText('Link On Tides'), { target: { value: 'theirs' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Link 1 already here' }));
+    expect(latest!.references[0]).toMatchObject({ date: '2019', link: { path: '/sea.vcw' } });
   });
 });

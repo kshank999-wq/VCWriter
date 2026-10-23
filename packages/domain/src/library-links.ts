@@ -187,3 +187,44 @@ export const linkedLibraries = (file: ProjectFile): { path: string; title: strin
   }
   return [...found.values()];
 };
+
+// ------------------------------------------- linking a source already here
+
+/** The facts that differ between two copies of one source, for the writer to see before linking them. */
+export const factDifferences = (here: Reference, there: Reference): { field: Fact; here: string; there: string }[] =>
+  FACTS.filter((field) => JSON.stringify(here[field]) !== JSON.stringify(there[field])).map((field) => ({
+    field,
+    here: Array.isArray(here[field]) ? (here[field] as string[]).join('; ') : String(here[field] ?? ''),
+    there: Array.isArray(there[field]) ? (there[field] as string[]).join('; ') : String(there[field] ?? ''),
+  }));
+
+/**
+ * **Link a source this library already has to the same source in another
+ * project** (addendum 43 §30). Where the two agree they are linked as they
+ * stand. Where they differ the writer has said which stands:
+ *
+ * - `theirs`: this copy takes the library's facts now;
+ * - `ours`: this copy keeps its facts, linked as though the library had not
+ *   yet heard of them — so the next time the library is opened they are
+ *   sent there, by the same path as any change made here (§29).
+ */
+export const linkExisting = (
+  file: ProjectFile,
+  localId: string,
+  source: Reference,
+  library: { path: string; title: string },
+  keep: 'ours' | 'theirs',
+): ProjectFile => {
+  const timestamp = nowIso();
+  const base = referenceFingerprint(source);
+  return {
+    ...file,
+    references: file.references.map((one) => {
+      if (one.id !== localId || one.link) return one;
+      const link = { path: library.path, title: library.title, referenceId: source.id, base };
+      return keep === 'theirs'
+        ? referenceSchema.parse({ ...one, ...factsOf(source), link, updatedAt: timestamp })
+        : { ...one, link, updatedAt: timestamp };
+    }),
+  };
+};

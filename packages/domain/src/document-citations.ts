@@ -201,5 +201,16 @@ export const bringInReferences = (
   return { file: added.length > 0 ? { ...file, references: [...file.references, ...added] } : file, added, already };
 };
 
+/**
+ * **The source in this library that is the same as one from another** (§30),
+ * by the rule bringing in uses (a DOI, an ISBN, or a title by the same first
+ * author); null where this library has none.
+ */
+export const sameSourceIn = (file: ProjectFile, source: Reference): Reference | null => {
+  const keys = new Set(sameSourceKeys(source));
+  if (keys.size === 0) return null;
+  return file.references.find((one) => one.archivedAt === null && sameSourceKeys(one).some((key) => keys.has(key))) ?? null;
+};
+
 /** Sources a document cites, for a count beside the library. */
 export const documentCitedCount = (file: ProjectFile, documentId: string): number => citedReferences(file, occurrencesIn(file, documentId)).length;

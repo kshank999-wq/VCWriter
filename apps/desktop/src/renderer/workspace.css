@@ -21897,3 +21897,14 @@ dialog.track-dialog.format-inspector {
 .citable { display: flex; flex-direction: column; gap: 4px; }
 .citable > textarea { width: 100%; }
 .citable-bar { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+
+/* Bring in sources (addendum 43 §11, §29, §30): one source to a row, who and
+   what on the first line, how it stands (and any choice) under it. */
+.refs-bring-list { list-style: none; margin: 8px 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 50vh; overflow: auto; }
+.refs-bring-list li { display: flex; flex-direction: column; gap: 2px; padding: 6px 8px; border: 1px solid var(--line, #333); border-radius: 6px; }
+.refs-bring-list li > label { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.refs-bring-list .cite-who { font-weight: 600; }
+.refs-bring-list .cite-who::after { content: ' ·'; font-weight: 400; opacity: 0.6; }
+.refs-bring-list li > label > .muted, .refs-bring-list li > .muted, .refs-bring-list li > label.muted { flex-basis: 100%; }
+.refs-bring-list .refs-have-differs { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.refs-bring-link { display: block; margin: 6px 0; }

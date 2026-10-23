@@ -6,6 +6,9 @@ import {
   createProjectFile,
   duplicateReference,
   fromRows,
+  factDifferences,
+  linkExisting,
+  sameSourceIn,
   linkState,
   linkedLibraries,
   settleLink,
@@ -100,5 +103,49 @@ describe('a linked source', () => {
     expect(duplicateReference(letters, copyId).reference!.link).toBeNull();
     const back = fromRows(toRows(letters));
     expect(factsOf(back, copyId).link).toEqual(factsOf(letters, copyId).link);
+  });
+});
+
+describe('a source already here, linked (§30)', () => {
+  const both = (date: string) => {
+    let book = createProjectFile({ title: 'The Sea', format: 'instructional' });
+    const there = addReference(book, { title: 'On Tides', authors: ['Jones, Robert'], date: '2019', shortCode: 'J19' });
+    book = there.file;
+    let letters = createProjectFile({ title: 'Letters', format: 'document' });
+    const here = addReference(letters, { title: 'On Tides', authors: ['Jones, Robert'], date, shortCode: 'mine' });
+    letters = here.file;
+    return { book, letters, there: there.reference, here: here.reference };
+  };
+
+  it('finds the same source here, and says what differs', () => {
+    const { letters, there, here } = both('2021');
+    expect(sameSourceIn(letters, there)?.id).toBe(here.id);
+    expect(factDifferences(here, there)).toEqual([{ field: 'date', here: '2021', there: '2019' }]);
+  });
+
+  it('links two that agree as they stand', () => {
+    const { book, letters, there, here } = both('2019');
+    const linked = linkExisting(letters, here.id, there, { path: THE_SEA, title: 'The Sea' }, 'ours');
+    expect(factsOf(linked, here.id).shortCode).toBe('mine');
+    expect(linkState(factsOf(linked, here.id), there)).toBe('same');
+    expect(syncLinkedLibrary(linked, new Map([[THE_SEA, book]])).pushed).toBe(0);
+  });
+
+  it('takes the library’s facts where told, and sends this one’s at the next opening where told', () => {
+    const { book, letters, there, here } = both('2021');
+    const taken = linkExisting(letters, here.id, there, { path: THE_SEA, title: 'The Sea' }, 'theirs');
+    expect(factsOf(taken, here.id).date).toBe('2019');
+    expect(linkState(factsOf(taken, here.id), there)).toBe('same');
+
+    const kept = linkExisting(letters, here.id, there, { path: THE_SEA, title: 'The Sea' }, 'ours');
+    expect(factsOf(kept, here.id).date).toBe('2021');
+    const synced = syncLinkedLibrary(kept, new Map([[THE_SEA, book]]));
+    expect(synced.pushed).toBe(1);
+    expect(factsOf(synced.origins.get(THE_SEA)!, there.id)).toMatchObject({ date: '2021', shortCode: 'J19' });
+  });
+
+  it('leaves a source that is already linked as it is', () => {
+    const { letters, copyId, book, bookId } = pair();
+    expect(linkExisting(letters, copyId, factsOf(book, bookId), { path: '/elsewhere.vcw', title: 'Elsewhere' }, 'theirs')).toEqual(letters);
   });
 });
