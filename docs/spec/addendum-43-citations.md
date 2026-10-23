@@ -1130,10 +1130,46 @@ now as the print's does (§24), with the same rules and helpers (`lineCuts`,
   locator is clamped to its limit too, so one note can never stop a file
   coming in.
 
-## 27. Not yet
+## 27. Word notes in APA's and MLA's forms
 
-- A Word note in a form other than Chicago's (APA's or MLA's parentheses, a
-  note that says something besides its source) is kept whole and flagged.
+A Word file's notes were read only in Chicago's forms (§20). One written to
+APA or MLA was kept whole and flagged, note by note. They're read now, in
+the same all-or-nothing way, by `recogniseNote` (`note-parts.ts`):
+
+| Form | APA | MLA |
+| --- | --- | --- |
+| Book | `Jones, R., & Lee, A. B. (2019). *On tides* (2nd ed.). Sea Press.` | `Jones, Robert, and Ada Lee. *On Tides*. Sea Press, 2019.` |
+| Article | `Lee, A. (2018). The pull. *Journal of Tides*, *4*(2), 33–40. https://doi.org/…` | `Lee, Ada. "The Pull." *Journal of Tides*, vol. 4, no. 2, 2018, pp. 33–40.` |
+| Chapter | `Hall, A. (2010). Charts. In B. Kim & C. Day (Eds.), *The sea book* (pp. 45–60). Wave.` | `Hall, Ann. "Charts." *The Sea Book*, edited by Bo Kim, Wave, 2010, pp. 45–60.` |
+| Web page | `Harbour Board. (2023, March 3). *Tide tables*. Harbour Board. https://…` | `"Tide Tables." *Harbour Board*, 3 Mar. 2023, harbour.example/tides.` |
+| Short form | `(Jones, 2019, p. 12)`, `Jones and Lee (2019, pp. 12–14)` | `(Jones 12)`, `(Jones, *On Tides* 12–14)` |
+
+- **Names.** APA's are kept with their initials ("Jones, R."); MLA's first
+  author as written and the others turned round. A name that isn't a
+  person's is an organisation, as before.
+- **Addresses.** An address at the end goes to the source, including MLA's
+  without its scheme ("harbour.example/tides"), and a DOI to its own field.
+- **Short forms.** A short form cites the latest source by that author it
+  names: by its title where it gives one (Chicago, MLA with a title), by its
+  year where it gives that (APA), or by the author alone (MLA's
+  "(Jones 12)"). A year that isn't the source's names another work, so the
+  note is kept as written. "(Smith 2019)", a year without APA's comma, is a
+  year and not page 2019. A remark in parentheses ("(See also chapter 3)")
+  is no citation.
+- **The library action** (*Read the parts of N sources from Word*, §20)
+  and **Insert → From file** (§22) use the same reading, so they know these
+  forms too.
+
+Checked by reading back what the book's own APA and MLA styles write, entry
+and short form, for a book and an article. In the preview, a Word file with
+six APA notes came into a document as four sources, its book cited three
+times at its own pages.
+
+## 28. Not yet
+
+- A Word note in a form other than Chicago's, APA's or MLA's (Harvard's
+  author-date notes beyond "(Smith 2019)", a legal citation), or one that
+  says something besides its source, is kept whole and flagged.
 - The eBook has no pages, so it carries no heads, feet or page numbers.
 - One library held live between projects: sources are brought in as copies,
   and a change in one project does not reach the other.

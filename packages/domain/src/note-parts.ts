@@ -31,7 +31,16 @@ export type NoteFacts = Partial<Pick<Reference, 'type' | 'authors' | 'editors' |
 
 export type RecognisedNote =
   | { kind: 'full'; source: NoteFacts & { type: ReferenceType; title: string }; locatorKind: LocatorKind; locator: string }
-  | { kind: 'short'; surname: string; title: string; locatorKind: LocatorKind; locator: string }
+  | {
+      kind: 'short';
+      surname: string;
+      /** The short title, where the note gives one ('' in APA's and MLA's parentheses). */
+      title: string;
+      /** The year, where the note gives one: APA's "(Jones, 2019, p. 12)". */
+      year?: string;
+      locatorKind: LocatorKind;
+      locator: string;
+    }
   | { kind: 'ibid'; locatorKind: LocatorKind; locator: string };
 
 /** A person as the note writes them, "Robert Jones", as the library keeps them, "Jones, Robert". */
@@ -177,7 +186,7 @@ const webPage = (body: string, url: string): Extract<RecognisedNote, { kind: 'fu
     source: {
       type: 'website',
       ...creators(found[1] ?? ''),
-      title: (found[2] as string).trim(),
+      title: (found[2] as string).trim().replace(/\.$/, ''),
       container: (found[3] ?? found[4] ?? '').trim(),
       ...(year ? { date: year } : {}),
       ...(accessed ? { accessed } : {}),
@@ -186,6 +195,169 @@ const webPage = (body: string, url: string): Extract<RecognisedNote, { kind: 'fu
     locatorKind: 'page',
     locator: '',
   };
+};
+
+// ------------------------------------------------------------ APA and MLA
+
+/**
+ * **Notes in APA's and MLA's forms** (addendum 43 §27). A Word file written
+ * to either style has its footnotes as the style writes a source: a whole
+ * reference-list or works-cited entry, or the short form in parentheses.
+ *
+ * - APA: `Jones, R., & Lee, A. (2019). *On tides* (2nd ed.). Sea Press.`, an
+ *   article `Lee, A. (2018). The pull. *Journal of Tides*, *4*(2), 33–40.`, a
+ *   chapter `Hall, A. (2010). Charts. In B. Kim (Ed.), *The sea book*
+ *   (pp. 45–60). Wave.`, a web page `Harbour Board. (2023, March 3). *Tide
+ *   tables*. https://…`; and `(Jones, 2019, p. 12)` or `Jones (2019, p. 12)`.
+ * - MLA: `Jones, Robert, and Ada Lee. *On Tides*. Sea Press, 2019.`, an
+ *   article `Lee, Ada. "The Pull." *Journal of Tides*, vol. 4, no. 2, 2018,
+ *   pp. 33–40.`, a chapter `Hall, Ann. "Charts." *The Sea Book*, edited by
+ *   Bo Kim, Wave, 2010, pp. 45–60.`, a web page `"Tide Tables." *Harbour
+ *   Board*, 3 Mar. 2023, harbour.example/tides.`; and `(Jones 12)` or
+ *   `(Jones, *On Tides* 12)`.
+ *
+ * As with Chicago's, a note is read only when the whole of it fits.
+ */
+
+const NAME = `[\\p{Lu}][\\p{L}'’-]+(?:\\s[\\p{Lu}][\\p{L}'’-]+)*`;
+
+/** APA's authors, "Jones, R., & Lee, A. B.", as the library keeps them; or a body, kept as its name. */
+const apaCreators = (text: string): Pick<NoteFacts, 'authors' | 'organization'> => {
+  const said = text.trim().replace(/[.,]$/, '');
+  // Initials, the last one's full stop sometimes eaten by the year's: "A. B".
+  const person = new RegExp(`(${NAME}),\\s*((?:[\\p{Lu}]\\.\\s?-?)*[\\p{Lu}]\\.?)(?=,|\\s*&|\\s*$)`, 'gu');
+  const people = [...said.matchAll(person)].map((one) => `${one[1]}, ${(one[2] as string).trim().replace(/(\p{Lu})$/u, '$1.')}`);
+  const leftover = said.replace(person, '').replace(/[\s,&.]|et al/g, '');
+  if (people.length > 0 && leftover.length === 0) return { authors: people };
+  return said ? { organization: said } : {};
+};
+
+/** APA's editors, "B. Kim & C. Day", turned round: "Kim, B.". */
+const apaEditors = (text: string): string[] =>
+  text
+    .split(/,\s*&\s*|\s*&\s*|,\s*/)
+    .map((one) => one.trim())
+    .filter(Boolean)
+    .map((one) => {
+      const found = one.match(/^((?:[\p{Lu}]\.\s?-?)+)\s*(.+)$/u);
+      return found ? `${(found[2] as string).trim()}, ${(found[1] as string).trim()}` : one;
+    });
+
+type Read = { source: NoteFacts & { type: ReferenceType; title: string }; locatorKind: LocatorKind; locator: string };
+const whole = (source: Read['source']): Read => ({ source, locatorKind: 'page', locator: '' });
+
+/** An APA reference entry, whole; null where it is not one. */
+const apaEntry = (said: string, url: string, doi: string): Read | null => {
+  const found = said.match(/^(.+?)\.?\s*\((\d{4})[a-z]?(?:,\s*([^)]+))?\)\.\s*(.+)$/u) ?? said.match(/^(.+?)\.?\s*\((n\.d\.)\)\.\s*(.+)$/u);
+  if (!found) return null;
+  const who = apaCreators(found[1] as string);
+  const date = found[2] === 'n.d.' ? '' : (found[2] as string);
+  const rest = ((found[4] ?? found[3]) as string).trim();
+  // An article: Title. *Journal*, *4*(2), 33–40
+  const article = rest.match(/^(.+?)\.\s*\*([^*]+?)\*,?\s*(?:\*(\w+)\*)?(?:\((\w+)\))?(?:,\s*([\d–-]+))?$/u);
+  if (article && !rest.startsWith('*')) {
+    return whole({
+      type: 'journal',
+      ...who,
+      title: (article[1] as string).trim(),
+      container: (article[2] as string).trim(),
+      ...(article[3] ? { volume: article[3] } : {}),
+      ...(article[4] ? { issue: article[4] } : {}),
+      date,
+    });
+  }
+  // A chapter: Title. In B. Kim (Ed.), *Book* (pp. 45–60). Publisher
+  const chapter = rest.match(/^(.+?)\.\s*In\s+(.+?)\s*\(Eds?\.\),\s*\*([^*]+)\*\s*(?:\((?:pp?\.\s*)[^)]+\))?\.\s*(.+)$/u);
+  if (chapter) {
+    return whole({
+      type: 'chapter',
+      ...who,
+      title: (chapter[1] as string).trim(),
+      editors: apaEditors(chapter[2] as string),
+      container: (chapter[3] as string).trim(),
+      publisher: (chapter[4] as string).trim(),
+      date,
+    });
+  }
+  // A book or a web page: *Title* (2nd ed.). Publisher, or the site.
+  const titled = rest.match(/^\*([^*]+?)\*\s*(?:\((\d+\w*)\s*ed\.\))?(?:\.\s*(.+))?$/u);
+  if (!titled) return null;
+  const after = (titled[3] ?? '').trim();
+  if (url && !doi) return whole({ type: 'website', ...who, title: (titled[1] as string).trim(), ...(after ? { container: after } : {}), date });
+  return whole({ type: 'book', ...who, title: (titled[1] as string).trim(), ...(titled[2] ? { edition: titled[2] } : {}), ...(after ? { publisher: after } : {}), date });
+};
+
+/** MLA's authors, "Jones, Robert, and Ada Lee": the first as written, the others turned round. */
+const mlaCreators = (text: string): Pick<NoteFacts, 'authors' | 'organization'> => {
+  const said = text.trim().replace(/[.,]$/, '');
+  if (!said.includes(',')) return said ? { organization: said } : {};
+  const [first, ...others] = said.replace(/,\s*et al\.?$/, '').split(/,\s*and\s+|\s+and\s+/);
+  if (!first || !new RegExp(`^${NAME},\\s*${NAME}$`, 'u').test(first.trim())) return { organization: said };
+  return { authors: [first.trim(), ...others.map((one) => inverted(one))] };
+};
+
+/** An MLA works-cited entry, whole; null where it is not one. */
+const mlaEntry = (said: string, url: string): Read | null => {
+  const Q = `["“]([^"“”]+?)[.,]?["”]`;
+  // A book: Author. *Title*. [2nd ed., ]Publisher, 2019
+  const book = said.match(new RegExp(`^(.+?)\\.\\s*\\*([^*]+)\\*\\.\\s*(?:(\\d+\\w*)\\s*ed\\.,\\s*)?(.+?),\\s*(\\d{4})$`, 'u'));
+  if (book) {
+    return whole({ type: 'book', ...mlaCreators(book[1] as string), title: (book[2] as string).trim(), ...(book[3] ? { edition: book[3] } : {}), publisher: (book[4] as string).trim(), date: book[5] as string });
+  }
+  // A chapter: Author. "Title." *Book*, edited by Bo Kim, Wave, 2010, pp. 45–60
+  const chapter = said.match(new RegExp(`^(.+?)\\.\\s*${Q}\\s*\\*([^*]+)\\*,\\s*edited by\\s+(.+?),\\s*(.+?),\\s*(\\d{4})(?:,\\s*pp?\\.\\s*[\\d–-]+)?$`, 'u'));
+  if (chapter) {
+    return whole({
+      type: 'chapter',
+      ...mlaCreators(chapter[1] as string),
+      title: (chapter[2] as string).trim(),
+      container: (chapter[3] as string).trim(),
+      editors: peopleOf(chapter[4] as string).map(inverted),
+      publisher: (chapter[5] as string).trim(),
+      date: chapter[6] as string,
+    });
+  }
+  // An article: Author. "Title." *Journal*, vol. 4, no. 2, 2018, pp. 33–40
+  const article = said.match(new RegExp(`^(.+?)\\.\\s*${Q}\\s*\\*([^*]+)\\*,\\s*(?:vol\\.\\s*(\\w+),\\s*)?(?:no\\.\\s*(\\w+),\\s*)?([^,]*?\\d{4})(?:,\\s*pp?\\.\\s*[\\d–-]+)?$`, 'u'));
+  if (article && !url) {
+    return whole({
+      type: 'journal',
+      ...mlaCreators(article[1] as string),
+      title: (article[2] as string).trim(),
+      container: (article[3] as string).trim(),
+      ...(article[4] ? { volume: article[4] } : {}),
+      ...(article[5] ? { issue: article[5] } : {}),
+      date: ((article[6] as string).match(/\d{4}/) as RegExpMatchArray)[0],
+    });
+  }
+  // A web page: [Author. ]"Title." *Site*, 3 Mar. 2023, address
+  const web = said.match(new RegExp(`^(?:(.+?)\\.\\s*)?${Q}\\s*\\*([^*]+)\\*(?:,\\s*([^,]*?\\d{4}))?$`, 'u'));
+  if (web && url) {
+    const year = web[4]?.match(/\d{4}/)?.[0] ?? '';
+    return whole({ type: 'website', ...(web[1] ? mlaCreators(web[1]) : {}), title: (web[2] as string).trim(), container: (web[3] as string).trim(), ...(year ? { date: year } : {}), url });
+  }
+  return null;
+};
+
+/** APA's and MLA's short forms in parentheses: (Jones, 2019, p. 12), Jones (2019, p. 12), (Jones 12), (Jones, *On Tides* 12). */
+const parenthetical = (said: string): Extract<RecognisedNote, { kind: 'short' }> | null => {
+  const others = `(?:\\s+(?:&|and)\\s+${NAME}|\\s+et al\\.)?`;
+  const inner = said.match(/^\((.+)\)$/)?.[1];
+  const apa =
+    (inner ?? said).match(new RegExp(`^(${NAME})${others},\\s*(\\d{4})[a-z]?(?:,\\s*(.+))?$`, 'u')) ??
+    said.match(new RegExp(`^(${NAME})${others}\\s*\\((\\d{4})[a-z]?(?:,\\s*(.+))?\\)$`, 'u'));
+  if (apa) {
+    const pinpoint = readLocator(apa[3] ?? '');
+    if (!looksLikeLocator(pinpoint)) return null;
+    return { kind: 'short', surname: (apa[1] as string).split(/\s+/).pop() as string, title: '', year: apa[2] as string, ...pinpoint };
+  }
+  if (inner === undefined) return null;
+  const mla = inner.match(new RegExp(`^(${NAME})${others}(?:,\\s*(?:\\*([^*]+)\\*|["“]([^"“”]+)["”]))?\\s+((?:\\d+[a-z]?|[ivxlc]+)(?:\\s*[–-]\\s*(?:\\d+|[ivxlc]+))?)$`, 'u'));
+  if (!mla) return null;
+  const surname = (mla[1] as string).split(/\s+/).pop() as string;
+  // "(Smith 2019)" is a year written without APA's comma, not page 2019.
+  if (/^(?:1[5-9]|20)\d\d$/.test(mla[4] as string) && !mla[2] && !mla[3]) return { kind: 'short', surname, title: '', year: mla[4] as string, locatorKind: 'page', locator: '' };
+  return { kind: 'short', surname, title: (mla[2] ?? mla[3] ?? '').trim(), ...readLocator(mla[4] as string) };
 };
 
 /**
@@ -205,10 +377,11 @@ export const recogniseNote = (text: string): RecognisedNote | null => {
   // A DOI or an address at the end belongs to the source, whatever the shape.
   let url = '';
   let doi = '';
-  const link = said.match(/,?\s*(?:doi:\s*(10\.\S+)|(https?:\/\/\S+))$/i);
+  // MLA writes an address without its scheme: "harbour.example/tides".
+  const link = said.match(/,?\s*(?:doi:\s*(10\.\S+)|(https?:\/\/\S+)|((?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+\/\S*))$/i);
   if (link) {
-    said = said.slice(0, link.index).trim();
-    const address = link[2] ?? '';
+    said = said.slice(0, link.index).trim().replace(/[.,]$/, '').trim();
+    const address = link[2] ?? (link[3] ? link[3] : '');
     const fromDoi = address.match(/^https?:\/\/(?:dx\.)?doi\.org\/(10\.\S+)$/i);
     doi = link[1] ?? fromDoi?.[1] ?? '';
     url = doi ? '' : address.replace(/[.]$/, '');
@@ -224,7 +397,15 @@ export const recogniseNote = (text: string): RecognisedNote | null => {
     if (!looksLikeLocator(read)) return null;
     return { kind: 'full', ...read, source: { ...read.source, ...(doi ? { doi } : {}), ...(url ? { url } : {}) } };
   }
-  if (url) return webPage(said, url);
+  if (url && !said.match(/\(\d{4}[a-z]?(?:,[^)]*)?\)\./)) {
+    const page = webPage(said, url);
+    if (page) return page;
+  }
+  // APA's and MLA's whole entries, and their short forms in parentheses (§27).
+  const entry = apaEntry(said, url, doi) ?? mlaEntry(said, url);
+  if (entry) return { kind: 'full', ...entry, source: { ...entry.source, ...(doi ? { doi } : {}), ...(url ? { url } : {}) } };
+  const brief = parenthetical(said);
+  if (brief) return brief;
 
   // A short note: Surname[ and Surname], *Short Title*[, 20] — or "Short Title,"[ 20]
   const short =
@@ -252,6 +433,19 @@ const squash = (value: string): string =>
 const surnameOf = (source: NoteFacts): string => {
   const first = source.authors?.[0] ?? source.editors?.[0] ?? source.organization ?? '';
   return (first.split(',')[0] ?? '').trim();
+};
+
+/**
+ * Whether a short form names a source: by its author's surname, and then by
+ * its title where the form gives one (Chicago's, MLA's with a title), by its
+ * year where it gives that (APA's), or by the author alone (MLA's "(Jones 12)").
+ */
+const shortNames = (short: Extract<RecognisedNote, { kind: 'short' }>, source: NoteFacts): boolean => {
+  if (squash(surnameOf(source)) !== squash(short.surname)) return false;
+  const title = squash(short.title);
+  if (title) return squash(source.title ?? '').includes(title);
+  if (short.year) return (source.date ?? '').startsWith(short.year);
+  return true;
 };
 
 /** One source the notes gave, and whether its parts were read. */
@@ -315,12 +509,10 @@ export const readNotes = (notes: readonly { key: string; text: string }[]): Note
       at = last;
       pinpoint = { locatorKind: read.locatorKind, locator: read.locator };
     } else if (read?.kind === 'short') {
-      const surname = squash(read.surname);
-      const title = squash(read.title);
-      // The latest source by that author whose title holds the short one.
+      // The latest source by that author the short form names.
       for (let index = sources.length - 1; index >= 0 && at === null; index -= 1) {
         const source = sources[index]?.source;
-        if (source && squash(surnameOf(source)) === surname && title.length > 0 && squash(source.title ?? '').includes(title)) at = index;
+        if (source && shortNames(read, source)) at = index;
       }
       if (at !== null) pinpoint = { locatorKind: read.locatorKind, locator: read.locator };
     }
@@ -394,11 +586,7 @@ export const recogniseFromWord = (file: ProjectFile): { file: ProjectFile; read:
       target = last;
       cite(occurrence.key, target, note);
     } else if (note?.kind === 'short') {
-      const surname = squash(note.surname);
-      const title = squash(note.title);
-      const found = [...references.values()].find(
-        (one) => !flattened(one) && one.archivedAt === null && squash(surnameOf(one)) === surname && title.length > 0 && squash(one.title).includes(title),
-      );
+      const found = [...references.values()].find((one) => !flattened(one) && one.archivedAt === null && shortNames(note, one));
       if (found) {
         target = found.id;
         cite(occurrence.key, target, note);
