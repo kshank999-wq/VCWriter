@@ -60,6 +60,7 @@ import {
   insertCitation,
   plainInline,
   updateCitation,
+  notesIntoLibrary,
 } from '@vcwriter/domain';
 import { readDocxParts } from '../read-docx';
 import { documentExtensions, extractRange, findMatches, headingPosition, type CitationStorage, type SearchState } from './extensions';
@@ -429,15 +430,31 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
     const current = editorRef.current;
     if (!current || readOnly) return;
     try {
-      const content = /\.docx$/i.test(chosen.name)
-        ? docxToDocContent(readDocx(await readDocxParts(await chosen.arrayBuffer())))
-        : textToDocContent(await chosen.text());
-      current.chain().focus().insertContent(content.content ?? []).run();
+      if (/\.docx$/i.test(chosen.name)) {
+        // A Word file's footnotes come in as citations, their sources into
+        // the library or matched to ones it has (addendum 43 §22).
+        const docx = readDocx(await readDocxParts(await chosen.arrayBuffer()));
+        const brought = notesIntoLibrary(file, docx.notes ?? []);
+        const references = brought.file.references.slice(file.references.length);
+        const citations = brought.file.citations.slice(file.citations.length);
+        if (citations.length > 0) onUpdate((now) => ({ ...now, references: [...now.references, ...references], citations: [...now.citations, ...citations] }));
+        current.chain().focus().insertContent(docxToDocContent(docx, brought.keys).content ?? []).run();
+        const notes = citations.length;
+        setMessage(
+          notes === 0
+            ? `Inserted ${chosen.name}.`
+            : `Inserted ${chosen.name}, with its ${notes === 1 ? 'footnote' : `${notes} footnotes`} as citations: ` +
+                `${brought.added === 1 ? 'one new source' : `${brought.added} new sources`} in References` +
+                (brought.reused > 0 ? `, ${brought.reused === 1 ? 'one' : brought.reused} already there.` : '.'),
+        );
+        return;
+      }
+      current.chain().focus().insertContent(textToDocContent(await chosen.text()).content ?? []).run();
       setMessage(`Inserted ${chosen.name}.`);
     } catch {
       setMessage(`${chosen.name} could not be read.`);
     }
-  }, [readOnly]);
+  }, [readOnly, file, onUpdate]);
 
   // The app's menus and keys reach the document through this.
   useEffect(() => {

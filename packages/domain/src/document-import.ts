@@ -25,10 +25,19 @@ const marksOf = (span: { bold?: boolean; italic?: boolean; underline?: boolean }
   return marks;
 };
 
-/** A paragraph's words with their emphasis, as the editor's text nodes. */
-const inlineOf = (paragraph: DocxParagraph): DocNode[] => {
+/**
+ * A paragraph's words with their emphasis, as the editor's text nodes — and,
+ * where its footnotes are kept (addendum 43 §22), a citation node where each
+ * note's reference stood, under the key the library gave it.
+ */
+const inlineOf = (paragraph: DocxParagraph, keys: ReadonlyMap<string, string> | null): DocNode[] => {
   const nodes: DocNode[] = [];
-  parseInline(paragraph.text).forEach((span) => {
+  parseInline(keys ? (paragraph.cited ?? paragraph.text) : paragraph.text).forEach((span) => {
+    if (span.citation) {
+      const key = keys?.get(span.citation);
+      if (key) nodes.push({ type: 'citation', attrs: { key } });
+      return;
+    }
     // The reader marks a line break inside a paragraph as a newline.
     span.text.split('\n').forEach((piece, index) => {
       if (index > 0) nodes.push({ type: 'hardBreak' });
@@ -76,12 +85,12 @@ const withoutBold = (nodes: DocNode[]): DocNode[] =>
     return rest;
   });
 
-const blockOf = (paragraph: DocxParagraph): DocNode => {
+const blockOf = (paragraph: DocxParagraph, keys: ReadonlyMap<string, string> | null): DocNode => {
   const headed =
     paragraph.styleName === 'title' ||
     paragraph.styleName === 'subtitle' ||
     (paragraph.outline !== null && paragraph.outline <= 5);
-  const content = headed ? withoutBold(inlineOf(paragraph)) : inlineOf(paragraph);
+  const content = headed ? withoutBold(inlineOf(paragraph, keys)) : inlineOf(paragraph, keys);
   const attrs = blockAttrs(paragraph);
   const style = paragraph.styleName;
   if (style === 'title' || style === 'subtitle') {
@@ -96,8 +105,12 @@ const blockOf = (paragraph: DocxParagraph): DocNode => {
 const isQuote = (paragraph: DocxParagraph) =>
   paragraph.styleName === 'quote' || paragraph.styleName === 'intense quote';
 
-/** A Word document as the editor's tree. */
-export const docxToDocContent = (docx: DocxDocument): DocNode => {
+/**
+ * A Word document as the editor's tree. With `keys` (the file's own note keys
+ * to the library's, from `notesIntoLibrary`), its footnotes come in as
+ * citations; without, the words come in clean, as they always have.
+ */
+export const docxToDocContent = (docx: DocxDocument, keys: ReadonlyMap<string, string> | null = null): DocNode => {
   const blocks: DocNode[] = [];
   let list: DocNode | null = null;
   let quote: DocNode | null = null;
@@ -109,7 +122,7 @@ export const docxToDocContent = (docx: DocxDocument): DocNode => {
       blocks.push({ type: 'pageBreak' });
     }
     const pictures = pictureNodes(paragraph);
-    const block = blockOf(paragraph);
+    const block = blockOf(paragraph, keys);
 
     if (paragraph.list) {
       quote = null;

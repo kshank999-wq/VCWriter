@@ -5,7 +5,13 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import type { Editor } from '@tiptap/core';
 import {
   addReference,
+  addBeat,
+  addUnit,
+  buildBookDocx,
   citationKeysInDoc,
+  insertCitation,
+  updateBeat,
+  type ManuscriptElementId,
   createProjectFile,
   mainDocument,
   setDocumentContent,
@@ -150,5 +156,35 @@ describe('another project’s library', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Bring in 1 source' }));
     expect(latest!.references.map((one) => one.title)).toEqual(['On Tides', 'The Moon']);
     expect(within(dialog).getByRole('status').textContent).toBe('1 source brought in from The Sea.');
+  });
+});
+
+describe('a Word file with footnotes, inserted', () => {
+  it('brings its notes in as citations, their source into References, numbered in the document', async () => {
+    // A Word file with two footnotes citing one book: a book's own export.
+    let book = createProjectFile({ title: 'The Sea', format: 'instructional' });
+    const source = addReference(book, { type: 'book', title: 'On Tides', authors: ['Jones, Robert'], date: '2019', publisher: 'Sea Press', place: 'Boston' });
+    book = source.file;
+    const one = insertCitation(book, { referenceId: source.reference.id, locator: '12' });
+    const two = insertCitation(one.file, { referenceId: source.reference.id, locator: '14' });
+    book = two.file;
+    const unit = addUnit(book, { trackId: book.tracks[0]!.id, title: 'One' });
+    const beat = addBeat(unit.file, { unitId: unit.unit.id });
+    book = updateBeat(beat.file, beat.beat.id, {
+      manuscript: {
+        elements: [{ id: crypto.randomUUID() as ManuscriptElementId, type: 'paragraph', text: `Tides follow the moon.${one.token} Twice a day.${two.token}`, characterId: null, attributes: {} }],
+      },
+    });
+    const bytes = await buildBookDocx(book);
+    const word = new File([new Uint8Array(bytes)], 'tides.docx', { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+
+    render(<Harness start={letter('')} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'File' }));
+    fireEvent.change(screen.getByLabelText('Choose a Word or text file to insert'), { target: { files: [word] } });
+    await waitFor(() => expect(screen.getByText(/Inserted tides\.docx, with its 2 footnotes as citations/)).toBeTruthy());
+    expect(latest!.references.map((one) => one.title)).toEqual(['On Tides']);
+    expect(latest!.citations.map((one) => one.locator)).toEqual(['12', '14']);
+    expect(keysNow()).toEqual(latest!.citations.map((one) => one.key));
+    expect([...document.querySelectorAll('sup.wp-cite')].map((one) => one.getAttribute('data-marker'))).toEqual(['1', '2']);
   });
 });

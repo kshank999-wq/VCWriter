@@ -974,13 +974,35 @@ opening, another page) is now marked `anchored` on its block, and
 on past it, on the pages and in Word. A page of your own in the front or
 back matter, anchored to nothing, still opens a division as before.
 
-## 22. Not yet
+## 22. A Word file's footnotes, inserted into a document
+
+*Insert a file…* in a document brought a Word file's words in and dropped
+its footnotes. They come in as citations now.
+
+- **The notes are read** as the book import reads them (§20,
+  `readNotes`): Chicago's forms into their parts, short notes and Ibid.s
+  onto the source before them, anything else kept as written.
+- **The library first.** `notesIntoLibrary` matches each source against the
+  project's References before adding it: by first author and title, or by
+  its words where it's kept as written. A source the project already has is
+  cited, not added twice, and its facts are the writer's: the note doesn't
+  overwrite them. A new source is tagged *From Word* and keeps its Word text.
+- **Keys free in this project.** A footnote's key in the file can clash with
+  a citation the project already has, so each note gets a key that's free,
+  and `keys` maps the file's keys to the library's.
+- **Where they stood.** `docxToDocContent(docx, keys)` puts a citation node
+  where each note's reference stood in the line. The document then numbers
+  and sets them like any it cites (§11). Without `keys` the words come in
+  clean, as before.
+
+The status line says how many footnotes came in, how many sources were new,
+and how many were already in the library.
+
+## 23. Not yet
 
 - A Word note in a form other than Chicago's (APA's or MLA's parentheses, a
   note that says something besides its source) is kept whole and flagged.
 - The eBook has no pages, so it carries no heads, feet or page numbers.
-- Footnotes in a Word file inserted into a document: Insert → From file
-  brings the words in without them.
 - A document's print sets its notes at the end, not at the foot of each page.
 - One library held live between projects: sources are brought in as copies,
   and a change in one project does not reach the other.

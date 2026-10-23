@@ -1,7 +1,7 @@
 import { nowIso } from './entities/common.js';
-import { referenceSchema, type LocatorKind, type Reference, type ReferenceType } from './entities/reference.js';
+import { citationSchema, referenceSchema, type Citation, type LocatorKind, type Reference, type ReferenceType } from './entities/reference.js';
 import { citationOccurrences, flattened } from './citations.js';
-import type { ReferenceId } from './ids.js';
+import { newId, type CitationId, type ReferenceId } from './ids.js';
 import type { ProjectFile } from './project-file.js';
 
 /**
@@ -399,3 +399,70 @@ export const fromWordUnread = (file: ProjectFile): number =>
 /** How many of those could be read: the ones whose Word text fits a shape. */
 export const fromWordReadable = (file: ProjectFile): number =>
   file.references.filter((reference) => reference.archivedAt === null && flattened(reference) && recogniseNote(reference.asWritten) !== null).length;
+
+// ------------------------------------------------ a Word file's notes, kept
+
+/**
+ * **A Word file's footnotes, into the library of the project they come into**
+ * (addendum 43 §22): Insert → From file in a document. The notes are read as
+ * the import reads them (`readNotes`), and each source is matched against
+ * the library first, by its author and title, or by its words where it is
+ * kept as written, so a source the project already has is cited rather than
+ * added twice. Each footnote becomes a citation under a key free in this
+ * project; `keys` says which key each of the file's own became.
+ */
+export const notesIntoLibrary = (
+  file: ProjectFile,
+  notes: readonly { key: string; text: string }[],
+): { file: ProjectFile; keys: Map<string, string>; added: number; reused: number } => {
+  const keys = new Map<string, string>();
+  if (notes.length === 0) return { file, keys, added: 0, reused: 0 };
+  const read = readNotes(notes);
+  const timestamp = nowIso();
+  const live = file.references.filter((reference) => reference.archivedAt === null);
+  const byFacts = new Map(live.filter((one) => one.title.trim()).map((one) => [`${squash(surnameOf(one))}|${squash(one.title)}`, one.id as string]));
+  const byWords = new Map(live.filter((one) => flattened(one)).map((one) => [one.asWritten.trim().toLowerCase(), one.id as string]));
+  const added: Reference[] = [];
+  let reused = 0;
+  const ids = read.sources.map((one) => {
+    const known = one.source ? byFacts.get(`${squash(surnameOf(one.source))}|${squash(one.source.title ?? '')}`) : byWords.get(one.asWritten.trim().toLowerCase());
+    if (known) {
+      reused += 1;
+      return known;
+    }
+    const made = referenceSchema.parse({
+      id: newId<ReferenceId>(),
+      projectId: file.project.id,
+      type: 'other',
+      ...(one.source ?? {}),
+      asWritten: one.asWritten,
+      tags: ['From Word'],
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    });
+    added.push(made);
+    return made.id as string;
+  });
+  const taken = new Set(file.citations.map((citation) => citation.key));
+  const fresh = (wanted: string): string => {
+    let key = wanted;
+    while (taken.has(key)) key = Math.floor(Math.random() * 0x1000000).toString(16).padStart(6, '0');
+    taken.add(key);
+    return key;
+  };
+  const citations: Citation[] = read.cited.map((one) => {
+    const key = fresh(one.key);
+    keys.set(one.key, key);
+    return citationSchema.parse({
+      id: newId<CitationId>(),
+      projectId: file.project.id,
+      referenceId: ids[one.source],
+      key,
+      locatorKind: one.locatorKind,
+      locator: one.locator,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    });
+  });
+  return { file: { ...file, references: [...file.references, ...added], citations: [...file.citations, ...citations] }, keys, added: added.length, reused };
+};

@@ -22,6 +22,11 @@ import {
   updateBeat,
   type ManuscriptElementId,
   type ProjectFile,
+  notesIntoLibrary,
+  docxToDocContent,
+  documentCitations,
+  setDocumentContent,
+  citationKeysInDoc,
 } from '../index.js';
 
 /**
@@ -220,6 +225,49 @@ describe('footnotes read from Word', () => {
     const parts = bookDocxParts(file);
     const doc = readDocx({ document: parts.document, footnotes: parts.footnotes });
     expect(doc.notes!.map((one) => one.text)).toEqual(citationNotes(file).map((one) => one.text));
+  });
+});
+
+describe('a Word file’s footnotes, inserted into a document (§22)', () => {
+  it('brings the notes into the library, matched to a source it has, and puts a citation where each stood', () => {
+    let file = createProjectFile({ title: 'Letters', format: 'document' });
+    // The project already has the source, and a citation under a key the file also uses.
+    const had = addReference(file, { title: 'On Tides', authors: ['Jones, Robert'] });
+    file = had.file;
+    const doc = fromWord();
+    const clash = insertCitation(file, { referenceId: had.reference.id });
+    file = { ...clash.file, citations: clash.file.citations.map((one) => ({ ...one, key: doc.notes![0]!.key })) };
+
+    const brought = notesIntoLibrary(file, doc.notes!);
+    expect(brought.added).toBe(0);
+    expect(brought.reused).toBe(1);
+    expect(brought.file.references).toHaveLength(1);
+    const keys = doc.notes!.map((one) => brought.keys.get(one.key)!);
+    expect(new Set([...keys, doc.notes![0]!.key]).size).toBe(4);
+    expect(brought.file.citations.slice(1).map((one) => [one.key, one.referenceId, one.locator])).toEqual(keys.map((key, at) => [key, had.reference.id, ['12', '14', '12'][at]]));
+
+    const content = docxToDocContent(doc, brought.keys);
+    expect(citationKeysInDoc(content)).toEqual(keys);
+    const second = content.content![1]!;
+    expect(second.content!.map((node) => (node.type === 'citation' ? `[${node.attrs!['key']}]` : node.text)).join('')).toBe(`Tides follow the moon.[${keys[0]}] Twice a day.[${keys[1]}]`);
+    // The document numbers and sets them as its own, from the library's
+    // source: the writer's facts win over the note's.
+    const placed = setDocumentContent(brought.file, brought.file.documents[0]!.id, content);
+    expect(documentCitations(placed, placed.documents[0]!.id).notes.map((one) => one.text)).toEqual([
+      'Robert Jones, *On Tides*, 12.',
+      'Jones, *On Tides*, 14.',
+      'Jones, *On Tides*, 12.',
+    ]);
+  });
+
+  it('adds what the library has not got, and leaves the words clean where no keys are given', () => {
+    const file = createProjectFile({ title: 'Letters', format: 'document' });
+    const doc = fromWord();
+    const brought = notesIntoLibrary(file, doc.notes!);
+    expect(brought.added).toBe(1);
+    expect(brought.file.references[0]).toMatchObject({ title: 'On Tides', tags: ['From Word'] });
+    expect(citationKeysInDoc(docxToDocContent(doc))).toEqual([]);
+    expect(notesIntoLibrary(file, []).file).toBe(file);
   });
 });
 
