@@ -1,4 +1,4 @@
-import { partsOf, partTitle, type BookBlock } from './book-plan.js';
+import { partsOf, partHeading, type BookBlock } from './book-plan.js';
 import { bookSettingsOf } from './book-layout.js';
 import { BOOK_STYLES, bookMetrics, bookVars, renderBookPage, type BookRenderContext } from './print-book.js';
 import type { BookPage } from './book-pages.js';
@@ -134,7 +134,7 @@ export const fixedEbookOf = (file: ProjectFile, laid: LaidForEbook, options: { m
   const bank = imageBank(assets, log);
   const cover = coverOf(file, settings, assets, metadata, log);
   const blocks = new Map(laid.blocks.map((block) => [block.id, block]));
-  const parts = new Map(partsOf(file).map((part) => [part.id, partTitle(part)]));
+  const parts = new Map(partsOf(file).map((part) => [part.id, partHeading(part, file)]));
   const { pageWidthPx, pageHeightPx } = bookMetrics(laid.context.geometry);
   const width = Math.round(pageWidthPx);
   const height = Math.round(pageHeightPx);

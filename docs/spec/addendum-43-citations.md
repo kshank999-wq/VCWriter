@@ -19,6 +19,7 @@ kept current, and headers and footers for instructional publishing.
 | 7 | Citations in the front and back matter | **built** (§13) |
 | 8 | Citations in a glossary's definitions | **built** (§14) |
 | 9 | Citations in a reader extra's discussion questions | **built** (§15) |
+| 10 | A reader extra's heading as its card promises | **fixed** (§16) |
 
 **What already existed.** The Layout room (addendum 20) had measured pages,
 running heads (the book's title on the verso, the chapter's on the recto),
@@ -736,7 +737,47 @@ disagree?*
   question cited after *north*. The page prints *1.*, the question with
   marker 3, and the short note at its foot.
 
-## 16. Not yet
+## 16. A reader extra's heading
+
+Noticed while building §15, and fixed at Ken's word (*fix the reader extras
+heading next*). A reader extra's card has always said *It will be headed
+“Questions for Discussion” unless you type something else below.* The page
+printed **Reader extras**: with no heading typed, every page fell back to its
+kind's name (`partTitle`), and nothing asked what the extra was for. The same
+held for a newsletter, a preview chapter and *also by*.
+
+**One answer** (`partHeading` in `book-plan.ts`): where the writer typed a
+heading, that; otherwise
+- a reader extra's purpose's heading (`extraHeading`: *Questions for
+  Discussion*, *Also by R. Jones* and the rest)
+- a bibliography's style's (§8)
+- any other page's kind's name, as before
+
+Every place that prints or lists a page's heading now reads it, so they
+cannot disagree:
+- the page itself, and so the contents and Word, which read the page's blocks
+- the eBook's sections and its navigation
+- the fixed-layout eBook
+- the Layout rail
+
+Both heading boxes, in Layout's column and in the back-matter dialog, show it
+as their placeholder: an empty box says what will print. The heading follows
+the page when its purpose changes, and words the writer types win. Nothing
+is stored, so pages already in people's books print the right heading as
+they stand.
+
+**Proof.** `part-heading.test.ts` (5 tests):
+- the purpose's heading, *Also by* with the author's name
+- printed on the page, listed in the contents and the eBook, never
+  *Reader extras*
+- named so on the rail
+- following a change of purpose, and giving way to typed words
+- a bibliography's style's heading unchanged
+
+Seen in Chromium: the discussion-questions page of §15 now heads itself
+*Questions for Discussion*, and the rail names it so.
+
+## 17. Not yet
 
 - A page set inside the story is numbered after the story, not where it
   stands.

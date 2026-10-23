@@ -65,6 +65,7 @@ import {
   REFERENCE_STYLE_NAMES,
   citationSettingsOf,
   referenceBibliography,
+  partHeading,
 } from '@vcwriter/domain';
 import { CitableText } from './citations/CitableText';
 import { readPdfPages } from '../read-vector';
@@ -303,7 +304,8 @@ function Body({
               <span>Heading text</span>
               <input
                 aria-label="Heading text"
-                placeholder={info.name}
+                // What prints with nothing typed: a reader extra's purpose, a bibliography's style.
+                placeholder={partHeading({ ...part, title: '' }, file)}
                 value={part.title}
                 onChange={(event) => onUpdate((current) => updatePart(current, partId, { title: event.target.value }))}
               />

@@ -1,5 +1,5 @@
 import { isFullPageArt } from './chapter-style.js';
-import { bookBlocks, partsOf, partTitle, type BookBlock } from './book-plan.js';
+import { bookBlocks, partsOf, partHeading, type BookBlock } from './book-plan.js';
 import { bookNames, bookSettingsOf } from './book-layout.js';
 import { parseInline, type InlineSpan } from './entities/inline.js';
 import { bookCitationsOf, type BookCitations } from './citation-style.js';
@@ -671,7 +671,7 @@ export const ebookOf = (file: ProjectFile, options: { modified?: string; target?
       begin({
         id: partKey(part),
         slug: safeName(part.kind.replace(/_/g, '-')),
-        title: partTitle(part),
+        title: partHeading(part, file),
         // An art page is wherever it stands: facing a chapter it is body
         // matter, otherwise the half the writer put it in.
         kind: part.kind === 'plate' && part.beforeMarkerId ? 'body' : front ? 'front' : 'back',

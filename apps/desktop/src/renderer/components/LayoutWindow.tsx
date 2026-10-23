@@ -189,6 +189,7 @@ import {
   setSectionLayout,
   type BookContentsRow,
   type SectionLayout,
+  partHeading,
 } from '@vcwriter/domain';
 import { CitableText } from './citations/CitableText';
 import { readFont } from '../read-font';
@@ -5968,7 +5969,7 @@ function PartFields({
           column that kept them alive; the column is gone. */}
       <label className="field">
         <span>Heading</span>
-        <input aria-label="The part's heading" placeholder={info.name} value={part.title} onChange={(event) => patch({ title: event.target.value })} />
+        <input aria-label="The part's heading" placeholder={partHeading({ ...part, title: '' }, file)} value={part.title} onChange={(event) => patch({ title: event.target.value })} />
       </label>
       {/* A copyright page never arrives here (§15c): it opens its own screen,
           and with the inspector gone (§9u) this panel is `PartDialog`'s alone,

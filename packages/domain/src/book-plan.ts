@@ -24,7 +24,7 @@ import { placeFigure } from './instructional.js';
 import { copyrightLines, copyrightOf, type CopyrightLine } from './copyright-page.js';
 import { titlePageContent, titlePageFieldsOf, type TitlePageContent } from './title-page.js';
 import { aboutAuthorOf, acknowledgementsOf, authorLinksShown, type AuthorPhotoShape } from './back-matter.js';
-import { bibliographyEntries, bibliographyOf, glossaryEntries, glossaryLetter, glossaryOf, readerExtraOf } from './back-matter-pages.js';
+import { EXTRA_WORDS, bibliographyEntries, bibliographyOf, extraHeading, glossaryEntries, glossaryLetter, glossaryOf, readerExtraOf } from './back-matter-pages.js';
 import { bibliographyHeadingOf, referenceBibliography } from './citation-style.js';
 import { citationSettingsOf } from './citations.js';
 import type { BookPage } from './book-pages.js';
@@ -200,6 +200,29 @@ const writeParts = (file: ProjectFile, parts: BookPart[]): ProjectFile => setBoo
 
 /** The heading a part prints, the kind's name where the writer gave none. */
 export const partTitle = (part: BookPart): string => part.title.trim() || PART_INFO[part.kind].name;
+
+/**
+ * **The heading a page prints, where the writer typed none** — asked of what
+ * the page is, not only of its kind.
+ *
+ * A reader extra is four pages under one kind (§17): its card has always said
+ * it *will be headed “Questions for Discussion” unless you type something
+ * else*, and the page printed **Reader extras**, the kind's name, because
+ * nothing read what the extra was. Now its heading is its purpose's
+ * (`extraHeading`: *Questions for Discussion*, *Sign Up for the Newsletter*,
+ * *Also by …*), and a bibliography's is its style's (addendum 43 §8). Every
+ * place that prints or lists a page's heading reads it here — the page, the
+ * contents, the eBook, Word and the rail — so they cannot disagree.
+ */
+export const partHeading = (part: BookPart, file?: ProjectFile): string => {
+  if (part.title.trim()) return part.title.trim();
+  if (part.kind === 'bibliography') return bibliographyLines(part, file).heading;
+  if (part.kind === 'reader_extra') {
+    const kind = readerExtraOf(part).kind;
+    return file ? extraHeading(file, kind) : EXTRA_WORDS[kind].heading;
+  }
+  return PART_INFO[part.kind].name;
+};
 
 /**
  * **One division laid out on its own terms** (addendum 43 §10): its own heads
@@ -892,7 +915,7 @@ const partOwnBlocks = (
 ): BookBlock[] => {
   // A bibliography made from the library is headed as its style heads it:
   // *References* in APA, *Works Cited* in MLA (addendum 43 §3).
-  const title = part.kind === 'bibliography' ? bibliographyLines(part, file).heading : partTitle(part);
+  const title = partHeading(part, file);
   /**
    * **A page of art replaces the page, not the kind** (§9y, from Ken: *instead
    * of the table of contents, I want a contents page that is a full page piece

@@ -9,7 +9,7 @@ import {
   halfOf,
   anchorOf,
   partArea,
-  partTitle,
+  partHeading,
   partsOf,
   removeBookFigure,
   setBackBlank,
@@ -113,7 +113,7 @@ const partRow = (file: ProjectFile, part: BookPart, depth: number): BookRow => (
    * second **THE STORY** heading after the back matter.
    */
   half: ((area) => (area === 'story' ? 'body' : area))(partArea(part, partsOf(file))) as BookRow['half'],
-  title: part.kind === 'plate' ? plateName(file, part) : partTitle(part),
+  title: part.kind === 'plate' ? plateName(file, part) : partHeading(part, file),
   label: '',
   depth,
   // A picture page facing a chapter is placed by the chapter it faces, which
