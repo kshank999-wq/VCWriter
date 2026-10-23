@@ -24,6 +24,7 @@ import {
   renderBookBlock,
   setTitlePage,
   updatePart,
+  BOOK_STYLES,
   type BookRenderContext,
   type ProjectFile,
 } from '../index.js';
@@ -167,6 +168,12 @@ describe('the epigraph and the dedication', () => {
     const made = addPart(file, kind, { text });
     return made.file;
   };
+
+  it('spaces a line of words that wraps for its own size, never tighter than the book', () => {
+    // The page's leading is the body's, a length: inherited by words at twice
+    // the size, a wrapped line was drawn on top of itself.
+    expect(BOOK_STYLES).toContain('.bk-display.bk-words p:not(.bk-words-gap) { line-height: max(var(--bk-lead), 1.25em); }');
+  });
 
   it('sets the lines under the words apart from the words', () => {
     const file = withWords('epigraph', 'The bell rang across the water twice.\n— W. H. Auden');

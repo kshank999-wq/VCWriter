@@ -1234,6 +1234,12 @@ ${CHAPTER_STYLES}
   /* The lines under the words: an epigraph's attribution, a dedication's
      second line. They start as the words and are set apart from here. */
   .bk-display.bk-words p.bk-words-under { font-size: var(--pt-line-size, 1em); text-transform: var(--pt-line-case, none); font-variant-caps: var(--pt-line-variant, normal); font-weight: var(--pt-line-weight, 400); font-style: var(--pt-line-style, italic); letter-spacing: var(--pt-line-tracking, 0); font-family: var(--pt-line-face, var(--pt-face, var(--bk-face))); text-align: var(--pt-line-align, var(--pt-align, center)); }
+  /* A line that wraps is spaced for its own size. The page's leading is a
+     length, the body's, and the words inherited it at twice the size, so a
+     long first line was drawn on top of itself. The book's leading stays the
+     least, so words at the body size are set exactly as before, and a blank
+     line keeps its height (§9as). */
+  .bk-display.bk-words p:not(.bk-words-gap) { line-height: max(var(--bk-lead), 1.25em); }
   /* It hangs at the foot, which is what a copyright page is (§7a); everything
      else about it is the writer's, the same as the other designed pages. */
   .bk-display.bk-copy-top { justify-content: flex-start; }

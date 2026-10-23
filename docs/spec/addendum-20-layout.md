@@ -3724,6 +3724,19 @@ A picture / Full-page art**, the page prints *A page of my own.* and nothing
 else, and the rail lists **A page of your own** between Chapter 1 and
 Chapter 2.
 
+### 19.8 A long line of words is spaced for its size
+
+A page of your own whose words were one long sentence was drawn with its
+wrapped lines on top of each other. The page sets its leading as a length,
+the body's, and the words inherit it at their own, larger size, so the
+second line stood where the first one's lower half was. An epigraph or a
+dedication with a long first line did the same.
+
+A line of words is now spaced at `max(var(--bk-lead), 1.25em)`, measured on
+its own size. The book's leading is the least, so words at the body size
+are set exactly as before, and a blank line keeps its height (§9as). The
+display page isn't measured by the cutter, so nothing else moves.
+
 ## 18. The body text can be set, on every screen a writer types it into
 
 From Ken, in one sentence:
