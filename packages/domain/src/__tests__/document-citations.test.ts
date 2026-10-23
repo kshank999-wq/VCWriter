@@ -7,6 +7,7 @@ import {
   documentMeasureHtml,
   documentPageBox,
   documentPagedHtml,
+  pageNotesHtml,
   createProjectFile,
   documentBodyXml,
   documentCitations,
@@ -177,5 +178,25 @@ describe('notes at the foot of each page (§23)', () => {
     const html = documentMeasureHtml(file.documents[0]!);
     expect(html).toContain('<div class="wp-doc" style="width: 6.5in"><div id="wp-flow"></div><div id="wp-page" class="wp-page-body"');
     expect(html).toContain('.wp-doc .wp-split { margin-bottom: 0 !important; }');
+  });
+});
+
+describe('a long note carried on in a document’s print (§24)', () => {
+  it('sets what is carried first, under a rule the width of the page, and the page’s last note as cut', () => {
+    const { file, ids } = project([['Tides follow@ the moon@.', 'They turn@.']]);
+    const cites = documentCitations(file, ids[0]!);
+    const carried = '<p class="wp-note wp-cont">the rest of the long note.</p>';
+    const cut = '<p class="wp-note wp-split" id="wp-note-3"><a href="#wp-ref-3">3.</a> Jones, the first lines</p>';
+    expect(pageNotesHtml({ body: '', notes: [2, 3], carried, cut }, cites)).toBe(
+      '<div class="wp-page-notes continues">' +
+        carried +
+        '<p class="wp-note" id="wp-note-2"><a href="#wp-ref-2">2.</a> Jones, <em>On Tides</em>, 11.</p>' +
+        cut +
+        '</div>',
+    );
+    // A page of nothing but what is carried still sets it.
+    expect(pageNotesHtml({ body: '', notes: [], carried }, cites)).toBe(`<div class="wp-page-notes continues">${carried}</div>`);
+    expect(pageNotesHtml({ body: '<p>x</p>', notes: [] }, cites)).toBe('');
+    expect(documentPagedHtml(file.documents[0]!, [{ body: '', notes: [], carried }], cites)).toContain('.wp-doc .wp-page-notes.continues::before { width: 100%; }');
   });
 });

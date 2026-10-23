@@ -133,6 +133,8 @@ export const DOCUMENT_CITATION_CSS = `
 .wp-doc .wp-page-notes { margin-top: auto; padding-top: 4pt; font-size: 0.85em; }
 .wp-doc .wp-page-notes::before { content: ""; display: block; width: 2in; border-top: 0.5pt solid currentColor; margin-bottom: 4pt; }
 .wp-doc .wp-page-notes .wp-note:last-child { margin-bottom: 0; }
+.wp-doc .wp-page-notes.continues::before { width: 100%; }
+.wp-doc .wp-note.wp-split { margin-bottom: 0; }
 .wp-doc .wp-bibliography-entry, .ProseMirror .wp-bibliography-entry { padding-left: 0.5in; text-indent: -0.5in; margin: 0 0 0.6em; }
 `;
 

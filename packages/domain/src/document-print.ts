@@ -142,8 +142,24 @@ export const documentPageCss = (document: WpDocument): string => {
 /** One set page: its words, as HTML, and the notes cited on it, by number from 1. */
 export interface DocumentPage {
   body: string;
+  /** The notes cited on the page, by number from 1, in order. */
   notes: number[];
+  /**
+   * **A long note carried on from the page before** (addendum 43 §24): the
+   * rest of it, as HTML, set first at this page's foot under a rule the
+   * width of the page, as a book carries one (§12).
+   */
+  carried?: string;
+  /** The page's last note, cut where the page ends: its first lines, as HTML. */
+  cut?: string;
 }
+
+/** A page's notes as they stand at its foot: what is carried on first, then its own. */
+export const pageNotesHtml = (page: DocumentPage, cites: DocumentCitations): string => {
+  const own = page.notes.map((n, at) => (page.cut !== undefined && at === page.notes.length - 1 ? page.cut : noteHtml(cites, n)));
+  if (!page.carried && own.length === 0) return '';
+  return `<div class="wp-page-notes${page.carried ? ' continues' : ''}">${page.carried ?? ''}${own.join('')}</div>`;
+};
 
 /**
  * **A document printed with its notes at the foot of each page** (addendum
@@ -155,14 +171,7 @@ export interface DocumentPage {
 export const documentPagedHtml = (document: WpDocument, pages: readonly DocumentPage[], cites: DocumentCitations): string =>
   printHead(document, documentPageCss(document)) +
   '<body><div class="wp-doc">' +
-  pages
-    .map(
-      (page) =>
-        `<section class="wp-page"><div class="wp-page-body">${page.body}</div>` +
-        (page.notes.length ? `<div class="wp-page-notes">${page.notes.map((n) => noteHtml(cites, n)).join('')}</div>` : '') +
-        '</section>',
-    )
-    .join('') +
+  pages.map((page) => `<section class="wp-page"><div class="wp-page-body">${page.body}</div>${pageNotesHtml(page, cites)}</section>`).join('') +
   '</div></body></html>';
 
 /**

@@ -93,14 +93,56 @@ const firstBelow = (doc: Document, points: { text: Text; offset: number }[], bel
   return low < points.length ? (points[low] as { text: Text; offset: number }) : null;
 };
 
-export interface SetPages {
-  pages: DocumentPage[];
-}
+/**
+ * The ways a block of text can be cut between its lines, most lines kept
+ * first: its first lines, and the rest to go on. Measured with the block in
+ * `into`, where it is set; it is taken out again, untouched.
+ */
+const lineCuts = (doc: Document, node: Element, into: Element, fewest = 1): { head: Element; tail: Element }[] => {
+  into.appendChild(node);
+  const lines = linesOf(doc, node);
+  const points = textPoints(doc, node);
+  // A line begins with the first character set below the middle of the gap above it.
+  const starts = lines.slice(1).map((mid, at) => firstBelow(doc, points, (mid + (lines[at] as number)) / 2));
+  into.removeChild(node);
+  const cuts: { head: Element; tail: Element }[] = [];
+  for (let keep = lines.length - 1; keep >= fewest; keep -= 1) {
+    const at = starts[keep - 1];
+    if (!at) continue;
+    const head = node.cloneNode(false) as Element;
+    const tail = node.cloneNode(false) as Element;
+    const before = doc.createRange();
+    before.setStart(node, 0);
+    before.setEnd(at.text, at.offset);
+    const after = doc.createRange();
+    after.setStart(at.text, at.offset);
+    after.setEnd(node, node.childNodes.length);
+    head.appendChild(before.cloneContents());
+    tail.appendChild(after.cloneContents());
+    head.classList.add('wp-split');
+    tail.classList.add('wp-cont');
+    tail.removeAttribute('id');
+    cuts.push({ head, tail });
+  }
+  return cuts;
+};
+
+/** A note may break over the page only when it is long: more than a third of the page. */
+const LONG_NOTE = 1 / 3;
+/** And it keeps at least this many lines on the page its marker is on, as a book's does. */
+const NOTE_LINES_KEPT = 2;
 
 /**
  * Set the document's words into pages with room for their notes. `body` is
  * the editor's HTML with its citations set and no notes at the end; the
  * frame is the measuring page, already holding `documentMeasureHtml`.
+ *
+ * **A long note carries on** (addendum 43 §24), as a book's does (§12): where
+ * the note cited last on a page is more than a third of a page and will not
+ * stand whole beside its marker, its first lines (two at the least) are set
+ * there and the rest first at the foot of the next page, under a rule the
+ * width of the page. A note shorter than that never breaks: its marker's
+ * line goes over to the page it fits on with it.
  */
 export const setPages = (doc: Document, document: WpDocument, cites: DocumentCitations, body: string): DocumentPage[] => {
   const flow = doc.getElementById('wp-flow') as HTMLElement;
@@ -109,18 +151,60 @@ export const setPages = (doc: Document, document: WpDocument, cites: DocumentCit
   flow.innerHTML = body;
   const room = documentPageBox(document).height * PX_PER_INCH - SLACK_PX;
 
-  const noteHeights = new Map<string, number>();
-  const notesHeight = (numbers: number[]): number => {
-    if (numbers.length === 0) return 0;
-    const key = numbers.join(',');
-    const known = noteHeights.get(key);
+  /** What is carried onto the page being set from the one before, as HTML. */
+  let carried: string | null = null;
+  /** The page's last note, cut, when `fits` had to cut it. */
+  let cut: { head: string; tail: string } | null = null;
+
+  /** The notes at a page's foot into the measuring box: what is carried, then these, the last one as given. */
+  const drawNotes = (numbers: number[], lastAs?: string) => {
+    notesBox.className = `wp-page-notes${carried ? ' continues' : ''}`;
+    notesBox.innerHTML =
+      (carried ?? '') + numbers.map((n, at) => (lastAs !== undefined && at === numbers.length - 1 ? lastAs : noteHtml(cites, n))).join('');
+  };
+  /** The height of the notes at a page's foot: what is carried, then these, the last one as given. */
+  const heights = new Map<string, number>();
+  const notesHeight = (numbers: number[], lastAs?: string): number => {
+    if (numbers.length === 0 && !carried) return 0;
+    const key = lastAs === undefined ? `${carried ?? ''}|${numbers.join(',')}` : null;
+    const known = key === null ? undefined : heights.get(key);
     if (known !== undefined) return known;
-    notesBox.innerHTML = numbers.map((n) => noteHtml(cites, n)).join('');
+    drawNotes(numbers, lastAs);
     const height = notesBox.getBoundingClientRect().height;
-    noteHeights.set(key, height);
+    if (key !== null) heights.set(key, height);
     return height;
   };
-  const fits = (): boolean => page.getBoundingClientRect().height + notesHeight(notesIn(page)) <= room;
+  const wholeNote = new Map<number, number>();
+  const noteAlone = (n: number): number => {
+    const known = wholeNote.get(n);
+    if (known !== undefined) return known;
+    notesBox.className = 'wp-page-notes';
+    notesBox.innerHTML = noteHtml(cites, n);
+    const height = (notesBox.lastElementChild as HTMLElement).getBoundingClientRect().height;
+    wholeNote.set(n, height);
+    return height;
+  };
+
+  const fits = (): boolean => {
+    cut = null;
+    const bodyHeight = page.getBoundingClientRect().height;
+    const numbers = notesIn(page);
+    if (bodyHeight + notesHeight(numbers) <= room) return true;
+    // The last note cited may be cut where the page ends, if it is a long one.
+    const last = numbers[numbers.length - 1];
+    if (last === undefined || noteAlone(last) <= room * LONG_NOTE) return false;
+    drawNotes(numbers);
+    const note = notesBox.lastElementChild as Element;
+    const holder = notesBox;
+    holder.removeChild(note);
+    for (const option of lineCuts(doc, note, holder, NOTE_LINES_KEPT)) {
+      if (bodyHeight + notesHeight(numbers, option.head.outerHTML) <= room) {
+        cut = { head: option.head.outerHTML, tail: option.tail.outerHTML };
+        return true;
+      }
+    }
+    return false;
+  };
 
   /**
    * Put as much of `node` as fits into `into` (on the page being set). Null
@@ -129,33 +213,11 @@ export const setPages = (doc: Document, document: WpDocument, cites: DocumentCit
    */
   const split = (node: Element, into: Element): { rest: Element | null } | null => {
     if (TEXT_BLOCKS.has(node.tagName) && !HEADINGS.has(node.tagName)) {
-      // Where each line after the first begins, measured with the block in place.
-      into.appendChild(node);
-      const lines = linesOf(doc, node);
-      const points = textPoints(doc, node);
-      // A line begins with the first character set below the middle of the gap above it.
-      const starts = lines.slice(1).map((mid, at) => firstBelow(doc, points, (mid + (lines[at] as number)) / 2));
-      into.removeChild(node);
       // Try the most lines first, down to one; the rest go on over the page.
-      for (let keep = lines.length - 1; keep >= 1; keep -= 1) {
-        const at = starts[keep - 1];
-        if (!at) continue;
-        const head = node.cloneNode(false) as Element;
-        const tail = node.cloneNode(false) as Element;
-        const before = doc.createRange();
-        before.setStart(node, 0);
-        before.setEnd(at.text, at.offset);
-        const after = doc.createRange();
-        after.setStart(at.text, at.offset);
-        after.setEnd(node, node.childNodes.length);
-        head.appendChild(before.cloneContents());
-        tail.appendChild(after.cloneContents());
-        head.classList.add('wp-split');
-        tail.classList.add('wp-cont');
-        tail.removeAttribute('id');
-        into.appendChild(head);
-        if (fits()) return { rest: tail };
-        into.removeChild(head);
+      for (const option of lineCuts(doc, node, into)) {
+        into.appendChild(option.head);
+        if (fits()) return { rest: option.tail };
+        into.removeChild(option.head);
       }
       return null;
     }
@@ -209,16 +271,49 @@ export const setPages = (doc: Document, document: WpDocument, cites: DocumentCit
   };
 
   const pages: DocumentPage[] = [];
+  /** What goes on past this page's carry, where that is itself too long for one page. */
+  let carriedOn: string | null = null;
+  /**
+   * A new page, with what is carried onto it. A carried note longer than two
+   * thirds of a page is set as far as that and the rest carried on again, so
+   * the page still has room for its own words.
+   */
+  const startPage = () => {
+    carriedOn = null;
+    if (!carried || notesHeight([]) <= room * (1 - LONG_NOTE)) return;
+    const whole: string = carried;
+    notesBox.className = 'wp-page-notes continues';
+    notesBox.innerHTML = whole;
+    const note = notesBox.lastElementChild as Element;
+    notesBox.removeChild(note);
+    for (const option of lineCuts(doc, note, notesBox, NOTE_LINES_KEPT)) {
+      carried = option.head.outerHTML;
+      if (notesHeight([]) <= room * (1 - LONG_NOTE)) {
+        carriedOn = option.tail.outerHTML;
+        return;
+      }
+    }
+    carried = whole;
+  };
   const close = () => {
     // A heading is never the last thing on a page: it goes over with what it heads.
-    const carried: Element[] = [];
+    const headings: Element[] = [];
     while (page.lastElementChild && HEADINGS.has(page.lastElementChild.tagName) && page.children.length > 1) {
-      carried.unshift(page.lastElementChild);
+      headings.unshift(page.lastElementChild);
       page.removeChild(page.lastElementChild);
     }
-    if (page.children.length > 0) pages.push({ body: page.innerHTML, notes: notesIn(page) });
+    if (page.children.length > 0 || carried) {
+      // A page holding nothing but a carried note still prints: it is part of the note.
+      // Measured once more as it stands, so `cut` answers for this page and no other.
+      fits();
+      const numbers = notesIn(page);
+      pages.push({ body: page.innerHTML, notes: numbers, ...(carried ? { carried } : {}), ...(cut ? { cut: cut.head } : {}) });
+      carried = [carriedOn, cut?.tail].filter(Boolean).join('') || null;
+      cut = null;
+    }
     page.innerHTML = '';
-    return carried;
+    startPage();
+    return headings;
   };
 
   const queue: Element[] = [...flow.children];
@@ -246,6 +341,8 @@ export const setPages = (doc: Document, document: WpDocument, cites: DocumentCit
     queue.unshift(...close(), node);
   }
   close();
+  // A note carried past the last words stands on a page of its own.
+  while (carried || carriedOn) close();
   return pages.length > 0 ? pages : [{ body: '', notes: [] }];
 };
 

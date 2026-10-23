@@ -1040,14 +1040,37 @@ browser sets the pages as before. If the setting fails for any reason, the
 print falls back to the notes at the end. Only print and PDF are set this
 way; the editor's own page view doesn't show notes.
 
-## 24. Not yet
+## 24. A long note carried on in a document's print
+
+In a document's print (§23), a note that wouldn't fit beside its marker took
+the marker's line over to the next page with it, and a note too long for any
+page was cut at the foot and lost. It carries on now, as a book's does (§12).
+
+- **When a note breaks.** Only the last note cited on the page, only when
+  it won't stand whole there, and only when it is long: more than a third
+  of a page. A shorter note never breaks; its marker's line goes over with
+  it, as before.
+- **How much stays.** As many lines as fit, and never fewer than two. The
+  lines are found the way a paragraph's are (§23), and the cut note's first
+  lines are drawn in its place (`DocumentPage.cut`).
+- **Where the rest goes.** First at the foot of the next page, before that
+  page's own notes, under a rule the width of the page instead of the short
+  one (`DocumentPage.carried`, `.wp-page-notes.continues`), the way a book
+  marks a note carried on.
+- **A note longer than a page.** What's carried takes at most two thirds of
+  the next page, so that page still has room for its own words; the rest
+  is carried on again. If the words end with a note still being carried, it
+  finishes on pages of its own.
+
+Checked in Chromium, on Letter and on A5 with a 5,000-character note:
+the note's words arrive whole across the pages, every other note stays in
+order, no page overflows, and the PDF has exactly the pages that were set.
+
+## 25. Not yet
 
 - A Word note in a form other than Chicago's (APA's or MLA's parentheses, a
   note that says something besides its source) is kept whole and flagged.
 - The eBook has no pages, so it carries no heads, feet or page numbers.
-- In a document's print, a note too long for the page its marker is on
-  doesn't carry on to the next page (a book's does, §12); the line moves
-  over with it instead.
 - The document editor's page view doesn't show the notes at the foot; only
   print and PDF do.
 - One library held live between projects: sources are brought in as copies,
