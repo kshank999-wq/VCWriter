@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   addBeat,
+  addPart,
+  bookBlocks,
   addMarker,
   addUnit,
   bookDocxParts,
@@ -122,6 +124,38 @@ describe('a division of its own', () => {
     expect(next.runningFoot).toBe('');
   });
 
+  it('prints nothing where a division’s head or foot is set to nothing, and the book’s again after it', () => {
+    const settings = bookSettingsSchema.parse({
+      trim: { width: 6, height: 9 },
+      runningHeads: { verso: 'title', recto: 'chapter', foot: '{title}' },
+      sections: [{ id: 'ch1', verso: '', recto: '', foot: '' }],
+    });
+    const laid = lay(settings, BLOCKS, LONG);
+    const inFirst = from(laid.pages, 'ch1').slice(0, from(laid.pages, 'ch1').findIndex((page) => page.pieces[0]?.blockId === 'ch2'));
+    expect(inFirst.length).toBeGreaterThan(2);
+    for (const page of inFirst) {
+      expect(page.runningHead).toBe('');
+      expect(page.runningFoot).toBe('');
+    }
+    const next = from(laid.pages, 'ch2').find((page) => page.side === 'recto' && !page.opens)!;
+    expect(next.runningHead).toBe('The Turn');
+    expect(next.runningFoot).toBe('The Sea');
+  });
+
+  it('carries a division’s heads, foot and numbering past a page set inside it', () => {
+    const settings = sections({ id: 'ch1', verso: 'Part One', recto: 'Part One', foot: '{title}', restart: true, numbering: 'roman' });
+    const leaf = make({ id: 'leaf', kind: 'part_opening', partId: 'leaf', anchored: true, display: true, starts: 'page', folio: false, unbreakable: true, chapterTitle: 'The Pull' });
+    const blocks = [...chapter(1, 'The Pull'), leaf, make({ id: 'ch1q', kind: 'paragraph', chapterTitle: 'The Pull' }), ...chapter(2, 'The Turn')];
+    const laid = lay(settings, blocks, { ...LONG, ch1p: 40, leaf: 0, ch1q: 150 });
+    const after = from(laid.pages, 'ch1q').slice(0, 3);
+    expect(after.map((page) => page.runningHead)).toEqual(['Part One', 'Part One', 'Part One']);
+    expect(after.every((page) => page.runningFoot === 'The Sea')).toBe(true);
+    // The count goes on in roman from the chapter's restart, past the page.
+    expect(after.every((page) => /^[ivx]+$/.test(page.counted ?? ''))).toBe(true);
+    // A page of its own that is not set inside anything still opens a division.
+    expect(laid.pages.find((page) => page.pieces[0]?.blockId === 'ch2')!.counted).toBe('1');
+  });
+
   it('stands its opening page clear of the heads and the foot, unless it asks for them', () => {
     const book = { ...sections(), runningHeads: { ...sections().runningHeads, foot: 'Page {page}' } };
     const clear = from(lay(book, BLOCKS, LONG).pages, 'ch1')[0]!;
@@ -203,6 +237,35 @@ describe('the book in Word', () => {
     expect(last).toContain('<w:pgNumType w:fmt="lowerRoman" w:start="1"/>');
     expect(last).not.toContain('<w:titlePg/>');
     expect(bands.some((band) => band.xml.includes('>Appendix<'))).toBe(true);
+  });
+
+  it('gives a division set to print nothing empty headers and footers of its own', () => {
+    const { file, markers } = book();
+    const named = setBookSettings(file, { runningHeads: { ...bookSettingsOf(file).runningHeads, verso: 'title', recto: 'chapter', foot: '{title}' } });
+    const quiet = setSectionLayout(named, markers[0]!, { verso: '', recto: '', foot: '' });
+    expect(bookSettingsOf(quiet).sections).toHaveLength(1);
+    const { document, bands } = bookDocxParts(quiet);
+    // The first chapter's section points at bands without the book's words: its
+    // page number, a field, is all they keep.
+    const at = document.indexOf('On the pull.');
+    const first = document.slice(document.indexOf('<w:sectPr>', at), document.indexOf('</w:sectPr>', at));
+    const ids = [...first.matchAll(/<w:(?:header|footer)Reference w:type="(?:default|even)" r:id="([^"]+)"/g)].map((match) => match[1]);
+    expect(ids.length).toBeGreaterThan(0);
+    for (const id of ids) expect(bands.find((band) => `rId${band.kind === 'header' ? 'Header' : 'Footer'}${band.name.replace(/\D/g, '')}` === id)!.xml).not.toMatch(/>The (?:Sea|Pull)</);
+    // The book's heads are still there for the chapter after.
+    expect(bands.some((band) => band.xml.includes('>The Turn<'))).toBe(true);
+  });
+
+  it('marks a page of your own set inside a chapter as standing in it, and one in the back matter as its own division', () => {
+    const { file } = book();
+    const line = file.beats.flatMap((beat) => beat.manuscript.elements).find((element) => element.text === 'On the turn.')!;
+    const inside = addPart(file, 'leaf', { beforeId: line.id, text: 'A table.' });
+    const outside = addPart(inside.file, 'leaf', { text: 'Afterwards.' });
+    const blocks = bookBlocks(outside.file);
+    const set = blocks.find((block) => block.partId === inside.partId)!;
+    const own = blocks.find((block) => block.partId === outside.partId)!;
+    expect(sectionIdOf(set)).toBeNull();
+    expect(sectionIdOf(own)).toBe(outside.partId);
   });
 
   it('forgets a division put back to the book’s in every respect', () => {

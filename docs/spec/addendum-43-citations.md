@@ -938,12 +938,46 @@ so short notes and Ibid.s find the source before them as the import does:
 - A note it can't read is left as it was.
 - Running it twice does nothing the second time.
 
-## 21. Not yet
+## 21. A division's head set to print nothing
+
+A division could give its pages their own heads and foot (§10), but an empty
+box meant *as the book*, so there was no way to say *nothing here*.
+
+The model already had the three answers: null is the book's, empty words
+print nothing, and anything else is the division's own. Pages and Word
+honoured an empty string. Only the screen couldn't say it.
+
+In *Heads & numbers by …*, each of the three lines (left-hand head,
+right-hand head, running foot) now has a choice beside it:
+
+- **As the book**: null; no box.
+- **Nothing**: empty words. The pages carry no head or foot there, and Word
+  gives the section bands without the book's words. The page number, where
+  the book prints one, is a separate thing and stays.
+- **Its own words**: the box appears, starting as what the book prints
+  there written as a field (`{chapter}`, `{title}`), so the writer edits
+  from where the book was.
+
+A box emptied while being typed in stays a box until the writer leaves it.
+Left empty, it prints nothing, which is what empty words mean. The summary
+beside the division says *no heads* and *no foot*. Putting all three back to
+the book's (with nothing else set) forgets the division's layout, as before.
+
+**A page inside a division no longer ends it.** Driving this caught a fault
+from §10. A page of your own is a part opening, and every part opening
+started a division of its own. So a page set inside a chapter dropped the
+chapter's heads, foot and numbering for every page after it: the book's
+heads came back mid-chapter, and a roman count restarted by the chapter
+fell back to arabic. A page anchored inside something (a line, a chapter's
+opening, another page) is now marked `anchored` on its block, and
+`sectionIdOf` gives it no division of its own. The chapter's layout carries
+on past it, on the pages and in Word. A page of your own in the front or
+back matter, anchored to nothing, still opens a division as before.
+
+## 22. Not yet
 
 - A Word note in a form other than Chicago's (APA's or MLA's parentheses, a
   note that says something besides its source) is kept whole and flagged.
-- A division's head set to print nothing: an empty box is the book's, and
-  *nothing* needs a way to say so.
 - The eBook has no pages, so it carries no heads, feet or page numbers.
 - Footnotes in a Word file inserted into a document: Insert → From file
   brings the words in without them.

@@ -2355,4 +2355,41 @@ describe('heads, feet and numbers by division (addendum 43 §10)', () => {
     ]);
     expect(within(fold).getByRole('button', { name: /The Return/ }).textContent).toContain('numbers restart');
   });
+
+  it('sets a chapter’s heads and foot to print nothing, to its own words, or back to the book’s (§21)', () => {
+    render(<Harness initial={novel()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Book settings…' }));
+    const dialog = screen.getByRole('dialog', { name: 'Book settings' });
+    const fold = within(dialog).getByRole('button', { name: 'Heads & numbers by chapter' }).closest('.layout-fold') as HTMLElement;
+    fireEvent.click(within(fold).getByRole('button', { name: /The Return/ }));
+    const own = within(fold).getByLabelText(/^Layout of .*The Return/);
+    const marker = latest!.markers.find((one) => one.title === 'The Return')!;
+    const layout = () => bookSettingsOf(latest!).sections.find((one) => one.id === marker.id) ?? null;
+
+    // As the book, with no box to type in.
+    expect((within(own).getByLabelText('What its left-hand head prints') as HTMLSelectElement).value).toBe('book');
+    expect(within(own).queryByLabelText('This division’s left-hand head')).toBeNull();
+
+    fireEvent.change(within(own).getByLabelText('What its left-hand head prints'), { target: { value: 'nothing' } });
+    fireEvent.change(within(own).getByLabelText('What its right-hand head prints'), { target: { value: 'nothing' } });
+    fireEvent.change(within(own).getByLabelText('What its running foot prints'), { target: { value: 'nothing' } });
+    expect(layout()).toMatchObject({ verso: '', recto: '', foot: '' });
+    expect(within(fold).getByRole('button', { name: /The Return/ }).textContent).toContain('no heads · no foot');
+
+    // Its own words start as what the book prints there, as a field.
+    fireEvent.change(within(own).getByLabelText('What its right-hand head prints'), { target: { value: 'own' } });
+    const box = within(own).getByLabelText('This division’s right-hand head') as HTMLInputElement;
+    expect(box.value).toBe('{chapter}');
+    // Emptied while typing, it stays a box; left empty, it is nothing.
+    fireEvent.focus(box);
+    fireEvent.change(box, { target: { value: '' } });
+    expect(within(own).getByLabelText('This division’s right-hand head')).toBeTruthy();
+    fireEvent.change(box, { target: { value: 'Coda' } });
+    expect(layout()!.recto).toBe('Coda');
+
+    fireEvent.change(within(own).getByLabelText('What its left-hand head prints'), { target: { value: 'book' } });
+    fireEvent.change(within(own).getByLabelText('What its right-hand head prints'), { target: { value: 'book' } });
+    fireEvent.change(within(own).getByLabelText('What its running foot prints'), { target: { value: 'book' } });
+    expect(layout()).toBeNull();
+  });
 });

@@ -243,7 +243,8 @@ const isFlow = (block: BookBlock): boolean => !block.display;
  */
 export const sectionIdOf = (block: BookBlock): string | null => {
   if (block.kind === 'chapter_opening') return block.id;
-  if (block.kind === 'part_opening') return block.partId ?? block.id;
+  // A page set among others opens nothing: the division it stands in goes on (addendum 43 §21).
+  if (block.kind === 'part_opening') return block.anchored ? null : (block.partId ?? block.id);
   if (block.kind === 'heading' && block.starts !== 'none') return block.unitId ?? block.id;
   return null;
 };

@@ -5609,8 +5609,22 @@ function SectionsSection({
   const [openId, setOpenId] = useState<string | null>(null);
   const set = (id: string, patch: Partial<Omit<SectionLayout, 'id'>>) => onUpdate((current) => setSectionLayout(current, id, patch));
   if (rows.length === 0) return <p className="muted small">The book has no {noun.toLowerCase()}s or pages of its own yet.</p>;
-  /** Empty words are the book's own, not nothing. */
-  const words = (value: string): string | null => (value.length > 0 ? value : null);
+  /**
+   * **A head or the foot set to print nothing** (addendum 43 §21). Null is the
+   * book's, empty words are nothing, and anything else is the division's own.
+   * Which a box means is chosen beside it, so an empty box never has to stand
+   * for two things; a box being typed in stays its own words while it is empty.
+   */
+  const [typing, setTyping] = useState<ReadonlySet<string>>(new Set());
+  const heads = settings.runningHeads;
+  /** What the division's own words start as: what the book prints there, as fields. */
+  const seed = (line: 'verso' | 'recto' | 'foot'): string => {
+    if (line === 'foot') return heads.foot.trim() || '{title}';
+    const what = line === 'verso' ? heads.verso : heads.recto;
+    const typed = (line === 'verso' ? heads.versoText : heads.rectoText).trim();
+    const field = what === 'title' ? '{title}' : what === 'author' ? '{author}' : what === 'chapter' ? '{chapter}' : what === 'custom' ? typed : '';
+    return field || '{chapter}';
+  };
   return (
     <div className="layout-sections">
       <p className="muted small">
@@ -5621,8 +5635,8 @@ function SectionsSection({
         const name = [row.label, row.title].filter(Boolean).join(' · ') || 'Untitled';
         const summary = own
           ? [
-              own.verso !== null || own.recto !== null ? 'own heads' : '',
-              own.foot !== null ? 'own foot' : '',
+              own.verso === '' && own.recto === '' ? 'no heads' : own.verso !== null || own.recto !== null ? 'own heads' : '',
+              own.foot === '' ? 'no foot' : own.foot !== null ? 'own foot' : '',
               own.headsOnOpening ? 'heads on its opening' : '',
               own.restart ? 'numbers restart' : '',
               own.numbering === 'roman' ? 'roman' : own.numbering === 'arabic' ? 'arabic' : '',
@@ -5639,20 +5653,56 @@ function SectionsSection({
             </button>
             {opened ? (
               <div className="layout-section-body" aria-label={`Layout of ${name}`}>
-                <div className="layout-two">
-                  <label className="field">
-                    <span>Top of left-hand pages</span>
-                    <input type="text" aria-label="This division’s left-hand head" value={own?.verso ?? ''} placeholder="As the book" onChange={(event) => set(row.id, { verso: words(event.target.value) })} />
-                  </label>
-                  <label className="field">
-                    <span>Top of right-hand pages</span>
-                    <input type="text" aria-label="This division’s right-hand head" value={own?.recto ?? ''} placeholder="As the book" onChange={(event) => set(row.id, { recto: words(event.target.value) })} />
-                  </label>
-                </div>
-                <label className="field">
-                  <span>Running foot</span>
-                  <input type="text" aria-label="This division’s running foot" value={own?.foot ?? ''} placeholder="As the book" onChange={(event) => set(row.id, { foot: words(event.target.value) })} />
-                </label>
+                {(
+                  [
+                    ['verso', 'Top of left-hand pages', 'This division’s left-hand head'],
+                    ['recto', 'Top of right-hand pages', 'This division’s right-hand head'],
+                    ['foot', 'Running foot', 'This division’s running foot'],
+                  ] as const
+                ).map(([line, words, label]) => {
+                  const value = own?.[line] ?? null;
+                  const key = `${row.id}:${line}`;
+                  const mode = value === null ? 'book' : value !== '' || typing.has(key) ? 'own' : 'nothing';
+                  const typingOff = () =>
+                    setTyping((current) => {
+                      const next = new Set(current);
+                      next.delete(key);
+                      return next;
+                    });
+                  return (
+                    <div key={line} className="field layout-section-line">
+                      <span>{words}</span>
+                      <select
+                        aria-label={`What ${label.replace('This division’s ', 'its ')} prints`}
+                        value={mode}
+                        onChange={(event) => {
+                          const chosen = event.target.value;
+                          if (chosen === 'own') {
+                            setTyping((current) => new Set(current).add(key));
+                            set(row.id, { [line]: seed(line) });
+                          } else {
+                            typingOff();
+                            set(row.id, { [line]: chosen === 'nothing' ? '' : null });
+                          }
+                        }}
+                      >
+                        <option value="book">As the book</option>
+                        <option value="nothing">Nothing</option>
+                        <option value="own">Its own words</option>
+                      </select>
+                      {mode === 'own' ? (
+                        <input
+                          type="text"
+                          aria-label={label}
+                          value={value ?? ''}
+                          onFocus={() => setTyping((current) => new Set(current).add(key))}
+                          onBlur={typingOff}
+                          onChange={(event) => set(row.id, { [line]: event.target.value })}
+                        />
+                      ) : null}
+                    </div>
+                  );
+                })}
                 <p className="field-note">Fields work here too: {HEAD_FIELDS.map((one) => one.field).join(' ')}.</p>
                 <label className="check">
                   <input type="checkbox" checked={own?.headsOnOpening ?? false} onChange={(event) => set(row.id, { headsOnOpening: event.target.checked })} /> Its opening page carries the heads and foot too

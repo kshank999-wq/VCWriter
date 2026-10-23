@@ -649,6 +649,14 @@ export interface BookBlock {
    */
   standsIn?: boolean;
   /**
+   * **A page set among others rather than opening a division** (addendum 43
+   * §21): a page of your own anchored in front of a line, a chapter's opening
+   * or another page. It is a part, but it stands inside whatever it was put
+   * in, so the heads, the foot and the numbering of that division carry on
+   * past it rather than stopping at it.
+   */
+  anchored?: boolean;
+  /**
    * The copyright page's lines, built from its fields (§9k). The printer
    * draws these where they are given and falls back to `text` where they are
    * not, which is what keeps a page nobody has set exactly as it was.
@@ -1082,6 +1090,7 @@ const partOwnBlocks = (
         block({
           id: part.id,
           kind: 'part_opening',
+          ...(anchorOf(part) ? { anchored: true } : {}),
           numbering,
           /**
            * **A page of the writer's own takes the page it was made from**
