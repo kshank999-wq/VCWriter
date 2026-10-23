@@ -17,7 +17,8 @@ import { CitationDialog, type CitationChoice } from './CitationDialog';
  *
  * A citation goes in as the manuscript's own `[^key]` token at the cursor, so
  * it moves with the words around it, and the book numbers it where the page
- * stands — the front matter before the story, the back matter after. **Cite**
+ * stands — the front matter before the story, the back matter after, and a
+ * page set inside the story where it stands there. **Cite**
  * beside the box and Ctrl/Cmd+Shift+C insert one; a click inside a token opens
  * it to change or take out. Under the box, the citations it holds are listed
  * by their markers, so a writer can see which token is which.

@@ -13,7 +13,7 @@ import {
   type ReferenceType,
 } from './entities/reference.js';
 import { beatsForUnit, unitsInStoryOrder } from './selectors.js';
-import { PART_INFO, halfOf, partsOf } from './book-plan.js';
+import { BOOK_END, PART_INFO, halfOf, partsOf } from './book-plan.js';
 import type { BookPart } from './entities/book.js';
 import { glossaryEntries, readerExtraOf } from './back-matter-pages.js';
 import type { ProjectFile } from './project-file.js';
@@ -384,22 +384,54 @@ export const citationOccurrences = (file: ProjectFile): CitationOccurrence[] => 
    * introduction, an epigraph, an appendix. They are read where the book
    * prints them — the front matter before the story, the back matter after
    * it — and each counts as a division of its own where the count starts
-   * again at each chapter. A page set inside the story is read after it.
+   * again at each chapter.
+   *
+   * **And a page set inside the story is read where it stands** (§19): a
+   * page of your own anchored in front of a line, a chapter's opening or
+   * another page is numbered there, as `bookBlocks` prints it, rather than
+   * after the story. In the story it counts with the chapter it stands in —
+   * in front of a chapter's opening, with the chapter it opens.
    */
-  const parts = partsOf(file).filter((part) => PART_INFO[part.kind].carries === 'text' && wordsOfPart(part).includes('[^'));
-  const fromPart = (part: BookPart) => {
-    inChapter = 0;
+  const allParts = partsOf(file);
+  const citing = (part: BookPart) => PART_INFO[part.kind].carries === 'text' && wordsOfPart(part).includes('[^');
+  /** The pages standing in front of each record, in the order the leaves put them. */
+  const standing = new Map<string, BookPart[]>();
+  for (const part of allParts) {
+    if (halfOf(part) !== 'body' || !part.beforeId) continue;
+    standing.set(part.beforeId, [...(standing.get(part.beforeId) ?? []), part]);
+  }
+  for (const list of standing.values()) list.sort((one, two) => one.afterLeaves - two.afterLeaves);
+  const read = new Set<string>();
+  const fromPart = (part: BookPart, restart: boolean) => {
+    if (read.has(part.id)) return;
+    read.add(part.id);
+    pagesBefore(part.id, restart);
+    if (!citing(part)) return;
+    if (restart) inChapter = 0;
     cite(wordsOfPart(part), { unitId: null, beatId: null, elementId: null, partId: part.id });
   };
-  for (const part of parts) if (halfOf(part) === 'front') fromPart(part);
+  function pagesBefore(recordId: string, restart: boolean) {
+    for (const page of standing.get(recordId) ?? []) fromPart(page, restart);
+  }
+  for (const part of allParts) if (halfOf(part) === 'front') fromPart(part, true);
   inChapter = 0;
+  const markersOf = new Map<string, string[]>();
+  for (const marker of file.markers) markersOf.set(marker.unitId as string, [...(markersOf.get(marker.unitId as string) ?? []), marker.id as string]);
   for (const unit of unitsInStoryOrder(file)) {
     if (chapterStarts.has(unit.id)) inChapter = 0;
+    for (const markerId of markersOf.get(unit.id as string) ?? []) pagesBefore(markerId, false);
     for (const beat of beatsForUnit(file, unit.id)) {
-      for (const element of beat.manuscript.elements) cite(element.text, { unitId: unit.id, beatId: beat.id, elementId: element.id, partId: null });
+      for (const element of beat.manuscript.elements) {
+        pagesBefore(element.id as string, false);
+        cite(element.text, { unitId: unit.id, beatId: beat.id, elementId: element.id, partId: null });
+      }
     }
   }
-  for (const part of parts) if (halfOf(part) !== 'front') fromPart(part);
+  for (const part of allParts) if (halfOf(part) === 'back') fromPart(part, true);
+  pagesBefore(BOOK_END, true);
+  // A page whose record has gone prints nowhere; its citations are listed
+  // last, so they are found and take no number from a page that prints.
+  for (const part of allParts) fromPart(part, true);
   // Each word-processor document counts on its own (addendum 43 §11): a
   // letter and a report in one project are two pieces of writing, each with
   // its notes from 1 and each citing a source in full the first time.

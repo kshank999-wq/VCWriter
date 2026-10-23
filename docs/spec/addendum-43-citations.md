@@ -850,10 +850,40 @@ and Word read the same paragraphs, so they print the extract too.
   above the extract's three paragraphs, the last cited after *shape* with
   marker 3 and its note at the foot.
 
-## 19. Not yet
+## 19. A page inside the story: numbered where it stands
 
-- A page set inside the story is numbered after the story, not where it
-  stands.
+A page of your own can stand inside the story: in front of a line, in front
+of a chapter's opening, in front of another page, or after everything at the
+end of the book. Until now its citations were numbered after the story,
+whatever page it printed on.
+
+They are numbered where the book prints them now. `citationOccurrences`
+walks the same records `bookBlocks` emits pages for:
+
+- in front of each front- or back-matter page, the pages anchored to it
+- in front of each chapter's opening, the pages anchored to its marker
+- in front of each line, the pages anchored to that element
+- after the back matter, the pages anchored to the end of the book
+
+Several pages in front of one record are read in the order of their leaves
+(`afterLeaves`), as the leaf run sets them.
+
+Counting by chapter:
+
+- A page inside a chapter counts with that chapter and does not restart it.
+- A page in front of a chapter's opening counts with the chapter it opens.
+- A page in front of a front- or back-matter page, or at the end of the
+  book, is a division of its own, like the pages around it (§13).
+
+A page whose record has gone prints nowhere. Its citations are listed last,
+so the writer can still find them, and they take no number from a page that
+prints.
+
+The test compares the numbering with the order the citation tokens come out
+of `bookBlocks`, so the numbers and the printed pages can't drift apart.
+
+## 20. Not yet
+
 - Recognising a Word note's parts (author, title, publisher) automatically.
   They are kept whole and flagged.
 - A division's head set to print nothing: an empty box is the book's, and

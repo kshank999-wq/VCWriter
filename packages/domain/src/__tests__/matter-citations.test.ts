@@ -5,6 +5,7 @@ import {
   addPart,
   addReference,
   addUnit,
+  BOOK_END,
   bookBlocks,
   bookCitationsOf,
   bookNames,
@@ -308,5 +309,44 @@ describe('citations in the front and back matter', () => {
       [lead.citation.key, '4'],
       [extract.citation.key, '5'],
     ]);
+  });
+
+  it('numbers a page set inside the story where it stands, as the book prints it', () => {
+    let { file, keys, parts } = book();
+    const source = file.references[0]!.id;
+    const cite = (locator: string) => {
+      const made = insertCitation(file, { referenceId: source, locator });
+      file = made.file;
+      return made;
+    };
+    // A second line in the chapter, for a page to stand in front of.
+    const beat = file.beats.find((one) => one.manuscript.elements.length > 0)!;
+    const first = beat.manuscript.elements[0]!;
+    const later = { ...first, id: crypto.randomUUID() as ManuscriptElementId, text: `And turn again.${cite('21').token}` };
+    file = updateBeat(file, beat.id, { manuscript: { elements: [first, later] } });
+    const marker = file.markers.find((one) => one.kind === 'chapter')!;
+    const page = (beforeId: string, locator: string) => {
+      const made = cite(locator);
+      const added = addPart(file, 'leaf', { beforeId, text: `A page of my own.${made.token}` });
+      file = added.file;
+      return { key: made.citation.key, partId: added.partId! };
+    };
+    const midChapter = page(later.id, '22');
+    const atOpening = page(marker.id, '19');
+    const beforeAppendix = page(parts.appendix, '29');
+    const atEnd = page(BOOK_END, '40');
+    const laterKey = file.citations.find((one) => one.locator === '21')!.key;
+
+    const order = citationOccurrences(file).map((one) => one.key);
+    expect(order).toEqual([keys.foreword, atOpening.key, keys.story, midChapter.key, laterKey, beforeAppendix.key, keys.appendix, atEnd.key]);
+    // The same order the book prints its words in.
+    const printed = bookBlocks(file).flatMap((block) => [...(block.text ?? '').matchAll(/\[\^([0-9a-f]{6})\]/g)].map((match) => match[1]));
+    expect(printed).toEqual(order);
+    expect(citationOccurrences(file)[3]).toMatchObject({ partId: midChapter.partId, marker: '4' });
+
+    // Counting by chapter, a page in the story counts with its chapter, and
+    // one in front of a chapter's opening with the chapter it opens.
+    const restarted = setCitationSettings(file, { restartEach: 'chapter' });
+    expect(citationOccurrences(restarted).map((one) => one.marker)).toEqual(['1', '1', '2', '3', '4', '1', '1', '1']);
   });
 });
