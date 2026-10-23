@@ -1046,3 +1046,26 @@
 .ProseMirror .wp-bibliography-block h2 { font-size: 1.1em; margin: 0 0 0.6em; }
 .ProseMirror .wp-bibliography-block.ProseMirror-selectednode { outline: 2px solid rgba(201, 165, 74, 0.6); }
 .ProseMirror .wp-bibliography-empty { color: #888; font-style: italic; }
+
+/* The page view set into pages (addendum 43 §25): the gap at each page's end,
+   holding the page's notes at its foot. Never typed into, saved or printed. */
+.wp-sheet .wp-page-gap {
+  display: block;
+  position: relative;
+  user-select: none;
+  pointer-events: none;
+}
+.wp-sheet .wp-page-gap .wp-page-foot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  overflow: hidden;
+  margin: 0;
+}
+.wp-sheet .wp-notes-measure {
+  position: absolute;
+  left: 0;
+  top: 0;
+  visibility: hidden;
+  pointer-events: none;
+}

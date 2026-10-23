@@ -211,3 +211,23 @@ describe('notes at the foot of the printed page (§23)', () => {
     expect(html).not.toContain('<section class="wp-notes">');
   });
 });
+
+describe('the page view’s notes (§25)', () => {
+  it('sets its pages without touching the words: nothing of the gaps is in the document', async () => {
+    const start = addReference(letter(), { title: 'On Tides', authors: ['Jones, Robert'] }).file;
+    render(<Harness start={start} />);
+    act(() => {
+      editorOf().commands.setTextSelection(13);
+    });
+    fireEvent.click(screen.getByRole('tab', { name: 'References' }));
+    press('Insert citation');
+    fireEvent.doubleClick(within(screen.getByRole('listbox', { name: 'Sources' })).getByRole('option'));
+    // The page view sets its pages a moment after the words settle.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 400));
+    });
+    expect(editorOf().getHTML()).not.toContain('wp-page-gap');
+    expect(JSON.stringify(latest!.documents[0]!.content)).not.toContain('gap');
+    expect(screen.getByText('1 page')).toBeTruthy();
+  });
+});

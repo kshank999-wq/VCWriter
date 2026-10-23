@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import type { Editor } from '@tiptap/core';
 import type { Mark } from '@tiptap/pm/model';
@@ -64,6 +64,8 @@ import {
 } from '@vcwriter/domain';
 import { readDocxParts } from '../read-docx';
 import { footNotedPrintHtml } from './foot-notes';
+import { PageView, layOutPageView, pageViewKey } from './page-view';
+import { DecorationSet } from '@tiptap/pm/view';
 import { documentExtensions, extractRange, findMatches, headingPosition, type CitationStorage, type SearchState } from './extensions';
 import { CitationDialog, type CitationChoice } from '../components/citations/CitationDialog';
 import { ReferencesPanel } from '../components/citations/ReferencesPanel';
@@ -111,6 +113,8 @@ interface DocumentWorkspaceProps {
 
 /** How long typing must pause before the tree is handed to the project. */
 const SETTLE_MS = 300;
+/** How long the page view waits after the words change before setting the pages again. */
+const PAGE_VIEW_SETTLE_MS = 150;
 
 const PX_PER_INCH = 96;
 
@@ -178,7 +182,7 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
   );
 
   const editor = useEditor({
-    extensions: documentExtensions(),
+    extensions: [...documentExtensions(), PageView],
     content: document.content,
     editable: !readOnly,
     shouldRerenderOnTransaction: true,
@@ -517,7 +521,10 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
     // drawn at a whole number of pages, so measuring it would never shrink.
     const measure = () => {
       const words = (node.querySelector('.ProseMirror') as HTMLElement | null)?.offsetHeight ?? node.scrollHeight;
-      const used = words + (margins.top + margins.bottom) * PX_PER_INCH;
+      // A quarter inch over is the last paragraph's own space under it, which
+      // stands in the bottom margin of a page the page view has filled (addendum
+      // 43 §25), and is not a page of its own.
+      const used = words + (margins.top + margins.bottom) * PX_PER_INCH - PX_PER_INCH / 4;
       setPages(Math.max(1, Math.ceil(used / (height * PX_PER_INCH) - 0.01)));
     };
     measure();
@@ -527,6 +534,41 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
     observer.observe(node);
     return () => observer.disconnect();
   }, [height, view.layout, editor, margins.top, margins.bottom, editor?.state.doc]);
+
+  /**
+   * **The page view set into pages, each page's notes at its foot** (addendum
+   * 43 §25). Worked out a moment after the words stop changing, and again
+   * when the notes, the paper or the margins do; in web layout the gaps go.
+   */
+  const notesMeasure = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!editor) return undefined;
+    if (view.layout !== 'print') {
+      if (pageViewKey.getState(editor.state) !== DecorationSet.empty) {
+        editor.view.dispatch(editor.state.tr.setMeta(pageViewKey, DecorationSet.empty).setMeta('addToHistory', false));
+      }
+      return undefined;
+    }
+    let timer: number | null = null;
+    const run = () => {
+      timer = null;
+      const box = notesMeasure.current;
+      if (!box || editor.isDestroyed) return;
+      const laid = layOutPageView(editor, cites, { pageHeight: height, top: margins.top, bottom: margins.bottom }, box);
+      setPages(laid.pages);
+    };
+    const schedule = () => {
+      if (timer !== null) window.clearTimeout(timer);
+      timer = window.setTimeout(run, PAGE_VIEW_SETTLE_MS);
+    };
+    schedule();
+    editor.on('update', schedule);
+    void window.document.fonts?.ready.then(schedule);
+    return () => {
+      if (timer !== null) window.clearTimeout(timer);
+      editor.off('update', schedule);
+    };
+  }, [editor, view.layout, cites, height, width, margins.top, margins.bottom, margins.left, margins.right]);
 
   // Zoom that follows the window: the whole page, or its width.
   const canvas = useRef<HTMLDivElement>(null);
@@ -939,6 +981,12 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
               />
             ) : null}
             <EditorContent editor={editor} />
+            {view.layout === 'print' ? (
+              // Where the page view measures its notes: the words' width, never seen.
+              <div className="wp-doc wp-notes-measure" aria-hidden="true" style={{ width: `${width - margins.left - margins.right}in` }}>
+                <div ref={notesMeasure} className="wp-page-notes" />
+              </div>
+            ) : null}
           </div>
         </div>
         {extracting && palettesOf(file).length ? (
@@ -1066,11 +1114,10 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
 }
 
 /**
- * The header on the first page and the footer on the last, drawn in their
- * margins with the fields filled in (addendum 42 §15). The screen is one long
- * sheet, not set into pages, so the bands of the pages between are left to the
- * printed page, where the browser sets each one exactly. A double-click opens
- * the bar to change them, as in Word.
+ * The header and footer on every page, in its margins, with the fields
+ * filled in (addendum 42 §15). The page view is set into pages (addendum 43
+ * §25), so each page's bands stand where that page's margins are, as the
+ * print sets them. A double-click opens the bar to change them, as in Word.
  */
 function PageBands({
   document,
@@ -1092,32 +1139,40 @@ function PageBands({
         {fillFields(slots[slot], { ...values, page })}
       </span>
     ));
-  const showHeader = firstPage && Object.values(header).some((text) => text.trim());
-  const showFooter = (firstPage || pages > 1) && Object.values(footer).some((text) => text.trim());
+  const hasHeader = Object.values(header).some((text) => text.trim());
+  const hasFooter = Object.values(footer).some((text) => text.trim());
   return (
     <>
-      {showHeader ? (
-        <div
-          className="wp-band header"
-          style={{ top: `${margins.top / 2}in`, left: `${margins.left}in`, right: `${margins.right}in` }}
-          title="Header: double-click to change"
-          onDoubleClick={onOpen}
-          aria-label="Header"
-        >
-          {band(header, 1)}
-        </div>
-      ) : null}
-      {showFooter ? (
-        <div
-          className="wp-band footer"
-          style={{ top: `${pages * pageHeight - margins.bottom / 2}in`, left: `${margins.left}in`, right: `${margins.right}in` }}
-          title="Footer: double-click to change"
-          onDoubleClick={onOpen}
-          aria-label="Footer"
-        >
-          {band(footer, pages)}
-        </div>
-      ) : null}
+      {Array.from({ length: pages }, (_, at) => {
+        // The first page carries them only where the document says so.
+        if (at === 0 && !firstPage) return null;
+        return (
+          <Fragment key={at}>
+            {hasHeader ? (
+              <div
+                className="wp-band header"
+                style={{ top: `${at * pageHeight + margins.top / 2}in`, left: `${margins.left}in`, right: `${margins.right}in` }}
+                title="Header: double-click to change"
+                onDoubleClick={onOpen}
+                aria-label={at === 0 ? 'Header' : `Header, page ${at + 1}`}
+              >
+                {band(header, at + 1)}
+              </div>
+            ) : null}
+            {hasFooter ? (
+              <div
+                className="wp-band footer"
+                style={{ top: `${(at + 1) * pageHeight - margins.bottom / 2}in`, left: `${margins.left}in`, right: `${margins.right}in` }}
+                title="Footer: double-click to change"
+                onDoubleClick={onOpen}
+                aria-label={at === 0 ? 'Footer' : `Footer, page ${at + 1}`}
+              >
+                {band(footer, at + 1)}
+              </div>
+            ) : null}
+          </Fragment>
+        );
+      })}
     </>
   );
 }

@@ -1066,12 +1066,46 @@ Checked in Chromium, on Letter and on A5 with a 5,000-character note:
 the note's words arrive whole across the pages, every other note stays in
 order, no page overflows, and the PDF has exactly the pages that were set.
 
-## 25. Not yet
+## 25. The editor's page view, set into pages, with each page's notes
+
+The page view was one long sheet with a rule where each page would end, and
+the words ran across the rules. Notes showed only in print and PDF (§23).
+
+The page view is now set into pages as the words are written
+(`apps/desktop/.../document/page-view.ts`), each page's notes at its foot:
+
+- **Measured line by line.** A moment after the words stop changing, the
+  editor's lines are read off the screen (by their middles, §23), with the
+  citations each line holds. A table, a picture, a rule or the bibliography
+  is one row and goes over whole.
+- **Pages end where the print's do.** A page takes rows while they and the
+  notes cited in them fit. A heading isn't left at the foot, and a page
+  break the writer put in ends the page.
+- **A gap at each page's end.** A widget decoration, not part of the
+  document, is put in where the page ends. It's as tall as the rest of the
+  page plus the margins down to the next page's words, and it carries the
+  page's notes standing at its foot. The last page's notes follow its last
+  words. The gaps are never typed into, saved or printed, and are measured
+  without them each time, in one go so nothing is painted between. The
+  scroll position is kept.
+- **Headers and footers on every page.** Now that the pages are real, the
+  bands are drawn on each page with its own number ("Page 2 of 3"), the
+  first page carrying them only where the document says so. Before, only
+  the first page's header and the last page's footer showed.
+- **Web layout** has no pages, and the gaps go.
+
+Checked in Chromium: the page view breaks on the same lines as the PDF,
+each page's notes end exactly at its foot (960, 2016 and 3072 pixels down a
+Letter sheet), the page count matches, and typing on page 2 keeps the caret
+and sets the pages again.
+
+## 26. Not yet
 
 - A Word note in a form other than Chicago's (APA's or MLA's parentheses, a
   note that says something besides its source) is kept whole and flagged.
 - The eBook has no pages, so it carries no heads, feet or page numbers.
-- The document editor's page view doesn't show the notes at the foot; only
-  print and PDF do.
+- In the editor's page view a note never breaks over the page (the print's
+  does, §24): a page's notes take at most three fifths of it on the screen,
+  and the rest is cut off there.
 - One library held live between projects: sources are brought in as copies,
   and a change in one project does not reach the other.
