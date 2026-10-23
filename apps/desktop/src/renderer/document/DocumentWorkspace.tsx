@@ -63,6 +63,7 @@ import {
   notesIntoLibrary,
 } from '@vcwriter/domain';
 import { readDocxParts } from '../read-docx';
+import { footNotedPrintHtml } from './foot-notes';
 import { documentExtensions, extractRange, findMatches, headingPosition, type CitationStorage, type SearchState } from './extensions';
 import { CitationDialog, type CitationChoice } from '../components/citations/CitationDialog';
 import { ReferencesPanel } from '../components/citations/ReferencesPanel';
@@ -388,22 +389,35 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
   /** This document's citations as print and Word set them, from the editor as it stands. */
   const citesNow = useCallback(() => documentCitations(withEditorOrder(file, citeKeysOf(editorRef.current)), documentId), [file, documentId, withEditorOrder]);
 
-  const printable = useCallback(() => {
+  /**
+   * The page the printer and the PDF are made from. In a footnote style the
+   * notes stand at the foot of the page they are cited on, the pages set
+   * here first (addendum 43 §23); otherwise the browser sets the pages.
+   */
+  const printable = useCallback(async () => {
     const current = docOf();
+    const cites = citesNow();
+    const html = editorRef.current?.getHTML() ?? '';
+    let paged: string | null = null;
+    try {
+      paged = await footNotedPrintHtml(current, cites, html);
+    } catch {
+      paged = null;
+    }
     return {
-      html: documentPrintHtml(current, citeDocumentHtml(citesNow(), editorRef.current?.getHTML() ?? '')),
+      html: paged ?? documentPrintHtml(current, citeDocumentHtml(cites, html)),
       paper: pageSize(current.pageSetup),
     };
   }, [docOf, citesNow]);
 
   const print = useCallback(async () => {
-    const { html, paper } = printable();
+    const { html, paper } = await printable();
     const result = await window.vcwriter.print({ file, kind: 'document', html, paper });
     if (!result.ok) setMessage(result.error ?? 'The document could not be printed');
   }, [file, printable]);
 
   const exportPdf = useCallback(async () => {
-    const { html, paper } = printable();
+    const { html, paper } = await printable();
     const result = await window.vcwriter.exportPdf({ file, kind: 'document', html, paper });
     if (!result.ok) setMessage(result.error ?? 'The PDF could not be created');
     else if (result.data?.path) setMessage(`Saved ${result.data.path}`);

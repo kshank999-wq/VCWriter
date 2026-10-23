@@ -18,9 +18,9 @@ import type { ProjectFile } from './project-file.js';
  * - a citation is an inline node, `citation` with its key, rather than a
  *   token in a line of text
  * - each document counts its notes on its own, from 1
- * - a document is laid out by the browser, which cannot put a note at the
- *   foot of the page it falls on, so print and PDF set the notes at the end
- *   under *Notes*; Word sets them as its own footnotes
+ * - the browser cannot put a note at the foot of the page it falls on, so
+ *   print and PDF set the pages first, in the renderer, with each page's
+ *   notes at its foot (§23); Word sets them as its own footnotes
  * - a bibliography is a block the writer puts where it goes, and it fills
  *   itself from the sources the document cites
  */
@@ -71,6 +71,13 @@ export const inlineMarksHtml = (text: string): string =>
 
 const markOf = (marker: string): string => (/^[0-9a-z]+$/.test(marker) ? `${marker}.` : marker);
 
+/** The nth note (from 1) as the page sets it: its marker, linked back to where it is cited, and its words. */
+export const noteHtml = (cites: DocumentCitations, n: number): string => {
+  const note = cites.notes[n - 1];
+  if (!note) return '';
+  return `<p class="wp-note" id="wp-note-${n}"><a href="#wp-ref-${n}">${escape(markOf(note.marker))}</a> ${inlineMarksHtml(note.text)}</p>`;
+};
+
 /** The bibliography as the page sets it: its heading and one hanging entry per source. */
 export const bibliographyHtml = (cites: DocumentCitations): string =>
   `<section class="wp-bibliography"><h2>${escape(cites.heading)}</h2>` +
@@ -86,7 +93,15 @@ export const bibliographyHtml = (cites: DocumentCitations): string =>
  * text under *Notes*, before the bibliography where there is one — a document
  * laid out by the browser has no page foot to put them at.
  */
-export const citeDocumentHtml = (cites: DocumentCitations, html: string): string => {
+export const citeDocumentHtml = (
+  cites: DocumentCitations,
+  html: string,
+  /**
+   * Whether the notes are set at the end. Print and PDF set them at the foot
+   * of each page instead (§23), and ask for none here.
+   */
+  notesAtEnd = true,
+): string => {
   let at = 0;
   const set = html
     .replace(/<sup\b[^>]*\bdata-cite="([0-9a-f]{6})"[^>]*>\s*<\/sup>/g, (_whole, key: string) => {
@@ -99,10 +114,8 @@ export const citeDocumentHtml = (cites: DocumentCitations, html: string): string
       return ` <span class="wp-cite-text">${inlineMarksHtml(said)}</span>`;
     })
     .replace(/<div\b[^>]*\bdata-bibliography\b[^>]*>\s*<\/div>/g, () => bibliographyHtml(cites));
-  if (!cites.raised || cites.notes.length === 0) return set;
-  const notes = cites.notes
-    .map((note, index) => `<p class="wp-note" id="wp-note-${index + 1}"><a href="#wp-ref-${index + 1}">${escape(markOf(note.marker))}</a> ${inlineMarksHtml(note.text)}</p>`)
-    .join('');
+  if (!notesAtEnd || !cites.raised || cites.notes.length === 0) return set;
+  const notes = cites.notes.map((_note, index) => noteHtml(cites, index + 1)).join('');
   const section = `<section class="wp-notes"><h2>Notes</h2>${notes}</section>`;
   // Notes come before the bibliography, as a paper sets them; with none, at the end.
   const bibliographyAt = set.indexOf('<section class="wp-bibliography">');
@@ -117,6 +130,9 @@ export const DOCUMENT_CITATION_CSS = `
 .wp-doc .wp-notes h2, .wp-doc .wp-bibliography h2 { font-size: 1.1em; }
 .wp-doc .wp-note { margin: 0 0 0.4em; }
 .wp-doc .wp-note a { color: inherit; text-decoration: none; }
+.wp-doc .wp-page-notes { margin-top: auto; padding-top: 4pt; font-size: 0.85em; }
+.wp-doc .wp-page-notes::before { content: ""; display: block; width: 2in; border-top: 0.5pt solid currentColor; margin-bottom: 4pt; }
+.wp-doc .wp-page-notes .wp-note:last-child { margin-bottom: 0; }
 .wp-doc .wp-bibliography-entry, .ProseMirror .wp-bibliography-entry { padding-left: 0.5in; text-indent: -0.5in; margin: 0 0 0.6em; }
 `;
 

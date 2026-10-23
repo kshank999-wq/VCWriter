@@ -998,11 +998,57 @@ its footnotes. They come in as citations now.
 The status line says how many footnotes came in, how many sources were new,
 and how many were already in the library.
 
-## 23. Not yet
+## 23. A document's notes at the foot of each page
+
+A document's print and PDF set its notes at the end, under *Notes* (§11).
+Chromium sets the pages itself and has no `float: footnote`, so it can't
+put a note at the foot of the page its marker falls on. Word already
+printed them as footnotes.
+
+They stand at the foot of each page now. The pages are set before printing,
+in the renderer (`apps/desktop/.../document/foot-notes.ts`), in a hidden
+frame with the print's own stylesheet at the width of the page's words
+(`documentMeasureHtml`):
+
+- **Blocks go onto a page** while they, and the notes cited in them, fit in
+  the page less its margins (`documentPageBox`), with a few pixels spare for
+  the printer's rounding.
+- **A paragraph that doesn't fit is broken between its lines.** The lines
+  are found from the text's boxes by their middles (a glyph's box is taller
+  than its line, so neighbouring lines' boxes overlap). The break falls at
+  the first character set below the gap. The rest goes over the page with
+  no space above and no first-line indent (`wp-split`, `wp-cont`).
+- **A list, a quotation, a table or the bibliography breaks between its
+  items, rows or entries**, and an item can itself break between its lines.
+  A numbered list goes on counting where it broke, and an item carried over
+  isn't numbered twice. A table repeats its head row.
+- **A heading is never left at the foot of a page**, and a page break the
+  writer put in starts a new page.
+- A block that won't fit even on a page of its own stands alone, cut at the
+  foot rather than pushing everything after it astray. Pictures are capped
+  at the page's height so this is rare.
+
+`documentPagedHtml` draws the pages: each a box the height of the page
+(a hair less, so a page never spills onto a printed page of its own),
+the words at the top and the page's notes at its foot under a short rule.
+Headers, footers and page numbers stay in the page's margin boxes. The
+words come through whole: checked in Chromium that the set pages hold the
+same text as the document, the notes in order, and that no page overflows.
+
+Where nothing is cited, or the style cites in parentheses (APA, MLA), the
+browser sets the pages as before. If the setting fails for any reason, the
+print falls back to the notes at the end. Only print and PDF are set this
+way; the editor's own page view doesn't show notes.
+
+## 24. Not yet
 
 - A Word note in a form other than Chicago's (APA's or MLA's parentheses, a
   note that says something besides its source) is kept whole and flagged.
 - The eBook has no pages, so it carries no heads, feet or page numbers.
-- A document's print sets its notes at the end, not at the foot of each page.
+- In a document's print, a note too long for the page its marker is on
+  doesn't carry on to the next page (a book's does, §12); the line moves
+  over with it instead.
+- The document editor's page view doesn't show the notes at the foot; only
+  print and PDF do.
 - One library held live between projects: sources are brought in as copies,
   and a change in one project does not reach the other.

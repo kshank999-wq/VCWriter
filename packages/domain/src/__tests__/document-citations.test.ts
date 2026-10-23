@@ -4,6 +4,9 @@ import {
   archiveReference,
   bringInReferences,
   citeDocumentHtml,
+  documentMeasureHtml,
+  documentPageBox,
+  documentPagedHtml,
   createProjectFile,
   documentBodyXml,
   documentCitations,
@@ -139,5 +142,40 @@ describe('bringing in sources from another library', () => {
     book = addReference(one.file, { title: 'B' }).file;
     const letters = createProjectFile({ title: 'Letters', format: 'document' });
     expect(bringInReferences(letters, book.references, new Set([one.reference.id])).added.map((ref) => ref.title)).toEqual(['A']);
+  });
+});
+
+describe('notes at the foot of each page (§23)', () => {
+  it('leaves the notes off the end when the pages will carry them', () => {
+    const { file, ids } = project([['Tides follow@ the moon.']]);
+    const key = file.citations[0]!.key;
+    const html = `<p>Tides follow<sup class="wp-cite" data-cite="${key}"></sup> the moon.</p>`;
+    const set = citeDocumentHtml(documentCitations(file, ids[0]!), html, false);
+    expect(set).toContain('<a href="#wp-note-1" id="wp-ref-1">1</a>');
+    expect(set).not.toContain('wp-notes');
+  });
+
+  it('draws each set page the height of the page, its own notes at its foot', () => {
+    const { file, ids } = project([['Tides follow@ the moon@.', 'They turn@.']]);
+    const document = file.documents[0]!;
+    // Letter, inch margins: six and a half by nine inches for words and notes.
+    expect(documentPageBox(document)).toEqual({ width: 6.5, height: 9 });
+    const cites = documentCitations(file, ids[0]!);
+    const html = documentPagedHtml(document, [{ body: '<p>One.</p>', notes: [1, 2] }, { body: '<p>Two.</p>', notes: [3] }], cites);
+    expect(html.match(/<section class="wp-page">/g)).toHaveLength(2);
+    expect(html).toContain('.wp-doc .wp-page { height: 8.980in;');
+    expect(html).toContain(
+      '<section class="wp-page"><div class="wp-page-body"><p>Two.</p></div><div class="wp-page-notes"><p class="wp-note" id="wp-note-3"><a href="#wp-ref-3">3.</a> Jones, <em>On Tides</em>, 12.</p></div></section>',
+    );
+    expect(html).toContain('@page { size: 8.5in 11in;');
+    // A page with nothing cited carries no rule at its foot.
+    expect(documentPagedHtml(document, [{ body: '<p>Plain.</p>', notes: [] }], cites)).not.toContain('<div class="wp-page-notes">');
+  });
+
+  it('measures in the same stylesheet, at the width of the page’s words', () => {
+    const { file } = project([['Tides.']]);
+    const html = documentMeasureHtml(file.documents[0]!);
+    expect(html).toContain('<div class="wp-doc" style="width: 6.5in"><div id="wp-flow"></div><div id="wp-page" class="wp-page-body"');
+    expect(html).toContain('.wp-doc .wp-split { margin-bottom: 0 !important; }');
   });
 });

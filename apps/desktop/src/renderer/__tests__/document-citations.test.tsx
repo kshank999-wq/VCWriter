@@ -188,3 +188,26 @@ describe('a Word file with footnotes, inserted', () => {
     expect([...document.querySelectorAll('sup.wp-cite')].map((one) => one.getAttribute('data-marker'))).toEqual(['1', '2']);
   });
 });
+
+describe('notes at the foot of the printed page (§23)', () => {
+  it('sets the pages before the PDF, each with the notes cited on it at its foot', async () => {
+    const exportPdf = vi.fn(async () => ({ ok: true, data: { path: '/p/Letter.pdf', pageCount: 1 } }));
+    (window as unknown as { vcwriter: unknown }).vcwriter = { exportPdf };
+    const start = addReference(letter(), { title: 'On Tides', authors: ['Jones, Robert'] }).file;
+    render(<Harness start={start} />);
+    act(() => {
+      editorOf().commands.setTextSelection(13);
+    });
+    fireEvent.click(screen.getByRole('tab', { name: 'References' }));
+    press('Insert citation');
+    fireEvent.doubleClick(within(screen.getByRole('listbox', { name: 'Sources' })).getByRole('option'));
+    fireEvent.click(screen.getByRole('tab', { name: 'File' }));
+    press('PDF');
+    await waitFor(() => expect(exportPdf).toHaveBeenCalled());
+    const html = (exportPdf.mock.calls[0] as unknown as [{ html: string }])[0].html;
+    expect(html).toContain('<section class="wp-page"><div class="wp-page-body"><p>Tides follow<sup class="wp-cite"><a href="#wp-note-1" id="wp-ref-1">1</a></sup> the moon.</p></div>');
+    expect(html).toContain('<div class="wp-page-notes"><p class="wp-note" id="wp-note-1"><a href="#wp-ref-1">1.</a> Robert Jones, <em>On Tides</em>.</p></div>');
+    // Not at the end as well.
+    expect(html).not.toContain('<section class="wp-notes">');
+  });
+});
