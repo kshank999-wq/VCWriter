@@ -596,7 +596,7 @@ export const buildProjectFromImport = (script: ImportedScript, options: ImportOp
       referenceId: (sources[one.source] as Reference).id,
       key: one.key,
       locatorKind: one.locatorKind,
-      locator: one.locator,
+      locator: one.locator.slice(0, 120),
       createdAt: timestamp,
       updatedAt: timestamp,
     }),

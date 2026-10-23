@@ -2,7 +2,8 @@ import { Extension, type Editor } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import type { Node as PmNode } from '@tiptap/pm/model';
-import { noteHtml, type DocumentCitations } from '@vcwriter/domain';
+import { noteHtml, pageNotesHtml as notesHtmlOf, type DocumentCitations } from '@vcwriter/domain';
+import { LONG_NOTE, NOTE_LINES_KEPT, lineCuts } from './foot-notes';
 
 /**
  * **The page view, set into pages, with each page's notes at its foot**
@@ -21,9 +22,9 @@ import { noteHtml, type DocumentCitations } from '@vcwriter/domain';
  *
  * As the print's: a page ends between lines; a table, a picture or a rule
  * goes over whole; a heading is not left at a page's foot; a page break the
- * writer put in ends the page. Unlike the print, a note is not broken over
- * the page here: a page's notes take at most three fifths of it and the rest
- * is cut off at the screen's foot, the print setting it in full.
+ * writer put in ends the page; and a long note breaks over the page, the rest
+ * of it carried first to the next page's foot (addendum 43 §26). The notes
+ * are drawn in the print's own markup, so the screen and the paper agree.
  */
 
 export const pageViewKey = new PluginKey<DecorationSet>('wpPageView');
@@ -49,8 +50,6 @@ export const PageView = Extension.create({
 });
 
 const PX_PER_INCH = 96;
-/** The most of a page its notes may take on the screen. */
-const NOTES_AT_MOST = 0.6;
 
 /** One line, or one block that goes over whole, in the editor's words. */
 interface Row {
@@ -185,16 +184,71 @@ export const layOutPageView = (
   const room = H - top - setup.bottom * PX_PER_INCH;
   const numberOf = new Map(cites.notes.map((note, at) => [note.key, at + 1]));
   const raised = cites.raised && cites.notes.length > 0;
+  /** What is carried onto the page being set, and what goes on past it again. */
+  let carried: string | null = null;
+  let carriedOn: string | null = null;
+  /** The notes at a page's foot into the measuring box: what is carried, then these, the last as given. */
+  const drawNotes = (numbers: number[], lastAs?: string) => {
+    notesBox.className = `wp-page-notes${carried ? ' continues' : ''}`;
+    notesBox.innerHTML =
+      (carried ?? '') + numbers.map((n, at) => (lastAs !== undefined && at === numbers.length - 1 ? lastAs : noteHtml(cites, n))).join('');
+  };
   const heights = new Map<string, number>();
-  const notesHeight = (numbers: number[]): number => {
-    if (!raised || numbers.length === 0) return 0;
-    const key = numbers.join(',');
-    const known = heights.get(key);
+  const notesHeight = (numbers: number[], lastAs?: string): number => {
+    if (!raised || (numbers.length === 0 && !carried)) return 0;
+    const key = lastAs === undefined ? `${carried ?? ''}|${numbers.join(',')}` : null;
+    const known = key === null ? undefined : heights.get(key);
     if (known !== undefined) return known;
-    notesBox.innerHTML = numbers.map((n) => noteHtml(cites, n)).join('');
-    const height = Math.min(notesBox.getBoundingClientRect().height / scale, room * NOTES_AT_MOST);
-    heights.set(key, height);
+    drawNotes(numbers, lastAs);
+    const height = notesBox.getBoundingClientRect().height / scale;
+    if (key !== null) heights.set(key, height);
     return height;
+  };
+  const wholeNote = new Map<number, number>();
+  const noteAlone = (n: number): number => {
+    const known = wholeNote.get(n);
+    if (known !== undefined) return known;
+    notesBox.className = 'wp-page-notes';
+    notesBox.innerHTML = noteHtml(cites, n);
+    const height = (notesBox.lastElementChild as HTMLElement).getBoundingClientRect().height / scale;
+    wholeNote.set(n, height);
+    return height;
+  };
+  /**
+   * **A long note breaks over the page** (addendum 43 §26), as the print's
+   * does (§24): the last note cited on a page, where it will not stand whole
+   * and is longer than a third of a page, keeps as many lines as fit (two at
+   * the least) and the rest is carried to the next page's foot. The cut, or
+   * null where the note is short or not even two lines fit.
+   */
+  const cutLast = (numbers: number[], space: number): { head: string; tail: string } | null => {
+    const last = numbers[numbers.length - 1];
+    if (!raised || last === undefined || noteAlone(last) <= room * LONG_NOTE) return null;
+    drawNotes(numbers);
+    const note = notesBox.lastElementChild as Element;
+    notesBox.removeChild(note);
+    for (const option of lineCuts(view.dom.ownerDocument, note, notesBox, NOTE_LINES_KEPT)) {
+      if (notesHeight(numbers, option.head.outerHTML) <= space) return { head: option.head.outerHTML, tail: option.tail.outerHTML };
+    }
+    return null;
+  };
+  /** A page starting with a carry longer than two thirds of a page sets that much, and carries the rest on. */
+  const startPage = () => {
+    carriedOn = null;
+    if (!carried || notesHeight([]) <= room * (1 - LONG_NOTE)) return;
+    const whole: string = carried;
+    notesBox.className = 'wp-page-notes continues';
+    notesBox.innerHTML = whole;
+    const note = notesBox.lastElementChild as Element;
+    notesBox.removeChild(note);
+    for (const option of lineCuts(view.dom.ownerDocument, note, notesBox, NOTE_LINES_KEPT)) {
+      carried = option.head.outerHTML;
+      if (notesHeight([]) <= room * (1 - LONG_NOTE)) {
+        carriedOn = option.tail.outerHTML;
+        return;
+      }
+    }
+    carried = whole;
   };
   const notesOf = (from: number, to: number): number[] =>
     [...new Set(rows.slice(from, to).flatMap((row) => row.keys))]
@@ -202,22 +256,32 @@ export const layOutPageView = (
       .filter((n): n is number => n !== undefined)
       .sort((a, b) => a - b);
 
-  // The pages: where each begins, as a row, and the notes on it.
-  const pages: { from: number; notes: number[] }[] = [];
+  // The pages: where each begins, as a row, and the notes at its foot.
+  const pages: PageFoot[] = [];
   let from = 0;
   while (from < rows.length) {
+    startPage();
     const pageTop = from === 0 ? 0 : (rows[from] as Row).top;
     let to = from + 1;
+    let cut: { head: string; tail: string } | null = null;
     if (!(rows[from] as Row).pageBreak) {
       while (to < rows.length) {
         const row = rows[to] as Row;
         if (row.pageBreak) break;
-        if (row.bottom - pageTop + notesHeight(notesOf(from, to + 1)) > room) break;
-        to += 1;
+        const used = row.bottom - pageTop;
+        const numbers = notesOf(from, to + 1);
+        if (used + notesHeight(numbers) <= room) {
+          to += 1;
+          continue;
+        }
+        // The note cited last may break, where it is long; the page then ends there.
+        cut = row.keys.length > 0 ? cutLast(numbers, room - used) : null;
+        if (cut) to += 1;
+        break;
       }
     }
     // A heading is not left at the foot: it goes over with what it heads.
-    if (to < rows.length) {
+    if (to < rows.length && !cut) {
       let back = to;
       while (back - 1 > from && (rows[back - 1] as Row).headingEnd) {
         let start = back - 1;
@@ -229,33 +293,48 @@ export const layOutPageView = (
     }
     // A page break the writer put in ends the page it is on, and starts nothing itself.
     const next = to < rows.length && (rows[to] as Row).pageBreak ? to + 1 : to;
-    pages.push({ from, notes: notesOf(from, to) });
+    const numbers = notesOf(from, to);
+    pages.push({ from, notes: numbers, carried, cut: cut?.head ?? null, height: notesHeight(numbers, cut?.head) });
+    carried = [carriedOn, cut?.tail].filter(Boolean).join('') || null;
     from = next;
   }
-  if (pages.length === 0) pages.push({ from: 0, notes: [] });
+  if (pages.length === 0) pages.push({ from: 0, notes: [], carried: null, cut: null, height: 0 });
+  // A note still being carried after the last words finishes on pages of its own.
+  const after: PageFoot[] = [];
+  while (carried) {
+    startPage();
+    after.push({ from: rows.length, notes: [], carried, cut: null, height: notesHeight([]) });
+    carried = carriedOn;
+  }
 
   // The gaps: each brings the next page's first row to the top of its page.
   const decorations: Decoration[] = [];
   let shift = 0;
   let index = 0;
+  const foot = (page: number) => (page + 1) * H - top - setup.bottom * PX_PER_INCH;
   pages.forEach((page, at) => {
     const following = pages[at + 1];
     const end = following ? (rows[following.from] as Row) : null;
     // Where this page's words end, on the sheet, below its top margin.
     const wordsEnd = end ? end.top + shift : (rows[rows.length - 1]?.bottom ?? 0) + shift;
-    const pageFoot = (index + 1) * H - top - setup.bottom * PX_PER_INCH;
-    const notes = page.notes.length > 0 ? notesHeight(page.notes) : 0;
     if (!end) {
-      // The last page: its notes at its foot, after the last words.
-      if (notes > 0) {
+      // The last page: its notes at its foot after the last words, and the
+      // pages of a note carried past them after that.
+      if (page.height > 0 || after.length > 0) {
         // After the last block, under its own space, and leaving the words'
         // padding under it; inside the paragraph the editor would add a line.
         const doc = view.state.doc;
         const lastDom = doc.lastChild ? (view.nodeDOM(doc.content.size - doc.lastChild.nodeSize) as HTMLElement | null) : null;
         const under = lastDom instanceof HTMLElement ? parseFloat(getComputedStyle(lastDom).marginBottom) || 0 : 0;
         const padding = parseFloat(getComputedStyle(words).paddingBottom) || 0;
-        const gap = Math.max(notes, pageFoot - wordsEnd - under - padding);
-        decorations.push(gapWidget(doc.content.size, gap, gap - notes, page.notes, cites, `end-${index}`));
+        const start = wordsEnd + under;
+        const feet: { at: number; html: string }[] = [];
+        if (page.height > 0) feet.push({ at: Math.max(0, foot(index) - start - page.height), html: pageNotesHtml(page, cites) });
+        after.forEach((more, n) => feet.push({ at: Math.max(0, foot(index + 1 + n) - start - more.height), html: pageNotesHtml(more, cites) }));
+        const last = index + after.length;
+        const gap = Math.max(page.height, foot(last) - start - padding);
+        decorations.push(gapWidget(doc.content.size, gap, feet, `end-${index}`));
+        index = last;
       }
       return;
     }
@@ -263,7 +342,8 @@ export const layOutPageView = (
     let nextIndex = index + 1;
     while (nextIndex * H < wordsEnd + top) nextIndex += 1;
     const gap = nextIndex * H - (wordsEnd + top);
-    decorations.push(gapWidget(end.pos, gap, Math.max(0, pageFoot - wordsEnd - notes), page.notes, cites, `p-${index}-${Math.round(gap)}`));
+    const feet = page.height > 0 ? [{ at: Math.max(0, foot(index) - wordsEnd - page.height), html: pageNotesHtml(page, cites) }] : [];
+    decorations.push(gapWidget(end.pos, gap, feet, `p-${index}-${Math.round(gap)}`));
     shift += gap;
     index = nextIndex;
   });
@@ -273,6 +353,19 @@ export const layOutPageView = (
   return { pages: index + 1 };
 };
 
+/** A page's notes as the page view sets them: the same as the print's (`pageNotesHtml`). */
+interface PageFoot {
+  from: number;
+  notes: number[];
+  carried: string | null;
+  cut: string | null;
+  /** How tall the notes stand, in unzoomed pixels. */
+  height: number;
+}
+
+const pageNotesHtml = (page: PageFoot, cites: DocumentCitations): string =>
+  notesHtmlOf({ body: '', notes: page.notes, ...(page.carried ? { carried: page.carried } : {}), ...(page.cut ? { cut: page.cut } : {}) }, cites);
+
 /** A short fingerprint of what a gap shows, so a gap is drawn again when its notes' words change. */
 const fingerprint = (text: string): string => {
   let hash = 0;
@@ -280,10 +373,9 @@ const fingerprint = (text: string): string => {
   return (hash >>> 0).toString(36);
 };
 
-/** The gap at a page's end, with the page's notes standing `notesAt` pixels down it. */
-const gapWidget = (pos: number, height: number, notesAt: number, notes: number[], cites: DocumentCitations, key: string): Decoration => {
-  const html = notes.map((n) => noteHtml(cites, n)).join('');
-  return Decoration.widget(
+/** The gap at a page's end, with the notes of the pages it spans standing `at` pixels down it. */
+const gapWidget = (pos: number, height: number, feet: { at: number; html: string }[], key: string): Decoration =>
+  Decoration.widget(
     pos,
     () => {
       const gap = document.createElement('span');
@@ -291,16 +383,14 @@ const gapWidget = (pos: number, height: number, notesAt: number, notes: number[]
       gap.contentEditable = 'false';
       gap.setAttribute('aria-hidden', 'true');
       gap.style.height = `${height}px`;
-      if (html) {
-        const foot = document.createElement('div');
-        foot.className = 'wp-page-notes wp-page-foot';
-        foot.style.top = `${notesAt}px`;
-        foot.style.maxHeight = `${Math.max(0, height - notesAt)}px`;
-        foot.innerHTML = html;
-        gap.appendChild(foot);
+      for (const one of feet) {
+        const holder = document.createElement('div');
+        holder.className = 'wp-page-foot';
+        holder.style.top = `${one.at}px`;
+        holder.innerHTML = one.html;
+        gap.appendChild(holder);
       }
       return gap;
     },
-    { side: -1, key: `${key}-${Math.round(notesAt)}-${fingerprint(html)}`, ignoreSelection: true },
+    { side: -1, key: `${key}-${feet.map((one) => `${Math.round(one.at)}:${fingerprint(one.html)}`).join(',')}`, ignoreSelection: true },
   );
-};

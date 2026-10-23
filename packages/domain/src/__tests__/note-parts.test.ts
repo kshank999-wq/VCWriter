@@ -76,6 +76,14 @@ describe('one note', () => {
     expect(recogniseNote('Ibid.')).toEqual({ kind: 'ibid', locatorKind: 'page', locator: '' });
   });
 
+  it('keeps whole a note that goes on to say something after its source', () => {
+    expect(recogniseNote('Robert Jones, *On Tides* (Boston: Sea Press, 2019), 12. He is wrong about the bar, as the log shows.')).toBeNull();
+    expect(recogniseNote('Jones, *On Tides*, 20; but see the harbour master’s log.')).toBeNull();
+    expect(recogniseNote('Ibid., 14. The same again.')).toBeNull();
+    // A pinpoint that is not a page still reads.
+    expect(recogniseNote('Jones, *On Tides*, fig. 2.')).toMatchObject({ kind: 'short', locatorKind: 'other', locator: 'fig. 2' });
+  });
+
   it('leaves a note it cannot read with confidence', () => {
     expect(recogniseNote('See the harbour master’s log for the whole of that winter.')).toBeNull();
     expect(recogniseNote('Jones told me this in 2019, on the quay.')).toBeNull();
@@ -87,6 +95,15 @@ describe('one note', () => {
     expect(readLocator('chap. 3')).toEqual({ locatorKind: 'chapter', locator: '3' });
     expect(readLocator('at 1:02:30')).toEqual({ locatorKind: 'timestamp', locator: '1:02:30' });
     expect(readLocator('fig. 2')).toEqual({ locatorKind: 'other', locator: 'fig. 2' });
+  });
+});
+
+describe('a very long note', () => {
+  it('is kept to the library’s limit, so it cannot stop the file coming in', () => {
+    const long = `See the log. ${'And so on at length. '.repeat(400)}`;
+    const read = readNotes([{ key: 'a', text: long }]);
+    expect(read.sources[0]!.asWritten).toHaveLength(5000);
+    expect(read.sources[0]!.asWritten.endsWith('…')).toBe(true);
   });
 });
 

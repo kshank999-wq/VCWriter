@@ -81,6 +81,10 @@ export const readLocator = (text: string): { locatorKind: LocatorKind; locator: 
   );
 };
 
+/** A pinpoint and not a remark: short, and with no sentence in it. */
+const looksLikeLocator = (pinpoint: { locatorKind: LocatorKind; locator: string }): boolean =>
+  pinpoint.locatorKind !== 'other' || (pinpoint.locator.length <= 30 && !/[.!?]\s+\p{Lu}|[;!?]\s/u.test(pinpoint.locator));
+
 /** The publication facts in a book's parentheses: `Boston: Sea Press, 2019`, `Sea Press, 2019`, `2019`. */
 const imprint = (text: string): Pick<NoteFacts, 'place' | 'publisher' | 'date'> | null => {
   const found = text.match(/^(?:(?:([^:]+):\s*)?([^,]+),\s*)?(\d{4}[a-z]?|n\.d\.)$/);
@@ -193,7 +197,10 @@ export const recogniseNote = (text: string): RecognisedNote | null => {
   if (!said) return null;
 
   const ibid = said.match(/^ibid\.?(?:,?\s*(.+))?$/i);
-  if (ibid) return { kind: 'ibid', ...readLocator(ibid[1] ?? '') };
+  if (ibid) {
+    const pinpoint = readLocator(ibid[1] ?? '');
+    return looksLikeLocator(pinpoint) ? { kind: 'ibid', ...pinpoint } : null;
+  }
 
   // A DOI or an address at the end belongs to the source, whatever the shape.
   let url = '';
@@ -212,6 +219,9 @@ export const recogniseNote = (text: string): RecognisedNote | null => {
     if (!found) continue;
     const read = shape.read(found);
     if (!read) continue;
+    // What follows the source is a page, a section or a time — not a sentence.
+    // A note that goes on to say something is kept whole, as it was written.
+    if (!looksLikeLocator(read)) return null;
     return { kind: 'full', ...read, source: { ...read.source, ...(doi ? { doi } : {}), ...(url ? { url } : {}) } };
   }
   if (url) return webPage(said, url);
@@ -224,7 +234,9 @@ export const recogniseNote = (text: string): RecognisedNote | null => {
     const surname = (short[1] as string).split(/\s+and\s+|,\s*/)[0]?.trim() ?? '';
     // A short note names people by surname alone: one word each.
     if (!/^[\p{Lu}][\p{L}'’-]*$/u.test(surname)) return null;
-    return { kind: 'short', surname, title: (short[2] as string).trim(), ...readLocator(short[3] ?? '') };
+    const pinpoint = readLocator(short[3] ?? '');
+    if (!looksLikeLocator(pinpoint)) return null;
+    return { kind: 'short', surname, title: (short[2] as string).trim(), ...pinpoint };
   }
   return null;
 };
@@ -264,6 +276,14 @@ export interface NotesRead {
  * A note that is not read stays a source of its own, kept as written — once
  * however many times the same words appear, as before.
  */
+/**
+ * A note's words as a source keeps them: whole up to the library's limit, and
+ * cut short with an ellipsis past it, so one very long note (a page of
+ * commentary after its source) does not stop the whole file coming in.
+ */
+const AS_WRITTEN_MOST = 5000;
+const keptAsWritten = (text: string): string => (text.length > AS_WRITTEN_MOST ? `${text.slice(0, AS_WRITTEN_MOST - 1)}…` : text);
+
 export const readNotes = (notes: readonly { key: string; text: string }[]): NotesRead => {
   const sources: NoteSourceRead[] = [];
   const cited: NotesRead['cited'] = [];
@@ -274,7 +294,7 @@ export const readNotes = (notes: readonly { key: string; text: string }[]): Note
     const same = text.toLowerCase();
     const known = byWords.get(same);
     if (known !== undefined) return known;
-    sources.push({ source: null, asWritten: text });
+    sources.push({ source: null, asWritten: keptAsWritten(text) });
     byWords.set(same, sources.length - 1);
     return sources.length - 1;
   };
@@ -286,7 +306,7 @@ export const readNotes = (notes: readonly { key: string; text: string }[]): Note
       const facts = `${squash(surnameOf(read.source))}|${squash(read.source.title)}`;
       at = byFacts.get(facts) ?? null;
       if (at === null) {
-        sources.push({ source: read.source, asWritten: note.text });
+        sources.push({ source: read.source, asWritten: keptAsWritten(note.text) });
         at = sources.length - 1;
         byFacts.set(facts, at);
       }
@@ -459,7 +479,7 @@ export const notesIntoLibrary = (
       referenceId: ids[one.source],
       key,
       locatorKind: one.locatorKind,
-      locator: one.locator,
+      locator: one.locator.slice(0, 120),
       createdAt: timestamp,
       updatedAt: timestamp,
     });

@@ -98,7 +98,7 @@ const firstBelow = (doc: Document, points: { text: Text; offset: number }[], bel
  * first: its first lines, and the rest to go on. Measured with the block in
  * `into`, where it is set; it is taken out again, untouched.
  */
-const lineCuts = (doc: Document, node: Element, into: Element, fewest = 1): { head: Element; tail: Element }[] => {
+export const lineCuts = (doc: Document, node: Element, into: Element, fewest = 1): { head: Element; tail: Element }[] => {
   into.appendChild(node);
   const lines = linesOf(doc, node);
   const points = textPoints(doc, node);
@@ -128,9 +128,9 @@ const lineCuts = (doc: Document, node: Element, into: Element, fewest = 1): { he
 };
 
 /** A note may break over the page only when it is long: more than a third of the page. */
-const LONG_NOTE = 1 / 3;
+export const LONG_NOTE = 1 / 3;
 /** And it keeps at least this many lines on the page its marker is on, as a book's does. */
-const NOTE_LINES_KEPT = 2;
+export const NOTE_LINES_KEPT = 2;
 
 /**
  * Set the document's words into pages with room for their notes. `body` is

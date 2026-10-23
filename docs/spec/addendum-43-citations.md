@@ -1099,13 +1099,41 @@ each page's notes end exactly at its foot (960, 2016 and 3072 pixels down a
 Letter sheet), the page count matches, and typing on page 2 keeps the caret
 and sets the pages again.
 
-## 26. Not yet
+## 26. A long note breaking over the page on screen
+
+The page view (§25) never broke a note: a page's notes took at most three
+fifths of it, and a long one was cut off at the screen's foot. It breaks
+now as the print's does (§24), with the same rules and helpers (`lineCuts`,
+`LONG_NOTE`, `NOTE_LINES_KEPT`, shared with `foot-notes.ts`):
+
+- **When it breaks.** Only the last note cited on a page, only when it
+  won't stand whole there, and only when it's longer than a third of a page.
+  The page ends at the line that cites it, and at least two of the note's
+  lines stay.
+- **Where the rest goes.** First at the next page's foot, under a rule the
+  width of the page. A carry longer than two thirds of a page is set that
+  far and carried on again. A note still carried after the last words
+  finishes on further pages at the end of the sheet, each with its foot.
+- **The same markup as the paper.** The gaps draw each page's notes with
+  the print's own `pageNotesHtml`, so the screen and the paper agree.
+
+**Found on the way: two faults in reading Word notes (§20, §22).**
+
+- A note that went on after its source ("…2019), 12. He is wrong about the
+  bar…") matched the book's shape, and everything after the source was taken
+  as its page. A page has a 120-character limit, so the whole insert or
+  import failed. A pinpoint now has to look like one: a page, a section, a
+  time, or something short with no new sentence or semicolon in it.
+  Otherwise the note is kept whole as written, as §20 says it should be.
+- A note longer than the 5,000 characters a source keeps as written also
+  failed the whole file. It's now cut there with an ellipsis, and the
+  locator is clamped to its limit too, so one note can never stop a file
+  coming in.
+
+## 27. Not yet
 
 - A Word note in a form other than Chicago's (APA's or MLA's parentheses, a
   note that says something besides its source) is kept whole and flagged.
 - The eBook has no pages, so it carries no heads, feet or page numbers.
-- In the editor's page view a note never breaks over the page (the print's
-  does, §24): a page's notes take at most three fifths of it on the screen,
-  and the rest is cut off there.
 - One library held live between projects: sources are brought in as copies,
   and a change in one project does not reach the other.
