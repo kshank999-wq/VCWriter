@@ -326,4 +326,31 @@ describe('a glossary that cites (addendum 43 §14)', () => {
     const key = after.citations[0]!.key;
     expect(readerExtraOf(pageOf(after, 'reader_extra')).questions[0]!.text).toBe(`What did Jones get wrong?[^${key}]`);
   });
+
+  it('cites from a newsletter’s message and from the note beside another title', () => {
+    const start = (about: Record<string, unknown>) => {
+      let file = createProjectFile({ title: 'The Sea', format: 'instructional' });
+      file = addReference(file, { title: 'On Tides', authors: ['Jones, Robert'] }).file;
+      return addPart(file, 'reader_extra', { about }).file;
+    };
+    let seen: ProjectFile | null = null;
+    const news = start({ kind: 'newsletter', message: 'Tide tables for every port.' });
+    render(<Harness kind={pageOf(news, 'reader_extra').id as PartKind} start={() => news} onFile={(one) => (seen = one)} />);
+    const message = screen.getByLabelText('Message') as HTMLTextAreaElement;
+    message.setSelectionRange(message.value.length - 1, message.value.length - 1);
+    fireEvent.click(screen.getByRole('button', { name: 'Cite…' }));
+    fireEvent.doubleClick(within(screen.getByRole('listbox', { name: 'Sources' })).getByRole('option'));
+    let after = seen as unknown as ProjectFile;
+    expect(readerExtraOf(pageOf(after, 'reader_extra')).message).toBe(`Tide tables for every port[^${after.citations[0]!.key}].`);
+    cleanup();
+
+    const also = start({ kind: 'also_by', titles: [{ id: 'b1', title: 'The Moon’s Hours', series: 'after Jones' }] });
+    render(<Harness kind={pageOf(also, 'reader_extra').id as PartKind} start={() => also} onFile={(one) => (seen = one)} />);
+    const note = screen.getByLabelText('Series note') as HTMLTextAreaElement;
+    note.setSelectionRange(note.value.length, note.value.length);
+    fireEvent.keyDown(note, { key: 'C', ctrlKey: true, shiftKey: true });
+    fireEvent.doubleClick(within(screen.getByRole('listbox', { name: 'Sources' })).getByRole('option'));
+    after = seen as unknown as ProjectFile;
+    expect(readerExtraOf(pageOf(after, 'reader_extra')).titles[0]!.series).toBe(`after Jones[^${after.citations[0]!.key}]`);
+  });
 });

@@ -234,4 +234,53 @@ describe('citations in the front and back matter', () => {
     expect(html).toContain(`What did Jones get wrong?<sup class="bk-cite" data-cite="${second.citation.key}">5</sup>`);
     expect(html).toContain('<span class="bk-note-mark">5.</span> Jones, <i>On Tides</i>, 51.');
   });
+
+  it('cites from a newsletter’s message and the notes beside the author’s other titles', () => {
+    let { file } = book();
+    const source = file.references[0]!.id;
+    const message = insertCitation(file, { referenceId: source, locator: '60' });
+    file = message.file;
+    const note = insertCitation(file, { referenceId: source, locator: '61' });
+    file = note.file;
+    const newsletter = addPart(file, 'reader_extra', { about: { kind: 'newsletter', message: `Tide tables for every port, as Jones kept them.${message.token}` } });
+    file = newsletter.file;
+    const also = addPart(file, 'reader_extra', {
+      about: {
+        kind: 'also_by',
+        titles: [
+          { id: 'b1', title: 'The Moon’s Hours', series: `after Jones’s tables${note.token}` },
+          { id: 'b2', title: '', series: 'a title with no name is not listed' },
+        ],
+      },
+    });
+    file = also.file;
+    const occurrences = citationOccurrences(file);
+    // After the foreword (1), the story (2) and the appendix (3): the newsletter, then the also-by.
+    expect(occurrences.filter((one) => one.partId === newsletter.partId).map((one) => one.marker)).toEqual(['4']);
+    expect(occurrences.filter((one) => one.partId === also.partId).map((one) => [one.key, one.marker])).toEqual([[note.citation.key, '5']]);
+
+    const blocks = bookBlocks(file);
+    const title = blocks.find((block) => block.partId === also.partId && block.role === 'also')!;
+    expect(title.text).toBe(`The Moon’s Hours — after Jones’s tables${note.token}`);
+    const settings = bookSettingsOf(file);
+    const context: BookRenderContext = {
+      settings,
+      geometry: geometryOf(settings, 'instructional', 100),
+      chapterStyle: chapterPageStyleOf(file),
+      paragraphStyle: 'indented',
+      pictures: new Map(),
+      names: bookNames(file),
+      titlePage: titlePageOf(file.project, file.settings),
+      contents: [],
+      index: null,
+      citations: bookCitationsOf(file),
+    };
+    const page: BookPage = {
+      sheet: 24, side: 'recto', numbering: 'arabic', number: 13, folio: '13', counted: '13', runningHead: '', runningFoot: '', chapterTitle: '',
+      display: false, blank: false, opens: false, pieces: [{ blockId: title.id, from: 0, to: 1 }], notes: [note.citation.key], noteParts: [], depth: 1, target: 30,
+    };
+    const html = renderBookPage(page, new Map(blocks.map((block) => [block.id, block])), context);
+    expect(html).toContain(`The Moon’s Hours — after Jones’s tables<sup class="bk-cite" data-cite="${note.citation.key}">5</sup>`);
+    expect(html).toContain('<span class="bk-note-mark">5.</span> Jones, <i>On Tides</i>, 61.');
+  });
 });

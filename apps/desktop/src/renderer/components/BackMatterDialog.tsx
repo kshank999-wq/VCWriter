@@ -894,7 +894,8 @@ function Card({
           <>
             <label className="field">
               <span>Message</span>
-              <textarea className="dp-serif-input" aria-label="Message" rows={4} value={own.message} onChange={(event) => write({ message: event.target.value })} />
+              {/* The message may cite (addendum 43 §17). */}
+              <CitableText file={file} onUpdate={onUpdate} className="dp-serif-input" aria-label="Message" rows={4} value={own.message} onChange={(message) => write({ message })} />
             </label>
             <label className="field">
               <span>Sign-up link</span>
@@ -954,11 +955,15 @@ function Card({
                     value={one.title}
                     onChange={(event) => write({ titles: own.titles.map((two) => (two.id === one.id ? { ...two, title: event.target.value } : two)) })}
                   />
-                  <input
+                  {/* The note beside a title may cite (addendum 43 §17); the title itself is a book's name. */}
+                  <CitableText
+                    file={file}
+                    onUpdate={onUpdate}
                     aria-label="Series note"
                     placeholder="Book Two of the Lamp"
+                    rows={1}
                     value={one.series}
-                    onChange={(event) => write({ titles: own.titles.map((two) => (two.id === one.id ? { ...two, series: event.target.value } : two)) })}
+                    onChange={(series) => write({ titles: own.titles.map((two) => (two.id === one.id ? { ...two, series } : two)) })}
                   />
                   <button type="button" className="ghost item-x" aria-label="Remove this title" onClick={() => write({ titles: own.titles.filter((two) => two.id !== one.id) })}>
                     ×

@@ -251,7 +251,7 @@ export const readerExtraOf = (part: Pick<BookPart, 'about'>): ReaderExtra => rea
  * author renames the page with nothing run.
  */
 export const extraHeading = (file: ProjectFile, kind: ExtraKind): string =>
-  kind === 'also_by' ? `Also by ${bookNames(file).author}` : EXTRA_WORDS[kind].heading;
+  kind === 'also_by' ? `Also by ${bookNames(file).author}`.trim() : EXTRA_WORDS[kind].heading;
 
 /** The smallest a printed code may be and still scan (the handoff's §3.7). */
 export const QR_MINIMUM_INCHES = 0.8;

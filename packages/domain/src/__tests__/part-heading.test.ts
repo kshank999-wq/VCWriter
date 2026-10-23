@@ -35,6 +35,9 @@ describe('a reader extra’s heading', () => {
     expect(partHeading(pageOf(questions.file, questions.id))).toBe('Questions for Discussion');
     const also = withExtra({ kind: 'also_by' });
     expect(partHeading(pageOf(also.file, also.id), also.file)).toBe('Also by R. Jones');
+    // A book with no author yet says only that, with no space left hanging.
+    const none = addPart(createProjectFile({ title: 'The Sea', format: 'instructional' }), 'reader_extra', { about: { kind: 'also_by' } });
+    expect(partHeading(pageOf(none.file, none.partId!), none.file)).toBe('Also by');
   });
 
   it('prints on the page, in the contents and in the eBook', () => {

@@ -20,6 +20,7 @@ kept current, and headers and footers for instructional publishing.
 | 8 | Citations in a glossary's definitions | **built** (§14) |
 | 9 | Citations in a reader extra's discussion questions | **built** (§15) |
 | 10 | A reader extra's heading as its card promises | **fixed** (§16) |
+| 11 | Citations in a newsletter's message and beside the author's other titles | **built** (§17) |
 
 **What already existed.** The Layout room (addendum 20) had measured pages,
 running heads (the book's title on the verso, the chapter's on the recto),
@@ -777,11 +778,50 @@ they stand.
 Seen in Chromium: the discussion-questions page of §15 now heads itself
 *Questions for Discussion*, and the rail names it so.
 
-## 17. Not yet
+## 17. Citations in a newsletter and in *also by*
+
+From Ken: *build the newsletter and also by citations next.* These are the
+reader extra's two kinds that §15 left out.
+
+- **A newsletter's message** is a `CitableText` in the reader extra's card,
+  the paragraphs of the message citing as any page's words do. The link and
+  its code do not cite; they are an address, not a claim.
+- **The author's other titles** (*also by*). Each title is a book's name,
+  and the series note beside it is where a source belongs (*a field guide,
+  after Jones's tables*). So the note is a `CitableText`, one line high, and
+  the title is a plain field. A title with no name is not listed, and its
+  note is not read.
+- The separate **Also by** page, written as words of its own, already cited
+  through its text box (§13).
+- **Where they count.** In the reader extra's place in the back matter: the
+  message's paragraphs in order, or the notes in the order the titles are
+  listed (`wordsOfPart`).
+- **On the page.** A message's paragraphs and a title's line (*The Moon's
+  Hours — a field guide, after Jones's tables*) are paragraphs of the page
+  already, so the marker is raised and the note set at the foot. The eBook
+  and Word read the same paragraphs.
+
+An *also by* page in a book with no author yet is headed *Also by*, with no
+space left hanging after it (`extraHeading`).
+
+**Proof.**
+- `matter-citations.test.ts`:
+  - a newsletter's message and a title's note numbered in their place after
+    the story and an appendix
+  - a nameless title's note left unread
+  - the title's line drawn with its marker raised and its note at the foot
+- `back-matter-dialog.test.tsx`: citing from a message with Cite…, and from
+  a series note with Ctrl+Shift+C.
+- `part-heading.test.ts`: *Also by* alone where the book has no author.
+- Seen in Chromium: an *also by* page with *The Moon's Hours — a field
+  guide, after Jones's tables*, marker 3 after *tables*, and its note at the
+  foot.
+
+## 18. Not yet
 
 - A page set inside the story is numbered after the story, not where it
   stands.
-- A newsletter's message and an *also by* list do not cite.
+- A preview chapter's lead-in does not cite.
 - Recognising a Word note's parts (author, title, publisher) automatically.
   They are kept whole and flagged.
 - A division's head set to print nothing: an empty box is the book's, and

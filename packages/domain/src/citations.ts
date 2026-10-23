@@ -433,15 +433,20 @@ export const citationOccurrences = (file: ProjectFile): CitationOccurrence[] => 
 
 /**
  * **The words a page of front or back matter prints, in its order** (§13,
- * §14, §15): its own text; on a glossary, its definitions as the page sets
- * them, sorted where it sorts; on a reader extra of discussion questions, its
- * questions in order. A citation is numbered where it is read.
+ * §14, §15, §17): its own text; on a glossary, its definitions as the page
+ * sets them, sorted where it sorts; on a reader extra, its questions in order,
+ * its newsletter's message, or the notes beside the author's other titles. A
+ * citation is numbered where it is read.
  */
 const wordsOfPart = (part: BookPart): string => {
   if (part.kind === 'glossary') return glossaryEntries(part).map((entry) => entry.definition).join('\n');
   if (part.kind === 'reader_extra') {
     const own = readerExtraOf(part);
     if (own.kind === 'questions') return own.questions.map((one) => one.text).join('\n');
+    // A newsletter's message (§17), and the note beside each title the
+    // author has written, in the order the page lists them.
+    if (own.kind === 'newsletter') return own.message;
+    if (own.kind === 'also_by') return own.titles.filter((one) => one.title.trim().length > 0).map((one) => one.series).join('\n');
   }
   return part.text;
 };
