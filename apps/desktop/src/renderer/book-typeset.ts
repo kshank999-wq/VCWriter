@@ -33,6 +33,7 @@ import {
   type NotePlacements,
   type Wraps,
   type ProjectFile,
+  type PrintPageStart,
 } from '@vcwriter/domain';
 
 /**
@@ -60,6 +61,8 @@ export interface Laying {
   context: BookRenderContext;
   laid: LaidBook;
   measured: Measured;
+  /** Where each printed page begins, for the reflowable eBook's page numbers (addendum 43 §28). */
+  pageStarts?: PrintPageStart[];
 }
 
 const picturesOf = (file: ProjectFile): Map<string, BookPicture> =>
@@ -270,7 +273,73 @@ export const layBook = (file: ProjectFile, box: HTMLElement): Laying => {
     pages = laying.laid.pages.length;
     laying = once(pages);
   }
-  return countedAt(laying, laying.laid.pages.length);
+  const counted = countedAt(laying, laying.laid.pages.length);
+  return { ...counted, pageStarts: printPageStarts(box, counted) };
+};
+
+/**
+ * **Where each printed page begins, in characters** (addendum 43 §28). The
+ * laying says which line of which block a page opens on; the eBook needs the
+ * character, so each block a page turns inside is drawn again and the first
+ * character of that line found, by the middles of the characters' boxes. A
+ * page with nothing on it (a blank leaf) begins where the next page does.
+ */
+export const printPageStarts = (box: HTMLElement, laying: Laying): PrintPageStart[] => {
+  const { leadPx } = bookMetrics(laying.geometry);
+  const byId = new Map(laying.blocks.map((block) => [block.id, block]));
+  const vars = bookVars(laying.context);
+  for (const [name, value] of Object.entries(vars)) box.style.setProperty(name, value);
+  box.className = `bk-measure ${textClass(laying.context)}`;
+  /** The first character of a block's line, counted in its words. */
+  const charAt = (block: BookBlock, line: number): number => {
+    box.innerHTML = `<div class="bk-item">${renderBookBlock(block, laying.context)}</div>`;
+    const item = box.firstElementChild as HTMLElement;
+    const top = item.getBoundingClientRect().top;
+    const points: { text: Text; offset: number }[] = [];
+    const walker = item.ownerDocument.createTreeWalker(item, NodeFilter.SHOW_TEXT, {
+      // The words alone: a citation's marker, a picture's caption and the like are not counted.
+      acceptNode: (node) => ((node.parentElement?.closest('.bk-cite, .bk-cite-text, .bk-inset, .bk-free, figcaption') ?? null) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
+    });
+    for (let text = walker.nextNode() as Text | null; text; text = walker.nextNode() as Text | null) {
+      for (let offset = 0; offset < text.data.length; offset += 1) points.push({ text, offset });
+    }
+    const range = item.ownerDocument.createRange();
+    const lineOf = (at: number): number => {
+      const point = points[at] as { text: Text; offset: number };
+      range.setStart(point.text, point.offset);
+      range.setEnd(point.text, point.offset + 1);
+      const rect = range.getBoundingClientRect();
+      return Math.floor(((rect.top + rect.bottom) / 2 - top) / leadPx);
+    };
+    let low = 0;
+    let high = points.length;
+    while (low < high) {
+      const mid = (low + high) >> 1;
+      if (lineOf(mid) >= line) high = mid;
+      else low = mid + 1;
+    }
+    return low;
+  };
+  const starts: PrintPageStart[] = [];
+  let blankLabels: string[] = [];
+  for (const page of laying.laid.pages) {
+    const label = page.counted || page.folio || String(page.sheet);
+    const piece = page.pieces[0];
+    const block = piece ? byId.get(piece.blockId) : undefined;
+    if (!piece || !block) {
+      blankLabels.push(label);
+      continue;
+    }
+    const at = piece.from > 0 && !block.display ? charAt(block, piece.from) : 0;
+    for (const blank of blankLabels) starts.push({ label: blank, blockId: block.id, at });
+    blankLabels = [];
+    starts.push({ label, blockId: block.id, at });
+  }
+  // Blank pages after the last words belong to the last block's end.
+  const last = starts[starts.length - 1];
+  if (last) for (const blank of blankLabels) starts.push({ label: blank, blockId: last.blockId, at: last.at });
+  box.innerHTML = '';
+  return starts;
 };
 
 /**

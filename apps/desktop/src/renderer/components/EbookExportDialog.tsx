@@ -93,7 +93,7 @@ export function EbookExportDialog({ open, file, laid = null, onClose, onUpdate }
   // would be written.
   const pkg = useMemo(() => {
     if (!open) return null;
-    return layout === 'fixed' && laid ? fixedEbookOf(file, laid, { target }) : ebookOf(file, { target });
+    return layout === 'fixed' && laid ? fixedEbookOf(file, laid, { target }) : ebookOf(file, { target, printPages: laid?.pageStarts ?? [] });
   }, [file, target, open, layout, laid]);
   const report = useMemo(() => (pkg ? preflightEbook(pkg) : null), [pkg]);
   const pictures = file.assets.filter((asset) => asset.kind === 'image' && asset.data.length > 0);
@@ -270,6 +270,14 @@ export function EbookExportDialog({ open, file, laid = null, onClose, onUpdate }
                   </label>
                 </fieldset>
 
+                {/* The print's page numbers in a reflowable book (addendum 43 §28). */}
+                {pkg.layout === 'reflowable' ? (
+                  <p className="muted small" aria-label="Page numbers">
+                    {laid?.pageStarts?.length
+                      ? `Page numbers: the printed book's ${laid.pageStarts.length} pages are marked where they turn, and listed, so a reader can go to a page as it is in print. The reading app shows the chapter's title at the top of its own pages.`
+                      : 'Page numbers: open the Layout room first, and the printed book’s pages are marked in the eBook so a reader can go to a page as it is in print.'}
+                  </p>
+                ) : null}
                 <h4>The book</h4>
                 <p className="muted small">
                   {pkg.metadata.title}

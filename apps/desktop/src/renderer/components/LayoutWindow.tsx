@@ -1899,7 +1899,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
       <EbookExportDialog
         open={ebookOpen}
         file={file}
-        laid={laying ? { pages: laying.laid.pages, blocks: laying.blocks, context: laying.context } : null}
+        laid={laying ? { pages: laying.laid.pages, blocks: laying.blocks, context: laying.context, pageStarts: laying.pageStarts ?? [] } : null}
         onClose={() => setEbookOpen(false)}
         onUpdate={onUpdate}
       />

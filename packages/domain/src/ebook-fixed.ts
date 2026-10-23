@@ -1,3 +1,4 @@
+import type { PrintPageStart } from './ebook.js';
 import { partsOf, partHeading, type BookBlock } from './book-plan.js';
 import { bookSettingsOf } from './book-layout.js';
 import { BOOK_STYLES, bookMetrics, bookVars, renderBookPage, type BookRenderContext } from './print-book.js';
@@ -40,6 +41,8 @@ export interface LaidForEbook {
   pages: readonly BookPage[];
   blocks: readonly BookBlock[];
   context: BookRenderContext;
+  /** Where each printed page begins, for the reflowable book's page numbers (addendum 43 §28). */
+  pageStarts?: readonly PrintPageStart[];
 }
 
 const PICTURED = /bk-figure-image|bk-plate-image|bk-inset-image|bk-title-art|bk-chapter-image|<img\b/;

@@ -1165,11 +1165,52 @@ and short form, for a book and an article. In the preview, a Word file with
 six APA notes came into a document as four sources, its book cited three
 times at its own pages.
 
-## 28. Not yet
+## 28. The printed book's page numbers in the eBook
+
+A reflowable eBook has no pages of its own. The reading app sets them to
+the screen and the reader's type size, and draws its own top line. Running
+heads and feet can't travel, so none were made. What can, and what readers,
+teachers and accessibility rules ask for, is **the printed book's page
+numbers**: "page 37" in the eBook is page 37 in print, so a citation or a
+class discussion finds its place in either. They now travel.
+
+- **Where each printed page begins** (`printPageStarts`, in the Layout
+  room's typesetter). The laying says which line of which block each page
+  opens on. Each block a page turns inside is drawn again, and the first
+  character of that line found by the middles of the characters' boxes,
+  counting only the words (not a citation's marker or a caption). A blank
+  page, or one the eBook doesn't carry (the contents, an index), begins
+  where the next page that it does carry begins.
+- **Markers in the eBook** (`ebookOf(file, { printPages })`). At each page's
+  start, an empty `<span epub:type="pagebreak" role="doc-pagebreak"
+  aria-label="37">`, before the block or among its words where a page
+  turns inside a paragraph, even inside italics. The words are set with a
+  private-use stand-in character at each turn, replaced by its marker.
+- **The page list.** The navigation document carries a hidden
+  `<nav epub:type="page-list">`, one entry per printed page (roman in the
+  front matter, arabic after). The EPUB 2 navigation, where the store
+  wants it, carries a `<pageList>` with its counts.
+- **Said in the package.** `printPageNumbers`, `pageBreakMarkers` and
+  `pageNavigation` are added to the accessibility features, and
+  `a11y:pageBreakSource` names the source: the book's print edition.
+- **Heads.** The reading app's own top line shows the section's title, from
+  each content file's `<title>`, which is the chapter's or the page's own
+  title. Nothing more is written for it.
+- **The export screen** says how many printed pages are marked, or that the
+  Layout room must be opened first.
+
+Checked in Chromium: a book laid in the Layout room at 11 pages exported as
+an EPUB with 11 page-list entries (i–vi, 1–5). The marker for page 3 stands
+at "because the chart tells him…", mid-paragraph, the first words of page 3
+in the Layout room.
+
+## 29. Not yet
 
 - A Word note in a form other than Chicago's, APA's or MLA's (Harvard's
   author-date notes beyond "(Smith 2019)", a legal citation), or one that
   says something besides its source, is kept whole and flagged.
-- The eBook has no pages, so it carries no heads, feet or page numbers.
+- A reflowable eBook exported without the Layout room open carries no print
+  page numbers: the pages are only known once the room has laid them.
+- The fixed-layout eBook is unchanged: its pages are the laid pages already.
 - One library held live between projects: sources are brought in as copies,
   and a change in one project does not reach the other.

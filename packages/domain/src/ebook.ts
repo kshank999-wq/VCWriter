@@ -440,6 +440,31 @@ export const accessibilityMeta = (images: readonly EbookImage[], cover: EbookCov
     .join('\n');
 };
 
+/** One printed page in the navigation's page list: where its marker is, and its number. */
+export interface EbookPageTarget {
+  href: string;
+  label: string;
+}
+
+/** The highest page number among the arabic ones, for the EPUB 2 navigation. */
+const maxPageNumber = (pages: readonly EbookPageTarget[]): number =>
+  pages.reduce((most, page) => (/^\d+$/.test(page.label) ? Math.max(most, Number(page.label)) : most), 0);
+
+/**
+ * What a book carrying the print's pages says of them (§28): that it has
+ * page-break markers and a page list, and which edition they are the pages
+ * of — the print book of the same title.
+ */
+const printPagesMeta = (pages: readonly EbookPageTarget[], metadata: EbookMetadata): string =>
+  pages.length === 0
+    ? ''
+    : [
+        `<meta property="schema:accessibilityFeature">printPageNumbers</meta>`,
+        `<meta property="schema:accessibilityFeature">pageBreakMarkers</meta>`,
+        `<meta property="schema:accessibilityFeature">pageNavigation</meta>`,
+        `<meta property="a11y:pageBreakSource">${escapeXml(`${metadata.title}, print edition`)}</meta>`,
+      ].join('\n') + '\n';
+
 export interface PackageDraft {
   metadata: EbookMetadata;
   rules: EbookRules;
@@ -469,6 +494,8 @@ export interface PackageDraft {
   margins?: EbookMargins | null;
   /** Package-level `rendition:` and other `meta` lines beyond the standard set. */
   extraMeta?: string[];
+  /** The print's pages, where the book carries them (§28): the navigation's page list. */
+  pageList?: EbookPageTarget[];
   log: string[];
   fileName: string;
   pages: EbookPackage['pages'];
@@ -481,6 +508,7 @@ export interface PackageDraft {
  */
 export const finishPackage = (draft: PackageDraft): EbookPackage => {
   const { metadata, rules, layout, images, cover, log } = draft;
+  const pageList = draft.pageList ?? [];
   const lang = escapeXml(metadata.language);
   const sections = draft.sections.slice();
   const entries: EpubEntry[] = draft.content.slice();
@@ -502,7 +530,12 @@ export const finishPackage = (draft: PackageDraft): EbookPackage => {
   const nav =
     `<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE html>\n<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="${lang}" lang="${lang}">\n<head>\n<meta charset="utf-8"/>\n<title>Contents</title>\n<link rel="stylesheet" type="text/css" href="${draft.css.href}"/>\n</head>\n<body>\n` +
     `<nav epub:type="toc" id="toc">\n<h1>Contents</h1>\n<ol>\n${draft.nav.map((item) => `<li><a href="${item.href}">${escapeXml(item.title)}</a></li>`).join('\n')}\n</ol>\n</nav>\n` +
-    `<nav epub:type="landmarks" hidden="hidden">\n<h1>Landmarks</h1>\n<ol>\n${landmarks}\n</ol>\n</nav>\n</body>\n</html>\n`;
+    `<nav epub:type="landmarks" hidden="hidden">\n<h1>Landmarks</h1>\n<ol>\n${landmarks}\n</ol>\n</nav>\n` +
+    // The print's pages (§28): a reader goes to page 37 as it is in the printed book.
+    (pageList.length > 0
+      ? `<nav epub:type="page-list" hidden="hidden">\n<h1>Pages</h1>\n<ol>\n${pageList.map((page) => `<li><a href="${page.href}">${escapeXml(page.label)}</a></li>`).join('\n')}\n</ol>\n</nav>\n`
+      : '') +
+    `</body>\n</html>\n`;
   entries.push({ path: 'OEBPS/toc.xhtml', mediaType: 'application/xhtml+xml', id: 'nav', properties: 'nav', data: nav });
 
   if (rules.includeNcx) {
@@ -517,8 +550,17 @@ export const finishPackage = (draft: PackageDraft): EbookPackage => {
       mediaType: 'application/x-dtbncx+xml',
       id: 'ncx',
       data:
-        `<?xml version="1.0" encoding="UTF-8"?>\n<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">\n<head>\n<meta name="dtb:uid" content="${escapeXml(metadata.identifier.urn)}"/>\n<meta name="dtb:depth" content="1"/>\n<meta name="dtb:totalPageCount" content="0"/>\n<meta name="dtb:maxPageNumber" content="0"/>\n</head>\n` +
-        `<docTitle><text>${escapeXml(metadata.title)}</text></docTitle>\n<navMap>\n${points}\n</navMap>\n</ncx>\n`,
+        `<?xml version="1.0" encoding="UTF-8"?>\n<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">\n<head>\n<meta name="dtb:uid" content="${escapeXml(metadata.identifier.urn)}"/>\n<meta name="dtb:depth" content="1"/>\n<meta name="dtb:totalPageCount" content="${pageList.length}"/>\n<meta name="dtb:maxPageNumber" content="${maxPageNumber(pageList)}"/>\n</head>\n` +
+        `<docTitle><text>${escapeXml(metadata.title)}</text></docTitle>\n<navMap>\n${points}\n</navMap>\n` +
+        (pageList.length > 0
+          ? `<pageList>\n${pageList
+              .map(
+                (page, index) =>
+                  `<pageTarget id="pt-${index + 1}" type="${/^\d+$/.test(page.label) ? 'normal' : 'front'}" value="${/^\d+$/.test(page.label) ? page.label : index + 1}" playOrder="${draft.nav.length + index + 1}"><navLabel><text>${escapeXml(page.label)}</text></navLabel><content src="${page.href}"/></pageTarget>`,
+              )
+              .join('\n')}\n</pageList>\n`
+          : '') +
+        `</ncx>\n`,
     });
   }
 
@@ -559,7 +601,7 @@ export const finishPackage = (draft: PackageDraft): EbookPackage => {
   const prefix = layout === 'fixed' ? ' prefix="rendition: http://www.idpf.org/vocab/rendition/#"' : '';
   const opf =
     `<?xml version="1.0" encoding="UTF-8"?>\n<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="pub-id" xml:lang="${lang}"${prefix}>\n` +
-    `<metadata xmlns:dc="http://purl.org/dc/elements/1.1/">\n<dc:identifier id="pub-id">${escapeXml(metadata.identifier.urn)}</dc:identifier>\n<dc:title id="title">${escapeXml(metadata.title)}</dc:title>\n${creators}\n<dc:language>${lang}</dc:language>\n<meta property="dcterms:modified">${escapeXml(metadata.modified)}</meta>\n${optional}\n${accessibilityMeta(images, cover, layout)}\n</metadata>\n` +
+    `<metadata xmlns:dc="http://purl.org/dc/elements/1.1/">\n<dc:identifier id="pub-id">${escapeXml(metadata.identifier.urn)}</dc:identifier>\n<dc:title id="title">${escapeXml(metadata.title)}</dc:title>\n${creators}\n<dc:language>${lang}</dc:language>\n<meta property="dcterms:modified">${escapeXml(metadata.modified)}</meta>\n${optional}\n${accessibilityMeta(images, cover, layout)}\n${printPagesMeta(pageList, metadata)}</metadata>\n` +
     `<manifest>\n${manifest}\n</manifest>\n<spine${rules.includeNcx ? ' toc="ncx"' : ''}>\n${spine}\n</spine>\n</package>\n`;
 
   const container = `<?xml version="1.0" encoding="UTF-8"?>\n<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">\n<rootfiles>\n<rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>\n</rootfiles>\n</container>\n`;
@@ -588,7 +630,58 @@ interface Draft {
   html: string[];
   /** The citations whose notes follow this section (addendum 43 §9). */
   notes: string[];
+  /** The printed pages that begin in this section (§28): each marker's id and number. */
+  pages: { id: string; label: string }[];
 }
+
+/**
+ * **Where a printed page begins** (addendum 43 §28): the block it opens in
+ * and how far into that block's words, in characters, with the number the
+ * page carries. Worked out by the Layout room from the pages it laid, and
+ * handed to the reflowable eBook so its page-break markers stand where the
+ * print's pages turn.
+ */
+export interface PrintPageStart {
+  label: string;
+  blockId: string;
+  /** Characters into the block's words (its spans' text, citations not counted); 0 at its start. */
+  at: number;
+}
+
+/** A private-use character standing in a block's words for a page break, while the words are set. */
+const SENTINEL = 0xe000;
+
+/** The spans with a stand-in character at each offset, so a marker can be set inside the words. */
+const markSpans = (spans: InlineSpan[], text: string, offsets: readonly number[]): InlineSpan[] => {
+  const source: InlineSpan[] = spans.length > 0 ? spans : [{ text, bold: false, italic: false, underline: false }];
+  const out: InlineSpan[] = [];
+  let seen = 0;
+  let next = 0;
+  for (const span of source) {
+    if (span.citation !== undefined || span.text.length === 0) {
+      out.push(span);
+      continue;
+    }
+    let rest = span.text;
+    let start = seen;
+    while (next < offsets.length && (offsets[next] as number) < start + rest.length) {
+      const cut = (offsets[next] as number) - start;
+      if (cut > 0) out.push({ ...span, text: rest.slice(0, cut) });
+      out.push({ text: String.fromCharCode(SENTINEL + next), bold: false, italic: false, underline: false });
+      rest = rest.slice(cut);
+      start += cut;
+      next += 1;
+    }
+    if (rest.length > 0) out.push({ ...span, text: rest });
+    seen += span.text.length;
+  }
+  // An offset at the very end goes after the last word.
+  while (next < offsets.length) {
+    out.push({ text: String.fromCharCode(SENTINEL + next), bold: false, italic: false, underline: false });
+    next += 1;
+  }
+  return out;
+};
 
 /**
  * Build the package: the blocks read into sections, the pictures pulled out
@@ -596,7 +689,15 @@ interface Draft {
  * stylesheet. Deterministic but for `modified`: the same book gives the same
  * files with the same names, so a second export replaces the first cleanly.
  */
-export const ebookOf = (file: ProjectFile, options: { modified?: string; target?: string } = {}): EbookPackage => {
+export const ebookOf = (
+  file: ProjectFile,
+  options: {
+    modified?: string;
+    target?: string;
+    /** Where the print's pages begin (§28), from the Layout room: the eBook marks them and lists them. */
+    printPages?: readonly PrintPageStart[];
+  } = {},
+): EbookPackage => {
   const settings = bookSettingsOf(file);
   const rules = ebookRulesFor(options.target ?? settings.ebook.target);
   const metadata = ebookMetadataOf(file, options);
@@ -630,8 +731,8 @@ export const ebookOf = (file: ProjectFile, options: { modified?: string; target?
    * again as big as the body, whatever the body turns out to be.
    */
   const bodyPt = settings.size > 0 ? settings.size : 11;
-  const begin = (draft: Omit<Draft, 'html' | 'notes'>) => {
-    current = { ...draft, html: [], notes: [] };
+  const begin = (draft: Omit<Draft, 'html' | 'notes' | 'pages'>) => {
+    current = { ...draft, html: [], notes: [], pages: [] };
     drafts.push(current);
     return current;
   };
@@ -644,9 +745,41 @@ export const ebookOf = (file: ProjectFile, options: { modified?: string; target?
   };
 
   const cites = bookCitationsOf(file);
-  /** The words of a block, its citations linked to the notes of the section they land in. */
-  const words = (block: BookBlock, draft: Draft): string =>
-    renderSpans(block.spans, block.text, cites ? { cites, keys: draft.notes } : null);
+
+  /**
+   * **The print's page numbers** (§28). Each page that begins in a block is a
+   * marker there: at its start, or among its words where a page turns inside
+   * a paragraph. A page that begins on something the eBook does not carry —
+   * a blank leaf, the contents — is marked at the next thing it does.
+   */
+  const pageStarts = new Map<string, PrintPageStart[]>();
+  for (const start of options.printPages ?? []) pageStarts.set(start.blockId, [...(pageStarts.get(start.blockId) ?? []), start]);
+  for (const list of pageStarts.values()) list.sort((a, b) => a.at - b.at);
+  const usedIds = new Set<string>();
+  const pageMarker = (start: PrintPageStart, draft: Draft): string => {
+    let id = `page-${safeName(start.label, 'n')}`;
+    for (let n = 2; usedIds.has(id); n += 1) id = `page-${safeName(start.label, 'n')}-${n}`;
+    usedIds.add(id);
+    draft.pages.push({ id, label: start.label });
+    return `<span epub:type="pagebreak" role="doc-pagebreak" id="${id}" aria-label="${escapeXml(start.label)}"></span>`;
+  };
+  /** Pages waiting for something to be marked on. */
+  let waiting: PrintPageStart[] = [];
+  const TEXTUAL = new Set(['paragraph', 'heading', 'blockquote']);
+  /** The pages that turn inside a block's words, set where they turn. */
+  const inside = (block: BookBlock): PrintPageStart[] =>
+    TEXTUAL.has(block.kind) ? (pageStarts.get(block.id) ?? []).filter((start) => start.at > 0) : [];
+
+  /** The words of a block, its citations linked to the notes of the section they land in, its page turns marked. */
+  const words = (block: BookBlock, draft: Draft): string => {
+    const turns = inside(block);
+    if (turns.length === 0) return renderSpans(block.spans, block.text, cites ? { cites, keys: draft.notes } : null);
+    const set = renderSpans(markSpans(block.spans, block.text, turns.map((one) => one.at)), block.text, cites ? { cites, keys: draft.notes } : null);
+    return set.replace(/[\uE000-\uF8FF]/g, (mark) => {
+      const start = turns[mark.charCodeAt(0) - SENTINEL];
+      return start ? pageMarker(start, draft) : '';
+    });
+  };
 
   const partOf = (block: BookBlock): BookPart | undefined => (block.partId ? parts.get(block.partId) : undefined);
 
@@ -656,6 +789,8 @@ export const ebookOf = (file: ProjectFile, options: { modified?: string; target?
 
   for (const block of bookBlocks(file)) {
     const part = partOf(block);
+    // The pages that begin at this block's start, and any still waiting for one.
+    waiting = [...waiting, ...(pageStarts.get(block.id) ?? []).filter((start) => start.at === 0 || !TEXTUAL.has(block.kind))];
     if (part && (!current || current.id !== partKey(part))) {
       if (part.kind === 'contents') {
         log.push('The contents page is the navigation document, which readers also show as their own table of contents.');
@@ -686,6 +821,8 @@ export const ebookOf = (file: ProjectFile, options: { modified?: string; target?
       current = null;
     }
 
+    const markedIn = current as Draft | null;
+    const markedAt = markedIn ? markedIn.html.length : 0;
     switch (block.kind) {
       case 'half_title':
         if (block.assetId && bank.asset(block.assetId, titlePage.title || metadata.title)) {
@@ -842,7 +979,21 @@ export const ebookOf = (file: ProjectFile, options: { modified?: string; target?
       default:
         break;
     }
+    // The block's start pages, before the first thing it set; where it set
+    // nothing, they wait for the next block that does.
+    const landed = current as Draft | null;
+    if (landed && waiting.length > 0) {
+      const fresh = landed !== markedIn;
+      const at = fresh ? 0 : markedAt;
+      if (landed.html.length > at) {
+        landed.html.splice(at, 0, waiting.map((start) => pageMarker(start, landed)).join(''));
+        waiting = [];
+      }
+    }
   }
+  // Pages after the last words (a blank leaf at the end) stand at the end of the last section.
+  const lastDraft = drafts[drafts.length - 1];
+  if (lastDraft && waiting.length > 0) lastDraft.html.push(waiting.map((start) => pageMarker(start, lastDraft)).join(''));
 
   const kept = drafts.filter((draft) => draft.html.join('').trim().length > 0);
   const sections: EbookSection[] = [];
@@ -862,9 +1013,11 @@ export const ebookOf = (file: ProjectFile, options: { modified?: string; target?
       }),
     });
   }
+  const pageList: EbookPageTarget[] = [];
   kept.forEach((draft, index) => {
     const href = `text/${String(index + 1).padStart(3, '0')}-${draft.slug}.xhtml`;
     sections.push({ id: draft.id, href, title: draft.title, kind: draft.kind });
+    for (const page of draft.pages) pageList.push({ href: `${href}#${page.id}`, label: page.label });
     content.push({
       path: `OEBPS/${href}`,
       mediaType: 'application/xhtml+xml',
@@ -903,6 +1056,7 @@ export const ebookOf = (file: ProjectFile, options: { modified?: string; target?
     log,
     fileName: `${safeName(metadata.title)}.epub`,
     pages: null,
+    pageList,
   });
 };
 
