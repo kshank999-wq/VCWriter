@@ -1270,7 +1270,35 @@ with the writer saying which stands.
   not at the next opening. The button says what it will do: "Bring in 1
   source and link 1 already here".
 
-## 31. Not yet
+## 31. Links that survive a moved project file
+
+A linked library (§29) was found by its file's path. Moved, renamed, or
+opened on another computer, the path led nowhere and the links waited until
+the writer brought the sources in again.
+
+- **The project's own id travels with the link** (`link.projectId`). It's
+  the same wherever the file is. A link made before it was kept learns it
+  the next time its library is read.
+- **Found where it was, if it's the same project.** The project at the
+  link's path is taken only if its id matches (`isLinkedLibrary`), so a
+  different project now at that path, even one of the same name, is never
+  mistaken for the library.
+- **Otherwise looked for.** The projects this computer knows are read, the
+  same name first, and the one with the library's id is the library. Every
+  link to the old place is moved to the new one (`relinkLibrary`), and the
+  sync (§29) carries on from there. The status line says the library was
+  followed.
+- **Pointed at, where it can't be found.** The library says which linked
+  project couldn't be found, and where it was last, and offers *Find The
+  Sea…*. The file the writer picks is taken only if it's that project; one
+  that isn't is refused with its name. Nothing linked to it is lost in the
+  meantime.
+
+Checked end to end in the browser preview: The Sea's stored record moved to
+a new place with a change made in it; opening the Document's library
+followed it there and took the change.
+
+## 32. Not yet
 
 - A Word note in a form other than Chicago's, APA's or MLA's (Harvard's
   author-date notes beyond "(Smith 2019)", a legal citation), or one that
@@ -1278,9 +1306,9 @@ with the writer saying which stands.
 - A reflowable eBook exported without the Layout room open carries no print
   page numbers: the pages are only known once the room has laid them.
 - The fixed-layout eBook is unchanged: its pages are the laid pages already.
-- A linked library is found by its file's path. Moved or renamed, or on
-  another computer where the path does not exist, the links wait (nothing
-  is lost) until the writer brings the sources in again from the new place.
+- A linked library that has moved is looked for among the projects this
+  computer knows (its recent projects). One that was never opened here is
+  found only when the writer points at it (*Find…*).
 - A change is sent into a project's file on disk. If that project is open
   in another window at the time, its next save puts back what it had, and
   the change is then taken back here at the next opening. (Sending extracts,

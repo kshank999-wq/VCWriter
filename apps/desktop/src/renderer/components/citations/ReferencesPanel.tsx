@@ -31,7 +31,9 @@ import {
   partsOf,
   occurrencesIn,
   fromWordReadable,
+  isLinkedLibrary,
   linkedLibraries,
+  relinkLibrary,
   settleLink,
   syncLinkedLibrary,
   unlinkReference,
@@ -121,15 +123,54 @@ export function ReferencesPanel({ file, onUpdate, readOnly = false, documentId =
     },
     [],
   );
+  /** Libraries that could not be found, where they were or anywhere else looked (§31). */
+  const [lost, setLost] = useState<{ path: string; title: string; projectId: string }[]>([]);
+  /**
+   * **A linked library, found** (§31): where its link says, if the project
+   * there is the one linked to; otherwise among the projects this computer
+   * knows, by the project's own id — the file having been moved, renamed or
+   * opened here from somewhere else. Null where it is nowhere to be found.
+   */
+  const locate = async (library: { path: string; title: string; projectId: string }) => {
+    const direct = await window.vcwriter.readProject(library.path);
+    if (direct.ok && direct.data && isLinkedLibrary(library, direct.data.file)) return { path: library.path, file: direct.data.file, hash: direct.data.contentHash };
+    if (!library.projectId || !window.vcwriter.listProjects) return null;
+    const listed = await window.vcwriter.listProjects();
+    const candidates = (listed.ok && listed.data ? listed.data : [])
+      .filter((entry) => !entry.missing && entry.path !== library.path)
+      // The same name first: a moved file usually keeps it.
+      .sort((a, b) => Number(b.title === library.title) - Number(a.title === library.title));
+    for (const entry of candidates.slice(0, 40)) {
+      const read = await window.vcwriter.readProject(entry.path);
+      if (read.ok && read.data && read.data.file.project.id === library.projectId) return { path: entry.path, file: read.data.file, hash: read.data.contentHash };
+    }
+    return null;
+  };
   const syncLinks = async () => {
     const libraries = linkedLibraries(fileNow.current);
     if (readOnly || libraries.length === 0 || !window.vcwriter?.readProject) return;
     const read = new Map<string, ProjectFile | null>();
     const hashes = new Map<string, string>();
+    const moves: { from: string; to: string; project: { id: string; title: string } }[] = [];
+    const missing: typeof lost = [];
     for (const library of libraries) {
-      const result = await window.vcwriter.readProject(library.path);
-      read.set(library.path, result.ok && result.data ? result.data.file : null);
-      if (result.ok && result.data) hashes.set(library.path, result.data.contentHash);
+      const found = await locate(library);
+      if (!found) {
+        read.set(library.path, null);
+        missing.push(library);
+        continue;
+      }
+      // Followed to where it is now, and its id learnt where the link had none.
+      if (found.path !== library.path || !library.projectId) moves.push({ from: library.path, to: found.path, project: { id: found.file.project.id, title: found.file.project.title } });
+      read.set(found.path, found.file);
+      hashes.set(found.path, found.hash);
+    }
+    if (!mounted.current) return;
+    setLost(missing);
+    const relinked = (current: ProjectFile) => moves.reduce((sofar, move) => relinkLibrary(sofar, move.from, move.to, move.project), current);
+    if (moves.length > 0) {
+      fileNow.current = relinked(fileNow.current);
+      onUpdate((current) => relinked(current));
     }
     if (!mounted.current) return;
     const first = syncLinkedLibrary(fileNow.current, read);
@@ -148,7 +189,8 @@ export function ReferencesPanel({ file, onUpdate, readOnly = false, documentId =
       done.pulled ? `${done.pulled === 1 ? 'One source' : `${done.pulled} sources`} took a change from where ${done.pulled === 1 ? 'it is' : 'they are'} linked` : '',
       done.pushed ? `${done.pushed === 1 ? 'one change' : `${done.pushed} changes`} sent to the linked library` : '',
       done.gone ? `${done.gone === 1 ? 'one source' : `${done.gone} sources`} unlinked, gone from the library ${done.gone === 1 ? 'it' : 'they'} came from` : '',
-      unread.length ? `${unread.join(', ')} could not be read; the links there wait for next time` : '',
+      unread.length ? `${unread.join(', ')} could not be found; the links there wait` : '',
+      moves.some((move) => move.from !== move.to) ? `followed ${[...new Set(moves.filter((move) => move.from !== move.to).map((move) => move.project.title || 'a library'))].join(', ')} to where ${moves.length === 1 ? 'it' : 'they'} now ${moves.length === 1 ? 'is' : 'are'}` : '',
     ].filter(Boolean);
     if (said.length) setMessage(`${said.join('; ')}.`.replace(/^./, (first) => first.toUpperCase()));
   };
@@ -157,6 +199,27 @@ export function ReferencesPanel({ file, onUpdate, readOnly = false, documentId =
     void syncLinks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /** The writer points at a library that has moved (§31); taken only if it is the project linked to. */
+  const findLibrary = async (library: { path: string; title: string; projectId: string }) => {
+    const chosen = await window.vcwriter.pickProject();
+    if (!chosen.ok || !chosen.data) return;
+    const read = await window.vcwriter.readProject(chosen.data.path);
+    if (!read.ok || !read.data) {
+      setMessage(read.error ?? 'That project could not be read.');
+      return;
+    }
+    if (library.projectId ? read.data.file.project.id !== library.projectId : read.data.file.project.title !== library.title) {
+      setMessage(`That is not ${library.title || 'the library these sources are linked to'}: ${read.data.file.project.title || 'it'} is another project.`);
+      return;
+    }
+    const to = chosen.data.path;
+    const project = { id: read.data.file.project.id, title: read.data.file.project.title };
+    fileNow.current = relinkLibrary(fileNow.current, library.path, to, project);
+    onUpdate((current) => relinkLibrary(current, library.path, to, project));
+    setLost((current) => current.filter((one) => one.path !== library.path));
+    await syncLinks();
+  };
 
   const settle = async (conflict: LinkConflict, keep: 'ours' | 'theirs') => {
     const read = await window.vcwriter.readProject(conflict.path);
@@ -217,6 +280,18 @@ export function ReferencesPanel({ file, onUpdate, readOnly = false, documentId =
         </p>
       ) : null}
 
+      {lost.length > 0 ? (
+        <section className="refs-lost" aria-label="Linked libraries not found">
+          {lost.map((library) => (
+            <p key={library.path} className="refs-warning">
+              {library.title || 'A linked library'} could not be found where it was ({library.path}) or among your projects. Its sources here are kept, and wait.{' '}
+              <button type="button" className="ghost small" disabled={readOnly} onClick={() => void findLibrary(library)}>
+                Find {library.title || 'it'}…
+              </button>
+            </p>
+          ))}
+        </section>
+      ) : null}
       {conflicts.length > 0 ? (
         <section className="refs-conflicts" aria-label="Changed in both projects">
           <p className="refs-warning">

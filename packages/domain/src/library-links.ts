@@ -52,7 +52,7 @@ export const referenceFingerprint = (reference: Reference): string => {
 /** A copy linked to the source it was made from in the project at `path`. */
 export const linkedCopy = (copy: Reference, source: Reference, path: string, title: string): Reference => ({
   ...copy,
-  link: { path, title, referenceId: source.id, base: referenceFingerprint(source) },
+  link: { path, title, projectId: source.projectId, referenceId: source.id, base: referenceFingerprint(source) },
 });
 
 /** Where a linked source stands against the source it is linked to. */
@@ -176,16 +176,43 @@ export const unlinkReference = (file: ProjectFile, referenceId: string): Project
   references: file.references.map((one) => (one.id === referenceId && one.link ? { ...one, link: null, updatedAt: nowIso() } : one)),
 });
 
-/** The projects this one's library is linked to, by path, with their names. */
-export const linkedLibraries = (file: ProjectFile): { path: string; title: string; count: number }[] => {
-  const found = new Map<string, { path: string; title: string; count: number }>();
+/** The projects this one's library is linked to, by path, with their names and ids. */
+export const linkedLibraries = (file: ProjectFile): { path: string; title: string; projectId: string; count: number }[] => {
+  const found = new Map<string, { path: string; title: string; projectId: string; count: number }>();
   for (const one of file.references) {
     if (!one.link || one.archivedAt !== null) continue;
-    const entry = found.get(one.link.path) ?? { path: one.link.path, title: one.link.title, count: 0 };
+    const entry = found.get(one.link.path) ?? { path: one.link.path, title: one.link.title, projectId: one.link.projectId, count: 0 };
+    if (!entry.projectId && one.link.projectId) entry.projectId = one.link.projectId;
     entry.count += 1;
     found.set(one.link.path, entry);
   }
   return [...found.values()];
+};
+
+// ------------------------------------------------- a library that has moved
+
+/**
+ * **Whether a project read from a link's path is the library it links to**
+ * (§31): the same project id, or — on a link made before ids were kept —
+ * any project at all, the path being all there was to go on.
+ */
+export const isLinkedLibrary = (library: { projectId: string }, read: ProjectFile): boolean =>
+  !library.projectId || read.project.id === library.projectId;
+
+/**
+ * **Follow a library to where it now is** (§31): every link to `from` points
+ * to `to` instead, and learns the project's id where it had none. Nothing
+ * else about the links changes, so the next sync carries on as before.
+ */
+export const relinkLibrary = (file: ProjectFile, from: string, to: string, project: { id: string; title: string }): ProjectFile => {
+  let changed = false;
+  const references = file.references.map((one) => {
+    if (!one.link || one.link.path !== from) return one;
+    if (one.link.path === to && one.link.projectId === project.id && one.link.title === project.title) return one;
+    changed = true;
+    return { ...one, link: { ...one.link, path: to, projectId: project.id, title: project.title || one.link.title } };
+  });
+  return changed ? { ...file, references } : file;
 };
 
 // ------------------------------------------- linking a source already here
@@ -221,7 +248,7 @@ export const linkExisting = (
     ...file,
     references: file.references.map((one) => {
       if (one.id !== localId || one.link) return one;
-      const link = { path: library.path, title: library.title, referenceId: source.id, base };
+      const link = { path: library.path, title: library.title, projectId: source.projectId, referenceId: source.id, base };
       return keep === 'theirs'
         ? referenceSchema.parse({ ...one, ...factsOf(source), link, updatedAt: timestamp })
         : { ...one, link, updatedAt: timestamp };

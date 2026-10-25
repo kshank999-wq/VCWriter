@@ -323,3 +323,61 @@ describe('a source already here, linked when brought in (§30)', () => {
     expect(latest!.references[0]).toMatchObject({ date: '2019', link: { path: '/sea.vcw' } });
   });
 });
+
+describe('a linked library that has moved (§31)', () => {
+  const linked = () => {
+    let book = createProjectFile({ title: 'The Sea', format: 'instructional' });
+    const made = addReference(book, { title: 'On Tides', authors: ['Jones, Robert'], date: '2019' });
+    book = made.file;
+    const letters = bringInReferences(letter(), book.references, null, { path: '/old/sea.vcw', title: 'The Sea' }).file;
+    return { book: updateReference(book, made.reference.id, { publisher: 'Sea Press' }), letters };
+  };
+
+  it('is found among the projects by its own id, followed there, and kept in step', async () => {
+    const { book, letters } = linked();
+    (window as unknown as { vcwriter: unknown }).vcwriter = {
+      readProject: vi.fn(async (path: string) =>
+        path === '/new/sea.vcw' ? { ok: true, data: { path, file: book, contentHash: 'x' } } : { ok: false, error: 'No such file' },
+      ),
+      listProjects: vi.fn(async () => ({ ok: true, data: [{ path: '/new/sea.vcw', title: 'The Sea', savedAt: null, sizeBytes: null, missing: false }] })),
+      sendIntoProject: vi.fn(async () => ({ ok: true, data: { contentHash: 'y' } })),
+    };
+    render(<Harness start={letters} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'References' }));
+    press('Sources & style');
+    await waitFor(() => expect(latest!.references[0]!.link!.path).toBe('/new/sea.vcw'));
+    await waitFor(() => expect(latest!.references[0]!.publisher).toBe('Sea Press'));
+    expect(screen.getByRole('status').textContent).toBe('One source took a change from where it is linked; followed The Sea to where it now is.');
+  });
+
+  it('says where it cannot be found, and is followed to the file the writer points at — if it is that project', async () => {
+    const { book, letters } = linked();
+    const other = createProjectFile({ title: 'The Sea', format: 'instructional' });
+    let picked = '/wrong.vcw';
+    (window as unknown as { vcwriter: unknown }).vcwriter = {
+      readProject: vi.fn(async (path: string) =>
+        path === '/found/sea.vcw'
+          ? { ok: true, data: { path, file: book, contentHash: 'x' } }
+          : path === '/wrong.vcw'
+            ? { ok: true, data: { path, file: other, contentHash: 'z' } }
+            : { ok: false, error: 'No such file' },
+      ),
+      listProjects: vi.fn(async () => ({ ok: true, data: [] })),
+      pickProject: vi.fn(async () => ({ ok: true, data: { path: picked } })),
+      sendIntoProject: vi.fn(async () => ({ ok: true, data: { contentHash: 'y' } })),
+    };
+    render(<Harness start={letters} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'References' }));
+    press('Sources & style');
+    const lost = await screen.findByLabelText('Linked libraries not found');
+    expect(lost.textContent).toContain('The Sea could not be found where it was (/old/sea.vcw)');
+    // Another project of the same name is not taken for it.
+    fireEvent.click(within(lost).getByRole('button', { name: 'Find The Sea…' }));
+    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('That is not The Sea: The Sea is another project.'));
+    picked = '/found/sea.vcw';
+    fireEvent.click(within(screen.getByLabelText('Linked libraries not found')).getByRole('button', { name: 'Find The Sea…' }));
+    await waitFor(() => expect(latest!.references[0]!.link!.path).toBe('/found/sea.vcw'));
+    await waitFor(() => expect(latest!.references[0]!.publisher).toBe('Sea Press'));
+    expect(screen.queryByLabelText('Linked libraries not found')).toBeNull();
+  });
+});

@@ -67,6 +67,13 @@ export const referenceSchema = z.object({
     .object({
       path: z.string().max(2000),
       title: z.string().max(300).default(''),
+      /**
+       * The linked project's own id (§31), which stays the same when its file
+       * is moved, renamed or opened on another computer, so the library can
+       * be found again where its path no longer leads. Empty on a link made
+       * before it was kept, until the library is next read.
+       */
+      projectId: z.string().max(80).default(''),
       referenceId: z.string().max(80),
       base: z.string().max(80),
     })

@@ -6,6 +6,8 @@ import {
   createProjectFile,
   duplicateReference,
   fromRows,
+  isLinkedLibrary,
+  relinkLibrary,
   factDifferences,
   linkExisting,
   sameSourceIn,
@@ -46,7 +48,7 @@ describe('a linked source', () => {
     const copy = factsOf(letters, copyId);
     expect(copy.link).toMatchObject({ path: THE_SEA, title: 'The Sea', referenceId: bookId });
     expect(linkState(copy, factsOf(book, bookId))).toBe('same');
-    expect(linkedLibraries(letters)).toEqual([{ path: THE_SEA, title: 'The Sea', count: 1 }]);
+    expect(linkedLibraries(letters)).toEqual([{ path: THE_SEA, title: 'The Sea', projectId: book.project.id, count: 1 }]);
     // Brought in without a link, it is this project's own.
     expect(bringInReferences(createProjectFile({ title: 'x', format: 'document' }), book.references).added[0]!.link).toBeNull();
   });
@@ -147,5 +149,31 @@ describe('a source already here, linked (§30)', () => {
   it('leaves a source that is already linked as it is', () => {
     const { letters, copyId, book, bookId } = pair();
     expect(linkExisting(letters, copyId, factsOf(book, bookId), { path: '/elsewhere.vcw', title: 'Elsewhere' }, 'theirs')).toEqual(letters);
+  });
+});
+
+describe('a library that has moved (§31)', () => {
+  it('knows the library by its project, wherever its file is', () => {
+    const { book, letters, copyId } = pair();
+    const link = factsOf(letters, copyId).link!;
+    expect(link.projectId).toBe(book.project.id);
+    const [library] = linkedLibraries(letters);
+    expect(isLinkedLibrary(library!, book)).toBe(true);
+    expect(isLinkedLibrary(library!, createProjectFile({ title: 'The Sea', format: 'instructional' }))).toBe(false);
+    // A link from before ids were kept goes by its path alone.
+    expect(isLinkedLibrary({ projectId: '' }, createProjectFile({ title: 'x', format: 'novel' }))).toBe(true);
+  });
+
+  it('follows the library to its new place, and carries on in step from there', () => {
+    const { book, letters, copyId, bookId } = pair();
+    const moved = relinkLibrary(letters, THE_SEA, '/elsewhere/sea.vcw', { id: book.project.id, title: 'The Sea' });
+    expect(factsOf(moved, copyId).link).toMatchObject({ path: '/elsewhere/sea.vcw', projectId: book.project.id });
+    const changed = updateReference(book, bookId, { publisher: 'Sea Press' });
+    expect(syncLinkedLibrary(moved, new Map([['/elsewhere/sea.vcw', changed]])).pulled).toBe(1);
+    // A link that had no id learns it.
+    const old = { ...letters, references: letters.references.map((one) => (one.link ? { ...one, link: { ...one.link, projectId: '' } } : one)) };
+    expect(factsOf(relinkLibrary(old, THE_SEA, THE_SEA, { id: book.project.id, title: 'The Sea' }), copyId).link!.projectId).toBe(book.project.id);
+    // Nothing to follow leaves the project as it was.
+    expect(relinkLibrary(letters, '/nowhere.vcw', '/elsewhere.vcw', { id: 'x', title: 'x' })).toBe(letters);
   });
 });
