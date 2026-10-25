@@ -241,6 +241,30 @@ from the app record.
 
 ---
 
+### 1.9 If TestFlight says "no builds"
+
+An upload the workflow reports as successful has only been **accepted by
+Apple's upload service**. Apple then processes it, and a build that fails
+processing **never appears in TestFlight**. Nothing in App Store Connect says
+so. Apple emails the reason to the account holder within the hour, with a
+subject like *"The uploaded build for VC Writer Notes has one or more issues"*
+and one or more `ITMS-9xxxx` codes in the body.
+
+1. **Search your email** (the Apple ID that holds the developer account,
+   spam folder included) for *ITMS* or *has one or more issues*, around the
+   date of the upload. The code names the fix.
+2. **Run Actions → Notes App Store status.** It uploads nothing. With the same
+   key the release uses, it reports:
+   - which app record the bundle id belongs to;
+   - whether `ASC_APP_ID` names that record or another one;
+   - every build Apple holds, with its processing state: `VALID`,
+     `PROCESSING` or `INVALID`.
+
+   An empty list, or a build marked `INVALID`, means processing turned it
+   away. The reason is in the email.
+3. Send the fix with a new build: run **Notes iOS release** again. The build
+   number goes up by itself.
+
 ## 2. Google Play — starting from nothing
 
 ### 2.1 Register
@@ -385,6 +409,52 @@ Paste the JSON exactly as downloaded, braces and all. The code parses it and
 un-escapes the private key inside, so it does not matter whether the newlines
 survive the paste.
 
+### 2.8 Building and uploading from GitHub
+
+GitHub → Actions → **Notes Android release** → Run workflow. No Android SDK,
+no Android Studio and no terminal. It reads from the same **release**
+environment as the iOS workflow.
+
+| Input | What it does |
+| --- | --- |
+| `profile` | **preview**: an APK that installs on a phone from a link (§4d). **production**: the `.aab` bundle Google Play takes. |
+| `submit` | Send a production build to Play. Off by default. |
+| `track` | `internal` (default), `alpha` (closed testing), `beta` (open testing) or `production` |
+| `release_status` | **draft** (default) waits in Play Console for you to roll it out; **completed** releases it to the track at once |
+| `build_id` | Send a build that already exists rather than making another |
+
+**Signing needs nothing from you.** On the first build EAS generates the
+Android upload keystore and keeps it on expo.dev; every later build signs with
+the same key, which Play requires of every update. Leave **Play App Signing**
+on when Play Console offers it, as it does by default for a new app. Google
+then holds the key that actually signs what users install, so even a lost
+upload key can be reset in Play Console instead of stranding the app.
+
+**Secrets.** `EXPO_TOKEN` is already there from the iOS workflow, and is all a
+build needs. Sending to Play needs one more:
+
+| Secret | What to paste | Where it comes from |
+| --- | --- | --- |
+| `GOOGLE_PLAY_UPLOAD_KEY_JSON` | the **whole contents** of a service-account JSON key | as §2.6 steps 1–5, a second service account named `vc-writer-release`. In Play Console → Users and permissions give it, for this app, **Release apps to testing tracks** and **Release to production, exclude devices, and use Play App Signing**. |
+
+A **second** account, not the §2.6 one. That one lets vc-writer.com read
+receipts, and §2.6 deliberately gives it nothing more. This one can release
+builds and never needs to see money. Two keys with two jobs means a leak of
+either one is half the trouble.
+
+**The first bundle goes up by hand.** Google's API refuses to create an app's
+first release. Once only:
+
+1. Run the workflow with `profile` = **production** and `submit` off.
+2. Open the build page linked in the run's summary and download the `.aab`.
+3. Play Console → the app → **Test and release → Testing → Internal testing**
+   → **Create new release**. Accept Play App Signing, upload the `.aab`, and
+   save.
+
+From then on, `submit` sends each new build itself. While the app has never
+been published, Play takes **draft** releases only. That is the default, and
+the workflow says so if `completed` is refused.
+
 ---
 
 ## 3. Everything that goes into Vercel
@@ -445,7 +515,7 @@ Longest-lead-time first, because three of these are waits rather than work.
 4. Create the app records, then the subscription group and the four products.
 5. Generate the Apple **In-App Purchase** key and the Google **service
    account**; put the four secrets in Vercel and redeploy.
-6. Build and upload with EAS (`apps/mobile/README.md` has the commands), take
+6. Build and upload from GitHub (§1.8 for iOS, §2.8 for Android), take
    the five screenshots `docs/store-listing.md` names, and submit. Apple
    reviews the first subscription alongside the first build.
 7. When both apps are live, set the two store URLs in Vercel and redeploy. The
@@ -526,8 +596,10 @@ addendum 27), which is every account that exists today.
 - The Apple Developer account is enrolled as an **individual**.
 - The bundle id and the app record exist.
 - The **Notes iOS release** workflow runs green. Run 5, on 21 October,
-  uploaded **1.0.0 (build 2)** to App Store Connect, and it is in TestFlight
-  now.
+  uploaded **1.0.0 (build 2)**, and Apple's upload service accepted it.
+  **It did not reach TestFlight**: on 25 October TestFlight showed no builds.
+  That means Apple's processing turned it away, or it went to a different
+  app record. §1.9 says how to tell which, and what to do.
 - The App Store API key secrets are in the `release` environment.
 - Signing (the distribution certificate and profile) is held by EAS.
 
@@ -576,6 +648,42 @@ The account is personal, so the store will show your own name as the seller.
 That is the trade-off §4a and the note below describe. It matters only if the
 app is to move to a company later, and moving it is simplest before the first
 subscription sells.
+
+### 4d. Notes on an Android phone, today
+
+This needs no Google Play account at all.
+
+1. GitHub → Actions → **Notes Android release** → Run workflow, leaving
+   `profile` on **preview**. It takes about fifteen minutes.
+2. Open the run's summary **on the phone** and tap the build page. Press
+   **Install**, or download the APK and open it.
+3. Android asks once whether the browser may install apps. Allow it, then
+   install.
+4. Sign in with your vc-writer.com account. Your account reads `included`, so
+   it sends notes at once.
+
+Dictation on Android uses Google's speech service, which comes with the
+**Google** app. Nearly every phone already has it. If the microphone button
+says speech is unavailable, install or update the Google app.
+
+As with the iPhone build, a purchase cannot complete in this copy: it is not
+installed from Play. Everything else works.
+
+**To put it on sale on Google Play:**
+
+1. Register (§2.1) and set up the payments profile (§2.3).
+2. Create the app (§2.4).
+3. Upload the first bundle by hand (§2.8).
+4. Create the two subscriptions (§2.5).
+5. Make the read-only service account (§2.6), put `GOOGLE_PLAY_SERVICE_ACCOUNT`
+   in Vercel (§2.7), and redeploy.
+6. Fill in the listing and the **Data safety** form from
+   `docs/store-listing.md`, then the content rating questionnaire.
+7. For a **personal** account, run the closed test: 12 testers for 14 days
+   (§2.2), each listed under License testing (§2.2a). Then apply for
+   production access.
+8. Send a build to the `production` track, and set
+   `NEXT_PUBLIC_PLAY_STORE_URL` in Vercel once the store page exists.
 
 ### The one thing not to do
 

@@ -1,0 +1,181 @@
+name: Notes Android release
+
+# VC Writer Notes for Android (addendum 27 §9, docs/store-setup.md §2.8).
+#
+# EAS builds the app in the cloud and signs it with an upload keystore it
+# creates the first time and keeps, so nothing about signing lives here or in
+# the repository. Two things it can make:
+#
+# - preview: an APK that installs straight onto a phone from a link. No Play
+#   account, no review. This is the copy to carry about before the store
+#   listing exists.
+# - production: the app bundle Google Play takes, optionally sent to a Play
+#   track. Rolling a release out stays a human act in Play Console unless
+#   `release_status` says otherwise, as activating a desktop build does at
+#   /admin/releases.
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: preview = an APK to install from a link; production = the Play bundle
+        type: choice
+        options: [preview, production]
+        default: preview
+      submit:
+        description: Send a production build to Google Play (needs the app made in Play Console and one bundle uploaded there by hand)
+        type: boolean
+        default: false
+      track:
+        description: Which Play track it goes to
+        type: choice
+        options: [internal, alpha, beta, production]
+        default: internal
+      release_status:
+        description: draft waits in Play Console for you to roll it out; completed releases it to the track at once
+        type: choice
+        options: [draft, completed]
+        default: draft
+      build_id:
+        description: Send this existing EAS build instead of making a new one (its id, from expo.dev or a previous run)
+        type: string
+        default: ''
+
+jobs:
+  android:
+    name: Build and upload
+    runs-on: ubuntu-latest
+    environment: release
+    defaults:
+      run:
+        working-directory: apps/mobile
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      # The **upload** service account (§2.8), not the read-only one vc-writer.com
+      # checks receipts with (§2.6). Only needed to send a build to Play.
+      GOOGLE_PLAY_UPLOAD_KEY_JSON: ${{ secrets.GOOGLE_PLAY_UPLOAD_KEY_JSON }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the inputs and secrets
+        run: |
+          missing=""
+          [ -n "$EXPO_TOKEN" ] || missing="$missing EXPO_TOKEN"
+          if [ "${{ inputs.submit }}" = "true" ]; then
+            [ -n "$GOOGLE_PLAY_UPLOAD_KEY_JSON" ] || missing="$missing GOOGLE_PLAY_UPLOAD_KEY_JSON"
+            if [ "${{ inputs.profile }}" != production ] && [ -z "${{ inputs.build_id }}" ]; then
+              echo "::error::Google Play takes the production bundle, not a preview APK. Run again with profile = production."
+              exit 1
+            fi
+          fi
+          if [ -n "$missing" ]; then
+            echo "::error::Missing from the release environment:$missing. docs/store-setup.md §2.8 says where each comes from."
+            exit 1
+          fi
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # The app config names plugins, and reading it means resolving them.
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Install EAS CLI
+        run: npm install --global eas-cli@25.2.0
+
+      # The same EAS project the iOS workflow made; linked, not made again.
+      - name: Link the EAS project
+        run: |
+          eas init --non-interactive --force
+          echo "EAS project: $(jq -r '.expo.extra.eas.projectId' app.json)"
+
+      # No signing step, unlike iOS: in non-interactive mode EAS generates the
+      # Android upload keystore on the first build and keeps it on expo.dev
+      # (eas-cli CreateKeystore). Every later build signs with the same one,
+      # which is what Play requires of every update. Lose access to the Expo
+      # account and you lose the key, so Play App Signing (on by default for a
+      # new app) is what keeps the app updatable: Google holds the real signing
+      # key and this one can be reset in Play Console.
+      - name: Build
+        id: build
+        if: inputs.build_id == ''
+        run: |
+          set +e
+          eas build --platform android --profile "${{ inputs.profile }}" --non-interactive --json > build.json
+          status=$?
+          set -e
+          cat build.json
+          id="$(jq -r '.[0].id // empty' build.json)"
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+          if [ "$status" != 0 ] || [ "$(jq -r '.[0].status' build.json)" != FINISHED ]; then
+            echo "::error::The Android build did not finish. Its logs follow."
+            if [ -n "$id" ]; then
+              eas build:view "$id" --json > view.json || true
+              jq -r '.error.message // empty' view.json || true
+              for url in $(jq -r '.logFiles[]? // empty' view.json); do
+                curl -fsSL "$url" -o phase.log.gz || continue
+                { gunzip -c phase.log.gz 2>/dev/null || cat phase.log.gz; } > phase.log
+                jq -r 'select(type == "object") | "[\(.phase // "")] \(.msg // "")"' phase.log 2>/dev/null > phase.txt \
+                  || grep -a '' phase.log > phase.txt || true
+                [ -s phase.txt ] || grep -a '' phase.log > phase.txt || true
+                tail -n 80 phase.txt || true
+              done
+            fi
+            exit 1
+          fi
+
+      # Where to get it, said on the run's own page rather than left on expo.dev.
+      - name: Say where the build is
+        if: inputs.build_id == ''
+        run: |
+          id="${{ steps.build.outputs.id }}"
+          file="$(jq -r '.[0].artifacts.applicationArchiveUrl // .[0].artifacts.buildUrl // empty' build.json)"
+          page="https://expo.dev/accounts/$(jq -r '.[0].project.ownerAccount.name // "kenshank"' build.json)/projects/vcwriter-notes/builds/$id"
+          {
+            echo "## VC Writer Notes for Android — ${{ inputs.profile }}"
+            echo ""
+            echo "Version $(jq -r '.[0].appVersion // "?"' build.json) ($(jq -r '.[0].appBuildVersion // "?"' build.json))"
+            echo ""
+            if [ "${{ inputs.profile }}" = preview ]; then
+              echo "**Install it:** open the build page on the phone and press Install, or download the APK and open it."
+              echo "Android asks once to allow installing from the browser; allow it."
+            else
+              echo "**This is the Play bundle (.aab).** It does not install on a phone by itself."
+              echo "The first one is uploaded by hand in Play Console (§2.8); later ones can be sent from here."
+            fi
+            echo ""
+            echo "- Build page: $page"
+            [ -n "$file" ] && echo "- File: $file"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "Build page: $page"
+          [ -n "$file" ] && echo "File: $file" || true
+
+      # The submit profile is completed here rather than in eas.json: the key's
+      # path is this runner's, and nothing about the key belongs in the repository.
+      - name: Upload to Google Play
+        if: inputs.submit
+        run: |
+          key="$RUNNER_TEMP/play-upload-key.json"
+          printf '%s' "$GOOGLE_PLAY_UPLOAD_KEY_JSON" > "$key"
+          jq -e '.type == "service_account" and (.client_email | length > 0)' "$key" > /dev/null \
+            || { echo "::error::GOOGLE_PLAY_UPLOAD_KEY_JSON is not a service account key. Paste the whole JSON file Google Cloud downloaded."; exit 1; }
+          jq --arg path "$key" --arg track "${{ inputs.track }}" --arg status "${{ inputs.release_status }}" \
+            '.submit.production.android += {serviceAccountKeyPath: $path, track: $track, releaseStatus: $status}' \
+            eas.json > eas.submit.json && mv eas.submit.json eas.json
+          set +e
+          eas submit --platform android --profile production --id "${{ inputs.build_id || steps.build.outputs.id }}" --non-interactive --wait --verbose 2>&1 | tee submit.log
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" != 0 ]; then
+            # The two refusals everybody meets once, said in words that say what to do.
+            if grep -qi "first time\|manually\|Package not found\|applicationNotFound" submit.log; then
+              echo "::error::Google Play takes the very first bundle only by hand. Download the .aab from the build page, upload it in Play Console → Test and release → Internal testing → Create new release, then run this again. docs/store-setup.md §2.8."
+            elif grep -qi "draft app" submit.log; then
+              echo "::error::The app has never been published, so Play only accepts a draft release. Run again with release_status = draft."
+            fi
+            exit "$status"
+          fi
+          echo "Sent to the ${{ inputs.track }} track as a ${{ inputs.release_status }} release."

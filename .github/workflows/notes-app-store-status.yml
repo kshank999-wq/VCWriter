@@ -1,0 +1,26 @@
+name: Notes App Store status
+
+# Which app the release workflow uploads to, and every build App Store Connect
+# holds for it with Apple's processing state (docs/store-setup.md §1.9). Reads
+# only; uploads nothing. For "the upload succeeded but TestFlight says no
+# builds".
+on:
+  workflow_dispatch:
+
+jobs:
+  status:
+    name: Ask App Store Connect
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Report
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+          ASC_APP_ID: ${{ secrets.ASC_APP_ID }}
+        run: node apps/mobile/scripts/asc-status.mjs

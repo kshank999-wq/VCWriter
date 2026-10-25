@@ -76,6 +76,12 @@ Run workflow. It builds with EAS, sets up signing the first time, and uploads
 the build to App Store Connect, where it appears under TestFlight. The secrets
 it needs are listed in `docs/store-setup.md` §1.8.
 
+**For Android, the same:** Actions → **Notes Android release**. With
+`profile` = preview it makes an APK that installs from a link, with no Play
+account. With production it makes the Play bundle and, with `submit`, sends it
+to a Play track. EAS generates and keeps the upload keystore. See
+`docs/store-setup.md` §2.8 and §4d.
+
 `eas submit` asks for what it needs at the prompt and stores nothing here. The
 `submit` block in `eas.json` is deliberately empty for that reason.
 
@@ -106,9 +112,11 @@ domain.
 
 ## What is not done
 
-It has **never been run on a device**. This repository's CI is Linux; an iOS
-build wants macOS or EAS, and neither has been done. What is proved is that it
-typechecks, its tests pass, its dependencies resolve, and every rule it follows
+iOS builds through EAS and is in TestFlight (1.0.0, build 2). Android builds
+through the **Notes Android release** workflow; `expo export --platform
+android` and `expo prebuild --platform android` both run clean here, with the
+billing, microphone and speech-service entries in the manifest. What is proved
+beyond that is that it typechecks, its tests pass, and every rule it follows
 is the domain's — the same code, under the same tests, as the website.
 
 Store accounts are Ken's to make: Apple Developer Program ($99/yr), Google Play
