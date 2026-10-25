@@ -519,6 +519,64 @@ While no subscription can be bought, the phone still sends notes: anyone whose
 first note predates the day Notes became paid reads `included` (§14.1 of
 addendum 27), which is every account that exists today.
 
+### 4c. Where Notes stands (25 October 2026), and what is left
+
+**Done.**
+
+- The Apple Developer account is enrolled as an **individual**.
+- The bundle id and the app record exist.
+- The **Notes iOS release** workflow runs green. Run 5, on 21 October,
+  uploaded **1.0.0 (build 2)** to App Store Connect, and it is in TestFlight
+  now.
+- The App Store API key secrets are in the `release` environment.
+- Signing (the distribution certificate and profile) is held by EAS.
+
+**Your own copy, today.** It needs no listing and no review, because internal
+testers are not reviewed:
+
+1. Open App Store Connect → VC Writer Notes → **TestFlight**. If build 2 shows
+   *Missing Compliance*, answer **No** (no non-exempt encryption).
+   `app.json` already says so, so it should not ask.
+2. Under **Internal Testing**, press **+** to make a group (e.g. *Me*), then
+   add yourself. Your Apple ID must be a user in **Users and Access**, and as
+   the account holder it already is.
+3. On the iPhone, install **TestFlight** from the App Store, open the
+   invitation email, and press **Install**.
+4. Sign in with your vc-writer.com account. It sends notes at once: your
+   account reads `included` (addendum 27 §14.1), so no subscription is asked
+   for.
+
+A TestFlight build runs for 90 days. Running the workflow again uploads the
+next build, and TestFlight updates it in place.
+
+**To put it on sale.** In order, each a step in App Store Connect:
+
+1. **Business**: accept the Paid Applications agreement and add bank and tax
+   details (§1.2). Nothing below can be submitted until it reads **Active**.
+2. **Monetization → Subscriptions**: create the group and the two products
+   (§1.5).
+3. **In-App Purchase key**: generate it (§1.6) and put the three `APPLE_IAP_*`
+   values in Vercel (§1.7), then redeploy.
+4. **The listing**:
+   - copy it from `docs/store-listing.md`: subtitle, description, keywords,
+     support URL, and the privacy policy <https://vc-writer.com/privacy>
+   - **App Privacy**: answer the questionnaire as that file says
+   - **Age rating**
+5. **Screenshots**: take them from the TestFlight copy on your phone
+   (store-listing §4). Take the paywall screenshot for each subscription's
+   review screenshot as well.
+6. On the 1.0.0 version page, pick build 2. Attach both subscriptions under
+   **In-App Purchases and Subscriptions**, then **Add for Review** →
+   **Submit**. Apple reviews the first subscriptions with the first build:
+   usually a day or two.
+7. When it is live, set the App Store URL in Vercel and the badge appears on
+   <https://vc-writer.com/notes>.
+
+The account is personal, so the store will show your own name as the seller.
+That is the trade-off §4a and the note below describe. It matters only if the
+app is to move to a company later, and moving it is simplest before the first
+subscription sells.
+
 ### The one thing not to do
 
 Do not take **paying subscribers** under an entity you intend to move away

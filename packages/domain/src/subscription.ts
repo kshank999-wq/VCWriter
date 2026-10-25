@@ -1,5 +1,5 @@
 import { licenseLive } from './entities/commerce.js';
-import type { License, LicenseStatus } from './entities/commerce.js';
+import type { License, LicenseGrant, LicenseStatus } from './entities/commerce.js';
 
 /**
  * The desktop subscription (addendum 32).
@@ -150,7 +150,17 @@ export interface DeskStanding {
    * would start the week over and it would never end.
    */
   seenLapsedAt: string | null;
+  /**
+   * How the licence came to be (addendum 44), so a given one that ends is not
+   * told to renew a subscription it never had. Absent on a record written
+   * before, which reads as bought.
+   */
+  grant?: LicenseGrant;
 }
+
+/** Of two live licences, the one that never ends outlasts any date. */
+const endsAtLive = (license: Pick<License, 'expiresAt'>): number =>
+  license.expiresAt ? new Date(license.expiresAt).getTime() : Number.POSITIVE_INFINITY;
 
 /** A licence with no date ended whenever its status said so, which is now. */
 const endsAt = (license: Pick<License, 'expiresAt'>): number =>
@@ -170,15 +180,21 @@ const endsAt = (license: Pick<License, 'expiresAt'>): number =>
  * this computer was ever activated is a separate question, answered by the host
  * and read by `writingStanding` (addendum 41 §10).
  */
-export const deskStandingFrom = (
-  licenses: readonly Pick<License, 'status' | 'expiresAt'>[],
-  now: Date,
-): Pick<License, 'status' | 'expiresAt'> | null => {
+type StandingClaim = Pick<License, 'status' | 'expiresAt'> & { grant?: LicenseGrant };
+
+const claimOf = (one: StandingClaim): StandingClaim =>
+  one.grant && one.grant !== 'purchase'
+    ? { status: one.status, expiresAt: one.expiresAt ?? null, grant: one.grant }
+    : { status: one.status, expiresAt: one.expiresAt ?? null };
+
+export const deskStandingFrom = (licenses: readonly StandingClaim[], now: Date): StandingClaim | null => {
   if (licenses.length === 0) return null;
-  const live = licenses.find((one) => licenseLive(one, now));
-  if (live) return { status: live.status, expiresAt: live.expiresAt ?? null };
+  // A licence that never ends answers before one that runs to a date, so a
+  // master licence is what the desk hears when the account has both.
+  const live = licenses.filter((one) => licenseLive(one, now)).sort((a, b) => endsAtLive(b) - endsAtLive(a))[0];
+  if (live) return claimOf(live);
   const ended = [...licenses].sort((a, b) => endsAt(b) - endsAt(a))[0]!;
-  return { status: ended.status, expiresAt: ended.expiresAt ?? null };
+  return claimOf(ended);
 };
 
 /**
@@ -190,7 +206,7 @@ export const deskStandingFrom = (
  */
 export const noteStanding = (
   previous: DeskStanding | null,
-  claim: Pick<License, 'status' | 'expiresAt'>,
+  claim: StandingClaim,
   now: Date,
 ): DeskStanding => {
   const checkedAt = now.toISOString();
@@ -199,6 +215,7 @@ export const noteStanding = (
     expiresAt: claim.expiresAt ?? null,
     checkedAt,
     seenLapsedAt: licenseLive(claim, now) ? null : (previous?.seenLapsedAt ?? checkedAt),
+    ...(claim.grant && claim.grant !== 'purchase' ? { grant: claim.grant } : {}),
   };
 };
 
@@ -266,6 +283,7 @@ export const NOT_ACTIVATED_NOTICE =
 const lapseWords = (standing: DeskStanding): string => {
   if (standing.status === 'expired' || standing.status === 'active') {
     const on = standing.expiresAt ? ` on ${standing.expiresAt.slice(0, 10)}` : '';
+    if (standing.grant === 'academic') return `Your VC Writer academic licence ended${on}.`;
     return `Your VC Writer subscription ended${on}.`;
   }
   return 'This copy’s licence is no longer active.';
@@ -314,7 +332,10 @@ export const writingStanding = (
   if (now.getTime() > daysAfter(standing.checkedAt, STANDING_GOOD_FOR_DAYS)) {
     return {
       writable: true,
-      notice: `${ended} Renew it to sync your work and to install on another computer.`,
+      notice:
+        standing.grant === 'academic'
+          ? `${ended} Ask whoever gave it to you to extend it, to sync your work and to install on another computer.`
+          : `${ended} Renew it to sync your work and to install on another computer.`,
       warning: true,
       needsActivation: false,
     };

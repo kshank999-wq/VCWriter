@@ -3,11 +3,13 @@ import { WHY_THIS_ARRIVED, type Notice, type Platform } from '@vcwriter/domain';
 import { env } from './env';
 import { adminClient } from './supabase';
 import {
+  licenseGranted,
   licenseReminder,
   oneSheetEmail,
   purchaseConfirmation,
   roomInvitation,
   roomNotice,
+  type LicenseGrantedInput,
   type RenderedEmail,
 } from './email-templates';
 
@@ -89,6 +91,16 @@ export const sendLicenseReminder = async (input: {
     to: input.to,
     userId: input.userId,
     email: licenseReminder({ serial: input.serial, accountUrl: `${env.siteUrl}/account` }),
+  });
+
+/** A licence an administrator has given (addendum 44). */
+export const sendLicenseGranted = async (
+  input: { to: string; userId: string } & Omit<LicenseGrantedInput, 'accountUrl'>,
+): Promise<SendResult> =>
+  deliver({
+    to: input.to,
+    userId: input.userId,
+    email: licenseGranted({ ...input, accountUrl: `${env.siteUrl}/account` }),
   });
 
 /**

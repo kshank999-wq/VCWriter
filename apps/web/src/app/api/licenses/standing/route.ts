@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { deskStandingFrom, licenseStatusSchema } from '@vcwriter/domain';
+import { deskStandingFrom, licenseGrantSchema, licenseStatusSchema } from '@vcwriter/domain';
 import { serverClient } from '@/lib/supabase';
 
 export const runtime = 'nodejs';
@@ -29,7 +29,7 @@ export async function GET(): Promise<Response> {
   const { data: auth } = await db.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: 'Sign in to check your licence' }, { status: 401 });
 
-  const { data, error } = await db.from('licenses').select('status, expires_at');
+  const { data, error } = await db.from('licenses').select('status, expires_at, grant_kind');
   if (error) return NextResponse.json({ error: 'The licence could not be read' }, { status: 502 });
 
   const licenses = (data ?? []).flatMap((row) => {
@@ -38,7 +38,10 @@ export async function GET(): Promise<Response> {
     // a row that cannot be understood here is exactly that (§8).
     const status = licenseStatusSchema.safeParse(row.status);
     if (!status.success) return [];
-    return [{ status: status.data, expiresAt: (row.expires_at as string | null) ?? null }];
+    // How it came to be (addendum 44), so an academic licence that ends is not
+    // told to renew a subscription; anything unnamed reads as bought.
+    const grant = licenseGrantSchema.catch('purchase').parse(row.grant_kind);
+    return [{ status: status.data, expiresAt: (row.expires_at as string | null) ?? null, grant }];
   });
 
   return NextResponse.json({ standing: deskStandingFrom(licenses, new Date()) });

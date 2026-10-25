@@ -10,7 +10,8 @@ interface DeviceRow {
   lastSeenAt: string | null;
   deactivatedAt: string | null;
   serial: string;
-  maxActivations: number;
+  /** Null on a licence that covers any number of computers (addendum 44). */
+  maxActivations: number | null;
 }
 
 const formatDate = (value: string | null): string =>
@@ -62,7 +63,10 @@ export function Devices() {
 
   const active = devices.filter((device) => device.deactivatedAt === null);
   const past = devices.filter((device) => device.deactivatedAt !== null);
-  const limit = devices[0]?.maxActivations ?? 0;
+  // Any licence covering any number of computers makes the account's limit none.
+  const limit = devices.some((device) => device.maxActivations === null)
+    ? null
+    : (devices[0]?.maxActivations ?? 0);
 
   if (devices.length === 0) {
     return (
@@ -75,8 +79,9 @@ export function Devices() {
   return (
     <>
       <p className="lede">
-        {active.length} of {limit} {limit === 1 ? 'seat' : 'seats'} in use. Free one here if you have replaced a
-        computer — no need to contact support.
+        {limit === null
+          ? `${active.length} ${active.length === 1 ? 'computer' : 'computers'} activated. Your licence covers any number, so there is no seat to free — remove one here only to tidy the list.`
+          : `${active.length} of ${limit} ${limit === 1 ? 'seat' : 'seats'} in use. Free one here if you have replaced a computer — no need to contact support.`}
       </p>
 
       <ul className="order-list">

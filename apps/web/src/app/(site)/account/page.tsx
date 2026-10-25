@@ -1,6 +1,13 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { describeNotesPlan, mayCaptureNotes } from '@vcwriter/domain';
+import {
+  describeNotesPlan,
+  licenseGrantSchema,
+  licenseKindName,
+  licenseSeatsPhrase,
+  mayCaptureNotes,
+  type LicenseGrant,
+} from '@vcwriter/domain';
 import { adminClient, currentUser } from '@/lib/supabase';
 import { notesPlanFor } from '@/lib/notes-subscription';
 import { DownloadButton } from './download-button';
@@ -18,6 +25,9 @@ const formatMoney = (cents: number, currency: string): string =>
 
 const formatDate = (value: string | null): string =>
   value ? new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : '—';
+
+/** A row's grant, read as bought where it says something this build cannot name. */
+const grantOf = (value: unknown): LicenseGrant => licenseGrantSchema.catch('purchase').parse(value);
 
 /**
  * My Account / Downloads (spec §3.2, §12.4): the customer can come back at any
@@ -44,7 +54,7 @@ export default async function AccountPage() {
   const [{ data: licenses }, { data: builds }, { data: orders }, { data: profile }] = await Promise.all([
     client
       .from('licenses')
-      .select('serial, status, entitled_platforms, max_activations, created_at, expires_at, stripe_subscription_id')
+      .select('serial, status, entitled_platforms, max_activations, created_at, expires_at, stripe_subscription_id, grant_kind, granted_to')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false }),
     client
@@ -83,11 +93,22 @@ export default async function AccountPage() {
             <div className="grid">
               {activeLicenses.map((license) => (
                 <article key={license.serial} className="card">
-                  <h3>License</h3>
+                  <h3>{licenseKindName(grantOf(license.grant_kind))}</h3>
                   <p className="serial">{license.serial}</p>
                   <p style={{ marginTop: 8 }}>
-                    Covers {license.entitled_platforms.join(' and ')} · up to {license.max_activations} devices
+                    Covers {license.entitled_platforms.join(' and ')} ·{' '}
+                    {grantOf(license.grant_kind) === 'master'
+                      ? 'on any number of computers'
+                      : `up to ${licenseSeatsPhrase({ grant: grantOf(license.grant_kind), maxActivations: license.max_activations })}`}
                   </p>
+                  {/* A given licence says who it is for and, where it ends,
+                      when (addendum 44). */}
+                  {license.granted_to && grantOf(license.grant_kind) === 'academic' ? (
+                    <p className="muted small">For {license.granted_to}</p>
+                  ) : null}
+                  {grantOf(license.grant_kind) === 'academic' && license.expires_at ? (
+                    <p className="muted small">Until {formatDate(license.expires_at)}</p>
+                  ) : null}
                   {/* A subscription's licence says when it renews (addendum
                       41 §4); a perpetual one has no date to say. */}
                   {license.stripe_subscription_id && license.expires_at ? (

@@ -39,6 +39,17 @@ export type Order = z.infer<typeof orderSchema>;
 export const licenseStatusSchema = z.enum(['active', 'suspended', 'revoked', 'expired']);
 export type LicenseStatus = z.infer<typeof licenseStatusSchema>;
 
+/**
+ * How a licence came to be (addendum 44 §1). Bought — once or by
+ * subscription — or given: an **academic** licence handed to a school, a
+ * class or a student, and the **master** licence the owner runs on every
+ * computer they have. A given licence is the same record as a bought one, so
+ * every gate that reads a licence reads it without knowing the difference;
+ * what differs is the one question of how many computers it covers.
+ */
+export const licenseGrantSchema = z.enum(['purchase', 'academic', 'master']);
+export type LicenseGrant = z.infer<typeof licenseGrantSchema>;
+
 export const licenseSchema = z.object({
   id: id<LicenseId>(),
   userId: id<UserId>(),
@@ -53,6 +64,9 @@ export const licenseSchema = z.object({
   entitledPlatforms: z.array(platformSchema).min(1).default(['windows', 'macos']),
   maxActivations: z.number().int().positive().default(2),
   expiresAt: isoDateTime().nullable().default(null),
+  grant: licenseGrantSchema.default('purchase'),
+  /** Who or what a given licence is for — a school, a course, a person. Empty on a bought one. */
+  grantedTo: z.string().default(''),
   ...timestamps,
 });
 export type License = z.infer<typeof licenseSchema>;
@@ -96,8 +110,21 @@ export const deviceActivationSchema = z.object({
 });
 export type DeviceActivation = z.infer<typeof deviceActivationSchema>;
 
-export const isActivationSlotAvailable = (license: License, activations: readonly DeviceActivation[]): boolean =>
-  activations.filter((activation) => activation.deactivatedAt === null).length < license.maxActivations;
+/**
+ * How many computers a licence covers, or null for **any number** — the
+ * master licence (addendum 44 §1). Read here and nowhere else, so the seat
+ * count and the unlimited case cannot be two answers.
+ */
+export const seatLimit = (license: Pick<License, 'grant' | 'maxActivations'>): number | null =>
+  license.grant === 'master' ? null : license.maxActivations;
+
+export const isActivationSlotAvailable = (
+  license: Pick<License, 'grant' | 'maxActivations'>,
+  activations: readonly DeviceActivation[],
+): boolean => {
+  const limit = seatLimit(license);
+  return limit === null || activations.filter((activation) => activation.deactivatedAt === null).length < limit;
+};
 
 /**
  * Whether a licence is live **now** (addendum 32).

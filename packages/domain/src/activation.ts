@@ -1,4 +1,4 @@
-import { isActivationSlotAvailable, licenseLive } from './entities/commerce.js';
+import { isActivationSlotAvailable, licenseLive, seatLimit } from './entities/commerce.js';
 import type { DeviceActivation, License } from './entities/commerce.js';
 import type { Platform } from './entities/common.js';
 
@@ -79,8 +79,9 @@ export interface ActivationSummary {
   active: DeviceActivation[];
   past: DeviceActivation[];
   inUse: number;
-  limit: number;
-  slotsFree: number;
+  /** Null where the licence covers any number of computers (addendum 44 §1). */
+  limit: number | null;
+  slotsFree: number | null;
 }
 
 /** What the account page shows: what is using a seat, and what used to. */
@@ -92,12 +93,13 @@ export const summariseActivations = (
   const active = own.filter((activation) => activation.deactivatedAt === null);
   const past = own.filter((activation) => activation.deactivatedAt !== null);
 
+  const limit = seatLimit(license);
   return {
     active,
     past,
     inUse: active.length,
-    limit: license.maxActivations,
-    slotsFree: Math.max(0, license.maxActivations - active.length),
+    limit,
+    slotsFree: limit === null ? null : Math.max(0, limit - active.length),
   };
 };
 

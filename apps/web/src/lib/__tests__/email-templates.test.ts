@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { licenseReminder, purchaseConfirmation, roomInvitation } from '../email-templates';
+import { licenseGranted, licenseReminder, purchaseConfirmation, roomInvitation } from '../email-templates';
 
 /**
  * What a customer receives is a contract: the serial, the link, and a version
@@ -99,5 +99,24 @@ describe('the room invitation', () => {
     // §7: a room where everyone can read everyone's unfinished draft is a room
     // where nobody drafts, so the invitation says so up front.
     expect(roomInvitation({ ...invite, title: '' }).text).toContain('nobody else in the room sees');
+  });
+});
+
+describe('a given licence (addendum 44)', () => {
+  it('says what it covers and how to start, and escapes who it is for', () => {
+    const email = licenseGranted({
+      serial: 'VCW-AAAAA-BBBBB-CCCCC-DDDDD',
+      kind: 'academic',
+      grantedTo: 'Hillside <High>',
+      seats: '25 computers',
+      expiresAt: '2027-06-30T23:59:59.000Z',
+      accountUrl: 'https://vc-writer.com/account',
+    });
+    expect(email.subject).toBe('Your VC Writer academic license');
+    expect(email.text).toContain('covers 25 computers until June 30, 2027');
+    expect(email.html).toContain('Hillside &lt;High&gt;');
+    expect(email.html).not.toContain('<High>');
+    const master = licenseGranted({ serial: 'X', kind: 'master', grantedTo: '', seats: 'any number of computers', expiresAt: null, accountUrl: 'u' });
+    expect(master.text).toContain('covers any number of computers and does not expire');
   });
 });

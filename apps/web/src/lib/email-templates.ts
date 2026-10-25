@@ -245,6 +245,46 @@ export const licenseReminder = (input: LicenseReminderInput): RenderedEmail => (
   ].join('\n'),
 });
 
+export interface LicenseGrantedInput {
+  serial: string;
+  kind: 'academic' | 'master';
+  /** Who it is for, as the administrator wrote it. */
+  grantedTo: string;
+  /** "2 computers", "any number of computers". */
+  seats: string;
+  /** ISO, or null where it does not end. */
+  expiresAt: string | null;
+  accountUrl: string;
+}
+
+const sayDate = (iso: string): string =>
+  new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
+
+/** Sent when an administrator gives a licence (addendum 44). */
+export const licenseGranted = (input: LicenseGrantedInput): RenderedEmail => {
+  const what =
+    input.kind === 'master'
+      ? `A master license for VC Writer. It covers ${input.seats} and does not expire.`
+      : `An academic license for VC Writer${input.grantedTo ? `, for ${input.grantedTo}` : ''}. It covers ${input.seats}${
+          input.expiresAt ? ` until ${sayDate(input.expiresAt)}` : ' and does not expire'
+        }.`;
+  const how =
+    'Sign in at vc-writer.com with this email address — a sign-in link is fine, no password is needed — to download VC Writer for Windows or macOS. It activates the first time you sign in on a computer.';
+  return {
+    template: 'license_granted',
+    version: 1,
+    subject: input.kind === 'master' ? 'Your VC Writer master license' : 'Your VC Writer academic license',
+    html: shell(
+      input.kind === 'master' ? 'Your master license' : 'Your academic license',
+      `<p style="margin:0 0 16px">${escapeHtml(what)}</p>
+       ${serialBlock(input.serial)}
+       ${primaryLink(input.accountUrl, 'Sign in and download')}
+       ${note(`${diamond}${escapeHtml(how)}`)}`,
+    ),
+    text: ['VC WRITER', '', what, '', `Your license: ${input.serial}`, '', `Sign in and download: ${input.accountUrl}`, '', how, '', 'vc-writer.com'].join('\n'),
+  };
+};
+
 export interface RoomInvitationInput {
   /** The room, which is a project somebody is already writing. */
   roomName: string;

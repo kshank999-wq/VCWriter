@@ -1,7 +1,7 @@
 import { app } from 'electron';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { licenseStatusSchema, noteStanding, type DeskStanding } from '@vcwriter/domain';
+import { licenseGrantSchema, licenseStatusSchema, noteStanding, type DeskStanding } from '@vcwriter/domain';
 import { accessToken, isCloudConfigured, SITE_URL } from './cloud';
 import { devicePlatform } from './device';
 
@@ -39,6 +39,7 @@ const held = async (): Promise<DeskStanding | null> => {
       expiresAt: typeof parsed.expiresAt === 'string' ? parsed.expiresAt : null,
       checkedAt: parsed.checkedAt,
       seenLapsedAt: typeof parsed.seenLapsedAt === 'string' ? parsed.seenLapsedAt : null,
+      ...(parsed.grant === 'academic' || parsed.grant === 'master' ? { grant: parsed.grant } : {}),
     };
   } catch {
     // Absent, unreadable or nonsense all mean the same thing: this machine has
@@ -75,7 +76,7 @@ const ask = async (previous: DeskStanding | null): Promise<DeskStanding | null> 
     });
     if (!response.ok) return null;
     const payload = (await response.json().catch(() => null)) as
-      | { standing?: { status?: unknown; expiresAt?: unknown } | null }
+      | { standing?: { status?: unknown; expiresAt?: unknown; grant?: unknown } | null }
       | null;
     if (!payload || !('standing' in payload)) return null;
 
@@ -92,6 +93,8 @@ const ask = async (previous: DeskStanding | null): Promise<DeskStanding | null> 
       {
         status: status.data,
         expiresAt: typeof payload.standing.expiresAt === 'string' ? payload.standing.expiresAt : null,
+        // Addendum 44: a given licence says so, and an unnamed answer reads as bought.
+        grant: licenseGrantSchema.catch('purchase').parse(payload.standing.grant),
       },
       new Date(),
     );

@@ -194,6 +194,7 @@ export * from './character-map.js';
 export * from './character-review.js';
 export * from './attribution.js';
 export * from './activation.js';
+export * from './license-grants.js';
 export * from './subscription.js';
 export * from './error-report.js';
 export * from './editor-daily.js';

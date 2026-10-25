@@ -8,6 +8,9 @@ interface LicenseRow {
   status: string;
   entitled_platforms: string[];
   max_activations: number;
+  /** Addendum 44: how it came to be. Absent before migration 0069. */
+  grant_kind?: string;
+  granted_to?: string;
   created_at: string;
 }
 
@@ -144,8 +147,10 @@ export function SupportConsole({ initialEmail = '' }: { initialEmail?: string })
                       <div>
                         <strong className="serial">{license.serial}</strong>
                         <p className="lede">
-                          {license.status} · {license.entitled_platforms.join(', ')} · up to{' '}
-                          {license.max_activations} devices
+                          {license.grant_kind === 'master' ? 'master · ' : license.grant_kind === 'academic' ? 'academic · ' : ''}
+                          {license.status} · {license.entitled_platforms.join(', ')} ·{' '}
+                          {license.grant_kind === 'master' ? 'any number of computers' : `up to ${license.max_activations} devices`}
+                          {license.granted_to ? ` · for ${license.granted_to}` : ''}
                         </p>
                       </div>
                       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

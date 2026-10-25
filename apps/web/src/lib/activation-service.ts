@@ -5,6 +5,7 @@ import {
   explainRefusal,
   licenseLive,
   licenseSchema,
+  seatLimit,
   type ActivationOutcome,
   type DeviceActivation,
   type License,
@@ -35,7 +36,8 @@ export interface ActivateInput {
 export interface ActivateResult {
   outcome: ActivationOutcome;
   message: string | null;
-  license: { serial: string; maxActivations: number } | null;
+  /** `maxActivations` is null where the licence covers any number of computers (addendum 44). */
+  license: { serial: string; maxActivations: number | null } | null;
 }
 
 const licenseRowToDomain = (row: Record<string, unknown>): License =>
@@ -48,6 +50,8 @@ const licenseRowToDomain = (row: Record<string, unknown>): License =>
     entitledPlatforms: row['entitled_platforms'],
     maxActivations: row['max_activations'],
     expiresAt: row['expires_at'],
+    grant: row['grant_kind'] ?? undefined,
+    grantedTo: row['granted_to'] ?? undefined,
     createdAt: row['created_at'],
     updatedAt: row['updated_at'],
   });
@@ -149,7 +153,7 @@ export const activateDevice = async (
   return {
     outcome,
     message: null,
-    license: { serial: license.serial, maxActivations: license.maxActivations },
+    license: { serial: license.serial, maxActivations: seatLimit(license) },
   };
 };
 
@@ -191,7 +195,7 @@ export const deactivateDevice = async (
 export const listDevices = async (
   userId: string,
   client: SupabaseClient = adminClient(),
-): Promise<Array<{ activation: DeviceActivation; serial: string; maxActivations: number }>> => {
+): Promise<Array<{ activation: DeviceActivation; serial: string; maxActivations: number | null }>> => {
   const { data: licenseRows } = await client.from('licenses').select('*').eq('user_id', userId);
   const licenses = ((licenseRows ?? []) as Record<string, unknown>[]).map(licenseRowToDomain);
   if (licenses.length === 0) return [];
@@ -209,10 +213,10 @@ export const listDevices = async (
     .map((activation) => {
       const license = licenses.find((candidate) => candidate.id === activation.licenseId);
       return license
-        ? { activation, serial: license.serial, maxActivations: license.maxActivations }
+        ? { activation, serial: license.serial, maxActivations: seatLimit(license) }
         : null;
     })
-    .filter((entry): entry is { activation: DeviceActivation; serial: string; maxActivations: number } =>
+    .filter((entry): entry is { activation: DeviceActivation; serial: string; maxActivations: number | null } =>
       entry !== null,
     );
 };
