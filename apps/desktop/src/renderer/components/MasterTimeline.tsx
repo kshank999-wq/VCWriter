@@ -25,6 +25,9 @@ import {
   beatsAreChips,
   clampLane,
   LANE_DEFAULT,
+  BEAT_CHIP_MAX,
+  clampBeatWidth,
+  laneCarriesWords,
   storyLayout,
   threadLayout,
   timecode,
@@ -96,6 +99,12 @@ interface MasterTimelineProps {
   laneHeight?: number;
   /** Set by the host where the board has lanes to grow (§4e). */
   onLane?(height: number): void;
+  /**
+   * **How wide the beats are drawn in a scene** (§4f): one width for the
+   * board, dragged from a scene's beat column. Never wider than the scene.
+   */
+  beatWidth?: number;
+  onBeatWidth?(width: number): void;
   /** Null in a window that holds only the tracks: there is no inspector there. */
   inspectorOpen: boolean | null;
   onToggleInspector(): void;
@@ -159,6 +168,8 @@ export function MasterTimeline({
   onSelectTrack,
   laneHeight: lane = LANE_DEFAULT,
   onLane,
+  beatWidth = BEAT_CHIP_MAX,
+  onBeatWidth,
   onUpdate,
   pixelsPerPage,
   onZoom,
@@ -574,6 +585,8 @@ export function MasterTimeline({
               selectedUnitId={selectedUnitId}
               laneAt={laneAt}
               chipsFor={chipsFor}
+              beatWidth={beatWidth}
+              {...(onBeatWidth ? { onBeatWidth } : {})}
               onSelectUnit={onSelectUnit}
               onSelectTrack={onSelectTrack}
               drag={drag}
@@ -813,6 +826,9 @@ interface TrackRowProps {
   selectedBeatId: BeatId | null;
   selectedUnitId: string | null;
   laneAt: number;
+  /** How wide the beats are drawn, and the drag that sets it (§4f). */
+  beatWidth: number;
+  onBeatWidth?(width: number): void;
   /**
    * Whether a beat is drawn as a chip or as a tick (addendum 02 §4d). It is
    * the board's answer rather than each block's: a row where some scenes drew
@@ -851,6 +867,8 @@ function TrackRow({
   selectedUnitId,
   laneAt,
   chipsFor,
+  beatWidth,
+  onBeatWidth,
   onSelectUnit,
   onSelectTrack,
   drag,
@@ -884,6 +902,42 @@ function TrackRow({
   const removal = trackRemoval(file, track.id);
   const unitWord = nouns.unit.toLowerCase();
   const subWord = nouns.sub.toLowerCase();
+
+  /**
+   * **Words while the lane is tall enough to carry them** (§4e's
+   * `laneCarriesWords`, written and never asked here). Below it the rows kept
+   * their words at full size in a lane a few pixels tall, so the titles ran
+   * over each other — Ken's *it starts to overlap the beats*. A lane too short
+   * for words draws ticks, the answer a scene too narrow for them already
+   * gets; the scene's own head is left alone, its width being what decides it.
+   */
+  const wordsFor = (span: StorySpan): boolean => chipsFor(span) && laneCarriesWords(laneAt);
+
+  /**
+   * **Dragging the beats wider** (§4f). The grip on a scene's beat column
+   * sets one width for the board, live as it moves; it starts from the width
+   * the column is actually drawn at, so a drag in a scene narrower than the
+   * setting does not jump. A double-click goes back to the default.
+   */
+  const startBeatResize = (event: React.PointerEvent<HTMLLIElement>) => {
+    if (!onBeatWidth) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const column = event.currentTarget.parentElement;
+    const from = column?.getBoundingClientRect().width ?? beatWidth;
+    const x0 = event.clientX;
+    const grip = event.currentTarget;
+    grip.setPointerCapture?.(event.pointerId);
+    const move = (moved: PointerEvent) => onBeatWidth(clampBeatWidth(from + moved.clientX - x0));
+    const done = () => {
+      grip.removeEventListener('pointermove', move);
+      grip.removeEventListener('pointerup', done);
+      grip.removeEventListener('pointercancel', done);
+    };
+    grip.addEventListener('pointermove', move);
+    grip.addEventListener('pointerup', done);
+    grip.addEventListener('pointercancel', done);
+  };
   /**
    * The run picked with shift (addendum 02 §6b, from Ken: *you should be able
    * to shift click several beats… and in this one it'll be merge*).
@@ -1311,15 +1365,18 @@ function TrackRow({
               )
             ) : collapsed ? null : (
               <ul
-                className={chipsFor(span) ? 'block-beats' : 'block-beats ticks'}
+                className={wordsFor(span) ? 'block-beats' : 'block-beats ticks'}
                 /* `--beat-cols` caps how wide the chips may run (§4d): a block
                    scales with its pages because that is the axis, and a chip
                    is a chip — measured at the top of the slider a single beat
                    was 2,089 pixels across. */
                 style={
                   {
-                    // One column, as tall as the beats in it (§4e).
+                    // One column, as tall as the beats in it (§4e), as wide
+                    // as the writer has dragged it and never wider than the
+                    // scene (§4f).
                     '--beat-h': `${laneAt}px`,
+                    '--beat-w': `${clampBeatWidth(beatWidth)}px`,
                   } as React.CSSProperties
                 }
                 onDragOver={(event) => {
@@ -1426,6 +1483,20 @@ function TrackRow({
                     </button>
                   </li>
                 ))}
+                {onBeatWidth && wordsFor(span) ? (
+                  <li
+                    className="beat-resize"
+                    role="separator"
+                    aria-orientation="vertical"
+                    aria-label={`Width of the ${nouns.sub.toLowerCase()}s`}
+                    title={`Drag to make the ${nouns.sub.toLowerCase()}s wider or narrower · double-click for the usual width`}
+                    onPointerDown={startBeatResize}
+                    onDoubleClick={(event) => {
+                      event.stopPropagation();
+                      onBeatWidth(BEAT_CHIP_MAX);
+                    }}
+                  />
+                ) : null}
                 <li className="block-add">
                   <button
                     type="button"

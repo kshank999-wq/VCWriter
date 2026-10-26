@@ -16,6 +16,7 @@ import {
   isWordProcessor,
   mainDocument,
   LANE_DEFAULT,
+  BEAT_CHIP_MAX,
   isInteractive,
   setParagraphStyle,
   setScriptFormat,
@@ -206,6 +207,8 @@ export default function App() {
    * old one holds a number that meant something else.
    */
   const [laneHeight, setLaneHeight] = usePreference('laneHeight', LANE_DEFAULT);
+  // How wide the beats are drawn in a scene (addendum 02 §4f), kept like the lane.
+  const [beatWidth, setBeatWidth] = usePreference('beatWidth', BEAT_CHIP_MAX);
   // The Timeline & Viewer screen: its own zoom, and whose thread is isolated.
   const [viewerZoom, setViewerZoom] = usePreference('viewerZoom', 180);
   const [isolatedCharacter, setIsolatedCharacter] = useState('');
@@ -1215,6 +1218,8 @@ export default function App() {
         onSelectTrack={setSelectedTrackId}
         laneHeight={laneHeight}
         onLane={setLaneHeight}
+        beatWidth={beatWidth}
+        onBeatWidth={setBeatWidth}
         onUpdate={project.update}
         pixelsPerPage={pixelsPerPage}
         onZoom={setPixelsPerPage}

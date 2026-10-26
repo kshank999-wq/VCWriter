@@ -245,6 +245,28 @@ export const LANE_READABLE = 14;
 export const laneCarriesWords = (height: number): boolean => clampLane(height) >= LANE_READABLE;
 
 /**
+ * **How wide the beats are drawn in a scene** (addendum 02 §4f, from Ken:
+ * *we need to be able to drag the beat out wider to read it. There's plenty
+ * of room in the scene to do it*).
+ *
+ * `BEAT_CHIP_MAX` capped every beat at 180 pixels because a chip that filled
+ * a whole chapter at the top of the zoom was 2,089 pixels of nothing (§4d).
+ * That cap was a constant, so a long beat title stayed cut off however much
+ * room its scene had. It is the **default** now, and the writer drags it wider
+ * or narrower; one width for every scene on the board, like the lane height,
+ * so the beats stay lined up down the tracks.
+ *
+ * It never runs past its scene: the block is the limit, which is what *fit
+ * the box* asks. So the ceiling only says how far a drag may go, and in a
+ * scene narrower than it the beats simply fill the scene.
+ */
+export const BEAT_WIDTH_FLOOR = 90;
+export const BEAT_WIDTH_CEILING = 1200;
+
+export const clampBeatWidth = (width: number): number =>
+  Math.min(BEAT_WIDTH_CEILING, Math.max(BEAT_WIDTH_FLOOR, Math.round(width)));
+
+/**
  * How tall a scene's block stands, given its beats.
  *
  * **The lane is as tall as what is in it**, so a chapter of twenty beats is a

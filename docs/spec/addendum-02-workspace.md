@@ -2789,3 +2789,42 @@ exactly like the change never having been made. One assertion pinned §4d's
 ceiling and is **rewritten rather than worked around**; what it asserts now is
 the **shape of the range** rather than a number, so the next correction to it
 does not have to edit a test about something else.
+
+
+### §4f Beats that fit their scene, and widen
+
+From Ken, with two pictures of the plot tracks: *when you zoom up and down,
+it starts to overlap the beats, but it's not fitting the box for the scene. So
+it should fit the box. … we need to be able to drag the beat out wider to read
+it. There's plenty of room in the scene to do it.*
+
+**The overlap.** §4e gave the lane a floor of 6 pixels and wrote
+`laneCarriesWords` (14 pixels and up) for exactly this question, but the plot
+tracks never asked it. So a 6-pixel row kept its 12-pixel title, and the
+titles ran over each other. Now:
+- **A lane too short for words draws ticks**, the same answer a scene too
+  narrow for them already got.
+- **Between 14 and 22 pixels the row's type shrinks with it**, padding first,
+  so a title never spills into the one below.
+- The scene's own head is still decided by its width alone, so a short lane
+  never hides a chapter's name.
+
+**The width.** §4d capped a beat at 180 pixels (`BEAT_CHIP_MAX`) because one
+chip filling a chapter at full zoom was 2,089 pixels of nothing. The cap was a
+constant, so a long title stayed cut off however much room its scene had. Now
+180 is the default:
+- A **grip on the beat column's right edge** drags the width, live, from 90
+  up to 1,200 pixels (`clampBeatWidth`).
+- **The scene is the limit.** The column is `min(--beat-w, 100%)`, so beats
+  fill a narrower scene and never run past its box.
+- **One width for the board**, kept as a preference beside the lane height,
+  so the beats stay lined up down the tracks, in the main window and a
+  popped-out one alike. A double-click on the grip goes back to 180.
+
+**Driven** in Chromium against the built preview: three chapters of eighteen
+long-titled beats, the page zoom at its top.
+- At lane 22: names read.
+- At lane 16: smaller type, no overlap.
+- At lane 8: ticks.
+- Dragging the grip took the first scenes' beats from 180 to 295 pixels, and a
+  drag far past the edge stopped at the 297-pixel scene.

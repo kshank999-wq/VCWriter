@@ -23,7 +23,7 @@ import { useWritingAccess } from './use-writing-access';
 import { StaleBuildNotice } from './components/StaleBuildNotice';
 import { WritingNotice } from './components/WritingNotice';
 import { usePreference } from './use-split';
-import { LANE_DEFAULT } from '@vcwriter/domain';
+import { BEAT_CHIP_MAX, LANE_DEFAULT } from '@vcwriter/domain';
 import { addBeatAfter, addSceneAfter } from './structure';
 import { beatIdOf, paneTitle, type PaneKey } from './panes';
 import { applyScheme, DEFAULT_SCHEME, type SchemeId } from './themes';
@@ -203,6 +203,7 @@ function Section({
   const printing = usePrinting({ file, setup: printSetup });
   // The vertical zoom is the machine's, like the horizontal one (§4e).
   const [lane, setLane] = usePreference('laneHeight', LANE_DEFAULT);
+  const [beatWidth, setBeatWidth] = usePreference('beatWidth', BEAT_CHIP_MAX);
   const [viewerZoom, setViewerZoom] = usePreference('viewerZoom', 180);
   const [isolatedCharacter, setIsolatedCharacter] = useState('');
 
@@ -453,6 +454,8 @@ function Section({
         onSelectTrack={setSelectedTrackId}
         laneHeight={lane}
         onLane={setLane}
+        beatWidth={beatWidth}
+        onBeatWidth={setBeatWidth}
         onUpdate={onUpdate}
         pixelsPerPage={pixelsPerPage}
         onZoom={setPixelsPerPage}

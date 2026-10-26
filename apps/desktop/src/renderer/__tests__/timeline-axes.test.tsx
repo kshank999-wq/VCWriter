@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { LANE_CEILING, LANE_FLOOR, ZOOM_CEILING, ZOOM_FLOOR, isProseFormat } from '@vcwriter/domain';
+import { BEAT_CHIP_MAX, BEAT_WIDTH_CEILING, BEAT_WIDTH_FLOOR, LANE_CEILING, LANE_FLOOR, ZOOM_CEILING, ZOOM_FLOOR, clampBeatWidth, isProseFormat } from '@vcwriter/domain';
 
 /**
  * **The two axes, and the viewer a book does not have** (addendum 02 §4e).
@@ -74,5 +74,46 @@ describe('the board has two axes', () => {
     const prefs = read('components/Preferences.tsx');
     expect(prefs).not.toContain('beatsPerColumn');
     expect(prefs).not.toContain('Cards before a new column');
+  });
+});
+
+/**
+ * **Beats that fit their scene, and can be dragged wider** (addendum 02 §4f,
+ * from Ken: *when you zoom up and down, it starts to overlap the beats… it
+ * should fit the box*, and *we need to be able to drag the beat out wider to
+ * read it*).
+ */
+describe('the beats fit the box', () => {
+  it('draws ticks, not words, in a lane too short to carry them', () => {
+    const board = read('components/MasterTimeline.tsx');
+    expect(board).toContain('laneCarriesWords(laneAt)');
+    expect(board).toContain("className={wordsFor(span) ? 'block-beats' : 'block-beats ticks'}");
+    // The scene's own head is decided by its width alone, so a short lane
+    // never hides a chapter's name.
+    expect(board).toContain("className={`block${chipsFor(span) ? '' : ' compressed'}");
+  });
+
+  it('shrinks the words with the row between readable and the default', () => {
+    const css = read('workspace.css');
+    expect(css).toContain('font-size: clamp(9px, calc(var(--beat-h, 22px) * 0.6), var(--ui));');
+  });
+
+  it('lets the beats be dragged wider, never past their scene', () => {
+    const board = read('components/MasterTimeline.tsx');
+    expect(board).toContain('className="beat-resize"');
+    expect(board).toContain("'--beat-w': `${clampBeatWidth(beatWidth)}px`");
+    const css = read('workspace.css');
+    expect(css).toContain('max-width: min(var(--beat-w, 180px), 100%);');
+    expect(css).not.toMatch(/\.block-beats \{[^}]*max-width: 180px;/);
+    // Kept like the lane height, in the main window and a popped-out one.
+    expect(read('App.tsx')).toContain("usePreference('beatWidth', BEAT_CHIP_MAX)");
+    expect(read('Satellite.tsx')).toContain("usePreference('beatWidth', BEAT_CHIP_MAX)");
+  });
+
+  it('keeps a dragged width between a readable floor and a sane ceiling', () => {
+    expect(clampBeatWidth(10)).toBe(BEAT_WIDTH_FLOOR);
+    expect(clampBeatWidth(99_999)).toBe(BEAT_WIDTH_CEILING);
+    expect(clampBeatWidth(300.4)).toBe(300);
+    expect(BEAT_WIDTH_FLOOR).toBeLessThan(BEAT_CHIP_MAX);
   });
 });

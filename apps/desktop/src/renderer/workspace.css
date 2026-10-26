@@ -1614,7 +1614,44 @@ dialog.scene-dialog > header.off {
      the slider, one beat ran 2,089 pixels across a chapter. Past a couple of
      hundred there is nothing more of a chip to read, so the list stops and the
      rest of the block is the block. */
-  max-width: 180px;
+  /* **As wide as the writer drags it, never wider than the scene**
+     (addendum 02 §4f, from Ken: *we need to be able to drag the beat out
+     wider to read it*). The 180 above is the default `--beat-w`, no longer
+     a wall; the scene is the wall, which is what *fit the box* asks. */
+  max-width: min(var(--beat-w, 180px), 100%);
+  position: relative;
+}
+
+/* The grip: the column's right edge, the full height of the beats. */
+.block-beats > .beat-resize {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  bottom: 0;
+  width: 7px;
+  height: auto;
+  min-height: 0;
+  cursor: ew-resize;
+  touch-action: none;
+  z-index: 2;
+}
+
+.block-beats > .beat-resize::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 3px;
+  width: 1px;
+  background: var(--border);
+  transition: background 120ms;
+}
+
+.block-beats > .beat-resize:hover::after,
+.block-beats > .beat-resize:active::after {
+  background: var(--gold);
+  width: 2px;
+  left: 2px;
 }
 
 .block-beats li {
@@ -1639,6 +1676,7 @@ dialog.scene-dialog > header.off {
   border-radius: 2px;
   padding: 3px 6px;
   font-size: var(--ui);
+  line-height: 1.25;
   text-align: left;
   color: var(--text);
 }
@@ -21242,6 +21280,16 @@ dialog.note-dialog > header {
 .block-beats.ticks .beat-row.selected,
 .block-beats.ticks .beat-row.marked {
   background: var(--gold-bright);
+}
+
+/* **The words fit the row they are in** (addendum 02 §4e/§4f, from Ken: *it
+   starts to overlap the beats… it should fit the box*). Between the lane that
+   can carry words (14px) and the default (22px) the row shrinks and its type
+   with it, padding first, so a title never spills into the one below. */
+.block-beats:not(.ticks) .beat-row {
+  padding-block: clamp(0px, calc((var(--beat-h, 22px) - 16px) / 2), 3px);
+  font-size: clamp(9px, calc(var(--beat-h, 22px) * 0.6), var(--ui));
+  max-height: var(--beat-h, 22px);
 }
 
 /* The words, the glyph and the dots go: at seven pixels tall there is nothing
