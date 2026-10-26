@@ -57,6 +57,39 @@ const main = async () => {
   if (records.length === 0) say(`- **No app record has the bundle id \`${BUNDLE}\`.** Create it (§1.4).`);
   for (const app of records) say(`- App record for \`${BUNDLE}\`: **${app.attributes.name}**, Apple ID \`${app.id}\``);
 
+  // Every app this key's team can see, and its newest builds whatever app
+  // they belong to: an upload that is not under the expected record may be
+  // under another, which is a different fault from one Apple turned away.
+  const everyApp = await get('/v1/apps?fields[apps]=name,bundleId&limit=50');
+  say();
+  say(`**Apps on this team (${(everyApp.data ?? []).length}):** ${(everyApp.data ?? []).map((one) => `${one.attributes.name} (\`${one.attributes.bundleId}\`)`).join(', ') || 'none'}`);
+  const anywhere = await get(
+    '/v1/builds?sort=-uploadedDate&limit=10&include=app,preReleaseVersion&fields[builds]=version,uploadedDate,processingState,app,preReleaseVersion&fields[apps]=name,bundleId&fields[preReleaseVersions]=version',
+  );
+  const names = new Map((anywhere.included ?? []).filter((one) => one.type === 'apps').map((one) => [one.id, `${one.attributes.name} (${one.attributes.bundleId})`]));
+  const shortVersions = new Map((anywhere.included ?? []).filter((one) => one.type === 'preReleaseVersions').map((one) => [one.id, one.attributes.version]));
+  say();
+  if ((anywhere.data ?? []).length === 0) say('**This team holds no builds for any app.**');
+  else {
+    say('Newest builds on the team, any app:');
+    say();
+    say('| App | Version | Build | Uploaded | Processing |');
+    say('| --- | --- | --- | --- | --- |');
+    for (const build of anywhere.data) {
+      const a = build.attributes;
+      say(`| ${names.get(build.relationships?.app?.data?.id) ?? '?'} | ${shortVersions.get(build.relationships?.preReleaseVersion?.data?.id) ?? '?'} | ${a.version} | ${a.uploadedDate?.slice(0, 16).replace('T', ' ') ?? '?'} | ${a.processingState} |`);
+    }
+  }
+  // Uploads Apple received but has not made builds of yet, or refused:
+  // the build-upload records, where the API offers them.
+  const uploads = await get(`/v1/apps/${encodeURIComponent(ASC_APP_ID || records[0]?.id || '')}/buildUploads?limit=10`).catch((error) => ({ error: error.message }));
+  say();
+  if (uploads.error) say(`Build uploads: not available here (${uploads.error.slice(0, 160)})`);
+  else {
+    say(`**Uploads Apple has received for this app: ${(uploads.data ?? []).length}.**`);
+    for (const one of uploads.data ?? []) say(`- ${JSON.stringify(one.attributes)}`);
+  }
+
   const appId = ASC_APP_ID || records[0]?.id;
   if (ASC_APP_ID) {
     const configured = records.find((one) => one.id === ASC_APP_ID);
