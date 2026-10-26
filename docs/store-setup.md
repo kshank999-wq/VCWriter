@@ -262,8 +262,16 @@ and one or more `ITMS-9xxxx` codes in the body.
 
    An empty list, or a build marked `INVALID`, means processing turned it
    away. The reason is in the email.
+   It also reads Apple's **upload records**, which carry the `ITMS` errors
+   themselves, so the reason can be read here even when no email arrives.
 3. Send the fix with a new build: run **Notes iOS release** again. The build
    number goes up by itself.
+
+**What it found for build 2** (26 October): `ITMS-90683`, a missing
+`NSPhotoLibraryUsageDescription`. The app never touches photos, but React
+Native's networking code can load `ph://` images from the library, and Apple
+asks for a purpose string for any code that could. `app.json` now carries
+one, saying the app does not use photos. No email had arrived.
 
 ## 2. Google Play — starting from nothing
 

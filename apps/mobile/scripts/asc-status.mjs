@@ -114,7 +114,7 @@ const main = async () => {
   say();
   if ((builds.data ?? []).length === 0) {
     say('**Apple holds no builds for this app.** An upload that the upload service accepted and that is not here was');
-    say('turned away in processing. Apple emailed the reason ("ITMS-…") to the account holder on the day of the upload.');
+    say('turned away in processing. Its reason ("ITMS-…") is in the upload records above, and in Apple\'s email.');
     return;
   }
   say('| Version | Build | Uploaded | Processing | Notes |');
