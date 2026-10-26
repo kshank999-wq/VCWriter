@@ -133,6 +133,12 @@ export interface SavedTo {
    * than from the kind in one place and the path in another.
    */
   working: boolean;
+  /**
+   * Where the file went on the writer's computer, where the host says so
+   * apart from the path (addendum 29 §8): the browser's library key is not a
+   * place anybody can look for. `live` is whether later saves keep writing it.
+   */
+  where?: { place: string; live: boolean };
 }
 
 /**
@@ -144,10 +150,18 @@ export interface SavedTo {
  * the host gave it, never prettified — a shortened path is a path you cannot
  * search your own disk for.
  */
-export const describeSavedTo = (saved: SavedTo): string =>
-  saved.working
+export const describeSavedTo = (saved: SavedTo): string => {
+  if (saved.where) {
+    const { place, live } = saved.where;
+    if (!saved.working) return `A copy is at ${place}. You are still writing in the one you were.`;
+    return live
+      ? `Saved to ${place}. You are writing in it from now on: every save goes to that file as well as to this browser.`
+      : `Saved to ${place}. This browser cannot keep that file up to date, so use Save as again for a newer copy there. You go on writing in this browser.`;
+  }
+  return saved.working
     ? `Saved. You are writing in ${saved.path} from now on, and it is on your recent list.`
     : `A copy is at ${saved.path}, and it is on your recent list. You are still writing in the one you were.`;
+};
 
 /* --------------------------------------------- where new projects go (§34) */
 

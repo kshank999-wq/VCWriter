@@ -216,7 +216,7 @@ export const useProject = (writable = true): UseProjectResult => {
     }
 
     setError(null);
-    return { kind, path: result.data.path, working: kind === 'as' };
+    return { kind, path: result.data.path, working: kind === 'as', ...(result.data.where ? { where: result.data.where } : {}) };
   }, []);
 
   useEffect(() => {

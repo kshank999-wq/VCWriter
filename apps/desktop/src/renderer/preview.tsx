@@ -31,8 +31,8 @@ if (!new URLSearchParams(window.location.search).get('pane')) {
   strip.innerHTML = `<span>${room ? (version ? 'Writers Room · a recorded version' : 'Writers Room') : 'Preview build'} ${__PREVIEW_BUILD__}</span>`;
   const button = document.createElement('button');
   button.type = 'button';
-  button.textContent = 'Download .vcw';
-  button.title = 'Save the open project as a file the desktop application opens';
+  button.textContent = 'Save .vcw…';
+  button.title = 'Save the open project as a file — into any folder, a Google Drive one included — that the desktop application opens';
   button.addEventListener('click', () => {
     if (!bridge.downloadCurrent()) window.alert('Open or create a project first.');
   });

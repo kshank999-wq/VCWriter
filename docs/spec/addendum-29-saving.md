@@ -233,9 +233,76 @@ separate decision about what a room is, and worth making deliberately.
 
 - **No *Save a copy* of a single room's view.** What is saved is the project;
   a room is a window onto it.
-- **No choosing the copy's name in the preview.** A browser has one place
-  rather than many, so there is nothing to ask; the title is what names it in
-  the library, and the writer renames it on the Home page.
+- ~~No choosing the copy's name in the preview.~~ Superseded by §11: the
+  preview now asks where, and the name is chosen in that dialog.
 - **No *revert to the copy*.** Snapshots are the recovery path (spec §6, §14)
   and a second one would be a second answer to *where do I get the old one
   back*.
+
+## 11. Saving to the writer's own computer from the preview
+
+From Ken: *I tried to use the save as function to save a copy of my work to a
+folder on my Google Drive, but it doesn't allow me. It just allows me to save
+in the browser. … Can we make sure that that works across all the modules?*
+
+**What it did.** In the preview, Save as and Save a copy wrote a second
+project into the browser's own storage and nowhere else. Every export
+(Word, text, eBook, the Layout room's files) went to the browser's downloads
+folder. Nothing asked where.
+
+**What it does now** (`renderer/disk-files.ts`, `browser-bridge.ts`).
+
+| Act | Chrome and Edge | Safari and Firefox |
+| --- | --- | --- |
+| **Save as…** | Asks where in the system's save dialog: any folder, a Google Drive, Dropbox or OneDrive folder included. Writes the `.vcw` there, and **every later save writes that file too**. | A download, and the sentence says so. |
+| **Save a copy…** | Asks where and writes the copy once. | A download. |
+| **Open a project file…** | Remembers the file it came from; saves go back to it. | Read into the browser as before. |
+| **Exports** (one file) | Asks where. | A download. |
+| **Exports** (several files) | Asks for a folder; the export's own folder is made inside it. | One download per file. |
+| **Save .vcw…** (the strip) | Asks where. | A download. |
+
+Every module reaches these through the same bridge calls: `saveProjectAs`
+from the menu bar, every room's Save control and the document ribbon;
+`saveFile` and `saveExport` from every export. So the change is made once,
+in the browser host, and holds in all of them. The desktop is unchanged; it
+always asked.
+
+**The dialog is asked first.** A browser opens it only in the moments after a
+press. So the bytes are made after the place has been chosen, never before.
+
+**The browser still holds the working copy.** The library entry is what the
+preview opens, snapshots and recovers from. The chosen file is kept in step
+with it: `saveProject` writes both. The link (library key → file handle) is
+kept in a small database of its own, so a reload remembers which file a
+project belongs to.
+
+**A file the browser may no longer write is said, not skipped.** After a
+reload the browser may need asking again, and it asks only during a press. An
+autosave cannot ask, so the save fails with *Saved in this browser. To keep
+X.vcw on your computer up to date as well, press Save and allow it.* The work
+is never at risk, because the browser copy is written first. The failure is
+retried at every save, so a Drive copy cannot fall silently behind.
+
+**A save stays cheap.** The project is turned into text only when a snapshot
+or a linked file needs it. `save-cost.test.ts` caught the first version doing
+it on every save, which is the cost addendum 20 removed.
+
+**Google Drive in a browser** means the Google Drive folder on the computer:
+Drive for desktop, or any synced folder. The browser's dialog cannot reach
+drive.google.com itself. A cloud drive is a folder, as `saving.ts` says.
+
+**Driven.** In Chromium, against the built preview, with the system dialog
+stood in for:
+- A novel saved with File → Save as… was written as `Harbour Lights.vcw`.
+- The screen said *Saved to Harbour Lights.vcw, in the folder you chose. You
+  are writing in it from now on…*
+- Adding a chapter rewrote that file at the next autosave.
+
+`disk-save.test.ts` pins:
+- save-as asks, writes, and goes on writing;
+- a copy is written once;
+- a dismissed dialog saves nothing;
+- a lost permission fails the save and loses nothing;
+- open writes back to the file it came from;
+- both export paths ask where;
+- the download fallback says where it went.

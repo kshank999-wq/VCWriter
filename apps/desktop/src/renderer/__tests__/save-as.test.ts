@@ -1,5 +1,6 @@
+/** @vitest-environment jsdom */
 import 'fake-indexeddb/auto';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createProjectFile } from '@vcwriter/domain';
 import { createBrowserBridge } from '../browser-bridge';
 import { createClient, createHub, type LinkMessage, type LinkTransport } from '../link';
@@ -15,6 +16,14 @@ import { createClient, createHub, type LinkMessage, type LinkTransport } from '.
  */
 
 describe('the preview can save somewhere else', () => {
+  // A browser that cannot ask where (§8): each save is also a download, which
+  // a test page has nowhere to put.
+  beforeEach(() => {
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+    URL.createObjectURL = vi.fn(() => 'blob:x');
+    URL.revokeObjectURL = vi.fn();
+  });
+
   /**
    * In the browser rather than only on the desktop, because this is the build
    * Ken actually uses — a feature that works everywhere but here reads as

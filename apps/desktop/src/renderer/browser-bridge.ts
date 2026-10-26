@@ -1,6 +1,7 @@
 import {
   PROJECT_FORMAT_VERSION,
   copyTitle,
+  suggestedFileName,
   createProjectFile,
   freeName,
   parseProjectFile,
@@ -22,6 +23,15 @@ import {
   type SceneVerdict,
 } from '@vcwriter/domain';
 import type { DesktopApiResult, OpenResult, VcWriterApi } from '../preload/index';
+import {
+  PROJECT_KIND,
+  mayWrite,
+  openFromDisk,
+  saveFilesToDisk,
+  saveToDisk,
+  writeHandle,
+  type DiskFileHandle,
+} from './disk-files';
 
 /**
  * The bridge for the browser preview (docs/deployment.md, "Browser preview").
@@ -245,30 +255,105 @@ const store = async (path: string, file: ProjectFile): Promise<OpenResult> => {
   return { path, file, contentHash };
 };
 
-/** Ask for a .vcw from disk; resolves null when the picker is dismissed. */
-const pickFile = (): Promise<File | null> =>
-  new Promise((resolve) => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.vcw,application/json';
-    input.style.display = 'none';
-    document.body.append(input);
-    const finish = (file: File | null) => {
-      input.remove();
-      resolve(file);
-    };
-    input.addEventListener('change', () => finish(input.files?.[0] ?? null));
-    input.addEventListener('cancel', () => finish(null));
-    input.click();
+/** Ask for a .vcw from disk; null when the dialog is dismissed. */
+const pickFile = async (): Promise<{ file: File; handle: DiskFileHandle | null } | null> => openFromDisk(PROJECT_KIND);
+
+/**
+ * **A project in this browser that is also a file on the writer's computer**
+ * (addendum 29 §8): its library key, and the handle of the file it was saved
+ * to or opened from. Every save of that project writes the file as well, so
+ * the copy in a Google Drive folder is the book as it stands and not as it was
+ * the day it was saved there.
+ *
+ * Held in memory, and kept in a database of its own so a reload remembers
+ * which file a project belongs to. A handle the browser cannot keep (one that
+ * will not clone) is held for the session only — the file is still written
+ * for as long as the page is open.
+ */
+const LINKS_DB = 'vcwriter-disk-links';
+const links = new Map<string, DiskFileHandle>();
+let linksLoaded: Promise<void> | null = null;
+
+const linksDatabase = (): Promise<IDBDatabase> =>
+  new Promise((resolve, reject) => {
+    const request = indexedDB.open(LINKS_DB, 1);
+    request.onupgradeneeded = () => request.result.createObjectStore('links');
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error ?? new Error('IndexedDB refused to open'));
   });
 
-const download = (name: string, text: string): void => {
-  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = name;
-  anchor.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+const loadLinks = (): Promise<void> =>
+  (linksLoaded ??= (async () => {
+    try {
+      const db = await linksDatabase();
+      await new Promise<void>((resolve) => {
+        const transaction = db.transaction('links', 'readonly');
+        const cursor = transaction.objectStore('links').openCursor();
+        cursor.onsuccess = () => {
+          const at = cursor.result;
+          if (!at) return;
+          if (!links.has(String(at.key))) links.set(String(at.key), at.value as DiskFileHandle);
+          at.continue();
+        };
+        transaction.oncomplete = () => {
+          db.close();
+          resolve();
+        };
+        transaction.onerror = () => resolve();
+      });
+    } catch {
+      // No database is no links remembered; the session's own still work.
+    }
+  })());
+
+const keepLink = async (path: string, handle: DiskFileHandle | null): Promise<void> => {
+  if (handle) links.set(path, handle);
+  else links.delete(path);
+  try {
+    const db = await linksDatabase();
+    await new Promise<void>((resolve) => {
+      const transaction = db.transaction('links', 'readwrite');
+      const store = transaction.objectStore('links');
+      try {
+        if (handle) store.put(handle, path);
+        else store.delete(path);
+      } catch {
+        // A handle that will not clone stays in memory only.
+      }
+      transaction.oncomplete = () => {
+        db.close();
+        resolve();
+      };
+      transaction.onerror = () => resolve();
+      transaction.onabort = () => resolve();
+    });
+  } catch {
+    // As above.
+  }
+};
+
+const linkOf = async (path: string): Promise<DiskFileHandle | null> => {
+  await loadLinks();
+  return links.get(path) ?? null;
+};
+
+/**
+ * Write a linked project's file, or say why it was not written. The browser
+ * copy is already saved by the time this runs, so the sentence says that too:
+ * the work is safe, and only the file on the computer is behind.
+ */
+const writeLinked = async (path: string, text: () => string): Promise<string | null> => {
+  const handle = await linkOf(path);
+  if (!handle) return null;
+  try {
+    if (!(await mayWrite(handle))) {
+      return `Saved in this browser. To keep ${handle.name} on your computer up to date as well, press Save (Ctrl+S or ⌘S) and allow it when the browser asks.`;
+    }
+    await writeHandle(handle, text());
+    return null;
+  } catch (error) {
+    return `Saved in this browser, but ${handle.name} on your computer could not be written: ${(error as Error).message}. It will be tried again at the next save.`;
+  }
 };
 
 type PrintInput = Parameters<VcWriterApi['print']>[0];
@@ -541,8 +626,10 @@ export const createBrowserBridge = (): BrowserBridge => {
       try {
         const picked = await pickFile();
         if (!picked) return fail('No file chosen');
-        const file = parseProjectFile(JSON.parse(await picked.text()));
+        const file = parseProjectFile(JSON.parse(await picked.file.text()));
         const result = await store(await pathFor(file.project.title), file);
+        // Opened from a folder the browser can write back to: saves go there too.
+        if (picked.handle) await keepLink(result.path, picked.handle);
         current = { path: result.path, file };
         return ok(result);
       } catch (error) {
@@ -578,6 +665,10 @@ export const createBrowserBridge = (): BrowserBridge => {
         current = { path: input.path, file: input.file };
         if (contentHash === input.previousHash) return ok({ contentHash, written: false });
         await write({ path: input.path, file: input.file, contentHash, savedAt: new Date().toISOString() });
+        // Made only when something needs it: stringifying a book's pictures on
+        // every keystroke's save is the cost addendum 20 took out.
+        let text: string | null = null;
+        const textOf = () => (text ??= serializeProjectFile(input.file));
         /**
          * **The caller was asking all along** (addendum 33 §12). `useProject`
          * has set `snapshot` every twentieth save since autosave was written
@@ -586,7 +677,12 @@ export const createBrowserBridge = (): BrowserBridge => {
          * finished story. Taken after the write, so a recovery point is never
          * a copy of something that failed to save.
          */
-        if (input.snapshot) await keepSnapshot(input.path, serializeProjectFile(input.file), 'autosave');
+        if (input.snapshot) await keepSnapshot(input.path, textOf(), 'autosave');
+        // And the file on the writer's computer, where this project is one
+        // (§8). A failure fails the save, so it is retried and said — never a
+        // file in a Drive folder quietly a week behind the book.
+        const behind = await writeLinked(input.path, textOf);
+        if (behind) return fail(behind);
         return ok({ contentHash, written: true });
       } catch (error) {
         return fail((error as Error).message);
@@ -623,7 +719,20 @@ export const createBrowserBridge = (): BrowserBridge => {
           input.kind === 'copy'
             ? { ...input.file, project: { ...input.file.project, title: copyTitle(input.file.project.title) } }
             : input.file;
-        return ok(await store(await pathFor(file.project.title), file));
+        /**
+         * **Where, asked first** (§8). The dialog opens only in the moments
+         * after a press, so it comes before anything else; the writer picks a
+         * folder — a Google Drive one as readily as any — and the file is
+         * written there. Where the browser cannot ask, it is a download.
+         */
+        const name = `${input.suggestedName ?? suggestedFileName(file.project.title, input.kind)}`.replace(/\.vcw$/i, '') + '.vcw';
+        const disk = await saveToDisk(name, PROJECT_KIND, () => new Blob([serializeProjectFile(file)], { type: PROJECT_KIND.mediaType }));
+        if (disk.kind === 'cancelled') return fail('Save cancelled');
+        const result = await store(await pathFor(file.project.title), file);
+        // A save-as is the file the writer goes on in, so every later save
+        // writes it too. A copy is a copy of the moment and is left alone.
+        if (input.kind === 'as' && disk.kind === 'written') await keepLink(result.path, disk.handle);
+        return ok({ ...result, where: { place: disk.where, live: disk.live } });
       } catch (error) {
         return fail((error as Error).message);
       }
@@ -662,7 +771,7 @@ export const createBrowserBridge = (): BrowserBridge => {
       try {
         const picked = await pickFile();
         if (!picked) return ok(null);
-        const file = parseProjectFile(JSON.parse(await picked.text()));
+        const file = parseProjectFile(JSON.parse(await picked.file.text()));
         const result = await store(await pathFor(file.project.title), file);
         return ok({ path: result.path });
       } catch (error) {
@@ -810,35 +919,36 @@ export const createBrowserBridge = (): BrowserBridge => {
       return ok(popup !== null);
     },
 
-    // An export in the browser is a download per file: the browser decides
-    // where they land, and the folder is whatever it downloads to.
+    /**
+     * An export's files, into a folder the writer chooses (§8), the export's
+     * own folder made inside it; downloads where the browser cannot ask.
+     */
     async saveExport(input) {
-      const paths: string[] = [];
-      for (const one of input.files) {
-        const url = URL.createObjectURL(new Blob([one.bytes as BlobPart], { type: one.mediaType }));
-        const anchor = document.createElement('a');
-        anchor.href = url;
-        anchor.download = one.name;
-        document.body.appendChild(anchor);
-        anchor.click();
-        anchor.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 10_000);
-        paths.push(one.name);
+      try {
+        const saved = await saveFilesToDisk(
+          input.folderName,
+          input.files.map((one) => ({ name: one.name, blob: new Blob([one.bytes as BlobPart], { type: one.mediaType }) })),
+        );
+        if (saved.kind === 'cancelled') return ok(null);
+        return ok({ folder: saved.folder, paths: saved.paths });
+      } catch (error) {
+        return fail((error as Error).message);
       }
-      return ok({ folder: "your browser's downloads folder", paths });
     },
 
-    // One file is one download, where the browser keeps them.
+    /** One file, where the writer says (§8): a Word export, a text file, an eBook. */
     async saveFile(input) {
-      const url = URL.createObjectURL(new Blob([input.bytes as BlobPart], { type: input.mediaType }));
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = input.name;
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 10_000);
-      return ok({ path: `${input.name} in your browser's downloads folder` });
+      try {
+        const saved = await saveToDisk(
+          input.name,
+          { name: input.kind.name, extension: input.kind.extension, mediaType: input.mediaType },
+          () => new Blob([input.bytes as BlobPart], { type: input.mediaType }),
+        );
+        if (saved.kind === 'cancelled') return ok(null);
+        return ok({ path: saved.where });
+      } catch (error) {
+        return fail((error as Error).message);
+      }
     },
 
     appInfo: async () => ok({ version: 'preview', platform: 'browser' }),
@@ -1086,7 +1196,10 @@ export const createBrowserBridge = (): BrowserBridge => {
     current: () => current,
     downloadCurrent: () => {
       if (!current) return false;
-      download(suggestedExportFileName(current.file).replace(/\.pdf$/i, '') + '.vcw', serializeProjectFile(current.file));
+      const { file } = current;
+      void saveToDisk(suggestedExportFileName(file).replace(/\.pdf$/i, '') + '.vcw', PROJECT_KIND, () =>
+        new Blob([serializeProjectFile(file)], { type: PROJECT_KIND.mediaType }),
+      );
       return true;
     },
   };

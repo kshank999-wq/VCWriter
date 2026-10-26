@@ -35,6 +35,17 @@ export interface DesktopApiResult<T> {
   error?: string;
 }
 
+/**
+ * Where a save-as went on the writer's computer, where that is not the path
+ * itself (addendum 29 §8): in the browser the path is the library's key, and
+ * the file the writer chose is somewhere else, said in words.
+ */
+export interface SavedPlace {
+  place: string;
+  /** Whether later saves keep writing it. */
+  live: boolean;
+}
+
 export interface OpenResult {
   path: string;
   file: ProjectFile;
@@ -148,7 +159,7 @@ export interface VcWriterApi {
     kind: SaveKind;
     file: ProjectFile;
     suggestedName?: string;
-  }): Promise<DesktopApiResult<OpenResult>>;
+  }): Promise<DesktopApiResult<OpenResult & { where?: SavedPlace }>>;
   /**
    * Where new projects go, and whether this host can be asked for somewhere
    * else (addendum 34).
