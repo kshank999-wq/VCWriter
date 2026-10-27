@@ -7,19 +7,19 @@ import {
   emptySitting,
   everything,
   hear,
+  hearPause,
+  startGuided,
   projectFailed,
   projectMade,
   projectNamed,
   readSpoken,
   sayBack,
-  speakBack,
-  COMMAND_WORD,
   type CaptureKey,
   type ProjectFormat,
   type Sitting,
 } from '@vcwriter/domain';
 import { makeProject, type ProjectSummary } from '../host/api';
-import { file as fileNote, newClientCaptureId } from '../host/queue';
+import { file as fileNote, newClientCaptureId, pendingCaptures } from '../host/queue';
 import { canHear, mayHear, readyToSpeak, startDictation, type DictationSession } from '../host/listen';
 import { beep, hush, readAloud } from '../host/say';
 import { colour, styles } from '../theme';
@@ -82,6 +82,23 @@ export function Capture({
   const [heard, setHeard] = useState<string | null>(null);
   const [undone, setUndone] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  /**
+   * **Where the last Save got to**, drawn on the button itself (addendum 27
+   * §18, from Ken: *it needs to change color or do something to let you know
+   * it's saving. I'm not sure if it is saving or not*). The sentence used to
+   * be at the foot of the screen, under the keyboard.
+   */
+  const [saving, setSaving] = useState<'idle' | 'saving' | 'sent' | 'waiting' | 'failed'>('idle');
+  /** Notes on this phone that have not gone, and why the last one did not. */
+  const [waiting, setWaiting] = useState<{ count: number; why: string | null }>({ count: 0, why: null });
+  const countWaiting = async () => {
+    try {
+      const left = await pendingCaptures();
+      setWaiting({ count: left.length, why: left.find((one) => one.lastError)?.lastError ?? null });
+    } catch {
+      // The count is a courtesy; a phone that cannot read its queue still saves.
+    }
+  };
 
   /** The walk. */
   const [handsFree, setHandsFree] = useState(false);
@@ -106,6 +123,7 @@ export function Capture({
   const formatNow = (): ProjectFormat => (chosen.current.format as ProjectFormat) ?? 'screenplay';
 
   useEffect(() => {
+    void countWaiting();
     void canHear().then(setHearable);
     return () => {
       session.current?.stop();
@@ -125,27 +143,37 @@ export function Capture({
     text: string;
     group?: string | null;
     spoken: boolean;
-  }) => {
+  }): Promise<'sent' | 'waiting' | 'failed'> => {
     const words = note.text.trim();
-    if (words.length === 0 && !note.subjectName) return;
-    const why = await fileNote({
-      clientCaptureId: newClientCaptureId(),
-      projectId: chosen.current.id,
-      rawText: words,
-      source: note.spoken ? 'mobile_voice' : 'mobile_text',
-      capturedAt: new Date().toISOString(),
-      category: note.key,
-      subjectName: note.subjectName,
-      subcategory: note.group ?? null,
-      syncedAt: null,
-      lastError: null,
-      attempts: 0,
-    });
+    if (words.length === 0 && !note.subjectName) return 'failed';
+    let why: string | null;
+    try {
+      why = await fileNote({
+        clientCaptureId: newClientCaptureId(),
+        projectId: chosen.current.id,
+        rawText: words,
+        source: note.spoken ? 'mobile_voice' : 'mobile_text',
+        capturedAt: new Date().toISOString(),
+        category: note.key,
+        subjectName: note.subjectName,
+        subcategory: note.group ?? null,
+        syncedAt: null,
+        lastError: null,
+        attempts: 0,
+      });
+    } catch (error) {
+      // Not even written to the phone: said, rather than a press that did nothing.
+      setStatus(`Could not save on this phone: ${error instanceof Error ? error.message : String(error)}`);
+      void countWaiting();
+      return 'failed';
+    }
     // **The reason, when it did not go** (addendum 27 §17). This said *it will
     // go when there is signal* whatever the reason was, and the reason on
     // Ken's phone was the server refusing a note — so *Save it* looked like it
     // worked and nothing ever arrived.
     setStatus(why ? `Saved on this phone, not sent yet: ${why}` : 'Saved and sent');
+    void countWaiting();
+    return why ? 'waiting' : 'sent';
   };
 
   /** Stop listening and wait for the last words to be committed. */
@@ -157,21 +185,27 @@ export function Capture({
   };
 
   const save = async () => {
+    if (saving === 'saving') return;
+    setSaving('saving');
     // **Stopped first**, so the dictated words are committed before they are
     // read: an iPhone holds them provisional until then, and Save used to
     // find the box empty and do nothing at all.
     await stopListening();
     const words = textRef.current.trim();
-    if (words.length === 0) {
+    if (words.length === 0 && !subjectName.trim()) {
       setStatus('Nothing to save yet. Dictate or type the note first.');
+      setSaving('failed');
       return;
     }
-    await put({
+    const went = await put({
       key: chosenKey,
       subjectName: subjectName.trim() || null,
       text: words,
       spoken: false,
     });
+    setSaving(went);
+    if (went === 'failed') return;
+    setTimeout(() => setSaving((now) => (now === went ? 'idle' : now)), 4000);
     setText('');
     setInterim('');
     // The name goes with the note; the category stays, because somebody
@@ -227,17 +261,42 @@ export function Capture({
 
   // ------------------------------------------------------ one turn of a walk
 
+  /** The few seconds of quiet that ask *are you done* (addendum 27 §18). */
+  const PAUSE_MS = 3500;
+  const pauseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [speaking, setSpeaking] = useState(false);
+  const clearPause = () => {
+    if (pauseTimer.current) clearTimeout(pauseTimer.current);
+    pauseTimer.current = null;
+  };
+
   /**
-   * Answer out loud **without hearing the answer** (addendum 27 §17). The
-   * microphone stays on through a walk, so the phone's own *Subsection* came
-   * back as words in Ken's note. It is held while the phone speaks and for a
-   * moment after, so the last syllable is not caught either.
+   * Answer out loud **without hearing the answer** (addendum 27 §17–18). The
+   * phone's own questions came back as words in Ken's note, so listening is
+   * paused outright while it speaks, and resumed a moment after.
    */
   const speakOnWalk = (words: string) => {
-    session.current?.hold(true);
+    clearPause();
+    session.current?.pause();
+    setSpeaking(true);
     readAloud(words, setStatus, () => {
-      setTimeout(() => session.current?.hold(false), 450);
+      setTimeout(() => {
+        setSpeaking(false);
+        session.current?.resume();
+      }, 350);
     });
+  };
+
+  /** Somebody is talking: the question waits until they stop for a few seconds. */
+  const heardSomething = () => {
+    clearPause();
+    if (walk.current.ask !== 'body') return;
+    pauseTimer.current = setTimeout(() => {
+      const after = hearPause(walk.current);
+      walk.current = after;
+      setSitting(after);
+      if (after.speak) speakOnWalk(after.speak);
+    }, PAUSE_MS);
   };
 
   const heardHandsFree = (chunk: string) => {
@@ -246,27 +305,20 @@ export function Capture({
     walk.current = after;
     setSitting(after);
 
-    // A note that just closed goes to the device **and is sent** at once: a
-    // walk that pushed everything at the end would lose the lot to a dropped
-    // connection (addendum 09 §13).
-    // Every note this breath closed: two commands said together can close one
-    // and open the next (addendum 27 §16), and each one is filed.
+    // Every note this phrase closed goes to the phone **and is sent** at once
+    // (addendum 09 §13).
     for (const done of after.filed.slice(before.filed.length)) void put({ ...done, key: done.key, spoken: true });
 
     if (after.opened) beep('open');
-    else if (after.open === null && before.open !== null) beep('close');
 
     if (after.wants) {
       const found = projectNamed(after.wants, [{ id: chosen.current.id, name: chosen.current.title }]);
       speakOnWalk(found ? `${chosen.current.title}.` : `No project called ${after.wants}.`);
       return;
     }
+    if (after.speak) speakOnWalk(after.speak);
+    else heardSomething();
 
-    const spoken = speakBack(before, after);
-    if (spoken) speakOnWalk(spoken);
-
-    // Said *after* the read-back, so *Making Blackout…* is heard before the
-    // answer to it.
     if (after.makes) void startProject(after.makes);
   };
 
@@ -288,14 +340,15 @@ export function Capture({
 
   const toggleWalk = async () => {
     if (handsFree) {
+      clearPause();
+      hush();
       // The last words heard are filed with the rest, not dropped at the stop.
       await stopListening();
       setHandsFree(false);
+      setSpeaking(false);
       // Whatever was still open is kept: a notebook that only kept what you
       // remembered to close is one you stop trusting after the first walk.
       const left = everything(walk.current);
-      // The note still open, if it has anything in it: `everything` hands it
-      // back as the last of the list, past the ones already filed.
       for (const open of left.slice(walk.current.filed.length)) void put({ ...open, spoken: true });
       walk.current = emptySitting();
       setSitting(emptySitting());
@@ -307,14 +360,21 @@ export function Capture({
       setStatus('VC Writer Notes needs the microphone and speech to hear you.');
       return;
     }
+    // **A walk that asks** (addendum 27 §18): the first question is the kind.
+    walk.current = startGuided(formatNow());
+    setSitting(walk.current);
     session.current = startDictation(
       {
         onFinal: (chunk) => {
           setInterim('');
           heardHandsFree(chunk);
         },
-        onInterim: setInterim,
+        onInterim: (guess) => {
+          setInterim(guess);
+          if (guess) heardSomething();
+        },
         onError: (message) => {
+          clearPause();
           setStatus(message);
           setHandsFree(false);
           setListening(false);
@@ -324,11 +384,13 @@ export function Capture({
           setListening(false);
         },
       },
-      { continuous: false },
+      // A phrase that has stopped changing is what was said.
+      { commitAfterMs: 1500 },
     );
     setHandsFree(true);
     setListening(true);
     setStatus(null);
+    if (walk.current.speak) speakOnWalk(walk.current.speak);
   };
 
   const toggleDictation = async () => {
@@ -364,77 +426,67 @@ export function Capture({
 
   if (handsFree) {
     const open = sitting.open;
+    const asking =
+      sitting.ask === 'kind'
+        ? 'What kind of note is it?'
+        : sitting.ask === 'title'
+          ? 'What is the title?'
+          : sitting.ask === 'confirm'
+            ? 'Are you done, or would you like to continue?'
+            : 'What would you like to put in this note?';
     return (
       <View style={styles.screen}>
         <View style={styles.bar}>
-          <Text style={styles.muted}>{project.title}</Text>
-          {sitting.group ? <Text style={styles.muted}>Group: {sitting.group}</Text> : null}
+          <Text style={styles.muted} numberOfLines={1}>
+            {project.title}
+          </Text>
+          <Text style={[styles.muted, { color: speaking ? colour.gold : listening ? colour.live : colour.muted }]}>
+            {speaking ? '◆ Speaking' : listening ? '● Listening' : 'Paused'}
+          </Text>
         </View>
         <ScrollView contentContainerStyle={styles.body}>
-          <Text style={[styles.heading, listening ? { color: colour.live } : null]}>
-            {listening ? '● Listening' : 'Paused'}
-          </Text>
+          {/* The question in hand, large: it is what the walk is waiting for
+              (addendum 27 §18). */}
+          <Text style={[styles.title, { fontSize: 24, color: colour.goldBright }]}>{asking}</Text>
+          {sitting.ask === 'kind' ? (
+            <Text style={styles.muted}>{vocabulary.map((one) => one.name).join(' · ')} · or “just a note”</Text>
+          ) : null}
+          {sitting.ask === 'title' ? <Text style={styles.muted}>Or say “skip” for no title.</Text> : null}
+          {sitting.ask === 'confirm' ? (
+            <Text style={styles.muted}>Say “save”, “continue”, “read it back”, “start over” or “throw it away”.</Text>
+          ) : null}
 
-          <Text style={[styles.title, { fontSize: 22 }]}>
-            {open ? captureKeyName(open.key ?? 'idea', formatNow()) : 'Between notes'}
-            {open?.subjectName ? ` · ${open.subjectName}` : ''}
-          </Text>
-          {/* Which part the next words go into (addendum 27 §16), said where it is read. */}
           {open ? (
-            <Text style={[styles.muted, open.on === 'title' ? { color: colour.goldBright } : null]}>
-              {open.on === 'title' ? 'Now: the title' : 'Now: the note'}
-            </Text>
-          ) : null}
-
-          {/* The writing, large, because it is the one thing a glance has to
-              confirm. */}
-          <Text style={styles.text}>
-            {open?.text ?? ''}
-            {interim ? <Text style={{ color: colour.muted }}> {interim}</Text> : null}
-          </Text>
-
-          {sitting.said ? <Text style={styles.muted}>{sitting.said}</Text> : null}
-
-          {everything(sitting).length > 0 ? (
-            <Text style={styles.muted}>
-              {everything(sitting).length} note{everything(sitting).length === 1 ? '' : 's'} so far
-            </Text>
-          ) : null}
-
-          {/* The commands, in the words to say (addendum 27 §16, from Ken: *we can have it
-              on the screen, a little instruction thing*). Every one begins
-              with the command word, so those words stay yours inside a note. */}
-          <View style={{ gap: 4, marginTop: 8 }}>
-            <Text style={styles.label}>Say “{COMMAND_WORD}” and then</Text>
-            {[
-              [`${vocabulary.slice(0, 3).map((one) => one.name.toLowerCase()).join(' / ')}…`, 'start a note'],
-              ['next', 'from the title to the note'],
-              ['title', 'back to the title'],
-              ['erase word', 'take back the last word'],
-              ['erase all', 'empty this note and start again'],
-              ['done', 'save it'],
-              ['scratch that', 'throw it away'],
-              ['group …', 'put the next notes together'],
-            ].map(([say, does]) => (
-              <Text key={say} style={styles.muted}>
-                <Text style={{ color: colour.gold }}>{say}</Text> — {does}
+            <View style={{ gap: 6, borderTopWidth: 1, borderColor: colour.border, paddingTop: 12 }}>
+              <Text style={styles.label}>{open.key ? captureKeyName(open.key, formatNow()) : 'Note'}</Text>
+              <Text style={[styles.title, { fontSize: 20 }]}>
+                {open.subjectName ?? (sitting.ask === 'title' ? (interim || '…') : 'No title')}
               </Text>
-            ))}
-          </View>
+              <Text style={styles.text}>
+                {open.text}
+                {interim && sitting.ask !== 'title' ? <Text style={{ color: colour.muted }}> {interim}</Text> : null}
+              </Text>
+            </View>
+          ) : interim ? (
+            <Text style={[styles.text, { color: colour.muted }]}>{interim}</Text>
+          ) : null}
+
+          {sitting.filed.length > 0 ? (
+            <Text style={styles.muted}>
+              {sitting.filed.length} note{sitting.filed.length === 1 ? '' : 's'} saved on this walk
+            </Text>
+          ) : null}
+          {status ? <Text style={styles.muted}>{status}</Text> : null}
         </ScrollView>
 
         <View style={{ padding: 20 }}>
-          <Pressable
-            style={[styles.button, { backgroundColor: colour.live }]}
-            onPress={() => void toggleWalk()}
-          >
+          <Pressable style={[styles.button, { backgroundColor: colour.live }]} onPress={() => void toggleWalk()}>
             <Text style={[styles.buttonText, { color: '#fff' }]}>Stop the walk</Text>
           </Pressable>
         </View>
       </View>
     );
   }
-
   return (
     <View style={styles.screen}>
       <View style={styles.bar}>
@@ -541,9 +593,42 @@ export function Capture({
           </Pressable>
         ) : null}
 
-        <Pressable style={styles.button} onPress={() => void save()}>
-          <Text style={styles.buttonText}>Save it</Text>
+        <Pressable
+          style={[
+            styles.button,
+            saving === 'saving' ? { opacity: 0.6 } : null,
+            saving === 'sent' ? { backgroundColor: colour.sent, borderColor: colour.sent } : null,
+            saving === 'waiting' || saving === 'failed' ? { backgroundColor: colour.red, borderColor: colour.red } : null,
+          ]}
+          onPress={() => void save()}
+          disabled={saving === 'saving'}
+          accessibilityState={{ busy: saving === 'saving' }}
+        >
+          <Text
+            style={[
+              styles.buttonText,
+              saving === 'sent' || saving === 'waiting' || saving === 'failed' ? { color: '#fff' } : null,
+            ]}
+          >
+            {saving === 'saving'
+              ? 'Saving…'
+              : saving === 'sent'
+                ? '✓ Saved and sent'
+                : saving === 'waiting'
+                  ? 'Saved on this phone — not sent'
+                  : saving === 'failed'
+                    ? 'Not saved'
+                    : 'Save it'}
+          </Text>
         </Pressable>
+        {/* Why, right under the button rather than at the foot of the screen. */}
+        {status && saving !== 'idle' ? <Text style={styles.muted}>{status}</Text> : null}
+        {waiting.count > 0 ? (
+          <Text style={styles.muted}>
+            {waiting.count} note{waiting.count === 1 ? '' : 's'} waiting on this phone
+            {waiting.why ? ` — last try: ${waiting.why}` : ''}
+          </Text>
+        ) : null}
 
         <View style={{ flexDirection: 'row', gap: 10 }}>
           {/* **Absent rather than greyed** where the phone cannot hear for

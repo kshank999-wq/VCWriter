@@ -17,6 +17,7 @@ const emit = (name: string, event: Record<string, unknown> = {}) => {
   for (const one of listeners.get(name) ?? []) one(event);
 };
 let onStop: () => void = () => undefined;
+let onAbort: () => void = () => undefined;
 const categories: unknown[] = [];
 
 vi.mock('react-native', () => ({ Platform: { OS: 'ios' } }));
@@ -30,6 +31,7 @@ vi.mock('expo-speech-recognition', () => ({
     },
     start: vi.fn(),
     stop: () => onStop(),
+    abort: () => onAbort(),
     setCategoryIOS: (options: unknown) => categories.push(options),
   },
 }));
@@ -55,6 +57,7 @@ beforeEach(() => {
   listeners.clear();
   categories.length = 0;
   onStop = () => undefined;
+  onAbort = () => undefined;
 });
 
 describe('stopping dictation', () => {
@@ -120,14 +123,37 @@ describe('reading back', () => {
  * when the recogniser stops.
  */
 describe('a phrase the phone sends twice', () => {
-  it('is committed once', async () => {
+  it('is committed once when the stop repeats it, capitals and punctuation aside', async () => {
+    // Ken's own: *this is an Amber Alert*, doubled at the stop.
     const { got, handlers: h } = handlers();
     const session = startDictation(h);
-    emit('result', { isFinal: true, results: [{ transcript: "you're a loser" }] });
-    emit('result', { isFinal: true, results: [{ transcript: " you're a loser" }] });
-    onStop = () => setTimeout(() => emit('end'), 5);
+    emit('result', { isFinal: true, results: [{ transcript: 'this is an Amber Alert' }] });
+    onStop = () =>
+      setTimeout(() => {
+        emit('result', { isFinal: true, results: [{ transcript: ' This is an Amber Alert.' }] });
+        emit('end');
+      }, 5);
     await session.stop();
-    expect(got.finals).toEqual(["you're a loser"]);
+    expect(got.finals).toEqual(['this is an Amber Alert']);
+  });
+
+  it('is committed once when a guess committed early is confirmed', async () => {
+    vi.useFakeTimers();
+    const { got, handlers: h } = handlers();
+    startDictation(h, { commitAfterMs: 1500 });
+    emit('result', { isFinal: false, results: [{ transcript: 'The bridge is' }] });
+    await vi.advanceTimersByTimeAsync(1600);
+    emit('result', { isFinal: true, results: [{ transcript: 'The bridge is out.' }] });
+    expect(got.finals).toEqual(['The bridge is', 'out.']);
+    vi.useRealTimers();
+  });
+
+  it('keeps a phrase said twice on purpose', () => {
+    const { got, handlers: h } = handlers();
+    startDictation(h);
+    emit('result', { isFinal: true, results: [{ transcript: 'command erase word' }] });
+    emit('result', { isFinal: true, results: [{ transcript: 'command erase word' }] });
+    expect(got.finals).toEqual(['command erase word', 'command erase word']);
   });
 
   it('gives only the new words when a final carries the last one and more', () => {
@@ -140,7 +166,7 @@ describe('a phrase the phone sends twice', () => {
 
   it('commits the same words again in a new recognition, where they are new', () => {
     const { got, handlers: h } = handlers();
-    startDictation(h, { continuous: false });
+    startDictation(h);
     emit('result', { isFinal: true, results: [{ transcript: 'command erase word' }] });
     emit('end');
     emit('result', { isFinal: true, results: [{ transcript: 'command erase word' }] });
@@ -149,14 +175,29 @@ describe('a phrase the phone sends twice', () => {
 });
 
 describe('while the phone speaks', () => {
-  it('hears nothing, so its own words never land in the note', () => {
+  it('stops listening, keeps nothing it hears, and starts again after', () => {
     const { got, handlers: h } = handlers();
     const session = startDictation(h);
-    session.hold(true);
-    emit('result', { isFinal: false, results: [{ transcript: 'Subsection' }] });
+    let aborted = 0;
+    onAbort = () => {
+      aborted += 1;
+    };
+    session.pause();
+    expect(aborted).toBe(1);
     emit('result', { isFinal: true, results: [{ transcript: 'Subsection.' }] });
-    session.hold(false);
+    emit('error', { error: 'aborted' });
+    emit('end');
+    session.resume();
     emit('result', { isFinal: true, results: [{ transcript: 'Chapter one' }] });
     expect(got.finals).toEqual(['Chapter one']);
+    expect(got.ended).toBe(0);
+  });
+
+  it('commits what was being said before it pauses', () => {
+    const { got, handlers: h } = handlers();
+    const session = startDictation(h);
+    emit('result', { isFinal: false, results: [{ transcript: 'the last line' }] });
+    session.pause();
+    expect(got.finals).toEqual(['the last line']);
   });
 });

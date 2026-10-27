@@ -417,7 +417,27 @@ export interface Sitting {
   opened: boolean;
   /** What a correction replaced, so one press puts it back. */
   undone: string | null;
+  /**
+   * **A walk that asks** (addendum 27 §18, from Ken: *in the hands-free mode,
+   * maybe it needs to ask you questions*). Set by `startGuided`; a sitting
+   * without it is §10's, driven by command words alone.
+   */
+  guided?: boolean;
+  /** What the guided walk is waiting for. */
+  ask?: GuidedStep;
+  /** What to say out loud this turn, in a guided walk; null for nothing. */
+  speak?: string | null;
+  /** The command word was said on its own, so the next phrase is the command. */
+  armed?: boolean;
 }
+
+/**
+ * The four questions of a guided walk (§18), in Ken's order: *you say idea,
+ * pause, then say the title, then pause, and then you can dictate the body.
+ * And when you're done, it asks you, are you done or would you like to
+ * continue?*
+ */
+export type GuidedStep = 'kind' | 'title' | 'body' | 'confirm';
 
 export const emptySitting = (): Sitting => ({
   open: null,
@@ -509,7 +529,16 @@ const askAbout = (plan: ProjectPlan): string => {
  * before it, and dropping it would be the notebook eating a note. The one act
  * that throws anything away is the one that says so out loud.
  */
-export const hear = (sitting: Sitting, said: string, format: ProjectFormat): Sitting => {
+export const hear = (sitting: Sitting, said0: string, format: ProjectFormat): Sitting => {
+  // The command word said on its own, with a pause after it (§18): the
+  // recogniser ends the phrase there, so *command* and *erase word* arrive
+  // apart. The word arms the next phrase rather than being refused.
+  const said = sitting.armed ? `${WAKE} ${said0}` : said0;
+  if (sitting.armed) sitting = { ...sitting, armed: false };
+  if (isWakeAlone(said)) {
+    return { ...sitting, opened: false, wants: null, makes: null, armed: true, said: 'Command?', speak: sitting.guided ? 'Yes?' : null };
+  }
+  if (sitting.guided) return hearGuided(sitting, said, format);
   const turns = splitTurns(said, format, sitting.open !== null);
   if (turns.length <= 1) return hearOne(sitting, said, format);
   // Several commands in one breath (addendum 27 §16, from Ken: *command erase word
@@ -897,6 +926,7 @@ export const speakBack = (before: Sitting, after: Sitting): string | null => {
    */
   if (after.making || before.making) return after.said;
   if (after.said.startsWith('Didn’t catch')) return after.said;
+  if (after.armed) return 'Command?';
   // Erasing and moving between title and body are heard (addendum 27 §16): from a pocket,
   // a command nobody hears is one somebody says again.
   if (/^(Erased|Nothing (open|left) to erase|Now the (note|title)|Nothing open\. Say)/.test(after.said)) return after.said;
@@ -918,3 +948,187 @@ export const projectNamed = <T extends { id: string; name: string }>(
     null
   );
 };
+
+// --------------------------------------------------------- the guided walk (§18)
+
+/** The command word, and nothing else. */
+const isWakeAlone = (said: string): boolean =>
+  WAKE_WORDS.includes(said.trim().replace(/[.!?,]+$/, '').trim().toLowerCase() as (typeof WAKE_WORDS)[number]);
+
+/** Words said as a whole answer, compared without case or punctuation. */
+const plain = (said: string): string => said.toLowerCase().replace(/[^a-z0-9' ]/g, ' ').replace(/\s+/g, ' ').trim();
+const answers = (said: string, words: readonly string[]): boolean => words.includes(plain(said));
+
+const CONTINUE = ['continue', 'keep going', 'go on', 'more', 'not done', 'no', 'not yet', 'keep dictating', 'add more'];
+const SAVE_IT = ['save', 'save it', 'done', 'yes', "i'm done", 'im done', 'i am done', 'finished', "that's it", 'thats it', 'that is it', 'save the note', 'yes save it', 'yes done'];
+const READ_IT = ['read it back', 'read it', 'read back', 'read that back', 'what did i say'];
+const THROW_IT = ['scratch that', 'scratch it', 'throw it away', 'delete it', 'cancel', 'discard'];
+const START_OVER = ['start over', 'erase all', 'erase it all', 'start again', 'reset'];
+const NO_TITLE = ['skip', 'no title', 'none', 'skip it', 'skip the title', 'no'];
+/** A note without a kind, for a writer who just wants to talk. */
+const JUST_A_NOTE = ['note', 'a note', 'just a note', 'plain note', 'nothing', 'no kind'];
+
+/** What a guided walk asks for the kind, with the project's own words. */
+export const kindQuestion = (format: ProjectFormat): string => {
+  const names = captureVocabulary(format)
+    .slice(0, 5)
+    .map((one) => one.name.toLowerCase());
+  return `What kind of note is it? ${names.join(', ')}, or just a note.`;
+};
+
+export const GUIDED_CONFIRM = 'Are you done, or would you like to continue?';
+/** Ken's words for the two questions after the kind (§18). */
+export const GUIDED_TITLE = 'What is the title?';
+export const GUIDED_BODY = 'What would you like to put in this note?';
+
+/** A guided walk, ready to ask its first question. */
+export const startGuided = (format: ProjectFormat): Sitting => {
+  const question = kindQuestion(format);
+  return { ...emptySitting(), guided: true, ask: 'kind', said: question, speak: question };
+};
+
+/** A title is a heading, not a paragraph: past this many words it is the body. */
+const GUIDED_TITLE_WORDS = 12;
+
+/**
+ * One phrase of a guided walk (§18).
+ *
+ * The questions carry the walk, so **no word needs a command in front of
+ * it**: *idea*, then the title, then the body, then *save* or *continue*. The
+ * command words of §16 still work at any point, for a writer who knows them.
+ */
+const hearGuided = (sitting: Sitting, said: string, format: ProjectFormat): Sitting => {
+  const base: Sitting = { ...sitting, opened: false, wants: null, makes: null, speak: null };
+  const text = said.trim();
+  if (text.length === 0) return base;
+
+  // The command words (§16) still work, guided or not.
+  const turn = readTurn(text, { open: sitting.open !== null, format, onTitle: sitting.ask === 'title' });
+  if (WAKE_WORDS.some((word) => opensWith(text, word) !== null) && turn.kind !== 'words' && turn.kind !== 'unknown') {
+    const after = hearOne({ ...sitting, guided: false }, text, format);
+    const open = after.open;
+    const ask: GuidedStep = open === null ? 'kind' : open.on === 'title' ? 'title' : 'body';
+    const filedNow = after.filed.length > sitting.filed.length;
+    const speak = filedNow
+      ? `Saved. ${kindQuestion(format)}`
+      : open === null && sitting.open !== null
+        ? `${after.said} ${kindQuestion(format)}`
+        : after.said;
+    return { ...after, guided: true, ask, speak };
+  }
+
+  switch (sitting.ask ?? 'kind') {
+    case 'kind': {
+      const vocabulary = captureVocabulary(format);
+      const stripped = opensWithAny(text, FILLER) ?? text;
+      const named = categoryAt(stripped, vocabulary) ?? categoryAt(text, vocabulary);
+      if (named && named.kind === 'start') {
+        // A kind with words after it in the same breath: a short run is the
+        // title, a long one the note.
+        const rest = (named.subjectName ? `${named.subjectName} ${named.text}` : named.text).trim().replace(/[.!?]+$/, '');
+        const words = rest.split(/\s+/).filter(Boolean).length;
+        const open: OpenNote = {
+          key: named.key,
+          subjectName: rest.length > 0 && words <= GUIDED_TITLE_WORDS ? rest : null,
+          text: rest.length > 0 && words > GUIDED_TITLE_WORDS ? rest : '',
+          group: sitting.group,
+          on: rest.length > 0 ? 'body' : 'title',
+        };
+        const kind = nameOf(named.key, format);
+        return {
+          ...base,
+          open,
+          opened: true,
+          ask: rest.length > 0 ? 'body' : 'title',
+          said: rest.length > 0 ? `${kind}. ${GUIDED_BODY}` : `${kind}. ${GUIDED_TITLE}`,
+          speak: rest.length > 0 ? `${kind}. ${GUIDED_BODY}` : `${kind}. ${GUIDED_TITLE}`,
+        };
+      }
+      if (answers(text, JUST_A_NOTE)) {
+        return {
+          ...base,
+          open: { key: null, subjectName: null, text: '', group: sitting.group, on: 'body' },
+          opened: true,
+          ask: 'body',
+          said: `A note. ${GUIDED_BODY}`,
+          speak: `A note. ${GUIDED_BODY}`,
+        };
+      }
+      const again = `I didn’t catch a kind. ${kindQuestion(format)}`;
+      return { ...base, said: again, speak: again };
+    }
+
+    case 'title': {
+      if (!sitting.open) return { ...base, ask: 'kind', said: kindQuestion(format), speak: kindQuestion(format) };
+      if (answers(text, NO_TITLE)) {
+        return { ...base, open: { ...sitting.open, on: 'body' }, ask: 'body', said: `No title. ${GUIDED_BODY}`, speak: `No title. ${GUIDED_BODY}` };
+      }
+      const title = text.replace(/[.!?]+$/, '').trim();
+      if (title.split(/\s+/).filter(Boolean).length > GUIDED_TITLE_WORDS) {
+        // A paragraph said for a title is the note itself.
+        return { ...base, open: { ...sitting.open, on: 'body', text: join(sitting.open.text, text) }, ask: 'body', said: text };
+      }
+      return { ...base, open: { ...sitting.open, subjectName: title, on: 'body' }, ask: 'body', said: GUIDED_BODY, speak: GUIDED_BODY };
+    }
+
+    case 'confirm': {
+      const open = sitting.open;
+      if (!open) return { ...base, ask: 'kind', said: kindQuestion(format), speak: kindQuestion(format) };
+      if (answers(text, SAVE_IT)) {
+        const keep = open.text.trim().length > 0 || (open.subjectName ?? '').trim().length > 0;
+        const next = kindQuestion(format);
+        return {
+          ...base,
+          open: null,
+          filed: keep ? [...sitting.filed, asFiled(open)] : sitting.filed,
+          ask: 'kind',
+          undone: null,
+          said: keep ? `Saved. ${nameOf(open.key, format)}.` : 'Nothing in that one.',
+          speak: keep ? `Saved. ${next}` : `Nothing in that one. ${next}`,
+        };
+      }
+      if (answers(text, CONTINUE)) return { ...base, ask: 'body', said: 'Go ahead.', speak: 'Go ahead.' };
+      if (answers(text, READ_IT)) {
+        const heading = open.subjectName ? `${nameOf(open.key, format)}, ${open.subjectName}.` : `${nameOf(open.key, format)}.`;
+        const words = `${heading} ${open.text}`.trim();
+        return { ...base, said: words, speak: `${words} ${GUIDED_CONFIRM}` };
+      }
+      if (answers(text, THROW_IT)) {
+        const next = kindQuestion(format);
+        return { ...base, open: null, ask: 'kind', said: 'Thrown away.', speak: `Thrown away. ${next}` };
+      }
+      if (answers(text, START_OVER)) {
+        return {
+          ...base,
+          open: { ...open, subjectName: null, text: '', on: 'title' },
+          undone: open.text,
+          ask: 'title',
+          said: `Erased. ${GUIDED_TITLE}`,
+          speak: `Erased. ${GUIDED_TITLE}`,
+        };
+      }
+      // Anything else is the writer carrying on: it is the note.
+      return { ...base, open: { ...open, on: 'body', text: join(open.text, text) }, ask: 'body', said: text };
+    }
+
+    case 'body':
+    default: {
+      const open: OpenNote = sitting.open ?? { key: null, subjectName: null, text: '', group: sitting.group, on: 'body' };
+      return { ...base, open: { ...open, on: 'body', text: join(open.text, text) }, opened: sitting.open === null, ask: 'body', said: text };
+    }
+  }
+};
+
+/**
+ * **A pause in a guided walk** (§18): the host calls this when the writer has
+ * said nothing for a few seconds. While the body is being dictated and there is
+ * something in it, the walk asks whether they are done; anywhere else a pause
+ * is somebody thinking, and nothing is said.
+ */
+export const hearPause = (sitting: Sitting): Sitting => {
+  if (!sitting.guided || sitting.ask !== 'body' || !sitting.open) return { ...sitting, speak: null };
+  const hasWords = sitting.open.text.trim().length > 0 || (sitting.open.subjectName ?? '').trim().length > 0;
+  if (!hasWords) return { ...sitting, speak: null };
+  return { ...sitting, ask: 'confirm', said: GUIDED_CONFIRM, speak: GUIDED_CONFIRM, opened: false };
+};
+

@@ -24,6 +24,8 @@ export const colour = {
   live: '#c4432f',
   /** The website's own `--red`, for the one control that cannot be undone. */
   red: '#8b1c1c',
+  /** A note that went (addendum 27 §18): the one colour that says *done*. */
+  sent: '#3f7d4f',
 } as const;
 
 export const styles = StyleSheet.create({

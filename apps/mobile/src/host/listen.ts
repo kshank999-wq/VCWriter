@@ -32,22 +32,21 @@ export interface DictationHandlers {
 export interface DictationSession {
   /**
    * Stop, **and wait for the last words** (from Ken: *I did a scene, but when I
-   * went to save it, it wouldn't save it. And when I went to read it back, it
-   * wouldn't read it back*). An iPhone holds every word of a continuous sitting
-   * as provisional until it is told to stop, and sends the final transcript
-   * *after* that. Stop used to take its listeners away in the same breath, so
-   * the final words arrived to nobody and the scene on the screen was never
-   * committed: Save and Read it back both found nothing. Now the listeners
-   * stay until the recogniser says it has ended (or a moment has passed), and
-   * whatever was still provisional is committed then.
+   * went to save it, it wouldn't save it*). An iPhone sends its final
+   * transcript *after* it is told to stop, so the listeners stay until the
+   * recogniser says it has ended (or a moment has passed), and whatever was
+   * still provisional is committed then.
    */
   stop(): Promise<void>;
   /**
-   * Stop hearing for a moment, without stopping (addendum 27 §17): while the
-   * phone speaks, the microphone hears the phone, and its own words came back
-   * into Ken's note. Whatever is heard while held is dropped.
+   * **Stop listening while the phone speaks** (addendum 27 §17–18). The
+   * microphone heard the phone's own questions and wrote them into Ken's note,
+   * and a recogniser left running under the speech is the likeliest cause of
+   * the walk's crash. `pause` ends the recognition outright; `resume` starts a
+   * fresh one. Nothing said in between is kept.
    */
-  hold(held: boolean): void;
+  pause(): void;
+  resume(): void;
 }
 
 /** How long a stop waits for the recogniser's last words before going on. */
@@ -55,21 +54,18 @@ const STOP_WAIT_MS = 1500;
 
 /**
  * How many times a sitting may restart itself having heard nothing before it
- * gives up.
- *
- * Restarting is what makes listening continuous; the counter is what stops it
- * becoming a loop — a microphone taken by a phone call would otherwise be
- * grabbed at forever with the button still lit, which reads as listening and
- * is not.
+ * gives up — a microphone taken by a phone call would otherwise be grabbed at
+ * forever with the button still lit.
  */
 const EMPTY_RESTARTS = 8;
 /**
- * A sitting that ended this soon after starting, having heard nothing, is a
- * microphone that will not listen. One that ran longer simply heard silence —
- * a walk between thoughts — and restarting it is the whole point (addendum 27
- * §17: Ken's walk *shut down* after a quiet stretch).
+ * A recognition that ended this soon after starting, having heard nothing, is
+ * a microphone that will not listen. One that ran longer simply heard silence,
+ * and restarting it is the point (addendum 27 §17: Ken's walk *shut down*).
  */
 const QUICK_END_MS = 1200;
+/** How close a repeat has to follow the words it repeats to be read as one. */
+const REPEAT_WINDOW_MS = 4000;
 
 /** Whether this device can hear for itself. */
 export const canHear = async (): Promise<boolean> => {
@@ -89,98 +85,180 @@ export const mayHear = async (): Promise<boolean> => {
   return said.granted;
 };
 
+/** A word as it is compared: no case, no punctuation. */
+const plainWord = (word: string): string => word.toLowerCase().replace(/[^a-z0-9']/g, '');
+
+/**
+ * A phrase as it is compared — its words in plain form, a lone dash or full
+ * stop left out — and where each of those words stands among the words as
+ * they were said, so what is handed on keeps the writer's own punctuation.
+ */
+const wordsOf = (said: string): { said: string[]; plain: string[]; at: number[] } => {
+  const all = said.trim().split(/\s+/).filter(Boolean);
+  const plain: string[] = [];
+  const at: number[] = [];
+  all.forEach((word, index) => {
+    const one = plainWord(word);
+    if (one.length === 0) return;
+    plain.push(one);
+    at.push(index);
+  });
+  return { said: all, plain, at };
+};
+
+const startsWithWords = (whole: readonly string[], start: readonly string[]): boolean =>
+  start.length > 0 && start.length <= whole.length && start.every((one, at) => whole[at] === one);
+const endsWithWords = (whole: readonly string[], end: readonly string[]): boolean =>
+  end.length > 0 && end.length <= whole.length && end.every((one, at) => whole[whole.length - end.length + at] === one);
+
 /**
  * Listen until told to stop.
  *
  * **Continuous and on-device where it can be**, which is the walk's whole
  * requirement: `requiresOnDeviceRecognition` falls back by itself where a
- * device has no local model, so a phone with signal and a phone without behave
- * the same way as far as this app is concerned.
+ * device has no local model.
  */
 export const startDictation = (
   handlers: DictationHandlers,
-  /**
-   * **A walk listens a phrase at a time** (addendum 27 §16). In continuous
-   * mode an iPhone confirms nothing until it is stopped, so *command done*
-   * said mid-walk was never acted on. Not continuous, it ends at each pause
-   * with that phrase confirmed, and the restart below picks up again — which
-   * is what makes a spoken command land when it is said. The typed screen
-   * keeps one continuous sitting, where a pause is not an instruction.
-   */
-  options: { continuous?: boolean } = {},
+  options: {
+    /**
+     * **Commit a phrase once it has stopped changing for this long** (addendum
+     * 27 §18). A walk is answered phrase by phrase, and an iPhone before iOS 18
+     * confirms nothing until it is stopped; a guess that has sat unchanged
+     * this long is what the writer said. Off for the typed screen, where the
+     * guess is drawn and committed at the stop.
+     */
+    commitAfterMs?: number;
+  } = {},
 ): DictationSession => {
   let running = true;
+  let paused = false;
+  let live = false;
   let heardAnything = false;
   let emptyRestarts = 0;
+  let startedAt = 0;
+  let stoppingNow = false;
   /** The recogniser's latest guess not yet committed: what a stop must not lose. */
   let pending = '';
+  let pendingTimer: ReturnType<typeof setTimeout> | null = null;
   let ended: (() => void) | null = null;
-  let held = false;
-  let startedAt = 0;
-  /**
-   * The last words committed in this recognition, for the repeat (addendum 27
-   * §17). On iOS 18 a phrase arrives as final when the speaker pauses, and the
-   * same words arrive as final **again** when the recogniser stops — so every
-   * phrase landed twice: Ken's doubled words, and *you're a loser, you're a
-   * loser*. A final that only repeats the last is dropped; one that carries
-   * the last and more gives the more.
-   */
-  let lastFinal = '';
+  /** A resume that came before the paused recognition had finished ending. */
+  let restartOnEnd = false;
 
-  const commit = (said: string) => {
-    const words = said.trim();
-    if (words.length === 0) return;
-    if (words === lastFinal) return;
-    const fresh = lastFinal.length > 0 && words.startsWith(`${lastFinal} `) ? words.slice(lastFinal.length).trim() : words;
-    lastFinal = words;
-    if (fresh.length > 0) handlers.onFinal(fresh);
+  /**
+   * **The repeat** (addendum 27 §17–18, from Ken: *when I stop the
+   * dictation, it doubles my last sentence… this is an Amber Alert, this is
+   * an Amber Alert*). On iOS 18 a phrase arrives as final when the speaker
+   * pauses, and again when the recogniser stops — and the second copy can
+   * differ in its capitals and punctuation, which is why comparing the text
+   * exactly let it through. Words are compared plain:
+   *
+   * - every word committed in this recognition, to recognise a transcript
+   *   that carries all of them and more (older iPhones send the whole sitting
+   *   each time) and give only the more;
+   * - the last phrase committed, to drop it said again, or take only what
+   *   follows it when it comes back longer.
+   */
+  let committed: string[] = [];
+  let lastPhrase: string[] = [];
+  let lastAt = 0;
+  /** The last phrase was committed early, from a guess that had stopped changing. */
+  let lastEarly = false;
+
+  /**
+   * The two moments a phone sends words it has already sent, and the only two
+   * where a repeat is dropped — a writer who says *erase word* twice means it
+   * twice:
+   *
+   * - **at the stop**, when the final transcript repeats what was committed;
+   * - **after an early commit**, when the recogniser confirms the phrase this
+   *   file already took from its guess.
+   */
+  const commit = (said: string, early = false) => {
+    const words = wordsOf(said);
+    const plain = words.plain;
+    if (plain.length === 0) return;
+    const confirming = lastEarly && Date.now() - lastAt < REPEAT_WINDOW_MS;
+    // The whole sitting sent again with more on the end — or, at a stop or an
+    // early commit, sent again as it was.
+    const carries = startsWithWords(plain, committed) && (plain.length > committed.length || stoppingNow || confirming);
+
+    let from = 0;
+    if (carries) from = committed.length;
+    else if (stoppingNow && endsWithWords(committed, plain)) return;
+    else if (confirming && startsWithWords(lastPhrase, plain)) return;
+    else if (confirming && startsWithWords(plain, lastPhrase)) from = lastPhrase.length;
+
+    if (from >= plain.length) return;
+    const fresh = words.said.slice(from === 0 ? 0 : (words.at[from] ?? words.said.length));
+    if (fresh.length === 0) return;
+    committed = [...committed, ...plain.slice(from)];
+    lastPhrase = plain;
+    lastAt = Date.now();
+    lastEarly = early;
+    handlers.onFinal(fresh.join(' '));
+  };
+
+  const clearPendingTimer = () => {
+    if (pendingTimer) clearTimeout(pendingTimer);
+    pendingTimer = null;
+  };
+
+  /** Commit what was still provisional, once. */
+  const settle = (early = false) => {
+    clearPendingTimer();
+    const last = pending;
+    pending = '';
+    if (!paused) commit(last, early);
   };
 
   const results = ExpoSpeechRecognitionModule.addListener('result', (event) => {
+    if (paused) return;
     // The library puts a space before a phrase that follows another; the words
     // are what matter.
     const said = (event.results?.[0]?.transcript ?? '').trim();
     if (said.length === 0) return;
     heardAnything = true;
-    if (held) {
-      pending = '';
-      return;
-    }
     if (event.isFinal) {
+      clearPendingTimer();
       pending = '';
       commit(said);
     } else {
       pending = said;
       handlers.onInterim(said);
+      if (options.commitAfterMs) {
+        clearPendingTimer();
+        pendingTimer = setTimeout(() => settle(true), options.commitAfterMs);
+      }
     }
   });
 
-  /** Commit what was still provisional, once. */
-  const settle = () => {
-    const last = pending;
-    pending = '';
-    if (!held) commit(last);
-  };
-
   const errors = ExpoSpeechRecognitionModule.addListener('error', (event) => {
-    // *Nothing was said* is the ordinary state of a walk between thoughts, not
-    // a failure worth interrupting somebody with.
-    if (event.error === 'no-speech') return;
+    // *Nothing was said* is the ordinary state of a walk between thoughts, and
+    // an abort is this file pausing on purpose.
+    if (event.error === 'no-speech' || event.error === 'aborted' || paused) return;
     running = false;
     handlers.onError(event.message || String(event.error) || 'The microphone stopped');
   });
 
   const ends = ExpoSpeechRecognitionModule.addListener('end', () => {
+    live = false;
     if (!running) {
       ended?.();
       return;
     }
+    if (paused) return;
+    if (restartOnEnd) {
+      restartOnEnd = false;
+      begin();
+      return;
+    }
     // A sitting that ends by itself keeps its last guess too.
     settle();
-    // A new recognition starts from nothing, so nothing it says repeats this one.
-    lastFinal = '';
-    // A recogniser ends on its own between utterances; starting it again is
-    // what makes it continuous.
+    // A new recognition starts from nothing.
+    committed = [];
+    lastPhrase = [];
+    lastEarly = false;
     if (heardAnything || Date.now() - startedAt > QUICK_END_MS) {
       heardAnything = false;
       emptyRestarts = 0;
@@ -195,25 +273,36 @@ export const startDictation = (
 
   const begin = () => {
     startedAt = Date.now();
-    ExpoSpeechRecognitionModule.start({
-      // Playback stays possible while listening, at a normal volume: the
-      // library's default mode is *measurement*, which turns read-back down to
-      // a whisper or to nothing.
-      iosCategory: {
-        category: 'playAndRecord',
-        categoryOptions: ['defaultToSpeaker', 'allowBluetooth'],
-        mode: 'default',
-      },
-      lang: 'en-US',
-      interimResults: true,
-      continuous: options.continuous ?? true,
-      // On the device where the device has a model: a walk out of signal is
-      // exactly when somebody is most likely to be using this.
-      requiresOnDeviceRecognition: true,
-      // Left alone rather than filtered: a writer's note is their words, and a
-      // notebook that starred them would be editing testimony.
-      addsPunctuation: true,
-    });
+    live = true;
+    committed = [];
+    try {
+      ExpoSpeechRecognitionModule.start({
+        // Playback stays possible while listening, at a normal volume: the
+        // library's default mode is *measurement*, which turns speech down to
+        // a whisper or to nothing.
+        iosCategory: {
+          category: 'playAndRecord',
+          categoryOptions: ['defaultToSpeaker', 'allowBluetooth'],
+          mode: 'default',
+        },
+        lang: 'en-US',
+        interimResults: true,
+        // One recognition for the whole sitting: restarting at every pause
+        // lost whatever was said in the gap (addendum 27 §18, from Ken: *it
+        // missed a bunch of sentences*).
+        continuous: true,
+        // On the device where the device has a model: a walk out of signal is
+        // exactly when somebody is most likely to be using this.
+        requiresOnDeviceRecognition: true,
+        // Left alone rather than filtered: a writer's note is their words.
+        addsPunctuation: true,
+      });
+    } catch (error) {
+      live = false;
+      running = false;
+      handlers.onError(error instanceof Error ? error.message : 'The microphone would not start');
+      handlers.onEnd();
+    }
   };
 
   begin();
@@ -223,6 +312,8 @@ export const startDictation = (
     stop() {
       stopping ??= new Promise<void>((resolve) => {
         running = false;
+        stoppingNow = true;
+        clearPendingTimer();
         const finish = () => {
           ended = null;
           clearTimeout(timer);
@@ -235,6 +326,10 @@ export const startDictation = (
         };
         const timer = setTimeout(finish, STOP_WAIT_MS);
         ended = finish;
+        if (!live) {
+          finish();
+          return;
+        }
         try {
           ExpoSpeechRecognitionModule.stop();
         } catch {
@@ -243,10 +338,25 @@ export const startDictation = (
       });
       return stopping;
     },
-    hold(on) {
-      held = on;
+    pause() {
+      if (paused || !running) return;
+      // What was being said is the writer's, and goes in before the pause.
+      settle();
+      paused = true;
+      handlers.onInterim('');
+      try {
+        ExpoSpeechRecognitionModule.abort();
+      } catch {
+        // Already ended is the same thing.
+      }
+    },
+    resume() {
+      if (!paused || !running) return;
+      paused = false;
       pending = '';
-      if (on) handlers.onInterim('');
+      // The abort may not have finished ending yet; then it starts once it has.
+      if (!live) begin();
+      else restartOnEnd = true;
     },
   };
 };

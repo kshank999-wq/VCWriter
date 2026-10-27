@@ -784,3 +784,75 @@ its next send, without a new build.
 the beginning*, in the title. The repeat above is the likeliest cause; it is
 named here until it is seen gone on a phone.
 
+## 18. Hands-free that asks, and a Save you can see
+
+From Ken, on build 6:
+
+> When I stop the dictation, it doubles the sentence I just put in… Hands-free
+> mode doesn't really work very well. It doesn't take a command, and when you
+> say command, it just repeats it back to you… and then it crashes… still the
+> save button doesn't work. It needs to change color or do something…
+
+And then the design, in his words:
+
+> It can listen and say… is it a section, is it an idea, a theme, or whatever
+> category… then if you pause for 3 or 4 seconds… it can let you know by
+> saying what is the title… it'll move on by what would you like to put in
+> this note and then you dictate it… when you're done, it asks you, are you
+> done or would you like to continue? … So the hands-free mode is interactive.
+
+**The walk asks** (`startGuided`, `hearGuided`, `hearPause` in
+`capture-session.ts`). Four questions, in his words:
+
+| It asks | You say | Then |
+| --- | --- | --- |
+| *What kind of note is it?* (the project's own kinds) | *idea*, *subsection*, *character*… or *just a note* | the title |
+| *What is the title?* | the title, or *skip* | the body |
+| *What would you like to put in this note?* | the note, for as long as you like | at a pause of 3.5 seconds, the next question |
+| *Are you done, or would you like to continue?* | *save*, *continue*, *read it back*, *start over*, *throw it away* | *save* files it and asks the kind again |
+
+- Words said at the last question that are none of those answers are the
+  writer carrying on, and go into the note.
+- A kind said with a short run of words after it takes those words as the
+  title.
+- No word needs a command in front of it. §16's command words still work at
+  any point.
+- *Command* said alone, which a pause after it delivers as its own phrase,
+  arms the next phrase instead of being refused (`armed`). That refusal was
+  Ken's *it just repeats it back to you*.
+
+**Listening for a walk** (`listen.ts`).
+- One continuous recognition for the whole walk. §16 restarted the
+  recogniser at every pause, and whatever was said in the gap was lost: *it
+  missed a bunch of sentences*.
+- A phrase is taken when its guess has stopped changing for 1.5 seconds
+  (`commitAfterMs`), or when the phone confirms it, whichever comes first.
+- Listening is **stopped outright while the phone speaks** (`pause`, by
+  abort, and `resume`), not merely ignored. A recogniser running under the
+  phone's own speech is the likeliest cause of the crash, and the phone heard
+  its own questions.
+
+**The repeat, compared by words.** §17 compared the repeated phrase exactly,
+and iOS 18 sends it back with different capitals and punctuation (*this is
+an Amber Alert* / *This is an Amber Alert.*), so it slipped through.
+- Words are compared plain now.
+- A repeat is dropped only at the two moments a phone sends one: **at the
+  stop**, and **when it confirms a phrase already committed early**. A
+  writer who says *erase word* twice means it twice.
+- What is handed on keeps the writer's own punctuation; only the comparison
+  ignores it.
+
+**Save you can see.**
+- The button says *Saving…*, then *✓ Saved and sent* in green, or *Saved on
+  this phone — not sent* or *Not saved* in red, with the reason under it.
+- A failure to write to the phone itself is caught and said. It used to be
+  swallowed, which is *nothing happens*.
+- The screen counts the notes waiting on the phone and gives the last
+  reason one did not go.
+
+**Not done, and why.** The phone could report its own failures to
+vc-writer.com's error log, which would let them be read here without Ken
+relaying them. It is not done: the App Store privacy answers say the app
+sends no crash reports, and changing that is Ken's call. Everything is said
+on the screen instead.
+
