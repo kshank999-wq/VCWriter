@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import {
   captureFromRow,
-  captureUploadBatchSchema,
+  readUploadBatch,
   uploadToRow,
   type CaptureItem,
 } from '@vcwriter/domain';
@@ -40,31 +40,31 @@ export async function POST(request: Request): Promise<Response> {
   if (!gate.ok) return gate.response;
   const { user } = gate;
 
-  const parsed = captureUploadBatchSchema.safeParse(await request.json().catch(() => ({})));
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: 'That is not a note.', detail: parsed.error.issues[0]?.message ?? '' },
-      { status: 400 },
-    );
-  }
+  // Note by note (addendum 27 §17): one note the server will not take used to
+  // refuse the whole batch, and every note queued behind it waited forever.
+  const read = readUploadBatch(await request.json().catch(() => ({})));
+  if (!read) return NextResponse.json({ error: 'That is not a note.' }, { status: 400 });
 
   const now = new Date().toISOString();
-  const rows = parsed.data.notes.map((note) => uploadToRow(note, user.id, now));
+  const rows = read.notes.map((note) => uploadToRow(note, user.id, now));
 
-  const { data, error } = await serverClient()
-    .from('capture_items')
-    .upsert(rows, { onConflict: 'user_id,client_capture_id', ignoreDuplicates: false })
-    .select('client_capture_id');
+  let accepted: string[] = [];
+  if (rows.length > 0) {
+    const { data, error } = await serverClient()
+      .from('capture_items')
+      .upsert(rows, { onConflict: 'user_id,client_capture_id', ignoreDuplicates: false })
+      .select('client_capture_id');
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error) return NextResponse.json({ error: error.message, refused: read.refused }, { status: 400 });
 
-  // The ids that landed, so a client can mark exactly those synced rather than
-  // assuming the whole batch went through.
-  const accepted = ((data ?? []) as { client_capture_id: string | null }[])
-    .map((row) => row.client_capture_id)
-    .filter((id): id is string => typeof id === 'string');
+    // The ids that landed, so a client can mark exactly those synced rather than
+    // assuming the whole batch went through.
+    accepted = ((data ?? []) as { client_capture_id: string | null }[])
+      .map((row) => row.client_capture_id)
+      .filter((id): id is string => typeof id === 'string');
+  }
 
-  return NextResponse.json({ accepted, count: accepted.length });
+  return NextResponse.json({ accepted, count: accepted.length, refused: read.refused });
 }
 
 /**

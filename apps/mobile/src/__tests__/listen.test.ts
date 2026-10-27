@@ -113,3 +113,50 @@ describe('reading back', () => {
     expect(categories).toEqual([{ category: 'playback', categoryOptions: ['duckOthers'], mode: 'spokenAudio' }]);
   });
 });
+
+/**
+ * The iOS 18 repeat (addendum 27 §17, from Ken: *it'll double the words that
+ * you said*). A phrase arrives as final when the speaker pauses and again
+ * when the recogniser stops.
+ */
+describe('a phrase the phone sends twice', () => {
+  it('is committed once', async () => {
+    const { got, handlers: h } = handlers();
+    const session = startDictation(h);
+    emit('result', { isFinal: true, results: [{ transcript: "you're a loser" }] });
+    emit('result', { isFinal: true, results: [{ transcript: " you're a loser" }] });
+    onStop = () => setTimeout(() => emit('end'), 5);
+    await session.stop();
+    expect(got.finals).toEqual(["you're a loser"]);
+  });
+
+  it('gives only the new words when a final carries the last one and more', () => {
+    const { got, handlers: h } = handlers();
+    startDictation(h);
+    emit('result', { isFinal: true, results: [{ transcript: 'The bridge' }] });
+    emit('result', { isFinal: true, results: [{ transcript: 'The bridge is out' }] });
+    expect(got.finals).toEqual(['The bridge', 'is out']);
+  });
+
+  it('commits the same words again in a new recognition, where they are new', () => {
+    const { got, handlers: h } = handlers();
+    startDictation(h, { continuous: false });
+    emit('result', { isFinal: true, results: [{ transcript: 'command erase word' }] });
+    emit('end');
+    emit('result', { isFinal: true, results: [{ transcript: 'command erase word' }] });
+    expect(got.finals).toEqual(['command erase word', 'command erase word']);
+  });
+});
+
+describe('while the phone speaks', () => {
+  it('hears nothing, so its own words never land in the note', () => {
+    const { got, handlers: h } = handlers();
+    const session = startDictation(h);
+    session.hold(true);
+    emit('result', { isFinal: false, results: [{ transcript: 'Subsection' }] });
+    emit('result', { isFinal: true, results: [{ transcript: 'Subsection.' }] });
+    session.hold(false);
+    emit('result', { isFinal: true, results: [{ transcript: 'Chapter one' }] });
+    expect(got.finals).toEqual(['Chapter one']);
+  });
+});

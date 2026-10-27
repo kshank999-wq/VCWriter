@@ -98,8 +98,14 @@ export const makeProject = async (input: {
  * and it is the **domain's** — so this app cannot invent a field, and a note
  * from here is indistinguishable at the desk from one typed in the browser.
  */
-export const sendNotes = async (notes: unknown[]): Promise<Answer<{ accepted: string[] }>> =>
-  ask<{ accepted: string[] }>('/api/notes', {
+/** What a send answers: the notes that landed, and any the server would not take, with why. */
+export interface SendAnswer {
+  accepted: string[];
+  refused?: { clientCaptureId: string | null; reason: string }[];
+}
+
+export const sendNotes = async (notes: unknown[]): Promise<Answer<SendAnswer>> =>
+  ask<SendAnswer>('/api/notes', {
     method: 'POST',
     body: JSON.stringify({ notes }),
   });

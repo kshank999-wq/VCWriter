@@ -211,8 +211,18 @@ export const flush = async (): Promise<string | null> => {
       [now, capture.clientCaptureId],
     );
   }
+  // A note the server would not take keeps its reason, and holds up nothing
+  // (addendum 27 §17): the server now reads a batch note by note.
+  const refused = said.data.refused ?? [];
+  for (const one of refused) {
+    if (!one.clientCaptureId) continue;
+    await database.runAsync('UPDATE captures SET last_error = ?, attempts = attempts + 1 WHERE client_capture_id = ?', [
+      one.reason,
+      one.clientCaptureId,
+    ]);
+  }
   await pruneSynced();
-  return null;
+  return refused[0]?.reason ?? null;
 };
 
 /**

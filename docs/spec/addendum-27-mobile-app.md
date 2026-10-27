@@ -719,3 +719,68 @@ words, with the guess drawn on the end again.
 
 **On screen.** The hands-free screen says whether the next words go into the
 title or the note, and lists the commands in the words to say them.
+
+## 17. Ken's second walk: doubled words, a phone that heard itself, and a Save that never sent
+
+From Ken, on build 5:
+
+> It'll either double the words that you said, or if I erase a word at the
+> end, then it'll put that word in the beginning… Save it still doesn't work…
+> If I say subsection and give it a title, it reads it back to me immediately
+> and then repeats the word again… I said, next. And it added the same, you're
+> a loser, next to it. And it didn't move on to the body. And then it shut
+> down.
+
+**Save never sent: one note held up every note.**
+- The phone sends everything waiting in one batch, and the server refused a
+  batch whole if any note in it failed.
+- A note with a title and no body (a walk's *subsection*, *you're a loser*)
+  failed the `rawText` minimum. From then on every send carried it, every
+  send was refused, and nothing reached the database after 29 September.
+- The phone also said *it will go when there is signal* whatever the reason
+  was.
+
+Now:
+- A note may be a title alone. `captureUploadSchema` asks for words **or** a
+  title.
+- The route reads a batch note by note (`readUploadBatch`): good notes land,
+  and each refused one comes back with its reason.
+- The phone records that reason against the note, and *Save it* says *Saved
+  and sent*, or *not sent yet:* and why.
+
+This is a server change, so the notes already waiting on the phone go out at
+its next send, without a new build.
+
+**Every phrase twice.**
+- On iOS 18 a phrase arrives as final when the speaker pauses, and again when
+  the recogniser stops. Ken's doubled words, and *you're a loser, you're a
+  loser*, were both that.
+- `startDictation` now drops a final that repeats the last one, and takes only
+  the new words from a final that carries the last one and more.
+- It trims the leading space the library puts before a following phrase.
+
+**The phone heard itself.**
+- The walk answers out loud (*Subsection. Say the title…*) with the
+  microphone on, so the answer came back as words in the note.
+- The walk now holds the microphone while it speaks and for a moment after
+  (`hold`, `speakOnWalk`).
+
+**The walk shut down.**
+- Listening a phrase at a time (§16) means each quiet stretch ends a
+  recognition. Four of those in a row read as a dead microphone.
+- Now only a recognition that ends within 1.2 seconds, having heard nothing,
+  counts against the walk, so silence between thoughts never stops it.
+
+**A title for the book's own parts.**
+- §16 started only the kinds that take a name on a title. Ken's *subsection*,
+  then *you're a loser*, wanted a heading too.
+- Characters, settings, dialogue, arcs, and the structural kinds (chapter,
+  section, subsection, scene) now start on a title.
+- Ideas, themes, plot points and research stay all body, so *idea*, then *she
+  drives a lorry*, is still the note.
+- On a title, *next* said on its own moves to the body; elsewhere it is a word.
+
+**Not yet reproduced:** *erase a word at the end, and it puts that word at
+the beginning*, in the title. The repeat above is the likeliest cause; it is
+named here until it is seen gone on a phone.
+

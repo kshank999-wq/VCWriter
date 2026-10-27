@@ -13,17 +13,34 @@ import { createAudioPlayer } from 'expo-audio';
  * beside traffic is a coin toss, where *up* and *down* are not.
  */
 
-export const readAloud = (text: string, onError?: (message: string) => void): void => {
+export const readAloud = (
+  text: string,
+  onError?: (message: string) => void,
+  /** Called once the words have been said, or could not be. */
+  onDone?: () => void,
+): void => {
   const words = text.trim();
-  if (words.length === 0) return;
+  if (words.length === 0) {
+    onDone?.();
+    return;
+  }
   try {
     // A new sentence replaces the one in the air: on a walk the most recent
     // answer is the only one worth hearing, and a queue of them read out over
     // each other is worse than silence.
     Speech.stop();
-    Speech.speak(words, { rate: 1.0, onError: () => onError?.('That could not be read back') });
+    Speech.speak(words, {
+      rate: 1.0,
+      onDone: () => onDone?.(),
+      onStopped: () => onDone?.(),
+      onError: () => {
+        onError?.('That could not be read back');
+        onDone?.();
+      },
+    });
   } catch {
     onError?.('That could not be read back');
+    onDone?.();
   }
 };
 

@@ -34,7 +34,12 @@ export const captureUploadSchema = z.object({
   projectId: z.string().uuid().nullable().default(null),
   source: captureSourceSchema.default('mobile_voice'),
   capturedAt: z.string().datetime(),
-  rawText: z.string().min(1).max(20_000),
+  /**
+   * The note's words. **Empty is allowed where the note has a title** (addendum
+   * 27 §17): a character named on a walk with nothing said after it is a note,
+   * and refusing it held up every note behind it on Ken's phone.
+   */
+  rawText: z.string().max(20_000).default(''),
   /**
    * What kind of thought the writer said it was, if they said (§4).
    *
@@ -55,8 +60,36 @@ export const captureUploadSchema = z.object({
   subcategory: z.string().max(200).nullable().default(null),
   /** How sure the transcription was, when the device can say. */
   transcriptConfidence: z.number().min(0).max(1).nullable().default(null),
+}).refine((note) => note.rawText.trim().length > 0 || (note.subjectName ?? '').trim().length > 0, {
+  message: 'A note needs some words or a title.',
+  path: ['rawText'],
 });
 export type CaptureUpload = z.infer<typeof captureUploadSchema>;
+
+/**
+ * A Sync press read **note by note** (addendum 27 §17). The batch used to be
+ * accepted or refused whole, so one note the server would not take held up
+ * every note queued behind it — on Ken's phone, everything after the first
+ * title-only note, with the screen saying *Saved*. Now each note stands on its
+ * own: the good ones land, and each refused one comes back with its reason.
+ */
+export const readUploadBatch = (
+  body: unknown,
+): { notes: CaptureUpload[]; refused: { clientCaptureId: string | null; reason: string }[] } | null => {
+  const list = (body as { notes?: unknown } | null)?.notes;
+  if (!Array.isArray(list) || list.length === 0 || list.length > 200) return null;
+  const notes: CaptureUpload[] = [];
+  const refused: { clientCaptureId: string | null; reason: string }[] = [];
+  for (const one of list) {
+    const read = captureUploadSchema.safeParse(one);
+    if (read.success) notes.push(read.data);
+    else {
+      const id = (one as { clientCaptureId?: unknown } | null)?.clientCaptureId;
+      refused.push({ clientCaptureId: typeof id === 'string' ? id : null, reason: read.error.issues[0]?.message ?? 'That is not a note.' });
+    }
+  }
+  return { notes, refused };
+};
 
 /** A whole Sync press: everything still waiting on the device, in one call. */
 export const captureUploadBatchSchema = z.object({

@@ -223,7 +223,7 @@ const categoryAt = (said: string, vocabulary: readonly SpokenCategory[]): Spoken
  */
 export const readTurn = (
   said: string,
-  where: { open: boolean; format: ProjectFormat },
+  where: { open: boolean; format: ProjectFormat; onTitle?: boolean },
 ): SpokenTurn => {
   const text = said.trim();
   if (text.length === 0) return { kind: 'words', text: '' };
@@ -285,6 +285,11 @@ export const readTurn = (
     return { kind: 'unknown', said: text };
   }
 
+  // On a title, *next* said on its own moves to the body (addendum 27 §17,
+  // from Ken: *I said, next… and it didn't move on to the body*). A title that
+  // is only the word *next* is not one anybody means.
+  if (where.onTitle && TO_BODY.includes(text.replace(/[.!?]+$/, '').trim().toLowerCase())) return { kind: 'toBody' };
+
   // Outside a note a bare category word starts one; inside, it is just a word.
   if (!where.open) {
     const category = categoryAt(text, vocabulary);
@@ -341,6 +346,18 @@ const asFiled = (open: OpenNote): OpenNote => {
  */
 const TITLE_WORDS = 4;
 const isTitle = (words: string): boolean => words.trim().split(/\s+/).filter(Boolean).length <= TITLE_WORDS;
+
+/**
+ * Whether a kind of note starts on a title (addendum 27 §16–17): one that names
+ * somebody or somewhere, and the book's own parts — a chapter, a section, a
+ * subsection, a scene — which have headings. An idea, a theme, a plot point or
+ * research is all body, so *idea*, then *she drives a lorry*, is the note.
+ */
+const hasTitle = (key: CaptureKey | null, format: ProjectFormat): boolean => {
+  if (key === null) return false;
+  if (key === 'unit' || key === 'sub' || key === 'scene') return true;
+  return captureVocabulary(format).find((one) => one.key === key)?.takesName ?? false;
+};
 
 /** The words of a note's title, for a name said over more than one breath. */
 const titleOf = (open: OpenNote): string => (open.subjectName ?? '').trim();
@@ -536,7 +553,7 @@ export const splitTurns = (said: string, format: ProjectFormat, open: boolean): 
 };
 
 const hearOne = (sitting: Sitting, said: string, format: ProjectFormat): Sitting => {
-  const turn = readTurn(said, { open: sitting.open !== null, format });
+  const turn = readTurn(said, { open: sitting.open !== null, format, onTitle: sitting.open?.on === 'title' });
   const base: Sitting = { ...sitting, opened: false, wants: null, makes: null, undone: sitting.undone };
 
   /**
@@ -608,10 +625,11 @@ const hearOne = (sitting: Sitting, said: string, format: ProjectFormat): Sitting
         sitting.open && (sitting.open.text.trim().length > 0 || sitting.open.subjectName)
           ? [...sitting.filed, asFiled(sitting.open)]
           : sitting.filed;
-      // A kind that takes a name, said with nothing after it, starts on its
-      // title (addendum 27 §16): the next words are the name, until *command next*.
-      const takesName = captureVocabulary(format).find((one) => one.key === turn.key)?.takesName ?? false;
-      const onTitle = takesName && turn.subjectName === null && turn.text.trim().length === 0;
+      // A kind said with nothing after it starts on its title (addendum 27
+      // §16–17): the next few words are the title — a character's name, a
+      // subsection's heading — until *command next*. A note with no kind
+      // (words said straight out) is all body.
+      const onTitle = hasTitle(turn.key, format) && turn.subjectName === null && turn.text.trim().length === 0;
       const made: OpenNote = {
         key: turn.key,
         subjectName: turn.subjectName,
@@ -630,20 +648,20 @@ const hearOne = (sitting: Sitting, said: string, format: ProjectFormat): Sitting
         said: turn.subjectName
           ? `${nameOf(turn.key, format)}, ${turn.subjectName}.`
           : onTitle
-            ? `${nameOf(turn.key, format)}. Say the name, then “${COMMAND_WORD} next”.`
+            ? `${nameOf(turn.key, format)}. Say the title, then “${COMMAND_WORD} next”.`
             : `${nameOf(turn.key, format)}.`,
       };
     }
 
     case 'eraseAll': {
       if (!sitting.open) return { ...base, said: 'Nothing open to erase.' };
-      const takesName = captureVocabulary(format).find((one) => one.key === sitting.open?.key)?.takesName ?? false;
+      const titled = hasTitle(sitting.open.key, format);
       return {
         ...base,
-        open: { ...sitting.open, subjectName: null, text: '', ...(takesName ? { on: 'title' as const } : { on: 'body' as const }) },
+        open: { ...sitting.open, subjectName: null, text: '', on: titled ? 'title' : 'body' },
         // What was there, so one press on the screen puts it back.
         undone: sitting.open.text,
-        said: takesName ? 'Erased. Say the name again.' : 'Erased. Start again.',
+        said: titled ? 'Erased. Say the title again.' : 'Erased. Start again.',
       };
     }
 

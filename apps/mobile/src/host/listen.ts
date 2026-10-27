@@ -42,6 +42,12 @@ export interface DictationSession {
    * whatever was still provisional is committed then.
    */
   stop(): Promise<void>;
+  /**
+   * Stop hearing for a moment, without stopping (addendum 27 §17): while the
+   * phone speaks, the microphone hears the phone, and its own words came back
+   * into Ken's note. Whatever is heard while held is dropped.
+   */
+  hold(held: boolean): void;
 }
 
 /** How long a stop waits for the recogniser's last words before going on. */
@@ -56,7 +62,14 @@ const STOP_WAIT_MS = 1500;
  * grabbed at forever with the button still lit, which reads as listening and
  * is not.
  */
-const EMPTY_RESTARTS = 4;
+const EMPTY_RESTARTS = 8;
+/**
+ * A sitting that ended this soon after starting, having heard nothing, is a
+ * microphone that will not listen. One that ran longer simply heard silence —
+ * a walk between thoughts — and restarting it is the whole point (addendum 27
+ * §17: Ken's walk *shut down* after a quiet stretch).
+ */
+const QUICK_END_MS = 1200;
 
 /** Whether this device can hear for itself. */
 export const canHear = async (): Promise<boolean> => {
@@ -102,14 +115,40 @@ export const startDictation = (
   /** The recogniser's latest guess not yet committed: what a stop must not lose. */
   let pending = '';
   let ended: (() => void) | null = null;
+  let held = false;
+  let startedAt = 0;
+  /**
+   * The last words committed in this recognition, for the repeat (addendum 27
+   * §17). On iOS 18 a phrase arrives as final when the speaker pauses, and the
+   * same words arrive as final **again** when the recogniser stops — so every
+   * phrase landed twice: Ken's doubled words, and *you're a loser, you're a
+   * loser*. A final that only repeats the last is dropped; one that carries
+   * the last and more gives the more.
+   */
+  let lastFinal = '';
+
+  const commit = (said: string) => {
+    const words = said.trim();
+    if (words.length === 0) return;
+    if (words === lastFinal) return;
+    const fresh = lastFinal.length > 0 && words.startsWith(`${lastFinal} `) ? words.slice(lastFinal.length).trim() : words;
+    lastFinal = words;
+    if (fresh.length > 0) handlers.onFinal(fresh);
+  };
 
   const results = ExpoSpeechRecognitionModule.addListener('result', (event) => {
-    const said = event.results?.[0]?.transcript ?? '';
-    if (said.trim().length === 0) return;
+    // The library puts a space before a phrase that follows another; the words
+    // are what matter.
+    const said = (event.results?.[0]?.transcript ?? '').trim();
+    if (said.length === 0) return;
     heardAnything = true;
+    if (held) {
+      pending = '';
+      return;
+    }
     if (event.isFinal) {
       pending = '';
-      handlers.onFinal(said);
+      commit(said);
     } else {
       pending = said;
       handlers.onInterim(said);
@@ -120,7 +159,7 @@ export const startDictation = (
   const settle = () => {
     const last = pending;
     pending = '';
-    if (last.trim().length > 0) handlers.onFinal(last);
+    if (!held) commit(last);
   };
 
   const errors = ExpoSpeechRecognitionModule.addListener('error', (event) => {
@@ -138,9 +177,11 @@ export const startDictation = (
     }
     // A sitting that ends by itself keeps its last guess too.
     settle();
+    // A new recognition starts from nothing, so nothing it says repeats this one.
+    lastFinal = '';
     // A recogniser ends on its own between utterances; starting it again is
     // what makes it continuous.
-    if (heardAnything) {
+    if (heardAnything || Date.now() - startedAt > QUICK_END_MS) {
       heardAnything = false;
       emptyRestarts = 0;
     } else if ((emptyRestarts += 1) > EMPTY_RESTARTS) {
@@ -153,6 +194,7 @@ export const startDictation = (
   });
 
   const begin = () => {
+    startedAt = Date.now();
     ExpoSpeechRecognitionModule.start({
       // Playback stays possible while listening, at a normal volume: the
       // library's default mode is *measurement*, which turns read-back down to
@@ -200,6 +242,11 @@ export const startDictation = (
         }
       });
       return stopping;
+    },
+    hold(on) {
+      held = on;
+      pending = '';
+      if (on) handlers.onInterim('');
     },
   };
 };

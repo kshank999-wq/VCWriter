@@ -141,7 +141,11 @@ export function Capture({
       lastError: null,
       attempts: 0,
     });
-    setStatus(why ? `Saved on this phone — it will go when there is signal` : 'Saved');
+    // **The reason, when it did not go** (addendum 27 §17). This said *it will
+    // go when there is signal* whatever the reason was, and the reason on
+    // Ken's phone was the server refusing a note — so *Save it* looked like it
+    // worked and nothing ever arrived.
+    setStatus(why ? `Saved on this phone, not sent yet: ${why}` : 'Saved and sent');
   };
 
   /** Stop listening and wait for the last words to be committed. */
@@ -223,6 +227,19 @@ export function Capture({
 
   // ------------------------------------------------------ one turn of a walk
 
+  /**
+   * Answer out loud **without hearing the answer** (addendum 27 §17). The
+   * microphone stays on through a walk, so the phone's own *Subsection* came
+   * back as words in Ken's note. It is held while the phone speaks and for a
+   * moment after, so the last syllable is not caught either.
+   */
+  const speakOnWalk = (words: string) => {
+    session.current?.hold(true);
+    readAloud(words, setStatus, () => {
+      setTimeout(() => session.current?.hold(false), 450);
+    });
+  };
+
   const heardHandsFree = (chunk: string) => {
     const before = walk.current;
     const after = hear(before, chunk, formatNow());
@@ -241,12 +258,12 @@ export function Capture({
 
     if (after.wants) {
       const found = projectNamed(after.wants, [{ id: chosen.current.id, name: chosen.current.title }]);
-      readAloud(found ? `${chosen.current.title}.` : `No project called ${after.wants}.`, setStatus);
+      speakOnWalk(found ? `${chosen.current.title}.` : `No project called ${after.wants}.`);
       return;
     }
 
     const spoken = speakBack(before, after);
-    if (spoken) readAloud(spoken, setStatus);
+    if (spoken) speakOnWalk(spoken);
 
     // Said *after* the read-back, so *Making Blackout…* is heard before the
     // answer to it.
@@ -259,14 +276,14 @@ export function Capture({
       // A failure **keeps the plan**, so a retry is one word.
       walk.current = projectFailed(walk.current, plan, said.error);
       setSitting(walk.current);
-      readAloud(said.error, setStatus);
+      speakOnWalk(said.error);
       return;
     }
     walk.current = projectMade(walk.current, plan);
     setSitting(walk.current);
     chosen.current = said.data;
     onProjectMade(said.data);
-    readAloud(`${said.data.title}. Ready.`, setStatus);
+    speakOnWalk(`${said.data.title}. Ready.`);
   };
 
   const toggleWalk = async () => {

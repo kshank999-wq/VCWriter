@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   captureUploadBatchSchema,
   captureUploadSchema,
+  readUploadBatch,
   mayStillEdit,
   uploadToRow,
 } from '../capture-upload.js';
@@ -36,8 +37,27 @@ describe('what the phone may send', () => {
     expect(captureUploadSchema.parse({ ...good, projectId: null }).projectId).toBeNull();
   });
 
-  it('refuses a note with no words in it', () => {
+  it('refuses a note with no words and no title', () => {
     expect(() => captureUploadSchema.parse({ ...good, rawText: '' })).toThrow();
+    expect(() => captureUploadSchema.parse({ ...good, rawText: '  ', subjectName: null })).toThrow();
+  });
+
+  it('takes a note that is only a title (addendum 27 §17)', () => {
+    expect(captureUploadSchema.parse({ ...good, rawText: '', subjectName: 'Tom' }).subjectName).toBe('Tom');
+  });
+
+  it('reads a batch note by note, so one refused note holds up nothing', () => {
+    const read = readUploadBatch({
+      notes: [
+        { ...good, clientCaptureId: 'a' },
+        { ...good, clientCaptureId: 'b', rawText: '' },
+        { ...good, clientCaptureId: 'c', rawText: '', subjectName: 'Tom' },
+      ],
+    });
+    expect(read?.notes.map((one) => one.clientCaptureId)).toEqual(['a', 'c']);
+    expect(read?.refused).toEqual([{ clientCaptureId: 'b', reason: 'A note needs some words or a title.' }]);
+    expect(readUploadBatch({ notes: [] })).toBeNull();
+    expect(readUploadBatch(null)).toBeNull();
   });
 
   /**

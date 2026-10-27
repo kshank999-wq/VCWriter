@@ -68,21 +68,21 @@ describe('erasing', () => {
 
   it('says so when there is nothing to erase, and every erase is heard', () => {
     expect(walk(['command erase all']).said).toBe('Nothing open to erase.');
-    const before = walk(['command idea', 'one two']);
+    const before = walk(['command idea', 'one two three four five']);
     const after = hear(before, 'command erase word', 'screenplay');
-    expect(speakBack(before, after)).toBe('Erased “two”.');
+    expect(speakBack(before, after)).toBe('Erased “five”.');
   });
 
   it('never writes the command into the note', () => {
-    const sitting = walk(['command idea', 'the bridge', 'command erase all', 'the river']);
-    expect(sitting.open?.text).toBe('the river');
+    const sitting = walk(['command idea', 'the bridge is out tonight', 'command erase all', 'the river is rising fast now']);
+    expect(sitting.open?.text).toBe('the river is rising fast now');
   });
 });
 
 describe('several commands in one breath', () => {
   it('carries out each of them', () => {
-    const sitting = walk(['command idea', 'one two three four', 'command erase word command erase word']);
-    expect(sitting.open?.text).toBe('one two');
+    const sitting = walk(['command idea', 'one two three four five six', 'command erase word command erase word']);
+    expect(sitting.open?.text).toBe('one two three four');
   });
 
   it('files the note and starts the next when both are said together', () => {
@@ -94,5 +94,24 @@ describe('several commands in one breath', () => {
   it('leaves the word alone in a sentence where no command follows it', () => {
     expect(splitTurns('I command you to stop', 'screenplay', true)).toEqual(['I command you to stop']);
     expect(walk(['command dialogue', 'I command you to stop the car.']).open?.text).toBe('I command you to stop the car.');
+  });
+});
+
+describe('every kind of note has a title (addendum 27 §17)', () => {
+  it('takes a short phrase after "subsection" as its title, and "next" alone moves to the body', () => {
+    // Ken's own: *I say subsection and give it a title… you're a loser… next*.
+    const sitting = ['command subsection', "you're a loser", 'next', 'He walks out of the gym alone.'].reduce(
+      (at, one) => hear(at, one, 'instructional'),
+      emptySitting(),
+    );
+    expect(sitting.open).toMatchObject({ key: 'sub', subjectName: "you're a loser", text: 'He walks out of the gym alone.' });
+  });
+
+  it('keeps an idea all body, so a short sentence after it is the note', () => {
+    expect(walk(['command idea', 'she drives a lorry']).open).toMatchObject({ subjectName: null, text: 'she drives a lorry' });
+  });
+
+  it('leaves "next" a word in the body', () => {
+    expect(walk(['command idea', 'the bridge is out tonight', 'next']).open?.text).toBe('the bridge is out tonight next');
   });
 });
