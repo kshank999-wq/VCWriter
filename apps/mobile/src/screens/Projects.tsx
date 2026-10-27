@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
@@ -83,6 +83,15 @@ export function Projects({
   const [asking, setAsking] = useState(false);
   const [collection, setCollection] = useState(false);
   const [storyNames, setStoryNames] = useState<string[]>(['']);
+  /**
+   * What the boxes start with, read when their screen is drawn and not on
+   * every change: a starting text that follows the typing is handed back to the
+   * box like a value, and the keyboard's dictation doubles through it (§26).
+   */
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const titleSeed = useMemo(() => title, [naming, asking]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const storySeeds = useMemo(() => storyNames, [asking, collection]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -169,7 +178,7 @@ export function Projects({
                 key={`story-${index}`}
                 style={styles.input}
                 // The keyboard's dictation writes here too (§21).
-                defaultValue={one}
+                defaultValue={storySeeds[index] ?? ''}
                 onChangeText={(typed) => setStoryNames((now) => now.map((was, at) => (at === index ? typed : was)))}
                 placeholder={`Story ${index + 1}`}
                 placeholderTextColor={colour.muted}
@@ -265,7 +274,7 @@ export function Projects({
               style={styles.input}
               // Not handed back on every change: the keyboard's dictation
               // would write the title twice (addendum 27 §21).
-              defaultValue={title}
+              defaultValue={titleSeed}
               onChangeText={setTitle}
               placeholder="Blackout"
               placeholderTextColor={colour.muted}

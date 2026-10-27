@@ -42,6 +42,8 @@ export function Review({
   const [only, setOnly] = useState<string>('all');
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
+  /** What the edit box starts with, set once when it opens (addendum 27 §26). */
+  const [seed, setSeed] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -208,7 +210,9 @@ export function Review({
                     style={[styles.input, { minHeight: 110, textAlignVertical: 'top', paddingTop: 10 }]}
                     // The keyboard's own dictation writes here; handing the
                     // value back doubles it (addendum 27 §21).
-                    defaultValue={draft}
+                    // Set once when the box opens: a starting text that
+                    // followed the typing is handed back like a value (§26).
+                    defaultValue={seed}
                     onChangeText={setDraft}
                     multiline
                     autoFocus
@@ -235,6 +239,7 @@ export function Review({
                     <Pressable
                       onPress={() => {
                         setDraft(note.rawText);
+                        setSeed(note.rawText);
                         setEditing(note.id as string);
                       }}
                     >

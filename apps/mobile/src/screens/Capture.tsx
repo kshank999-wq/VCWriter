@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { InputAccessoryView, Keyboard, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { InputAccessoryView, Keyboard, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import {
   applyCorrection,
   captureKeyName,
@@ -555,6 +555,30 @@ export function Capture({
 
   // ------------------------------------------------------------- the screen
 
+  /** Turned on its side: the note on the left, the controls on the right (§26). */
+  const { width, height } = useWindowDimensions();
+  const wide = width > height;
+
+  /**
+   * **What a box starts with, read once per drawing** (§26). A `defaultValue`
+   * that follows the words is handed to the native box on every change, as a
+   * `value` is — the keyboard's dictation doubled the title through it. So it
+   * is worked out only when the box is drawn again (its `key` changes), from
+   * the words as they are then.
+   */
+  const titleKey = `title-${titleDrawn}-${into === 'title' ? interim : ''}`;
+  const bodyKey = `body-${bodyDrawn}-${into === 'body' ? interim : ''}`;
+  const titleSeed = useMemo(
+    () => (into === 'title' && interim.length > 0 ? `${subjectRef.current}${subjectRef.current ? ' ' : ''}${interim}` : subjectRef.current),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [titleKey],
+  );
+  const bodySeed = useMemo(
+    () => (into === 'body' && interim.length > 0 ? `${textRef.current}${textRef.current.length > 0 ? ' ' : ''}${interim}` : textRef.current),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [bodyKey],
+  );
+
   if (handsFree) {
     const open = sitting.open;
     const asking = guidedQuestion(sitting, formatNow());
@@ -647,94 +671,61 @@ export function Capture({
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
-        {onSubscribe ? (
-          <Pressable onPress={onSubscribe} style={styles.row}>
-            <Text style={[styles.muted, { flex: 1 }]}>
-              Notes are being kept on this phone and not sent. Subscribe and they all go at once.
-            </Text>
-          </Pressable>
-        ) : null}
-        <Text style={[styles.heading, { fontSize: 22 }]}>
-          {captureKeyName(chosenKey, format)}
-          {subjectName.trim() ? ` · ${subjectName.trim()}` : ''}
-        </Text>
-        {heard ? <Text style={styles.muted}>Heard: {heard}</Text> : null}
-
-        {collection ? <StoryPicker projectId={project.id} storyId={story?.id ?? null} onChoose={chooseStory} /> : null}
-
-        <View style={styles.field}>
-          <Text style={styles.label}>This is a</Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-            {vocabulary.map((one) => (
-              <Pressable
-                key={one.key}
-                onPress={() => setCategory(one.key)}
-                style={[
-                  styles.button,
-                  styles.secondary,
-                  { paddingVertical: 9, paddingHorizontal: 12 },
-                  chosenKey === one.key ? { borderColor: colour.gold } : null,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.buttonText,
-                    styles.secondaryText,
-                    { fontSize: 12, letterSpacing: 0.4 },
-                    chosenKey === one.key ? { color: colour.goldBright } : null,
-                  ]}
-                >
-                  {one.name}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>Title</Text>
+      {/* **Two halves** (addendum 27 §26, from Ken: *the screen will be
+          divided into the upper half with the note… and the lower half, which
+          is basically the controls… if you turn it sideways, one is on one half,
+          one's on the other*): the note above and the controls below, side by
+          side when the phone is turned. The note's box keeps its size and
+          scrolls, so Save never goes off the screen. */}
+      <View style={{ flex: 1, flexDirection: wide ? 'row' : 'column' }}>
+        <View style={{ flex: 1, padding: 16, gap: 8 }}>
+          <Text style={[styles.heading, { fontSize: 20 }]} numberOfLines={1}>
+            {captureKeyName(chosenKey, format)}
+            {collection && story ? ` · ${story.title}` : ''}
+          </Text>
           <TextInput
             ref={titleBox}
-            key={`title-${titleDrawn}-${into === 'title' ? interim : ''}`}
-            style={[styles.input, into === 'title' && listening ? { borderColor: colour.live } : null]}
-            defaultValue={into === 'title' && interim.length > 0 ? `${subjectName}${subjectName ? ' ' : ''}${interim}` : subjectName}
+            key={titleKey}
+            style={[styles.input, into === 'title' ? { borderColor: listening ? colour.live : colour.goldDeep } : null]}
+            defaultValue={titleSeed}
+            // **The keyboard comes only from its tab** (§26): until then the
+            // box takes no focus at all, and a touch only chooses it.
+            editable={typing}
+            onPressIn={() => aim('title')}
             onFocus={() => aim('title')}
-            showSoftInputOnFocus={typing}
             onChangeText={(typed) => {
               typingOver();
               typedTitle(typed);
             }}
             inputAccessoryViewID={KEYS}
-            placeholder={takesName ? 'MARA' : 'Optional'}
+            placeholder={takesName ? 'Title — a name, like MARA' : 'Title'}
             placeholderTextColor={colour.muted}
             // Capitals for a name, as a script prints it; a title as said.
             autoCapitalize={takesName ? 'characters' : 'words'}
             autoCorrect={false}
           />
-        </View>
-
-        <TextInput
-          ref={bodyBox}
-          key={`body-${bodyDrawn}-${into === 'body' ? interim : ''}`}
-          style={[
-            styles.input,
-            { minHeight: 180, textAlignVertical: 'top', paddingTop: 12 },
-            into === 'body' && listening ? { borderColor: colour.live } : null,
-          ]}
-          defaultValue={into === 'body' && interim.length > 0 ? `${text}${text.length > 0 ? ' ' : ''}${interim}` : text}
-          onFocus={() => aim('body')}
-          showSoftInputOnFocus={typing}
-          inputAccessoryViewID={KEYS}
-          onChangeText={(typed) => {
-            typingOver();
-            typedText(typed);
-          }}
-          placeholder="What just occurred to you?"
-          placeholderTextColor={colour.muted}
-          multiline
-        />
-
+          <TextInput
+            ref={bodyBox}
+            key={bodyKey}
+            style={[
+              styles.input,
+              { flex: 1, textAlignVertical: 'top', paddingTop: 12 },
+              into === 'body' ? { borderColor: listening ? colour.live : colour.goldDeep } : null,
+            ]}
+            defaultValue={bodySeed}
+            editable={typing}
+            onPressIn={() => aim('body')}
+            onFocus={() => aim('body')}
+            inputAccessoryViewID={KEYS}
+            onChangeText={(typed) => {
+              typingOver();
+              typedText(typed);
+            }}
+            placeholder="What just occurred to you?"
+            placeholderTextColor={colour.muted}
+            multiline
+            scrollEnabled
+          />
         {undone ? (
           <Pressable
             style={[styles.button, styles.secondary]}
@@ -746,7 +737,20 @@ export function Capture({
             <Text style={[styles.buttonText, styles.secondaryText]}>Put the old wording back</Text>
           </Pressable>
         ) : null}
+        </View>
 
+        <ScrollView
+          style={{ flex: 1, borderColor: colour.border, ...(wide ? { borderLeftWidth: 1 } : { borderTopWidth: 1 }) }}
+          contentContainerStyle={styles.body}
+          keyboardShouldPersistTaps="handled"
+        >
+          {onSubscribe ? (
+            <Pressable onPress={onSubscribe} style={styles.row}>
+              <Text style={[styles.muted, { flex: 1 }]}>
+                Notes are being kept on this phone and not sent. Subscribe and they all go at once.
+              </Text>
+            </Pressable>
+          ) : null}
         <Pressable
           style={[
             styles.button,
@@ -783,7 +787,6 @@ export function Capture({
             {waiting.why ? ` — last try: ${waiting.why}` : ''}
           </Text>
         ) : null}
-
         {hearable !== false ? (
           // Where Dictate writes, chosen without the keyboard (§22).
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -845,8 +848,41 @@ export function Capture({
           </Pressable>
         ) : null}
 
-        {status ? <Text style={styles.muted}>{status}</Text> : null}
-      </ScrollView>
+          {collection ? <StoryPicker projectId={project.id} storyId={story?.id ?? null} onChoose={chooseStory} /> : null}
+
+        <View style={styles.field}>
+          <Text style={styles.label}>This is a</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+            {vocabulary.map((one) => (
+              <Pressable
+                key={one.key}
+                onPress={() => setCategory(one.key)}
+                style={[
+                  styles.button,
+                  styles.secondary,
+                  { paddingVertical: 9, paddingHorizontal: 12 },
+                  chosenKey === one.key ? { borderColor: colour.gold } : null,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.buttonText,
+                    styles.secondaryText,
+                    { fontSize: 12, letterSpacing: 0.4 },
+                    chosenKey === one.key ? { color: colour.goldBright } : null,
+                  ]}
+                >
+                  {one.name}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
+          {heard ? <Text style={styles.muted}>Heard: {heard}</Text> : null}
+          {status ? <Text style={styles.muted}>{status}</Text> : null}
+        </ScrollView>
+      </View>
 
       {/* **The keyboard is the writer's to call** (§22, from Ken: *it should
           be collapsible because it gets in the way*). Down, a tab at the foot

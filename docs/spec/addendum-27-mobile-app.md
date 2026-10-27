@@ -1040,3 +1040,36 @@ a copy with another id, never met its notes.
   with `ids`.
 - **Migration 0072** lets the writer delete their own note whatever its status;
   0042's refusal to *change* a filed note stands.
+
+## 26. Two halves, a keyboard that never comes by itself, and dictation written once
+
+From Ken, on build 12: *the keyboard should never come up… it should never be
+accessible unless you hit the keyboard tab… the note shouldn't elongate. It
+should have a scroll bar… the save disappears off the bottom of the page… if
+you use the dictate function off of the keyboard, it doubles the words again…
+seems only happened in the title… another major change I want is to be able to
+have a landscape view… the screen will be divided into the upper half with the
+note and all that information and the lower half, which is basically the
+controls, and so if you turn it sideways, one is on one half, one's on the
+other.*
+
+- **The note screen is two halves.** The note — its kind (and story) as a
+  heading, the title box and the note box — takes the top half; the controls
+  — Save, Dictate into, Dictate and Read it back, Hands free, the Story, the
+  kinds — take the bottom half in a scrolling column of their own. Turned on
+  its side (`useWindowDimensions`, wider than tall) the note is the left half
+  and the controls the right. `app.json`'s orientation is `default` now.
+- **The note box keeps its size and scrolls** instead of growing, so Save is
+  always on the screen.
+- **The keyboard comes only from its tab.** The boxes are `editable` only
+  while the Keyboard tab has asked for it; until then a touch takes no focus
+  and only chooses the box Dictate writes into (`onPressIn`), and the chosen
+  box is outlined. `showSoftInputOnFocus` (§24) was not enough on the iPhone.
+- **Why the keyboard's dictation still doubled (§21 was half the answer).**
+  React Native hands a box's `defaultValue` to the native view whenever it
+  changes, exactly as it does a `value`, and the boxes' `defaultValue`
+  followed the words as they were typed. Each box now starts from a *seed*
+  worked out only when it is drawn again (its `key` changes: our own
+  dictation, a correction, Save clearing it) — in Capture, Review, the new
+  project's title and story names. `dictation-boxes.test.ts` holds every box
+  to a seed.

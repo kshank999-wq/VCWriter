@@ -10,13 +10,17 @@ import { describe, expect, it } from 'vitest';
  * `value` is handed back on every change gets the words twice.
  */
 describe('boxes the keyboard dictates into', () => {
-  it.each(['Capture.tsx', 'Review.tsx', 'Projects.tsx'])('in %s take a defaultValue, never a value', (name) => {
+  it.each(['Capture.tsx', 'Review.tsx', 'Projects.tsx', 'StoryPicker.tsx'])('in %s take a defaultValue, never a value', (name) => {
     const source = readFileSync(join(__dirname, '..', 'screens', name), 'utf8');
     const inputs = source.split(/<TextInput\s/).slice(1).map((one) => one.slice(0, one.indexOf('/>')));
     expect(inputs.length).toBeGreaterThan(0);
     for (const input of inputs) {
       expect(input).toMatch(/defaultValue=/);
       expect(input).not.toMatch(/\svalue=/);
+      // **And the starting text is a seed, read when the box is drawn** (§26):
+      // React Native hands a changed `defaultValue` to the box as it does a
+      // value, so one bound to the words as typed doubled the title anyway.
+      expect(input).toMatch(/defaultValue=\{(titleSeed|bodySeed|seed|storySeeds\[index\] \?\? '')\}|defaultValue=""/);
     }
   });
 });
