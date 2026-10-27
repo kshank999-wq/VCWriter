@@ -150,9 +150,32 @@ export function Capture({
   const bodyBox = useRef<TextInput>(null);
   /** Whether the keyboard is up, for the tab that brings it back (§22). */
   const [keyboardUp, setKeyboardUp] = useState(false);
+  /**
+   * **The keyboard is down until it is asked for** (addendum 27 §24, from Ken:
+   * *it's made mainly to dictate into… I want the keyboard by default to be
+   * collapsed unless you click the bottom keyboard tab*). Touching a box puts
+   * the cursor there and chooses where Dictate writes, and nothing more; only
+   * the Keyboard tab sets this, and the keyboard going away clears it.
+   */
+  const [typing, setTyping] = useState(false);
+  const showKeyboard = () => {
+    const box = (intoRef.current === 'title' ? titleBox : bodyBox).current;
+    setTyping(true);
+    // A box already focused without its keyboard has to be focused again for
+    // the keyboard to come, once the prop allowing it has landed.
+    box?.blur();
+    setTimeout(() => box?.focus(), 60);
+  };
+  const hideKeyboard = () => {
+    setTyping(false);
+    Keyboard.dismiss();
+  };
   useEffect(() => {
     const shown = Keyboard.addListener('keyboardDidShow', () => setKeyboardUp(true));
-    const hidden = Keyboard.addListener('keyboardDidHide', () => setKeyboardUp(false));
+    const hidden = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardUp(false);
+      setTyping(false);
+    });
     return () => {
       shown.remove();
       hidden.remove();
@@ -510,7 +533,7 @@ export function Capture({
     typedOver.current = false;
     // The keyboard goes down while the phone listens (§22); the Keyboard tab
     // at the foot brings it back.
-    Keyboard.dismiss();
+    hideKeyboard();
     session.current = startDictation({
       onFinal: (chunk) => {
         setInterim('');
@@ -670,13 +693,14 @@ export function Capture({
         </View>
 
         <View style={styles.field}>
-          <Text style={styles.label}>{takesName ? 'Who' : 'About'}</Text>
+          <Text style={styles.label}>Title</Text>
           <TextInput
             ref={titleBox}
             key={`title-${titleDrawn}-${into === 'title' ? interim : ''}`}
             style={[styles.input, into === 'title' && listening ? { borderColor: colour.live } : null]}
             defaultValue={into === 'title' && interim.length > 0 ? `${subjectName}${subjectName ? ' ' : ''}${interim}` : subjectName}
             onFocus={() => aim('title')}
+            showSoftInputOnFocus={typing}
             onChangeText={(typed) => {
               typingOver();
               typedTitle(typed);
@@ -700,6 +724,7 @@ export function Capture({
           ]}
           defaultValue={into === 'body' && interim.length > 0 ? `${text}${text.length > 0 ? ' ' : ''}${interim}` : text}
           onFocus={() => aim('body')}
+          showSoftInputOnFocus={typing}
           inputAccessoryViewID={KEYS}
           onChangeText={(typed) => {
             typingOver();
@@ -772,7 +797,7 @@ export function Capture({
                 style={[styles.button, styles.secondary, { paddingVertical: 7, paddingHorizontal: 14 }, into === box ? { borderColor: colour.gold } : null]}
               >
                 <Text style={[styles.buttonText, styles.secondaryText, { fontSize: 13 }, into === box ? { color: colour.goldBright } : null]}>
-                  {box === 'title' ? (takesName ? 'Who' : 'Title') : 'Note'}
+                  {box === 'title' ? 'Title' : 'Note'}
                 </Text>
               </Pressable>
             ))}
@@ -830,20 +855,20 @@ export function Capture({
       {!keyboardUp ? (
         <Pressable
           style={styles.keyTab}
-          onPress={() => (into === 'title' ? titleBox : bodyBox).current?.focus()}
+          onPress={showKeyboard}
           accessibilityRole="button"
           accessibilityLabel="Show the keyboard"
         >
           <Text style={styles.keyTabText}>⌨ Keyboard</Text>
         </Pressable>
       ) : Platform.OS !== 'ios' ? (
-        <Pressable style={styles.keyTab} onPress={() => Keyboard.dismiss()} accessibilityRole="button" accessibilityLabel="Hide the keyboard">
+        <Pressable style={styles.keyTab} onPress={hideKeyboard} accessibilityRole="button" accessibilityLabel="Hide the keyboard">
           <Text style={styles.keyTabText}>⌄ Hide keyboard</Text>
         </Pressable>
       ) : null}
       {Platform.OS === 'ios' ? (
         <InputAccessoryView nativeID={KEYS}>
-          <Pressable style={styles.keyTab} onPress={() => Keyboard.dismiss()} accessibilityRole="button" accessibilityLabel="Hide the keyboard">
+          <Pressable style={styles.keyTab} onPress={hideKeyboard} accessibilityRole="button" accessibilityLabel="Hide the keyboard">
             <Text style={styles.keyTabText}>⌄ Hide keyboard</Text>
           </Pressable>
         </InputAccessoryView>

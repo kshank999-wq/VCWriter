@@ -987,3 +987,21 @@ dropdown that allows you to pick the short story that it's going to go into.*
   `story_id` column (added to a phone's existing queue on open), and
   `capture_items.story_marker_id` (migration 0071, no foreign key, for 0061's
   reason). The desktop inbox shows the story's name on the note.
+
+## 24. The keyboard is down until it is asked for
+
+From Ken, on build 11: *it's made mainly to dictate into, but whenever you put a
+cursor in the About or the Title section… I want to be able to get to the button
+to dictate. Otherwise, I have to use the dictation on the keyboard. So I want the
+keyboard by default to be collapsed unless you click the bottom keyboard tab…
+And I would actually like to change the name from About to Title.*
+
+- **Touching a box does not raise the keyboard.** It puts the cursor there and
+  chooses the box Dictate writes into (§22); the boxes take
+  `showSoftInputOnFocus` from a `typing` flag that is off by default.
+- **The ⌨ Keyboard tab** turns it on and refocuses the chosen box, so the
+  keyboard comes up there. *Hide keyboard*, Dictate, and the keyboard going
+  away for any reason turn it off again.
+- **The first box is called Title**, whatever the kind (it was *About*, or
+  *Who* for a kind that names somebody; the *MARA* placeholder still shows a
+  name is wanted there). The *Dictate into* choice reads *Title | Note*.
