@@ -1,26 +1,42 @@
 name: Notes App Store status
 
 # Which app the release workflow uploads to, and every build App Store Connect
-# holds for it with Apple's processing state (docs/store-setup.md §1.9). Reads
-# only; uploads nothing. For "the upload succeeded but TestFlight says no
-# builds".
+# holds for it with Apple's processing state (docs/store-setup.md §1.9), then
+# who in TestFlight can install the newest one (§1.10). Reads only, unless
+# fix_testflight is ticked: then it answers the encryption question, adds the
+# newest valid build to every internal group, and puts the tester in them.
 on:
   workflow_dispatch:
+    inputs:
+      fix_testflight:
+        description: Put the newest valid build in front of the tester in TestFlight
+        type: boolean
+        default: false
+      tester_email:
+        description: The tester's Apple ID email (blank = the account holder)
+        type: string
+        default: ''
 
 jobs:
   status:
     name: Ask App Store Connect
     runs-on: ubuntu-latest
     environment: release
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+      ASC_APP_ID: ${{ secrets.ASC_APP_ID }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - name: Report
-        env:
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
-          ASC_APP_ID: ${{ secrets.ASC_APP_ID }}
         run: node apps/mobile/scripts/asc-status.mjs
+      - name: TestFlight
+        if: always()
+        env:
+          FIX: ${{ inputs.fix_testflight }}
+          TESTER_EMAIL: ${{ inputs.tester_email }}
+        run: node apps/mobile/scripts/asc-testflight.mjs

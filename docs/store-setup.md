@@ -273,6 +273,33 @@ Native's networking code can load `ph://` images from the library, and Apple
 asks for a purpose string for any code that could. `app.json` now carries
 one, saying the app does not use photos. No email had arrived.
 
+### 1.10 If TestFlight says "no builds available" to you
+
+A valid build reaches a tester only when three things hold:
+- the encryption question is answered;
+- the build is **in a group**;
+- the tester is in **that group**.
+
+EAS makes an internal group named *Team (Expo)* that the browser will not let
+you edit, and a tester added outside every group is sent nothing. So the
+status shows "no builds available" though the build is fine.
+
+**Run Actions → Notes App Store status with *fix_testflight* ticked.** With
+the release key it:
+1. answers the encryption question where it is open;
+2. adds the newest valid build to every internal group;
+3. puts the tester in each group: the email given, or else the account
+   holder;
+4. sends the TestFlight invitation.
+
+Then, on the iPhone:
+- Install **TestFlight** from the App Store, signed in with that same Apple ID.
+- The build is under **VC Writer Notes** in the TestFlight app. Open the
+  invitation email on the phone if the app is not listed yet.
+
+Without the tick, the step only reports: the build's TestFlight state, every
+group, its builds and its testers.
+
 ## 2. Google Play — starting from nothing
 
 ### 2.1 Register
