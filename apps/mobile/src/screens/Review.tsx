@@ -168,7 +168,9 @@ export function Review({
                 <>
                   <TextInput
                     style={[styles.input, { minHeight: 110, textAlignVertical: 'top', paddingTop: 10 }]}
-                    value={draft}
+                    // The keyboard's own dictation writes here; handing the
+                    // value back doubles it (addendum 27 §21).
+                    defaultValue={draft}
                     onChangeText={setDraft}
                     multiline
                     autoFocus

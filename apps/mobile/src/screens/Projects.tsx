@@ -189,7 +189,9 @@ export function Projects({
             <Text style={styles.label}>Title</Text>
             <TextInput
               style={styles.input}
-              value={title}
+              // Not handed back on every change: the keyboard's dictation
+              // would write the title twice (addendum 27 §21).
+              defaultValue={title}
               onChangeText={setTitle}
               placeholder="Blackout"
               placeholderTextColor={colour.muted}

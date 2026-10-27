@@ -916,3 +916,26 @@ it's a scene, it then re-asks me what type of note is it.*
   waited through in silence rather than answered with the question again,
   which is what made the walk re-ask. A kind the project lacks says so —
   *There are no scenes in this project* — instead of *I didn't catch a kind*.
+
+## 21. The keyboard's own dictation, written once
+
+From Ken, on build 9: *when I use the dictate on the phone, as opposed to the
+dictate button, and I am in the short form, and I say, or speak in a title,
+then when I stop the dictation, it repeats it still. The hands-free works very
+well now.*
+
+That is iOS's keyboard microphone, not the app's Dictate. It writes into the
+focused box and, when it stops, replaces what it wrote with its final text. The
+boxes were controlled — the app handed `value` back on every change — and the
+value arriving in the middle of that replacement put the words in a second
+time.
+
+- **The boxes keep their own text.** The Capture title and note boxes, the
+  Review edit box and the new-project title take a `defaultValue`, and what
+  is typed or dictated by the keyboard only updates the app's copy.
+- **Only a change the app makes redraws a box**, by a new `key`: our own
+  Dictate (its words and its grey guess), a spoken correction, *put the old
+  wording back*, and Save clearing the boxes.
+- The title box capitalises a name as a script prints it (MARA) and anything
+  else — a segment's title — word by word.
+- `dictation-boxes.test.ts` holds the three screens to it.

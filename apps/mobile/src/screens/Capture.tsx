@@ -75,9 +75,31 @@ export function Capture({
   const textRef = useRef('');
   /** Set when typing took over a dictation: its last words are in the box already. */
   const typedOver = useRef(false);
+  /**
+   * **The boxes are the keyboard's while it writes** (addendum 27 §21, from
+   * Ken: *when I use the dictate on the phone… and I speak in a title, then
+   * when I stop the dictation, it repeats it*). iOS's own dictation writes into
+   * the box and finishes by replacing what it wrote; a box whose `value` the
+   * app hands back on every change gets the words a second time. So the boxes
+   * keep their own text (`defaultValue`), and only a change the app makes —
+   * our dictation, a correction, a save clearing them — redraws one, by a new
+   * `key`.
+   */
+  const [bodyDrawn, setBodyDrawn] = useState(0);
+  const [titleDrawn, setTitleDrawn] = useState(0);
   const setText = (next: string | ((current: string) => string)) => {
     textRef.current = typeof next === 'function' ? next(textRef.current) : next;
     setTextState(textRef.current);
+    setBodyDrawn((n) => n + 1);
+  };
+  /** Words the writer typed or the keyboard dictated: already in the box. */
+  const typedText = (typed: string) => {
+    textRef.current = typed;
+    setTextState(typed);
+  };
+  const putTitle = (name: string) => {
+    setSubjectName(name);
+    setTitleDrawn((n) => n + 1);
   };
   const [interim, setInterim] = useState('');
   const [heard, setHeard] = useState<string | null>(null);
@@ -211,7 +233,7 @@ export function Capture({
     setInterim('');
     // The name goes with the note; the category stays, because somebody
     // catching three thoughts about one person should say it once.
-    setSubjectName('');
+    putTitle('');
     setUndone(null);
     setHeard(null);
   };
@@ -238,7 +260,7 @@ export function Capture({
     const command = readSpoken(chunk, formatNow());
     if (command.kind === 'category') {
       setCategory(command.category);
-      if (command.subjectName) setSubjectName(command.subjectName);
+      if (command.subjectName) putTitle(command.subjectName);
       const said = captureKeyName(command.category, formatNow());
       setHeard(command.subjectName ? `${said} — ${command.subjectName}` : said);
       if (command.text.length > 0) append(command.text);
@@ -561,19 +583,22 @@ export function Capture({
         <View style={styles.field}>
           <Text style={styles.label}>{takesName ? 'Who' : 'About'}</Text>
           <TextInput
+            key={`title-${titleDrawn}`}
             style={styles.input}
-            value={subjectName}
+            defaultValue={subjectName}
             onChangeText={setSubjectName}
             placeholder={takesName ? 'MARA' : 'Optional'}
             placeholderTextColor={colour.muted}
-            autoCapitalize="characters"
+            // Capitals for a name, as a script prints it; a title as said.
+            autoCapitalize={takesName ? 'characters' : 'words'}
             autoCorrect={false}
           />
         </View>
 
         <TextInput
+          key={`body-${bodyDrawn}-${interim}`}
           style={[styles.input, { minHeight: 180, textAlignVertical: 'top', paddingTop: 12 }]}
-          value={interim.length > 0 ? `${text}${text.length > 0 ? ' ' : ''}${interim}` : text}
+          defaultValue={interim.length > 0 ? `${text}${text.length > 0 ? ' ' : ''}${interim}` : text}
           onChangeText={(typed) => {
             // **Typing ends the dictation it is typed over**, and what is in
             // the box is what is kept — the guess included — once. The box used
@@ -588,7 +613,7 @@ export function Capture({
               setInterim('');
               void was?.stop();
             }
-            setText(typed);
+            typedText(typed);
           }}
           placeholder="What just occurred to you?"
           placeholderTextColor={colour.muted}
