@@ -100,6 +100,34 @@ export const beginStory = (
   return { file: marked.file, unitId: made.unit.id, markerId: marked.marker.id };
 };
 
+/**
+ * **A collection with its stories named at the start** (addendum 22 §11, from
+ * Ken: *under short stories and collections, I want an additional screen that
+ * asks you, is this a single story or a collection? If you hit collection, it
+ * gives the ability to enter multiple story names into a list*).
+ *
+ * The first title marks the opening section the new project already has, so
+ * it is not left before every story as a section nobody claimed; each later
+ * one is `beginStory`, a section of its own at the end. A single story is a
+ * collection of one, named for the project. Blank titles are skipped, and a
+ * project that already has stories only gains the new ones at the end.
+ */
+export const withStories = (file: ProjectFile, titles: readonly string[]): ProjectFile => {
+  const names = titles.map((title) => title.trim()).filter((title) => title.length > 0);
+  let next = file;
+  for (const title of names) {
+    const first = storiesOf(next).length === 0 ? unitsInStoryOrder(next)[0] : undefined;
+    next = first && !next.markers.some((marker) => marker.unitId === first.id)
+      ? addMarker(next, { unitId: first.id, title, kind: 'chapter' }).file
+      : beginStory(next, { title }).file;
+  }
+  return next;
+};
+
+/** A collection's stories as a list to choose from: id and title, in order. */
+export const storyChoices = (file: ProjectFile): Array<{ id: StoryMarkerId; title: string }> =>
+  storiesOf(file).map((story) => ({ id: story.placed.marker.id, title: story.placed.marker.title }));
+
 export interface AddedStory {
   file: ProjectFile;
   unitId: StructuralUnitId;

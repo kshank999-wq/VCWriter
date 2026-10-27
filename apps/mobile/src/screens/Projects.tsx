@@ -73,6 +73,16 @@ export function Projects({
   const [title, setTitle] = useState('');
   const [format, setFormat] = useState<ProjectFormat>('screenplay');
   const [making, setMaking] = useState(false);
+  /**
+   * **One story or a collection** (addendum 27 §23, from Ken: *under short
+   * stories and collections, I want an additional screen that asks you, is
+   * this a single story or a collection? If you hit collection, it gives the
+   * ability to enter multiple story names into a list*). Asked after the title,
+   * on that format alone; the names are kept here until the project is made.
+   */
+  const [asking, setAsking] = useState(false);
+  const [collection, setCollection] = useState(false);
+  const [storyNames, setStoryNames] = useState<string[]>(['']);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -104,11 +114,11 @@ export function Projects({
     void AsyncStorage.setItem(SHELF, JSON.stringify(after)).catch(() => undefined);
   };
 
-  const start = async () => {
+  const start = async (stories?: string[]) => {
     const name = title.trim();
     if (name.length === 0 || making) return;
     setMaking(true);
-    const said = await makeProject({ title: name, format });
+    const said = await makeProject({ title: name, format, ...(stories ? { stories } : {}) });
     setMaking(false);
     if (!said.ok) {
       setError(said.error);
@@ -116,11 +126,75 @@ export function Projects({
     }
     setNaming(false);
     setTitle('');
+    setAsking(false);
+    setCollection(false);
+    setStoryNames(['']);
     void AsyncStorage.setItem(LAST, said.data.id).catch(() => undefined);
     // Straight into it: somebody who has just named a project wants to talk
     // into it.
     onChoose(said.data);
   };
+
+  if (asking) {
+    const names = storyNames.map((one) => one.trim()).filter(Boolean);
+    return (
+      <ScrollView style={styles.screen} contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+        <Text style={styles.heading}>{title.trim()}</Text>
+        <Text style={styles.title}>Is this a single story or a collection?</Text>
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <Pressable
+            style={[styles.button, styles.secondary, { flex: 1 }]}
+            onPress={() => void start([title.trim()])}
+            disabled={making}
+            accessibilityRole="button"
+          >
+            <Text style={[styles.buttonText, styles.secondaryText]}>{making && !collection ? 'Starting…' : 'Single story'}</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.button, styles.secondary, { flex: 1 }, collection ? { borderColor: colour.gold } : null]}
+            onPress={() => setCollection(true)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: collection }}
+          >
+            <Text style={[styles.buttonText, styles.secondaryText, collection ? { color: colour.goldBright } : null]}>Collection</Text>
+          </Pressable>
+        </View>
+
+        {collection ? (
+          <View style={{ gap: 10 }}>
+            <Text style={styles.label}>The stories</Text>
+            {storyNames.map((one, index) => (
+              <TextInput
+                key={`story-${index}`}
+                style={styles.input}
+                // The keyboard's dictation writes here too (§21).
+                defaultValue={one}
+                onChangeText={(typed) => setStoryNames((now) => now.map((was, at) => (at === index ? typed : was)))}
+                placeholder={`Story ${index + 1}`}
+                placeholderTextColor={colour.muted}
+                autoCapitalize="words"
+                autoFocus={index === storyNames.length - 1 && index > 0}
+              />
+            ))}
+            <Pressable style={[styles.button, styles.secondary]} onPress={() => setStoryNames((now) => [...now, ''])}>
+              <Text style={[styles.buttonText, styles.secondaryText]}>+ Another story</Text>
+            </Pressable>
+            <Text style={styles.muted}>You can add more later, from the note screen.</Text>
+            <Pressable style={styles.button} onPress={() => void start(names)} disabled={making || names.length === 0}>
+              <Text style={styles.buttonText}>
+                {making ? 'Starting…' : names.length === 0 ? 'Name a story first' : `Start it with ${names.length} ${names.length === 1 ? 'story' : 'stories'}`}
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        <Pressable style={[styles.button, styles.secondary]} onPress={() => setAsking(false)}>
+          <Text style={[styles.buttonText, styles.secondaryText]}>Back</Text>
+        </Pressable>
+      </ScrollView>
+    );
+  }
 
   if (choosing) {
     return (
@@ -226,8 +300,13 @@ export function Projects({
               ))}
             </View>
           </View>
-          <Pressable style={styles.button} onPress={() => void start()} disabled={making}>
-            <Text style={styles.buttonText}>{making ? 'Starting…' : 'Start it'}</Text>
+          <Pressable
+            style={styles.button}
+            // A collection is asked one more thing first (§23).
+            onPress={() => (format === 'short_story' ? title.trim() && setAsking(true) : void start())}
+            disabled={making}
+          >
+            <Text style={styles.buttonText}>{making ? 'Starting…' : format === 'short_story' ? 'Next' : 'Start it'}</Text>
           </Pressable>
           <Pressable style={[styles.button, styles.secondary]} onPress={() => setNaming(false)}>
             <Text style={[styles.buttonText, styles.secondaryText]}>Cancel</Text>

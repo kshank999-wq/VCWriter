@@ -337,3 +337,21 @@ describe('removing a story', () => {
     expect(divisionRemoval(made.file, made.markerId).comfort).toContain('chapter');
   });
 });
+
+describe('withStories (addendum 22 §11)', () => {
+  it('names the opening section for the first story and adds a section for each after', async () => {
+    const { createProjectFile, withStories, storyChoices, unplacedSections } = await import('../index.js');
+    const made = withStories(createProjectFile({ title: 'Tales', format: 'short_story' }), ['The Lamp', '  ', 'Harbour Lights', 'Last Train']);
+    expect(storyChoices(made).map((one) => one.title)).toEqual(['The Lamp', 'Harbour Lights', 'Last Train']);
+    expect(unplacedSections(made)).toHaveLength(0);
+    expect(made.units).toHaveLength(3);
+  });
+
+  it('adds later stories at the end, and makes a single story of the project’s name', async () => {
+    const { createProjectFile, withStories, storyChoices } = await import('../index.js');
+    const one = withStories(createProjectFile({ title: 'The Lamp', format: 'short_story' }), ['The Lamp']);
+    expect(storyChoices(one).map((s) => s.title)).toEqual(['The Lamp']);
+    const more = withStories(one, ['Coda']);
+    expect(storyChoices(more).map((s) => s.title)).toEqual(['The Lamp', 'Coda']);
+  });
+});

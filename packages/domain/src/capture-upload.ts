@@ -58,6 +58,11 @@ export const captureUploadSchema = z.object({
   subjectName: z.string().max(200).nullable().default(null),
   /** The writer's own word this note was said under (§12). */
   subcategory: z.string().max(200).nullable().default(null),
+  /**
+   * The story in a collection the note is for (addendum 27 §23): the story's
+   * marker id, chosen from the list on the phone. Null for every other format.
+   */
+  storyId: z.string().uuid().nullable().default(null),
   /** How sure the transcription was, when the device can say. */
   transcriptConfidence: z.number().min(0).max(1).nullable().default(null),
 }).refine((note) => note.rawText.trim().length > 0 || (note.subjectName ?? '').trim().length > 0, {
@@ -117,6 +122,7 @@ export const uploadToRow = (
   category: upload.category,
   subject_name: upload.subjectName,
   subcategory: upload.subcategory,
+  story_marker_id: upload.storyId,
   transcript_confidence: upload.transcriptConfidence,
   client_capture_id: upload.clientCaptureId,
   synced_at: now,

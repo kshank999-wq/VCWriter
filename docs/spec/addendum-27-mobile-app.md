@@ -959,3 +959,31 @@ says keyboard, but it should be collapsible because it gets in the way.*
   keyboard* bar sits on it (on the iPhone an input accessory, fixed to the
   keyboard; on Android at the foot of the screen).
 - Typing in either box ends a dictation in progress, as typing in the note did.
+
+## 23. One story or a collection, and the story a note goes into
+
+From Ken: *under short stories and collections, I want an additional screen
+that asks you, is this a single story or a collection? If you hit collection,
+it gives the ability to enter multiple story names into a list… and then you
+can add to that list. So when you're on the note screen, there'll be a
+dropdown that allows you to pick the short story that it's going to go into.*
+
+- **New project, Short stories and collections**: *Start it* reads *Next*, and
+  the next screen asks *Is this a single story or a collection?* **Single
+  story** makes the project with one story named for it. **Collection** opens
+  a list of story names, *+ Another story* adding a row, and *Start it with N
+  stories*.
+- **The stories are the desk's own.** `POST /api/notes/projects` takes
+  `stories`, and `withStories` (addendum 22 §11) puts the first on the
+  opening section and starts each later one on a section of its own at the
+  end — a story is a marker over its sections, exactly as *+ New story* makes
+  one on the desktop.
+- **The note screen has a Story dropdown** on a collection: the stories in
+  order, read from `GET /api/notes/projects/:id/stories`, and a box at its
+  foot that adds one at the end (`POST` the same route, which writes only the
+  rows that are new). The choice is remembered per project on the phone, and
+  the hands-free bar names the story its notes are going into.
+- **The note carries the story**: `storyId` on the upload, the queue's
+  `story_id` column (added to a phone's existing queue on open), and
+  `capture_items.story_marker_id` (migration 0071, no foreign key, for 0061's
+  reason). The desktop inbox shows the story's name on the note.

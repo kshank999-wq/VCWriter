@@ -3,8 +3,11 @@ import { z } from 'zod';
 import {
   SYNC_TABLES,
   createProjectFile,
+  isCollection,
   projectFormatSchema,
+  storyChoices,
   toRows,
+  withStories,
   type Row,
 } from '@vcwriter/domain';
 import { currentUser, serverClient } from '@/lib/supabase';
@@ -33,6 +36,12 @@ const schema = z.object({
   title: z.string().trim().min(1).max(200),
   /** The phone offers the two a writer is most likely to start on a train. */
   format: projectFormatSchema.default('screenplay'),
+  /**
+   * A collection's stories, named on the phone before it is made (addendum 27
+   * §23): one name for a single story, several for a collection. Read only on
+   * the short-story format.
+   */
+  stories: z.array(z.string().trim().max(200)).max(100).default([]),
 });
 
 export async function GET(): Promise<Response> {
@@ -62,11 +71,12 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json({ error: 'A project needs a title.' }, { status: 400 });
   }
 
-  const file = createProjectFile({
+  const made = createProjectFile({
     title: parsed.data.title,
     format: parsed.data.format,
     ownerId: user.id as never,
   });
+  const file = isCollection(made.project.format) ? withStories(made, parsed.data.stories) : made;
   const rows = toRows(file);
   const db = serverClient();
 
@@ -94,5 +104,6 @@ export async function POST(request: Request): Promise<Response> {
       format: file.project.format,
       updated_at: file.project.updatedAt,
     },
+    stories: storyChoices(file),
   });
 }

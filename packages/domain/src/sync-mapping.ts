@@ -1234,6 +1234,7 @@ export const captureFromRow = (row: Row): CaptureItem =>
     category: nullableText(row['category']),
     subjectName: nullableText(row['subject_name']),
     subcategory: nullableText(row['subcategory']),
+    storyMarkerId: nullableText(row['story_marker_id']),
     status: row['status'],
     reviewedAt: nullableText(row['reviewed_at']),
     resultRef:

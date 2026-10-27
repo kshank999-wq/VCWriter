@@ -12453,6 +12453,16 @@ dialog.projects-dialog {
   letter-spacing: 0.02em;
 }
 
+/* The story of a collection a note was said for (addendum 27 §23). */
+.mobile-story {
+  color: var(--gold);
+  border: 1px solid var(--gold-deep);
+  border-radius: 10px;
+  padding: 0 7px;
+  margin-right: 6px;
+  white-space: nowrap;
+}
+
 .mobile-text {
   margin: 5px 0 8px;
   font-size: 12.5px;

@@ -630,3 +630,12 @@ honest half of the ask and is its own piece of work.
 - **Stage 4, a file at a time (§4a).** Several files in one import, in
   the order listed; *Add episodes to the series…*; `appendImportedEpisode`,
   `markEpisodeAt` and `ensureFirstEpisode` in `series-import.ts`.
+
+## 11. Stories named from the phone
+
+`withStories(file, titles)` names a collection's stories in one go
+(addendum 27 §23): the first title marks the opening section a new project
+already has, so no section is left before every story unclaimed, and each
+later one is `beginStory`. On a project that already has stories it only
+adds at the end. `storyChoices` lists them as id and title, which is what
+the phone's Story dropdown shows.

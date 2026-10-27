@@ -314,6 +314,10 @@ function Note({
     return items;
   };
 
+  const storyTitle = capture.storyMarkerId
+    ? (file.markers.find((marker) => marker.id === capture.storyMarkerId)?.title ?? null)
+    : null;
+
   return (
     <li
       className={lifted ? 'mobile-note lifted' : 'mobile-note'}
@@ -340,6 +344,9 @@ function Note({
         ) : (
           <span className="mobile-subject" />
         )}
+        {/* The story of a collection it was said for (addendum 27 §23): the
+            marker's title as it is now, and nothing where the story has gone. */}
+        {storyTitle ? <span className="mobile-story small">{storyTitle}</span> : null}
         <span className="muted small">{when(capture.capturedAt)}</span>
       </div>
 

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { InputAccessoryView, Keyboard, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import {
   applyCorrection,
@@ -19,7 +20,8 @@ import {
   type ProjectFormat,
   type Sitting,
 } from '@vcwriter/domain';
-import { makeProject, type ProjectSummary } from '../host/api';
+import { makeProject, type ProjectSummary, type StoryChoice } from '../host/api';
+import { StoryPicker } from './StoryPicker';
 import { file as fileNote, newClientCaptureId, pendingCaptures } from '../host/queue';
 import { canHear, mayHear, readyToSpeak, startDictation, type DictationSession } from '../host/listen';
 import { beep, hush, readAloud } from '../host/say';
@@ -61,6 +63,30 @@ export function Capture({
 }) {
   const format = (project.format as ProjectFormat) ?? 'screenplay';
   const vocabulary = captureVocabulary(format);
+  /**
+   * The story of a collection the notes are for (addendum 27 §23), chosen from
+   * the list at the top of the screen and remembered per project, so a walk
+   * back into the same collection is still on the same story. A ref beside it
+   * for the recogniser's callbacks, which run outside a render.
+   */
+  const collection = format === 'short_story';
+  const [story, setStory] = useState<StoryChoice | null>(null);
+  const storyRef = useRef<StoryChoice | null>(null);
+  const storyKey = `vcwriter-notes-story:${project.id}`;
+  const chooseStory = (next: StoryChoice | null) => {
+    storyRef.current = next;
+    setStory(next);
+    if (next) void AsyncStorage.setItem(storyKey, JSON.stringify(next)).catch(() => undefined);
+  };
+  useEffect(() => {
+    if (!collection) return;
+    void AsyncStorage.getItem(storyKey)
+      .then((kept) => {
+        if (kept && !storyRef.current) chooseStory(JSON.parse(kept) as StoryChoice);
+      })
+      .catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project.id]);
 
   /** Typed capture. */
   const [category, setCategory] = useState<CaptureKey>('idea');
@@ -210,6 +236,7 @@ export function Capture({
         category: note.key,
         subjectName: note.subjectName,
         subcategory: note.group ?? null,
+        storyId: collection ? (storyRef.current?.id ?? null) : null,
         syncedAt: null,
         lastError: null,
         attempts: 0,
@@ -513,6 +540,8 @@ export function Capture({
         <View style={styles.bar}>
           <Text style={styles.muted} numberOfLines={1}>
             {project.title}
+            {/* A walk's notes go into the story chosen before it (§23). */}
+            {collection && story ? ` · ${story.title}` : ''}
           </Text>
           <Text style={[styles.muted, { color: speaking ? colour.gold : listening ? colour.live : colour.muted }]}>
             {speaking ? '◆ Speaking' : listening ? '● Listening' : 'Paused'}
@@ -608,6 +637,8 @@ export function Capture({
           {subjectName.trim() ? ` · ${subjectName.trim()}` : ''}
         </Text>
         {heard ? <Text style={styles.muted}>Heard: {heard}</Text> : null}
+
+        {collection ? <StoryPicker projectId={project.id} storyId={story?.id ?? null} onChoose={chooseStory} /> : null}
 
         <View style={styles.field}>
           <Text style={styles.label}>This is a</Text>

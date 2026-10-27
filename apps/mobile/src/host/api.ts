@@ -79,9 +79,17 @@ export const listProjects = async (): Promise<Answer<ProjectSummary[]>> => {
   return said.ok ? ok(said.data.projects ?? []) : said;
 };
 
+/** A story of a collection, as the phone lists it (addendum 27 §23). */
+export interface StoryChoice {
+  id: string;
+  title: string;
+}
+
 export const makeProject = async (input: {
   title: string;
   format: string;
+  /** A collection's story names, or the one story's (addendum 27 §23). */
+  stories?: string[];
 }): Promise<Answer<ProjectSummary>> => {
   const said = await ask<{ project?: ProjectSummary }>('/api/notes/projects', {
     method: 'POST',
@@ -89,6 +97,21 @@ export const makeProject = async (input: {
   });
   if (!said.ok) return said;
   return said.data.project ? ok(said.data.project) : no('That project could not be started.');
+};
+
+/** A collection's stories, in order (addendum 27 §23). */
+export const listStories = async (projectId: string): Promise<Answer<StoryChoice[]>> => {
+  const said = await ask<{ stories?: StoryChoice[] }>(`/api/notes/projects/${encodeURIComponent(projectId)}/stories`);
+  return said.ok ? ok(said.data.stories ?? []) : said;
+};
+
+/** Add a story at the end of a collection; answers the whole list after. */
+export const addStory = async (projectId: string, title: string): Promise<Answer<StoryChoice[]>> => {
+  const said = await ask<{ stories?: StoryChoice[] }>(`/api/notes/projects/${encodeURIComponent(projectId)}/stories`, {
+    method: 'POST',
+    body: JSON.stringify({ title }),
+  });
+  return said.ok ? ok(said.data.stories ?? []) : said;
 };
 
 /**

@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { id, isoDateTime, timestamps } from './common.js';
 import { storyEntityRefSchema } from './links.js';
 import { systemCategoryKeySchema } from './research.js';
-import type { AssetId, CaptureItemId, ProjectId, UserId } from '../ids.js';
+import type { AssetId, CaptureItemId, ProjectId, StoryMarkerId, UserId } from '../ids.js';
 
 /**
  * Voice/mobile intake (spec §9, §11).
@@ -150,6 +150,13 @@ export const captureItemSchema = z.object({
    * allowed to have thought about.
    */
   subcategory: z.string().nullable().default(null),
+  /**
+   * The story of a collection it was said for (addendum 27 §23, from Ken: *a
+   * dropdown that allows you to pick the short story that it's going to go
+   * into*). The story's marker; null on any other format, and where the
+   * writer chose none.
+   */
+  storyMarkerId: id<StoryMarkerId>().nullable().default(null),
   status: captureStatusSchema.default('pending'),
   reviewedAt: isoDateTime().nullable().default(null),
   /** What the approved capture became, once the writer confirmed it. */

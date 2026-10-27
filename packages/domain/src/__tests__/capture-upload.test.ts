@@ -87,6 +87,13 @@ describe('what the phone may send', () => {
     expect(() => captureUploadSchema.parse({ ...good, subcategory: 'x'.repeat(201) })).toThrow();
   });
 
+  it('carries the story of a collection it was said for, as the story’s id (addendum 27 §23)', () => {
+    const story = '7d1f4c2a-1b2c-4d3e-8f90-123456789abc';
+    expect(uploadToRow(captureUploadSchema.parse({ ...good, storyId: story }), 'user-42')['story_marker_id']).toBe(story);
+    expect(captureUploadSchema.parse(good).storyId).toBeNull();
+    expect(() => captureUploadSchema.parse({ ...good, storyId: 'The Lamp' })).toThrow();
+  });
+
   it('has no field for status, so a client cannot claim a note was approved', () => {
     const parsed = captureUploadSchema.parse({ ...good, status: 'approved' } as never);
     expect('status' in parsed).toBe(false);

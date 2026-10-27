@@ -31,6 +31,8 @@ export interface QueuedCapture {
   category: string | null;
   subjectName: string | null;
   subcategory: string | null;
+  /** The story of a collection it is for (addendum 27 §23); null elsewhere. */
+  storyId: string | null;
   /** Set once the server has the row; kept briefly so the screen can show it landed. */
   syncedAt: string | null;
   lastError: string | null;
@@ -58,6 +60,13 @@ const open = async (): Promise<SQLite.SQLiteDatabase> => {
       attempts INTEGER NOT NULL DEFAULT 0
     );
   `);
+  // The story column came with addendum 27 §23; a phone with notes queued
+  // from before gains it, and one that has it already refuses the second add.
+  try {
+    await db.execAsync('ALTER TABLE captures ADD COLUMN story_id TEXT;');
+  } catch {
+    // There already.
+  }
   return db;
 };
 
@@ -70,6 +79,7 @@ interface Row {
   category: string | null;
   subject_name: string | null;
   subcategory: string | null;
+  story_id?: string | null;
   synced_at: string | null;
   last_error: string | null;
   attempts: number;
@@ -84,6 +94,7 @@ const fromRow = (row: Row): QueuedCapture => ({
   category: row.category,
   subjectName: row.subject_name,
   subcategory: row.subcategory,
+  storyId: row.story_id ?? null,
   syncedAt: row.synced_at,
   lastError: row.last_error,
   attempts: row.attempts,
@@ -96,13 +107,14 @@ export const enqueue = async (capture: QueuedCapture): Promise<void> => {
   await database.runAsync(
     `INSERT INTO captures
        (client_capture_id, project_id, raw_text, source, captured_at,
-        category, subject_name, subcategory, synced_at, last_error, attempts)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        category, subject_name, subcategory, story_id, synced_at, last_error, attempts)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(client_capture_id) DO UPDATE SET
        raw_text = excluded.raw_text,
        category = excluded.category,
        subject_name = excluded.subject_name,
        subcategory = excluded.subcategory,
+       story_id = excluded.story_id,
        synced_at = excluded.synced_at,
        last_error = excluded.last_error,
        attempts = excluded.attempts`,
@@ -115,6 +127,7 @@ export const enqueue = async (capture: QueuedCapture): Promise<void> => {
       capture.category,
       capture.subjectName,
       capture.subcategory,
+      capture.storyId,
       capture.syncedAt,
       capture.lastError,
       capture.attempts,
@@ -170,6 +183,7 @@ const forUpload = (capture: QueuedCapture) => ({
   category: capture.category,
   subjectName: capture.subjectName,
   subcategory: capture.subcategory,
+  storyId: capture.storyId,
 });
 
 /**
