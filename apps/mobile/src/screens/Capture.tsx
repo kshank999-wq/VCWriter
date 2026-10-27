@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { InputAccessoryView, Keyboard, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { Alert, InputAccessoryView, Keyboard, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import {
   applyCorrection,
   captureKeyName,
@@ -340,6 +340,40 @@ export function Capture({
    * phone switched from recording to playback, and a sentence where there is
    * nothing yet rather than a press that does nothing.
    */
+  /**
+   * **Cancel the note in hand** (addendum 27 §27, from Ken: *we need a way to
+   * cancel the note… if you start writing a note and you have to go all the
+   * way back out to the project screen and go back in*). Dictation stops
+   * without keeping what it was hearing, and the title and note are emptied;
+   * the kind and the story stay, as they do after a save. Asked first when
+   * there is anything to lose.
+   */
+  const cancelNote = () => {
+    const clear = () => {
+      typedOver.current = true;
+      const was = session.current;
+      session.current = null;
+      setListening(false);
+      void was?.stop();
+      setInterim('');
+      setText('');
+      putTitle('');
+      setUndone(null);
+      setHeard(null);
+      setStatus(null);
+      aim('body');
+    };
+    const anything = textRef.current.trim().length > 0 || subjectRef.current.trim().length > 0 || interim.length > 0;
+    if (!anything) {
+      clear();
+      return;
+    }
+    Alert.alert('Cancel this note?', 'The title and the note are cleared and nothing is saved.', [
+      { text: 'Keep writing', style: 'cancel' },
+      { text: 'Cancel the note', style: 'destructive', onPress: clear },
+    ]);
+  };
+
   const readBack = async () => {
     await stopListening();
     const words = textRef.current.trim();
@@ -679,10 +713,21 @@ export function Capture({
           scrolls, so Save never goes off the screen. */}
       <View style={{ flex: 1, flexDirection: wide ? 'row' : 'column' }}>
         <View style={{ flex: 1, padding: 16, gap: 8 }}>
-          <Text style={[styles.heading, { fontSize: 20 }]} numberOfLines={1}>
-            {captureKeyName(chosenKey, format)}
-            {collection && story ? ` · ${story.title}` : ''}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Text style={[styles.heading, { fontSize: 20, flex: 1 }]} numberOfLines={1}>
+              {captureKeyName(chosenKey, format)}
+              {collection && story ? ` · ${story.title}` : ''}
+            </Text>
+            <Pressable
+              onPress={cancelNote}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel this note"
+              hitSlop={8}
+              style={[styles.button, styles.secondary, { paddingVertical: 6, paddingHorizontal: 12 }]}
+            >
+              <Text style={[styles.buttonText, styles.secondaryText, { fontSize: 13 }]}>✕ Cancel</Text>
+            </Pressable>
+          </View>
           <TextInput
             ref={titleBox}
             key={titleKey}
