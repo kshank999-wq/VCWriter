@@ -46,7 +46,7 @@ const LAST = 'vcwriter-notes-project';
  * still named, `formatSpokenName` reading every format.
  */
 const FORMATS: ProjectFormat[] = (
-  ['screenplay', 'series', 'novel', 'short_story', 'instructional', 'stage_play', 'short_form', 'game'] as const
+  ['screenplay', 'series', 'novel', 'short_story', 'instructional', 'stage_play', 'short_form', 'document', 'game'] as const
 ).filter((format) => startsHere(format));
 
 export function Projects({

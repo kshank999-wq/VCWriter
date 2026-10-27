@@ -298,6 +298,7 @@ describe('a format said out loud', () => {
     expect(formatNamed('It’s a screenplay.')).toBe('screenplay');
     expect(formatNamed("it's a screenplay")).toBe('screenplay');
     expect(formatNamed('an educational book')).toBe('instructional');
+    expect(formatNamed('an instructional book')).toBe('instructional');
     expect(formatNamed('textbook')).toBe('instructional');
     // A description is not a choice of format, which is what stops the first
     // sentence of a synopsis being read as one.
@@ -315,7 +316,7 @@ describe('a format said out loud', () => {
     // A list that is shorter than what the program can make is a question with
     // missing answers, said to somebody who cannot see the screen — and what
     // the program can **make** is what this list is of (addendum 30).
-    expect(spokenFormatNames()).toContain('Educational book');
+    expect(spokenFormatNames()).toContain('Instructional book');
     expect(spokenFormatNames()).toContain('Novel');
     // The word processor's Document is the eighth (addendum 42).
     expect(spokenFormatNames()).toContain('Document');
@@ -370,7 +371,7 @@ describe('making a project by voice', () => {
     // What landed, then what is missing. The bare question was what this said
     // before it was driven, and it is the sentence the turn before it already
     // said — so answering was silent, which from a pocket reads as unheard.
-    expect(kind.said).toBe('Educational book. What is it called?');
+    expect(kind.said).toBe('Instructional book. What is it called?');
 
     const named = hear(kind, 'Refraction', 'screenplay');
     expect(named.making).toMatchObject({ name: 'Refraction', format: 'instructional' });
@@ -381,7 +382,7 @@ describe('making a project by voice', () => {
     const asked = walk([`${WAKE} new project Blackout`, 'a graphic novella']);
     expect(asked.making).toMatchObject({ name: 'Blackout', format: null });
     expect(asked.said).toContain('Not a kind I know');
-    expect(asked.said).toContain('Educational book');
+    expect(asked.said).toContain('Instructional book');
   });
 
   it('will not make one with a name and no kind, or a kind and no name', () => {

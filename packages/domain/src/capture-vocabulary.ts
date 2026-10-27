@@ -205,8 +205,10 @@ const SPOKEN_FORMATS: ReadonlyArray<{ format: ProjectFormat; name: string; spoke
   { format: 'novel', name: 'Novel', spoken: ['novel'] },
   {
     format: 'instructional',
-    name: 'Educational book',
-    spoken: ['educational book', 'textbook', 'text book', 'instructional book', 'non-fiction book', 'course'],
+    // Ken's word for it (addendum 27 §16): *instructional book*. *Educational
+    // book* is still heard, since it is what he said first.
+    name: 'Instructional book',
+    spoken: ['instructional book', 'instructional', 'educational book', 'textbook', 'text book', 'non-fiction book', 'course'],
   },
   {
     format: 'short_story',

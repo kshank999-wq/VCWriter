@@ -210,7 +210,7 @@ describe('what a format is called', () => {
    */
   it('is deliberately not the spoken name, and the phone reads that one', () => {
     expect(formatSpokenName('series')).toBe('Series');
-    expect(formatSpokenName('instructional')).toBe('Educational book');
+    expect(formatSpokenName('instructional')).toBe('Instructional book');
     expect(formatName('series')).not.toBe(formatSpokenName('series'));
   });
 
