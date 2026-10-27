@@ -856,3 +856,52 @@ relaying them. It is not done: the App Store privacy answers say the app
 sends no crash reports, and changing that is Ken's call. Everything is said
 on the screen instead.
 
+
+## 19. Hands-free that waits for a pause, and a save that asks twice
+
+From Ken, on build 7:
+
+> When you hit hands-free, it will ask you, what category? You tell it your
+> category. You wait a few seconds. And when it doesn't hear from you, it
+> says, what is the title? You dictate the title, and then when you wait a few
+> seconds, it'll say, what would you like this note to say? … if you stop for
+> a few seconds to think, it'll say, would you like to continue or save? If
+> you say continue … it's paused in between, so you can have a thought … if
+> you say save, would you like it to be read back before saving? … will you
+> like to save? … If you say no, would you like to delete the note? Or
+> continue?
+
+§18 moved on as soon as it heard the category or the title. Now **the pause
+moves the walk on** (`hearPause`), and a category, a
+title or the note may each take as many breaths as the writer needs.
+
+| It asks | You say | Then |
+| --- | --- | --- |
+| *What type of note is this?* | *idea*, *scene*, *subsection*… or *just a note* | at the pause, the title |
+| *What is the title?* | the title, or *skip* | at the pause, the note |
+| *What would you like this note to say?* | the note | at the pause, the next question |
+| *Would you like to continue or save?* | *continue* | back to the note, quietly |
+| | *save* | *read it back first?* |
+| *Would you like it read back before saving?* | *yes* (it reads it) or *no* | *would you like to save?* |
+| *Would you like to save?* | *yes* | saved; *what category?* again |
+| | *no* | *delete the note, or continue?* |
+| *Would you like to delete the note, or continue?* | *delete* or *continue* | deleted and *what category?*, or back to the note |
+
+- **After *continue* a pause says nothing** until something new has been
+  said (`fresh` on the sitting). That is Ken's *paused in between, so you can
+  have a thought*. A pause in the note asked again at once in §18.
+- *Yes* and *no* to *continue or save?* answer nothing, so the question is
+  asked again rather than guessed.
+- Words said at *continue or save?* that are no answer are the writer
+  carrying on, as in §18. *Read it back* and *delete* work there too.
+- A category with a few words after it in one breath takes them as the
+  title, and the pause then asks for the note.
+- **Only the question is spoken.** The project's types are listed at the
+  top of the screen while it asks; reading them all out took too long (Ken,
+  on build 7).
+- **The title gets 7 seconds of quiet**, everything else 3.5
+  (`guidedPauseMs`). At 3.5 the walk moved on while Ken was still thinking
+  of the title.
+- The screen shows the question in hand, large, and under it what may be
+  said to it.
+- §16's command words still work at any point.

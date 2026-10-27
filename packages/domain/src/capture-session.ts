@@ -429,15 +429,23 @@ export interface Sitting {
   speak?: string | null;
   /** The command word was said on its own, so the next phrase is the command. */
   armed?: boolean;
+  /**
+   * Words have gone into the note since the walk last asked (§19), so the
+   * next pause asks *continue or save?*. Cleared by *continue*, which gives
+   * the writer a quiet pause to think in.
+   */
+  fresh?: boolean;
 }
 
 /**
- * The four questions of a guided walk (§18), in Ken's order: *you say idea,
- * pause, then say the title, then pause, and then you can dictate the body.
- * And when you're done, it asks you, are you done or would you like to
- * continue?*
+ * The questions of a guided walk (§19), in Ken's order: *what category?*, a
+ * pause, *what is the title?*, a pause, *what would you like this note to
+ * say?*, and at each pause in the note *would you like to continue or save?*.
+ * Saving asks *read it back first?*, then *would you like to save?*, and a
+ * *no* to that asks *delete the note, or continue?*. A subsection said with no
+ * section in hand first asks *which section is this part of?* (`section`).
  */
-export type GuidedStep = 'kind' | 'title' | 'body' | 'confirm';
+export type GuidedStep = 'kind' | 'section' | 'title' | 'body' | 'confirm' | 'readBack' | 'save' | 'discard';
 
 export const emptySitting = (): Sitting => ({
   open: null,
@@ -959,27 +967,54 @@ const isWakeAlone = (said: string): boolean =>
 const plain = (said: string): string => said.toLowerCase().replace(/[^a-z0-9' ]/g, ' ').replace(/\s+/g, ' ').trim();
 const answers = (said: string, words: readonly string[]): boolean => words.includes(plain(said));
 
-const CONTINUE = ['continue', 'keep going', 'go on', 'more', 'not done', 'no', 'not yet', 'keep dictating', 'add more'];
-const SAVE_IT = ['save', 'save it', 'done', 'yes', "i'm done", 'im done', 'i am done', 'finished', "that's it", 'thats it', 'that is it', 'save the note', 'yes save it', 'yes done'];
+const CONTINUE = ['continue', 'keep going', 'go on', 'more', 'not done', 'not yet', 'keep dictating', 'add more', 'go ahead'];
+const SAVE_IT = ['save', 'save it', 'done', "i'm done", 'im done', 'i am done', 'finished', "that's it", 'thats it', 'that is it', 'save the note', 'save this note'];
+const SAID_YES = ['yes', 'yeah', 'yep', 'yup', 'sure', 'please', 'yes please', 'ok', 'okay', 'correct'];
+const SAID_NO = ['no', 'nope', 'no thanks', 'no thank you', 'not now', 'nah'];
 const READ_IT = ['read it back', 'read it', 'read back', 'read that back', 'what did i say'];
-const THROW_IT = ['scratch that', 'scratch it', 'throw it away', 'delete it', 'cancel', 'discard'];
+const THROW_IT = ['delete', 'delete it', 'delete the note', 'delete this note', 'scratch that', 'scratch it', 'throw it away', 'cancel', 'discard'];
 const START_OVER = ['start over', 'erase all', 'erase it all', 'start again', 'reset'];
-const NO_TITLE = ['skip', 'no title', 'none', 'skip it', 'skip the title', 'no'];
+const NO_TITLE = ['skip', 'no title', 'none', 'skip it', 'skip the title'];
 /** A note without a kind, for a writer who just wants to talk. */
-const JUST_A_NOTE = ['note', 'a note', 'just a note', 'plain note', 'nothing', 'no kind'];
+const JUST_A_NOTE = ['note', 'a note', 'just a note', 'plain note', 'nothing', 'no kind', 'no category'];
 
-/** What a guided walk asks for the kind, with the project's own words. */
-export const kindQuestion = (format: ProjectFormat): string => {
-  const names = captureVocabulary(format)
-    .slice(0, 5)
-    .map((one) => one.name.toLowerCase());
-  return `What kind of note is it? ${names.join(', ')}, or just a note.`;
-};
+/**
+ * What a guided walk asks for the category. Only the question is spoken: the
+ * project's kinds are on the screen, and reading them all out took too long
+ * (Ken, on build 7). Takes the format so a project's own wording can return.
+ */
+export const kindQuestion = (_format: ProjectFormat): string => GUIDED_KIND;
 
-export const GUIDED_CONFIRM = 'Are you done, or would you like to continue?';
-/** Ken's words for the two questions after the kind (§18). */
+/** Ken's words for each question (§19). */
+export const GUIDED_KIND = 'What type of note is this?';
 export const GUIDED_TITLE = 'What is the title?';
-export const GUIDED_BODY = 'What would you like to put in this note?';
+export const GUIDED_BODY = 'What would you like this note to say?';
+export const GUIDED_CONFIRM = 'Would you like to continue or save?';
+export const GUIDED_READ_BACK = 'Would you like it read back before saving?';
+export const GUIDED_SAVE = 'Would you like to save?';
+export const GUIDED_DISCARD = 'Would you like to delete the note, or continue?';
+/** Asked of a subsection said with no section in hand, in the project's own nouns. */
+export const sectionQuestion = (format: ProjectFormat): string =>
+  `Which ${nameOf('unit', format).toLowerCase()} is this part of?`;
+
+const NO_SECTION = ['none', 'no section', 'no chapter', 'skip', 'skip it', 'not sure', "i don't know", 'i dont know'];
+
+/**
+ * **A section's title is the group of what follows it** (§19, from Ken: *do a
+ * section and then that stays on the screen, and then you can do
+ * subsections… make sure your sections and subsections are grouped*).
+ *
+ * The group (§12) is how a walk arrives at the desk sorted: everything said
+ * under one word is filed together there. So naming a section sets it, the
+ * section's own note is under it, and every note after is under it until
+ * another section is named. Nothing is made in the project by saying it.
+ */
+const underSection = (sitting: Sitting, open: OpenNote): { group: string | null; open: OpenNote } => {
+  const title = (open.subjectName ?? '').trim();
+  if (open.key !== 'unit' || title.length === 0) return { group: sitting.group, open };
+  const known = groupsSaid(sitting).find((one) => sameGroup(one, title)) ?? title;
+  return { group: known, open: { ...open, group: known } };
+};
 
 /** A guided walk, ready to ask its first question. */
 export const startGuided = (format: ProjectFormat): Sitting => {
@@ -987,15 +1022,33 @@ export const startGuided = (format: ProjectFormat): Sitting => {
   return { ...emptySitting(), guided: true, ask: 'kind', said: question, speak: question };
 };
 
+/**
+ * How long the walk waits in quiet before asking its next question, in
+ * milliseconds. The title gets longer: a writer thinks before naming a thing,
+ * and at 3.5 seconds the walk moved on in the middle of it (Ken, on build 7).
+ */
+export const guidedPauseMs = (ask: GuidedStep | undefined): number => (ask === 'title' || ask === 'section' ? 7000 : 3500);
+
 /** A title is a heading, not a paragraph: past this many words it is the body. */
 const GUIDED_TITLE_WORDS = 12;
 
+const wordCount = (text: string): number => text.split(/\s+/).filter(Boolean).length;
+
+/** The note as it would be read back: its category, its title, its words. */
+const readBack = (open: OpenNote, format: ProjectFormat): string => {
+  const heading = open.subjectName ? `${nameOf(open.key, format)}, ${open.subjectName}.` : `${nameOf(open.key, format)}.`;
+  return `${heading} ${open.text}`.trim();
+};
+
 /**
- * One phrase of a guided walk (§18).
+ * One phrase of a guided walk (§19).
  *
- * The questions carry the walk, so **no word needs a command in front of
- * it**: *idea*, then the title, then the body, then *save* or *continue*. The
- * command words of §16 still work at any point, for a writer who knows them.
+ * **The pauses carry the walk** (from Ken: *you tell it your category, you
+ * wait a few seconds, and when it doesn't hear from you, it says what is the
+ * title?*). A category, a title and the note are each taken for as long as
+ * the writer talks, and only a pause (`hearPause`) asks the next question.
+ * Answers to a question (*save*, *yes*, *continue*) are acted on as said.
+ * The command words of §16 still work at any point.
  */
 const hearGuided = (sitting: Sitting, said: string, format: ProjectFormat): Sitting => {
   const base: Sitting = { ...sitting, opened: false, wants: null, makes: null, speak: null };
@@ -1017,118 +1070,200 @@ const hearGuided = (sitting: Sitting, said: string, format: ProjectFormat): Sitt
     return { ...after, guided: true, ask, speak };
   }
 
+  const next = kindQuestion(format);
+  const saved = (open: OpenNote): Sitting => {
+    const keep = open.text.trim().length > 0 || (open.subjectName ?? '').trim().length > 0;
+    return {
+      ...base,
+      open: null,
+      filed: keep ? [...sitting.filed, asFiled(open)] : sitting.filed,
+      ask: 'kind',
+      fresh: false,
+      undone: null,
+      said: keep ? `Saved. ${nameOf(open.key, format)}.` : 'Nothing in that one.',
+      speak: keep ? `Saved. ${next}` : `Nothing in that one. ${next}`,
+    };
+  };
+  const thrown = (): Sitting => ({ ...base, open: null, ask: 'kind', fresh: false, said: 'Deleted.', speak: `Deleted. ${next}` });
+  /** Back to the note, quiet until the writer has said something new. */
+  const carryOn = (): Sitting => ({ ...base, ask: 'body', fresh: false, said: 'Go ahead.', speak: 'Go ahead.' });
+  const asking = (ask: GuidedStep, question: string): Sitting => ({ ...base, ask, said: question, speak: question });
+
   switch (sitting.ask ?? 'kind') {
     case 'kind': {
       const vocabulary = captureVocabulary(format);
       const stripped = opensWithAny(text, FILLER) ?? text;
       const named = categoryAt(stripped, vocabulary) ?? categoryAt(text, vocabulary);
       if (named && named.kind === 'start') {
-        // A kind with words after it in the same breath: a short run is the
-        // title, a long one the note.
+        // The category is taken, and the title is asked at the pause. Words
+        // after it in the same breath: a short run is the title, a long one
+        // the note.
         const rest = (named.subjectName ? `${named.subjectName} ${named.text}` : named.text).trim().replace(/[.!?]+$/, '');
-        const words = rest.split(/\s+/).filter(Boolean).length;
+        const long = rest.length > 0 && wordCount(rest) > GUIDED_TITLE_WORDS;
         const open: OpenNote = {
           key: named.key,
-          subjectName: rest.length > 0 && words <= GUIDED_TITLE_WORDS ? rest : null,
-          text: rest.length > 0 && words > GUIDED_TITLE_WORDS ? rest : '',
+          subjectName: rest.length > 0 && !long ? rest : null,
+          text: long ? rest : '',
           group: sitting.group,
-          on: rest.length > 0 ? 'body' : 'title',
+          on: long ? 'body' : 'title',
         };
-        const kind = nameOf(named.key, format);
-        return {
-          ...base,
-          open,
-          opened: true,
-          ask: rest.length > 0 ? 'body' : 'title',
-          said: rest.length > 0 ? `${kind}. ${GUIDED_BODY}` : `${kind}. ${GUIDED_TITLE}`,
-          speak: rest.length > 0 ? `${kind}. ${GUIDED_BODY}` : `${kind}. ${GUIDED_TITLE}`,
-        };
+        return { ...base, open, opened: sitting.open === null, ask: long ? 'body' : 'kind', fresh: long, said: nameOf(named.key, format) };
       }
       if (answers(text, JUST_A_NOTE)) {
-        return {
-          ...base,
-          open: { key: null, subjectName: null, text: '', group: sitting.group, on: 'body' },
-          opened: true,
-          ask: 'body',
-          said: `A note. ${GUIDED_BODY}`,
-          speak: `A note. ${GUIDED_BODY}`,
-        };
+        const open: OpenNote = { key: null, subjectName: null, text: '', group: sitting.group, on: 'title' };
+        return { ...base, open, opened: sitting.open === null, said: 'A note.' };
       }
-      const again = `I didn’t catch a kind. ${kindQuestion(format)}`;
+      if (sitting.open) {
+        // The category is in; words before the pause are the title.
+        return hearGuided({ ...sitting, ask: 'title' }, text, format);
+      }
+      const again = `I didn’t catch the type. ${next}`;
       return { ...base, said: again, speak: again };
     }
 
+    case 'section': {
+      if (!sitting.open) return asking('kind', next);
+      if (answers(text, NO_SECTION)) {
+        return { ...base, group: null, open: { ...sitting.open, group: null }, ask: 'title', said: `No ${nameOf('unit', format).toLowerCase()}. ${GUIDED_TITLE}`, speak: `No ${nameOf('unit', format).toLowerCase()}. ${GUIDED_TITLE}` };
+      }
+      // The section's name, for as many breaths as it takes; the pause moves on.
+      const name = join(sitting.group ?? '', text.replace(/[.!?]+$/, '').trim());
+      const known = groupsSaid(sitting).find((one) => sameGroup(one, name)) ?? name;
+      return { ...base, group: known, open: { ...sitting.open, group: known }, said: known };
+    }
+
     case 'title': {
-      if (!sitting.open) return { ...base, ask: 'kind', said: kindQuestion(format), speak: kindQuestion(format) };
+      if (!sitting.open) return asking('kind', next);
       if (answers(text, NO_TITLE)) {
-        return { ...base, open: { ...sitting.open, on: 'body' }, ask: 'body', said: `No title. ${GUIDED_BODY}`, speak: `No title. ${GUIDED_BODY}` };
+        return { ...base, open: { ...sitting.open, subjectName: null, on: 'body' }, ask: 'body', fresh: false, said: `No title. ${GUIDED_BODY}`, speak: `No title. ${GUIDED_BODY}` };
       }
       const title = text.replace(/[.!?]+$/, '').trim();
-      if (title.split(/\s+/).filter(Boolean).length > GUIDED_TITLE_WORDS) {
+      if (!sitting.open.subjectName && wordCount(title) > GUIDED_TITLE_WORDS) {
         // A paragraph said for a title is the note itself.
-        return { ...base, open: { ...sitting.open, on: 'body', text: join(sitting.open.text, text) }, ask: 'body', said: text };
+        return { ...base, open: { ...sitting.open, on: 'body', text: join(sitting.open.text, text) }, ask: 'body', fresh: true, said: text };
       }
-      return { ...base, open: { ...sitting.open, subjectName: title, on: 'body' }, ask: 'body', said: GUIDED_BODY, speak: GUIDED_BODY };
+      return { ...base, open: { ...sitting.open, subjectName: join(sitting.open.subjectName ?? '', title), on: 'title' }, ask: 'title', said: title };
     }
 
     case 'confirm': {
       const open = sitting.open;
-      if (!open) return { ...base, ask: 'kind', said: kindQuestion(format), speak: kindQuestion(format) };
-      if (answers(text, SAVE_IT)) {
-        const keep = open.text.trim().length > 0 || (open.subjectName ?? '').trim().length > 0;
-        const next = kindQuestion(format);
-        return {
-          ...base,
-          open: null,
-          filed: keep ? [...sitting.filed, asFiled(open)] : sitting.filed,
-          ask: 'kind',
-          undone: null,
-          said: keep ? `Saved. ${nameOf(open.key, format)}.` : 'Nothing in that one.',
-          speak: keep ? `Saved. ${next}` : `Nothing in that one. ${next}`,
-        };
-      }
-      if (answers(text, CONTINUE)) return { ...base, ask: 'body', said: 'Go ahead.', speak: 'Go ahead.' };
+      if (!open) return asking('kind', next);
+      if (answers(text, SAVE_IT)) return asking('readBack', GUIDED_READ_BACK);
+      if (answers(text, CONTINUE)) return carryOn();
+      if (answers(text, SAID_YES) || answers(text, SAID_NO)) return asking('confirm', GUIDED_CONFIRM);
       if (answers(text, READ_IT)) {
-        const heading = open.subjectName ? `${nameOf(open.key, format)}, ${open.subjectName}.` : `${nameOf(open.key, format)}.`;
-        const words = `${heading} ${open.text}`.trim();
+        const words = readBack(open, format);
         return { ...base, said: words, speak: `${words} ${GUIDED_CONFIRM}` };
       }
-      if (answers(text, THROW_IT)) {
-        const next = kindQuestion(format);
-        return { ...base, open: null, ask: 'kind', said: 'Thrown away.', speak: `Thrown away. ${next}` };
-      }
+      if (answers(text, THROW_IT)) return asking('discard', GUIDED_DISCARD);
       if (answers(text, START_OVER)) {
         return {
           ...base,
           open: { ...open, subjectName: null, text: '', on: 'title' },
           undone: open.text,
           ask: 'title',
+          fresh: false,
           said: `Erased. ${GUIDED_TITLE}`,
           speak: `Erased. ${GUIDED_TITLE}`,
         };
       }
       // Anything else is the writer carrying on: it is the note.
-      return { ...base, open: { ...open, on: 'body', text: join(open.text, text) }, ask: 'body', said: text };
+      return { ...base, open: { ...open, on: 'body', text: join(open.text, text) }, ask: 'body', fresh: true, said: text };
+    }
+
+    case 'readBack': {
+      const open = sitting.open;
+      if (!open) return asking('kind', next);
+      if (answers(text, SAID_YES) || answers(text, READ_IT)) {
+        const words = readBack(open, format);
+        return { ...base, ask: 'save', said: words, speak: `${words} ${GUIDED_SAVE}` };
+      }
+      if (answers(text, SAID_NO) || answers(text, SAVE_IT)) return asking('save', GUIDED_SAVE);
+      if (answers(text, CONTINUE)) return carryOn();
+      if (answers(text, THROW_IT)) return asking('discard', GUIDED_DISCARD);
+      return asking('readBack', GUIDED_READ_BACK);
+    }
+
+    case 'save': {
+      const open = sitting.open;
+      if (!open) return asking('kind', next);
+      if (answers(text, SAID_YES) || answers(text, SAVE_IT)) return saved(open);
+      if (answers(text, SAID_NO) || answers(text, THROW_IT)) return asking('discard', GUIDED_DISCARD);
+      if (answers(text, CONTINUE)) return carryOn();
+      if (answers(text, READ_IT)) {
+        const words = readBack(open, format);
+        return { ...base, said: words, speak: `${words} ${GUIDED_SAVE}` };
+      }
+      return asking('save', GUIDED_SAVE);
+    }
+
+    case 'discard': {
+      const open = sitting.open;
+      if (!open) return asking('kind', next);
+      if (answers(text, THROW_IT)) return thrown();
+      if (answers(text, CONTINUE) || answers(text, SAID_NO)) return carryOn();
+      if (answers(text, SAVE_IT)) return saved(open);
+      return asking('discard', GUIDED_DISCARD);
     }
 
     case 'body':
     default: {
       const open: OpenNote = sitting.open ?? { key: null, subjectName: null, text: '', group: sitting.group, on: 'body' };
-      return { ...base, open: { ...open, on: 'body', text: join(open.text, text) }, opened: sitting.open === null, ask: 'body', said: text };
+      return { ...base, open: { ...open, on: 'body', text: join(open.text, text) }, opened: sitting.open === null, ask: 'body', fresh: true, said: text };
     }
   }
 };
 
 /**
- * **A pause in a guided walk** (§18): the host calls this when the writer has
- * said nothing for a few seconds. While the body is being dictated and there is
- * something in it, the walk asks whether they are done; anywhere else a pause
- * is somebody thinking, and nothing is said.
+ * **A pause in a guided walk** (§19): the host calls this when the writer has
+ * said nothing for a few seconds. It is what moves the walk on:
+ *
+ * - a category heard → *What is the title?*
+ * - a title heard → *What would you like this note to say?*
+ * - new words in the note → *Would you like to continue or save?*
+ *
+ * Anywhere else, and after *continue* until something new is said, a pause is
+ * somebody thinking, and nothing is said.
  */
-export const hearPause = (sitting: Sitting): Sitting => {
-  if (!sitting.guided || sitting.ask !== 'body' || !sitting.open) return { ...sitting, speak: null };
-  const hasWords = sitting.open.text.trim().length > 0 || (sitting.open.subjectName ?? '').trim().length > 0;
-  if (!hasWords) return { ...sitting, speak: null };
-  return { ...sitting, ask: 'confirm', said: GUIDED_CONFIRM, speak: GUIDED_CONFIRM, opened: false };
+export const hearPause = (sitting: Sitting, format?: ProjectFormat): Sitting => {
+  const quiet: Sitting = { ...sitting, speak: null };
+  const open = sitting.open;
+  if (!sitting.guided || !open) return quiet;
+  const ask = (step: GuidedStep, question: string, on: OpenNote['on']): Sitting => ({
+    ...sitting,
+    open: { ...open, on },
+    ask: step,
+    fresh: false,
+    opened: false,
+    said: question,
+    speak: question,
+  });
+  const hasTitle = (open.subjectName ?? '').trim().length > 0;
+  const hasText = open.text.trim().length > 0;
+  /** Past the title: a section's title becomes the group from here on. */
+  const pastTitle = (step: GuidedStep, question: string): Sitting => {
+    const placed = underSection(sitting, open);
+    const after = ask(step, question, 'body');
+    return { ...after, group: placed.group, open: { ...placed.open, on: 'body' } };
+  };
+  switch (sitting.ask) {
+    case 'kind': {
+      if (hasText) return pastTitle('confirm', GUIDED_CONFIRM);
+      if (hasTitle) return pastTitle('body', GUIDED_BODY);
+      const kind = format ? `${nameOf(open.key, format)}. ` : '';
+      // A subsection with no section in hand asks which one it belongs to.
+      if (open.key === 'sub' && !sitting.group && format) {
+        return { ...ask('section', `${kind}${sectionQuestion(format)}`, 'title'), group: null };
+      }
+      return ask('title', `${kind}${GUIDED_TITLE}`, 'title');
+    }
+    case 'section':
+      return (sitting.group ?? '').trim().length > 0 ? ask('title', GUIDED_TITLE, 'title') : quiet;
+    case 'title':
+      return hasTitle || hasText ? pastTitle('body', GUIDED_BODY) : quiet;
+    case 'body':
+      return sitting.fresh && (hasText || hasTitle) ? ask('confirm', GUIDED_CONFIRM, 'body') : quiet;
+    default:
+      return quiet;
+  }
 };
-

@@ -7,7 +7,16 @@ import {
   emptySitting,
   everything,
   hear,
+  GUIDED_BODY,
+  GUIDED_CONFIRM,
+  GUIDED_DISCARD,
+  GUIDED_READ_BACK,
+  GUIDED_SAVE,
+  GUIDED_KIND,
+  GUIDED_TITLE,
+  guidedPauseMs,
   hearPause,
+  sectionQuestion,
   startGuided,
   projectFailed,
   projectMade,
@@ -261,8 +270,7 @@ export function Capture({
 
   // ------------------------------------------------------ one turn of a walk
 
-  /** The few seconds of quiet that ask *are you done* (addendum 27 §18). */
-  const PAUSE_MS = 3500;
+  /** The few seconds of quiet that move the walk to its next question (addendum 27 §19). */
   const pauseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [speaking, setSpeaking] = useState(false);
   const clearPause = () => {
@@ -290,13 +298,16 @@ export function Capture({
   /** Somebody is talking: the question waits until they stop for a few seconds. */
   const heardSomething = () => {
     clearPause();
-    if (walk.current.ask !== 'body') return;
+    // Only while a type, a section, a title or the note is being said; the other
+    // questions wait for their answer.
+    const ask = walk.current.ask;
+    if (ask !== 'kind' && ask !== 'section' && ask !== 'title' && ask !== 'body') return;
     pauseTimer.current = setTimeout(() => {
-      const after = hearPause(walk.current);
+      const after = hearPause(walk.current, formatNow());
       walk.current = after;
       setSitting(after);
       if (after.speak) speakOnWalk(after.speak);
-    }, PAUSE_MS);
+    }, guidedPauseMs(ask));
   };
 
   const heardHandsFree = (chunk: string) => {
@@ -428,12 +439,35 @@ export function Capture({
     const open = sitting.open;
     const asking =
       sitting.ask === 'kind'
-        ? 'What kind of note is it?'
-        : sitting.ask === 'title'
-          ? 'What is the title?'
+        ? GUIDED_KIND
+        : sitting.ask === 'section'
+          ? sectionQuestion(formatNow())
+          : sitting.ask === 'title'
+          ? GUIDED_TITLE
           : sitting.ask === 'confirm'
-            ? 'Are you done, or would you like to continue?'
-            : 'What would you like to put in this note?';
+            ? GUIDED_CONFIRM
+            : sitting.ask === 'readBack'
+              ? GUIDED_READ_BACK
+              : sitting.ask === 'save'
+                ? GUIDED_SAVE
+                : sitting.ask === 'discard'
+                  ? GUIDED_DISCARD
+                  : GUIDED_BODY;
+    /** What may be said to the question in hand. */
+    const hint =
+      sitting.ask === 'kind'
+        ? 'Say one of the types above, then pause.'
+        : sitting.ask === 'section'
+          ? `Say its name, then pause. Or say “none”.`
+          : sitting.ask === 'title'
+          ? 'Take your time, then pause. Or say “skip” for no title.'
+          : sitting.ask === 'body'
+            ? 'Pause to be asked whether to continue or save.'
+            : sitting.ask === 'confirm'
+              ? 'Say “continue” or “save”. “Read it back” and “delete” work too.'
+              : sitting.ask === 'readBack' || sitting.ask === 'save'
+                ? 'Say “yes” or “no”.'
+                : 'Say “delete” or “continue”.';
     return (
       <View style={styles.screen}>
         <View style={styles.bar}>
@@ -445,26 +479,34 @@ export function Capture({
           </Text>
         </View>
         <ScrollView contentContainerStyle={styles.body}>
+          {/* The section in hand stays at the top: every note said now is
+              filed under it (addendum 27 §19). */}
+          {sitting.group ? (
+            <Text style={[styles.label, { color: colour.gold }]}>
+              {captureKeyName('unit', formatNow())}: {sitting.group}
+            </Text>
+          ) : null}
+          {/* The types, at the top and on the screen only: the walk asks
+              simply *what type of note is this?* (addendum 27 §19). */}
+          {sitting.ask === 'kind' ? (
+            <Text style={[styles.text, { fontSize: 18, lineHeight: 28, color: colour.text }]}>
+              {[...vocabulary.map((one) => one.name), 'Just a note'].join('  ·  ')}
+            </Text>
+          ) : null}
           {/* The question in hand, large: it is what the walk is waiting for
               (addendum 27 §18). */}
           <Text style={[styles.title, { fontSize: 24, color: colour.goldBright }]}>{asking}</Text>
-          {sitting.ask === 'kind' ? (
-            <Text style={styles.muted}>{vocabulary.map((one) => one.name).join(' · ')} · or “just a note”</Text>
-          ) : null}
-          {sitting.ask === 'title' ? <Text style={styles.muted}>Or say “skip” for no title.</Text> : null}
-          {sitting.ask === 'confirm' ? (
-            <Text style={styles.muted}>Say “save”, “continue”, “read it back”, “start over” or “throw it away”.</Text>
-          ) : null}
+          <Text style={styles.muted}>{hint}</Text>
 
           {open ? (
             <View style={{ gap: 6, borderTopWidth: 1, borderColor: colour.border, paddingTop: 12 }}>
               <Text style={styles.label}>{open.key ? captureKeyName(open.key, formatNow()) : 'Note'}</Text>
               <Text style={[styles.title, { fontSize: 20 }]}>
-                {open.subjectName ?? (sitting.ask === 'title' ? (interim || '…') : 'No title')}
+                {open.subjectName ?? (sitting.ask === 'title' || sitting.ask === 'kind' ? (interim || '…') : 'No title')}
               </Text>
               <Text style={styles.text}>
                 {open.text}
-                {interim && sitting.ask !== 'title' ? <Text style={{ color: colour.muted }}> {interim}</Text> : null}
+                {interim && sitting.ask !== 'title' && sitting.ask !== 'kind' ? <Text style={{ color: colour.muted }}> {interim}</Text> : null}
               </Text>
             </View>
           ) : interim ? (
