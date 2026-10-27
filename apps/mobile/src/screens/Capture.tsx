@@ -4,6 +4,7 @@ import {
   applyCorrection,
   captureKeyName,
   captureVocabulary,
+  guidedQuestion,
   emptySitting,
   everything,
   hear,
@@ -290,7 +291,7 @@ export function Capture({
   /** Somebody is talking: the question waits until they stop for a few seconds. */
   const heardSomething = () => {
     clearPause();
-    if (walk.current.ask !== 'body') return;
+    if (walk.current.ask !== 'body' && walk.current.ask !== 'visual') return;
     pauseTimer.current = setTimeout(() => {
       const after = hearPause(walk.current);
       walk.current = after;
@@ -426,14 +427,7 @@ export function Capture({
 
   if (handsFree) {
     const open = sitting.open;
-    const asking =
-      sitting.ask === 'kind'
-        ? 'What kind of note is it?'
-        : sitting.ask === 'title'
-          ? 'What is the title?'
-          : sitting.ask === 'confirm'
-            ? 'Are you done, or would you like to continue?'
-            : 'What would you like to put in this note?';
+    const asking = guidedQuestion(sitting, formatNow());
     return (
       <View style={styles.screen}>
         <View style={styles.bar}>
@@ -452,6 +446,9 @@ export function Capture({
             <Text style={styles.muted}>{vocabulary.map((one) => one.name).join(' · ')} · or “just a note”</Text>
           ) : null}
           {sitting.ask === 'title' ? <Text style={styles.muted}>Or say “skip” for no title.</Text> : null}
+          {open?.av && (sitting.ask === 'body' || sitting.ask === 'visual') && !(sitting.ask === 'body' ? open.text : open.visual) ? (
+            <Text style={styles.muted}>Or say “skip” to leave it empty.</Text>
+          ) : null}
           {sitting.ask === 'confirm' ? (
             <Text style={styles.muted}>Say “save”, “continue”, “read it back”, “start over” or “throw it away”.</Text>
           ) : null}
@@ -459,13 +456,30 @@ export function Capture({
           {open ? (
             <View style={{ gap: 6, borderTopWidth: 1, borderColor: colour.border, paddingTop: 12 }}>
               <Text style={styles.label}>{open.key ? captureKeyName(open.key, formatNow()) : 'Note'}</Text>
-              <Text style={[styles.title, { fontSize: 20 }]}>
-                {open.subjectName ?? (sitting.ask === 'title' ? (interim || '…') : 'No title')}
-              </Text>
-              <Text style={styles.text}>
-                {open.text}
-                {interim && sitting.ask !== 'title' ? <Text style={{ color: colour.muted }}> {interim}</Text> : null}
-              </Text>
+              {/* An idea is a general note with no title to show (§20). */}
+              {open.subjectName || sitting.ask === 'title' ? (
+                <Text style={[styles.title, { fontSize: 20 }]}>{open.subjectName ?? (interim || '…')}</Text>
+              ) : null}
+              {open.av ? (
+                // A segment, audio then visual (addendum 27 §20).
+                <>
+                  <Text style={styles.label}>Audio</Text>
+                  <Text style={styles.text}>
+                    {open.text}
+                    {interim && sitting.ask === 'body' ? <Text style={{ color: colour.muted }}> {interim}</Text> : null}
+                  </Text>
+                  <Text style={styles.label}>Visual</Text>
+                  <Text style={styles.text}>
+                    {open.visual}
+                    {interim && sitting.ask === 'visual' ? <Text style={{ color: colour.muted }}> {interim}</Text> : null}
+                  </Text>
+                </>
+              ) : (
+                <Text style={styles.text}>
+                  {open.text}
+                  {interim && sitting.ask !== 'title' ? <Text style={{ color: colour.muted }}> {interim}</Text> : null}
+                </Text>
+              )}
             </View>
           ) : interim ? (
             <Text style={[styles.text, { color: colour.muted }]}>{interim}</Text>

@@ -882,3 +882,37 @@ needed. Either alone would still have lost every note.
 Also, from Ken: the hands-free button reads **Stop the note**, not *Stop the
 walk*, and the screen says *saved so far* and *notes saved*.
 
+
+## 20. Short form's segments, and a kind question you can answer
+
+From Ken, on build 8 (Save working at last): *under the notes for short form,
+it will be just segments or ideas. And when you do a segment, it first asks you
+with the audio and then the visual. If it's an idea, it's just a general note.
+… It just needs to say what kind of note is it? … it takes too long to read
+off all of them. … it doesn't recognize what type very easily. And when I say
+it's a scene, it then re-asks me what type of note is it.*
+
+- **Short form's vocabulary is Segment and Idea** (`captureVocabulary`). The
+  segment is the unit key (`unit`), named as addendum 05 names a scene there;
+  *segment* and *scene* both open one. Other formats are unchanged.
+- **A segment is asked audio, then visual.** After its title the walk asks
+  *What is the audio?*; a pause asks *What is the visual?*; a pause after that
+  asks whether you are done. *Continue* carries on with the visual, *skip*
+  leaves either half empty, and *read it back* reads both. The open note holds
+  the two halves (`OpenNote.av`, `text` for the audio, `visual`), and filing
+  folds them into one labelled text — `Audio: …` and `Visual: …` on their own
+  lines — so the upload, the server and the desk need nothing new.
+- **A kind with no title asks none.** An idea goes straight to *What would you
+  like to put in this note?*; `hasTitle` already said so for the command walk
+  (§16) and the guided walk now follows it. Named kinds and the structural
+  parts still ask the title.
+- **The kind question is the question only**: *What kind of note is it?* The
+  kinds stay on screen in text, where they can be read at a glance.
+- **The kind is heard the way people answer.** *It's a scene*, *a new scene*,
+  *scene please*, *scene note*, *let's do a scene* and the recogniser's
+  *seen* all open a scene: lead words come off, a half-heard opening word is
+  mended, and a kind anywhere in an answer of four words or fewer counts. Lead
+  words that arrive alone (*it's a*, committed early before *scene*) are
+  waited through in silence rather than answered with the question again,
+  which is what made the walk re-ask. A kind the project lacks says so —
+  *There are no scenes in this project* — instead of *I didn't catch a kind*.

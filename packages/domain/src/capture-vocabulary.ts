@@ -142,6 +142,22 @@ export const captureVocabulary = (format: ProjectFormat): SpokenCategory[] => {
       ? []
       : [{ key: 'scene', name: 'Scene', spoken: ['scene'], takesName: false }];
 
+  /**
+   * **Short form is segments and ideas** (addendum 27 §20, from Ken: *under
+   * the notes for short form, it will be just segments or ideas*). A spot is
+   * written in segments of audio and visual (addendum 05), with no cast to
+   * keep and no plot to track, so the list is the two things a producer says.
+   * The segment is the unit — addendum 05 calls a scene a Segment everywhere
+   * it is written — and *scene* is heard for it, since there is no other rung
+   * the word could mean here.
+   */
+  if (format === 'short_form') {
+    return [
+      { key: 'unit', name: 'Segment', spoken: ['segment', 'scene'], takesName: false },
+      ANYWHERE[0] as SpokenCategory,
+    ];
+  }
+
   return isInstructional(format)
     ? [...structural, ...ANYWHERE]
     : [...STORY, ...scene, ...structural, ...ANYWHERE];
