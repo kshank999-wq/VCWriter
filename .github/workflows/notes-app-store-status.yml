@@ -16,6 +16,10 @@ on:
         description: The tester's Apple ID email (blank = the account holder)
         type: string
         default: ''
+      expire_below:
+        description: Retire every build numbered below this (blank = none), so testers see only the newer ones
+        type: string
+        default: ''
 
 jobs:
   status:
@@ -39,4 +43,5 @@ jobs:
         env:
           FIX: ${{ inputs.fix_testflight }}
           TESTER_EMAIL: ${{ inputs.tester_email }}
+          EXPIRE_BELOW: ${{ inputs.expire_below }}
         run: node apps/mobile/scripts/asc-testflight.mjs

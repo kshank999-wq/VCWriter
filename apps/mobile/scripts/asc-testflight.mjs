@@ -19,6 +19,13 @@ import { appendFileSync } from 'node:fs';
 const BASE = process.env.ASC_BASE ?? 'https://api.appstoreconnect.apple.com';
 const { ASC_KEY_ID, ASC_ISSUER_ID, ASC_API_KEY_P8, ASC_APP_ID } = process.env;
 const FIX = process.env.FIX === 'true';
+/**
+ * Retire every build numbered below this one (addendum 27 §18, from Ken: *the
+ * version now reads build 3 again*). A build tied to a tester on its own stays
+ * in their TestFlight app beside the group's newer ones; an expired build is
+ * gone from every tester's list. Blank retires nothing.
+ */
+const EXPIRE_BELOW = Number(process.env.EXPIRE_BELOW ?? '') || 0;
 const TESTER_EMAIL = (process.env.TESTER_EMAIL ?? '').trim().toLowerCase();
 
 const b64url = (value) => Buffer.from(value).toString('base64url');
@@ -61,6 +68,23 @@ const main = async () => {
   const app = encodeURIComponent(ASC_APP_ID);
 
   say(`## TestFlight for VC Writer Notes${FIX ? ' — fixing' : ''}`);
+  say();
+
+  // Every build, who it is given to on its own, and — asked for — the old ones retired.
+  const all = await get(`/v1/builds?filter[app]=${app}&sort=-uploadedDate&limit=20&fields[builds]=version,processingState,expired`);
+  say('| Build | Processing | Expired | Testers given it on its own |');
+  say('| --- | --- | --- | --- |');
+  for (const one of all.data ?? []) {
+    const own = await get(`/v1/builds/${one.id}/individualTesters?limit=50&fields[betaTesters]=email`).catch(() => ({ data: [] }));
+    let expired = one.attributes.expired;
+    if (EXPIRE_BELOW && Number(one.attributes.version) < EXPIRE_BELOW && !expired) {
+      await call('PATCH', `/v1/builds/${one.id}`, { data: { type: 'builds', id: one.id, attributes: { expired: true } } });
+      expired = true;
+    }
+    say(
+      `| ${one.attributes.version} | ${one.attributes.processingState} | ${expired ? 'yes' : 'no'} | ${(own.data ?? []).map((t) => t.attributes.email).join(', ') || '—'} |`,
+    );
+  }
   say();
 
   // The newest valid build.
