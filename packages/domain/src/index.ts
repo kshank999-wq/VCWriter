@@ -164,6 +164,7 @@ export * from './sync-mapping.js';
 export * from './sync-merge.js';
 export * from './sync-recovery.js';
 export * from './capture-approval.js';
+export * from './capture-transfer.js';
 export * from './capture-upload.js';
 export * from './capture-voice.js';
 export * from './capture-vocabulary.js';
