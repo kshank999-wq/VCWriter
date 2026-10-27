@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { ExpoSpeechRecognitionModule } from 'expo-speech-recognition';
 
 /**
@@ -29,8 +30,22 @@ export interface DictationHandlers {
 }
 
 export interface DictationSession {
-  stop(): void;
+  /**
+   * Stop, **and wait for the last words** (from Ken: *I did a scene, but when I
+   * went to save it, it wouldn't save it. And when I went to read it back, it
+   * wouldn't read it back*). An iPhone holds every word of a continuous sitting
+   * as provisional until it is told to stop, and sends the final transcript
+   * *after* that. Stop used to take its listeners away in the same breath, so
+   * the final words arrived to nobody and the scene on the screen was never
+   * committed: Save and Read it back both found nothing. Now the listeners
+   * stay until the recogniser says it has ended (or a moment has passed), and
+   * whatever was still provisional is committed then.
+   */
+  stop(): Promise<void>;
 }
+
+/** How long a stop waits for the recogniser's last words before going on. */
+const STOP_WAIT_MS = 1500;
 
 /**
  * How many times a sitting may restart itself having heard nothing before it
@@ -73,14 +88,29 @@ export const startDictation = (handlers: DictationHandlers): DictationSession =>
   let running = true;
   let heardAnything = false;
   let emptyRestarts = 0;
+  /** The recogniser's latest guess not yet committed: what a stop must not lose. */
+  let pending = '';
+  let ended: (() => void) | null = null;
 
   const results = ExpoSpeechRecognitionModule.addListener('result', (event) => {
     const said = event.results?.[0]?.transcript ?? '';
     if (said.trim().length === 0) return;
     heardAnything = true;
-    if (event.isFinal) handlers.onFinal(said);
-    else handlers.onInterim(said);
+    if (event.isFinal) {
+      pending = '';
+      handlers.onFinal(said);
+    } else {
+      pending = said;
+      handlers.onInterim(said);
+    }
   });
+
+  /** Commit what was still provisional, once. */
+  const settle = () => {
+    const last = pending;
+    pending = '';
+    if (last.trim().length > 0) handlers.onFinal(last);
+  };
 
   const errors = ExpoSpeechRecognitionModule.addListener('error', (event) => {
     // *Nothing was said* is the ordinary state of a walk between thoughts, not
@@ -92,9 +122,11 @@ export const startDictation = (handlers: DictationHandlers): DictationSession =>
 
   const ends = ExpoSpeechRecognitionModule.addListener('end', () => {
     if (!running) {
-      handlers.onEnd();
+      ended?.();
       return;
     }
+    // A sitting that ends by itself keeps its last guess too.
+    settle();
     // A recogniser ends on its own between utterances; starting it again is
     // what makes it continuous.
     if (heardAnything) {
@@ -111,6 +143,14 @@ export const startDictation = (handlers: DictationHandlers): DictationSession =>
 
   const begin = () => {
     ExpoSpeechRecognitionModule.start({
+      // Playback stays possible while listening, at a normal volume: the
+      // library's default mode is *measurement*, which turns read-back down to
+      // a whisper or to nothing.
+      iosCategory: {
+        category: 'playAndRecord',
+        categoryOptions: ['defaultToSpeaker', 'allowBluetooth'],
+        mode: 'default',
+      },
       lang: 'en-US',
       interimResults: true,
       continuous: true,
@@ -125,13 +165,45 @@ export const startDictation = (handlers: DictationHandlers): DictationSession =>
 
   begin();
 
+  let stopping: Promise<void> | null = null;
   return {
     stop() {
-      running = false;
-      ExpoSpeechRecognitionModule.stop();
-      results.remove();
-      errors.remove();
-      ends.remove();
+      stopping ??= new Promise<void>((resolve) => {
+        running = false;
+        const finish = () => {
+          ended = null;
+          clearTimeout(timer);
+          settle();
+          results.remove();
+          errors.remove();
+          ends.remove();
+          handlers.onEnd();
+          resolve();
+        };
+        const timer = setTimeout(finish, STOP_WAIT_MS);
+        ended = finish;
+        try {
+          ExpoSpeechRecognitionModule.stop();
+        } catch {
+          finish();
+        }
+      });
+      return stopping;
     },
   };
+};
+
+/**
+ * Get the phone ready to speak (iOS): out of the recording session and into
+ * playback, so *Read it back* is heard at full volume — and heard at all,
+ * since a session left recording can silence speech entirely. Nothing to do
+ * on Android, where speech and the microphone do not share a session.
+ */
+export const readyToSpeak = (): void => {
+  if (Platform.OS !== 'ios') return;
+  try {
+    ExpoSpeechRecognitionModule.setCategoryIOS({ category: 'playback', categoryOptions: ['duckOthers'], mode: 'spokenAudio' });
+  } catch {
+    // A phone that will not change it still tries to speak.
+  }
 };

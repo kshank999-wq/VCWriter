@@ -20,7 +20,7 @@ import {
 } from '@vcwriter/domain';
 import { makeProject, type ProjectSummary } from '../host/api';
 import { file as fileNote, newClientCaptureId } from '../host/queue';
-import { canHear, mayHear, startDictation, type DictationSession } from '../host/listen';
+import { canHear, mayHear, readyToSpeak, startDictation, type DictationSession } from '../host/listen';
 import { beep, hush, readAloud } from '../host/say';
 import { colour, styles } from '../theme';
 
@@ -64,7 +64,18 @@ export function Capture({
   /** Typed capture. */
   const [category, setCategory] = useState<CaptureKey>('idea');
   const [subjectName, setSubjectName] = useState('');
-  const [text, setText] = useState('');
+  const [text, setTextState] = useState('');
+  /**
+   * The words as they are **now**, for whatever runs after an await: a stop
+   * commits the last dictated words through a callback, and Save and Read it
+   * back read them in the same breath, before any render would hand them a
+   * fresh `text`.
+   */
+  const textRef = useRef('');
+  const setText = (next: string | ((current: string) => string)) => {
+    textRef.current = typeof next === 'function' ? next(textRef.current) : next;
+    setTextState(textRef.current);
+  };
   const [interim, setInterim] = useState('');
   const [heard, setHeard] = useState<string | null>(null);
   const [undone, setUndone] = useState<string | null>(null);
@@ -131,10 +142,24 @@ export function Capture({
     setStatus(why ? `Saved on this phone — it will go when there is signal` : 'Saved');
   };
 
+  /** Stop listening and wait for the last words to be committed. */
+  const stopListening = async () => {
+    const was = session.current;
+    session.current = null;
+    if (was) await was.stop();
+    setListening(false);
+  };
+
   const save = async () => {
-    const words = text.trim();
-    if (words.length === 0) return;
-    session.current?.stop();
+    // **Stopped first**, so the dictated words are committed before they are
+    // read: an iPhone holds them provisional until then, and Save used to
+    // find the box empty and do nothing at all.
+    await stopListening();
+    const words = textRef.current.trim();
+    if (words.length === 0) {
+      setStatus('Nothing to save yet. Dictate or type the note first.');
+      return;
+    }
     await put({
       key: chosenKey,
       subjectName: subjectName.trim() || null,
@@ -150,6 +175,22 @@ export function Capture({
     setHeard(null);
   };
 
+  /**
+   * Read the note back: listening stopped and its words committed first, the
+   * phone switched from recording to playback, and a sentence where there is
+   * nothing yet rather than a press that does nothing.
+   */
+  const readBack = async () => {
+    await stopListening();
+    const words = textRef.current.trim();
+    if (words.length === 0 && !subjectName.trim()) {
+      setStatus('Nothing to read back yet. Dictate or type the note first.');
+      return;
+    }
+    readyToSpeak();
+    readAloud(sayBack({ category: chosenKey, subjectName: subjectName.trim() || null, text: words }, format), setStatus);
+  };
+
   // ------------------------------------------------- one utterance, typed
 
   const heardTyped = (chunk: string) => {
@@ -163,11 +204,9 @@ export function Capture({
       return;
     }
     if (command.kind === 'correction') {
-      setText((current) => {
-        const after = applyCorrection(current, command.text);
-        setUndone(after.previous);
-        return after.text;
-      });
+      const after = applyCorrection(textRef.current, command.text);
+      setUndone(after.previous);
+      setText(after.text);
       setHeard('Correction');
       return;
     }
@@ -231,10 +270,9 @@ export function Capture({
 
   const toggleWalk = async () => {
     if (handsFree) {
-      session.current?.stop();
-      session.current = null;
+      // The last words heard are filed with the rest, not dropped at the stop.
+      await stopListening();
       setHandsFree(false);
-      setListening(false);
       // Whatever was still open is kept: a notebook that only kept what you
       // remembered to close is one you stop trusting after the first walk.
       const left = everything(walk.current);
@@ -270,9 +308,7 @@ export function Capture({
 
   const toggleDictation = async () => {
     if (listening) {
-      session.current?.stop();
-      session.current = null;
-      setListening(false);
+      await stopListening();
       return;
     }
     if (!(await mayHear())) {
@@ -472,12 +508,7 @@ export function Capture({
           ) : null}
           <Pressable
             style={[styles.button, styles.secondary, { flex: 1 }]}
-            onPress={() =>
-              readAloud(
-                sayBack({ category: chosenKey, subjectName: subjectName.trim() || null, text }, format),
-                setStatus,
-              )
-            }
+            onPress={() => void readBack()}
           >
             <Text style={[styles.buttonText, styles.secondaryText]}>Read it back</Text>
           </Pressable>
