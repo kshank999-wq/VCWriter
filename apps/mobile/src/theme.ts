@@ -113,4 +113,14 @@ export const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colour.border,
   },
+
+  /** The tab that brings the keyboard up or puts it away (addendum 27 §22). */
+  keyTab: {
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: colour.border,
+    backgroundColor: colour.raised,
+  },
+  keyTabText: { color: colour.gold, fontSize: 14, letterSpacing: 0.4 },
 });

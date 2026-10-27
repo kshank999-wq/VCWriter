@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { InputAccessoryView, Keyboard, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import {
   applyCorrection,
   captureKeyName,
@@ -97,11 +97,41 @@ export function Capture({
     textRef.current = typed;
     setTextState(typed);
   };
-  const putTitle = (name: string) => {
+  /** The title as it is now, for a phrase heard between renders. */
+  const subjectRef = useRef('');
+  const typedTitle = (name: string) => {
+    subjectRef.current = name;
     setSubjectName(name);
+  };
+  const putTitle = (name: string) => {
+    typedTitle(name);
     setTitleDrawn((n) => n + 1);
   };
   const [interim, setInterim] = useState('');
+  /**
+   * **Which box the Dictate button writes into** (addendum 27 §22, from Ken:
+   * *when I use the dictate button, I'm trying to put a title. It jumps down to
+   * the body portion*). The box last touched, or the one chosen beside the
+   * button; a title heard moves it on to the note, as the hands-free walk does.
+   */
+  const [into, setInto] = useState<'title' | 'body'>('body');
+  const intoRef = useRef<'title' | 'body'>('body');
+  const aim = (box: 'title' | 'body') => {
+    intoRef.current = box;
+    setInto(box);
+  };
+  const titleBox = useRef<TextInput>(null);
+  const bodyBox = useRef<TextInput>(null);
+  /** Whether the keyboard is up, for the tab that brings it back (§22). */
+  const [keyboardUp, setKeyboardUp] = useState(false);
+  useEffect(() => {
+    const shown = Keyboard.addListener('keyboardDidShow', () => setKeyboardUp(true));
+    const hidden = Keyboard.addListener('keyboardDidHide', () => setKeyboardUp(false));
+    return () => {
+      shown.remove();
+      hidden.remove();
+    };
+  }, []);
   const [heard, setHeard] = useState<string | null>(null);
   const [undone, setUndone] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -199,6 +229,23 @@ export function Capture({
     return why ? 'waiting' : 'sent';
   };
 
+  /**
+   * **Typing ends the dictation it is typed over**, and what is in the box is
+   * what is kept — the guess included — once. The box used to show the words
+   * plus the recogniser's guess, and every key pressed wrote both back as the
+   * words with the guess drawn on the end again: Ken's backspace that kept
+   * writing *erase all*.
+   */
+  const typingOver = () => {
+    if (interim.length === 0 && !listening) return;
+    typedOver.current = true;
+    const was = session.current;
+    session.current = null;
+    setListening(false);
+    setInterim('');
+    void was?.stop();
+  };
+
   /** Stop listening and wait for the last words to be committed. */
   const stopListening = async () => {
     const was = session.current;
@@ -257,6 +304,14 @@ export function Capture({
   // ------------------------------------------------- one utterance, typed
 
   const heardTyped = (chunk: string) => {
+    // Into the title: the words are the title, and the next go to the note.
+    if (intoRef.current === 'title') {
+      const words = chunk.trim().replace(/[.!?]+$/, '');
+      if (words.length === 0) return;
+      putTitle(subjectRef.current ? `${subjectRef.current} ${words}` : words);
+      aim('body');
+      return;
+    }
     const command = readSpoken(chunk, formatNow());
     if (command.kind === 'category') {
       setCategory(command.category);
@@ -426,6 +481,9 @@ export function Capture({
       return;
     }
     typedOver.current = false;
+    // The keyboard goes down while the phone listens (§22); the Keyboard tab
+    // at the foot brings it back.
+    Keyboard.dismiss();
     session.current = startDictation({
       onFinal: (chunk) => {
         setInterim('');
@@ -583,10 +641,16 @@ export function Capture({
         <View style={styles.field}>
           <Text style={styles.label}>{takesName ? 'Who' : 'About'}</Text>
           <TextInput
-            key={`title-${titleDrawn}`}
-            style={styles.input}
-            defaultValue={subjectName}
-            onChangeText={setSubjectName}
+            ref={titleBox}
+            key={`title-${titleDrawn}-${into === 'title' ? interim : ''}`}
+            style={[styles.input, into === 'title' && listening ? { borderColor: colour.live } : null]}
+            defaultValue={into === 'title' && interim.length > 0 ? `${subjectName}${subjectName ? ' ' : ''}${interim}` : subjectName}
+            onFocus={() => aim('title')}
+            onChangeText={(typed) => {
+              typingOver();
+              typedTitle(typed);
+            }}
+            inputAccessoryViewID={KEYS}
             placeholder={takesName ? 'MARA' : 'Optional'}
             placeholderTextColor={colour.muted}
             // Capitals for a name, as a script prints it; a title as said.
@@ -596,23 +660,18 @@ export function Capture({
         </View>
 
         <TextInput
-          key={`body-${bodyDrawn}-${interim}`}
-          style={[styles.input, { minHeight: 180, textAlignVertical: 'top', paddingTop: 12 }]}
-          defaultValue={interim.length > 0 ? `${text}${text.length > 0 ? ' ' : ''}${interim}` : text}
+          ref={bodyBox}
+          key={`body-${bodyDrawn}-${into === 'body' ? interim : ''}`}
+          style={[
+            styles.input,
+            { minHeight: 180, textAlignVertical: 'top', paddingTop: 12 },
+            into === 'body' && listening ? { borderColor: colour.live } : null,
+          ]}
+          defaultValue={into === 'body' && interim.length > 0 ? `${text}${text.length > 0 ? ' ' : ''}${interim}` : text}
+          onFocus={() => aim('body')}
+          inputAccessoryViewID={KEYS}
           onChangeText={(typed) => {
-            // **Typing ends the dictation it is typed over**, and what is in
-            // the box is what is kept — the guess included — once. The box used
-            // to show the words plus the recogniser's guess, and every key
-            // pressed wrote both back as the words with the guess drawn on the
-            // end again: Ken's backspace that kept writing *erase all*.
-            if (interim.length > 0 || listening) {
-              typedOver.current = true;
-              const was = session.current;
-              session.current = null;
-              setListening(false);
-              setInterim('');
-              void was?.stop();
-            }
+            typingOver();
             typedText(typed);
           }}
           placeholder="What just occurred to you?"
@@ -669,6 +728,26 @@ export function Capture({
           </Text>
         ) : null}
 
+        {hearable !== false ? (
+          // Where Dictate writes, chosen without the keyboard (§22).
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Text style={styles.label}>Dictate into</Text>
+            {(['title', 'body'] as const).map((box) => (
+              <Pressable
+                key={box}
+                onPress={() => aim(box)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: into === box }}
+                style={[styles.button, styles.secondary, { paddingVertical: 7, paddingHorizontal: 14 }, into === box ? { borderColor: colour.gold } : null]}
+              >
+                <Text style={[styles.buttonText, styles.secondaryText, { fontSize: 13 }, into === box ? { color: colour.goldBright } : null]}>
+                  {box === 'title' ? (takesName ? 'Who' : 'Title') : 'Note'}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+
         <View style={{ flexDirection: 'row', gap: 10 }}>
           {/* **Absent rather than greyed** where the phone cannot hear for
               itself: a disabled Dictate is a control that can only refuse
@@ -712,6 +791,35 @@ export function Capture({
 
         {status ? <Text style={styles.muted}>{status}</Text> : null}
       </ScrollView>
+
+      {/* **The keyboard is the writer's to call** (§22, from Ken: *it should
+          be collapsible because it gets in the way*). Down, a tab at the foot
+          brings it up on the box Dictate writes into; up, the bar on it puts
+          it away — on iOS fixed to the keyboard, elsewhere at the foot. */}
+      {!keyboardUp ? (
+        <Pressable
+          style={styles.keyTab}
+          onPress={() => (into === 'title' ? titleBox : bodyBox).current?.focus()}
+          accessibilityRole="button"
+          accessibilityLabel="Show the keyboard"
+        >
+          <Text style={styles.keyTabText}>⌨ Keyboard</Text>
+        </Pressable>
+      ) : Platform.OS !== 'ios' ? (
+        <Pressable style={styles.keyTab} onPress={() => Keyboard.dismiss()} accessibilityRole="button" accessibilityLabel="Hide the keyboard">
+          <Text style={styles.keyTabText}>⌄ Hide keyboard</Text>
+        </Pressable>
+      ) : null}
+      {Platform.OS === 'ios' ? (
+        <InputAccessoryView nativeID={KEYS}>
+          <Pressable style={styles.keyTab} onPress={() => Keyboard.dismiss()} accessibilityRole="button" accessibilityLabel="Hide the keyboard">
+            <Text style={styles.keyTabText}>⌄ Hide keyboard</Text>
+          </Pressable>
+        </InputAccessoryView>
+      ) : null}
     </View>
   );
 }
+
+/** The bar on the iPhone's keyboard that puts it away (§22). */
+const KEYS = 'capture-keys';

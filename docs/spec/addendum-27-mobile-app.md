@@ -939,3 +939,23 @@ time.
 - The title box capitalises a name as a script prints it (MARA) and anything
   else — a segment's title — word by word.
 - `dictation-boxes.test.ts` holds the three screens to it.
+
+## 22. Dictating a title, and a keyboard that goes away
+
+From Ken: *when I use the dictate button, I'm trying to put a title. It jumps
+down to the body portion. Also, when I hit dictate, I don't want the keyboard to
+be up… Maybe it can have a tab on the bottom if you want to bring it up that
+says keyboard, but it should be collapsible because it gets in the way.*
+
+- **Dictate writes into a chosen box.** *Dictate into: Title | Note* sits
+  above the Dictate button (*Who* in place of *Title* for a kind that names
+  somebody), and touching either box chooses it too. The box being written
+  into is outlined while the phone listens, and its grey guess shows there.
+- **A title heard moves on to the note**, as the hands-free walk does: the
+  phrase (its full stop dropped) is the title, and the next goes to the body.
+  Pressing *Title* again adds to it.
+- **Dictate puts the keyboard away.** A *⌨ Keyboard* tab at the foot of the
+  screen brings it back on the chosen box; while it is up, a *⌄ Hide
+  keyboard* bar sits on it (on the iPhone an input accessory, fixed to the
+  keyboard; on Android at the foot of the screen).
+- Typing in either box ends a dictation in progress, as typing in the note did.

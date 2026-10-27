@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest';
 describe('boxes the keyboard dictates into', () => {
   it.each(['Capture.tsx', 'Review.tsx', 'Projects.tsx'])('in %s take a defaultValue, never a value', (name) => {
     const source = readFileSync(join(__dirname, '..', 'screens', name), 'utf8');
-    const inputs = source.split('<TextInput').slice(1).map((one) => one.slice(0, one.indexOf('/>')));
+    const inputs = source.split(/<TextInput\s/).slice(1).map((one) => one.slice(0, one.indexOf('/>')));
     expect(inputs.length).toBeGreaterThan(0);
     for (const input of inputs) {
       expect(input).toMatch(/defaultValue=/);
