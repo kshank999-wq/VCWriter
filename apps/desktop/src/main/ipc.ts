@@ -10,6 +10,7 @@ import {
   suggestedFileName,
   type ProjectFolder,
   type CaptureItem,
+  type PhoneProjectName,
   type DeskStanding,
   type SaveKind,
   type LearningAidKind,
@@ -27,6 +28,9 @@ import {
   accountStatus,
   activateLicense,
   listCaptures,
+  listPhoneNotes,
+  listArchivedNotes,
+  deleteCaptures,
   requestLearningAid,
   requestSceneReview,
   sendOneSheet,
@@ -751,6 +755,31 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
       }
     },
   );
+
+  // The phone's notes by hand, the archive, and deleting (addendum 27 §25).
+  ipcMain.handle('cloud:phoneNotes', async (): Promise<DesktopApiResult<{ notes: CaptureItem[]; projects: PhoneProjectName[] }>> => {
+    try {
+      return ok(await listPhoneNotes());
+    } catch (cause) {
+      return fail(cause);
+    }
+  });
+
+  ipcMain.handle('cloud:archivedNotes', async (): Promise<DesktopApiResult<CaptureItem[]>> => {
+    try {
+      return ok(await listArchivedNotes());
+    } catch (cause) {
+      return fail(cause);
+    }
+  });
+
+  ipcMain.handle('cloud:deleteCaptures', async (_event, ids: string[]): Promise<DesktopApiResult<number>> => {
+    try {
+      return ok(await deleteCaptures(ids));
+    } catch (cause) {
+      return fail(cause);
+    }
+  });
 
   ipcMain.handle('cloud:resolveCapture', async (_event, capture: CaptureItem): Promise<DesktopApiResult<true>> => {
     try {

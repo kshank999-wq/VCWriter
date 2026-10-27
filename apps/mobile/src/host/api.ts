@@ -150,6 +150,14 @@ export const forgetNote = async (noteId: string): Promise<Answer<{ deleted: bool
   ask(`/api/notes/${noteId}`, { method: 'DELETE' });
 
 /**
+ * Delete notes the desk has already transferred (addendum 27 §25, from Ken:
+ * *once the notes are transferred and verified, it'll give you the option to
+ * delete those notes*). The same route the desk's archive uses.
+ */
+export const deleteNotes = async (ids: string[]): Promise<Answer<{ deleted: number }>> =>
+  ask('/api/notes/inbox', { method: 'DELETE', body: JSON.stringify({ ids }) });
+
+/**
  * Delete the account this phone is signed into (addendum 27 §12).
  *
  * **In the app rather than at a link to the website**, which is what the App

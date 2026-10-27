@@ -8,6 +8,7 @@ import {
   SYNC_TABLES,
   captureFromRow,
   captureReviewToRow,
+  ARCHIVED_STATUSES,
   WAITING_STATUSES,
   bytesToHash,
   fromRows,
@@ -22,6 +23,7 @@ import {
   whatToDo,
   type CaptureItem,
   type MergeResult,
+  type PhoneProjectName,
   type ProjectFile,
   type RoomMaster,
   type Row,
@@ -632,6 +634,58 @@ export const listCaptures = async (projectId: string | null): Promise<CaptureIte
   const { data, error } = await query;
   if (error) throw new CloudError(error.message);
   return (data ?? []).map((row) => captureFromRow(row as Row));
+};
+
+/**
+ * **Every note still waiting, whichever project it was said in** (addendum 27
+ * §25), with the names of those projects. The desk lists them by phone
+ * project, so notes said into a project this computer does not have can still
+ * be brought over by hand.
+ */
+export const listPhoneNotes = async (): Promise<{ notes: CaptureItem[]; projects: PhoneProjectName[] }> => {
+  const userId = await requireUserId();
+  const { data, error } = await supabase()
+    .from('capture_items')
+    .select('*')
+    .eq('user_id', userId)
+    .in('status', [...WAITING_STATUSES])
+    .order('captured_at', { ascending: false })
+    .limit(500);
+  if (error) throw new CloudError(error.message);
+  const notes = (data ?? []).map((row) => captureFromRow(row as Row));
+  const ids = [...new Set(notes.map((note) => note.projectId as string | null).filter((id): id is string => !!id))];
+  if (ids.length === 0) return { notes, projects: [] };
+  const { data: named, error: nameError } = await supabase().from('projects').select('id, title').in('id', ids);
+  if (nameError) throw new CloudError(nameError.message);
+  return { notes, projects: (named ?? []) as PhoneProjectName[] };
+};
+
+/** The archive (§25): what the desk has filed or set aside, newest first. */
+export const listArchivedNotes = async (): Promise<CaptureItem[]> => {
+  const userId = await requireUserId();
+  const { data, error } = await supabase()
+    .from('capture_items')
+    .select('*')
+    .eq('user_id', userId)
+    .in('status', [...ARCHIVED_STATUSES])
+    .order('reviewed_at', { ascending: false, nullsFirst: false })
+    .limit(500);
+  if (error) throw new CloudError(error.message);
+  return (data ?? []).map((row) => captureFromRow(row as Row));
+};
+
+/** Delete notes for good — from the archive, or ones thrown away (§25). */
+export const deleteCaptures = async (ids: readonly string[]): Promise<number> => {
+  if (ids.length === 0) return 0;
+  const userId = await requireUserId();
+  const { data, error } = await supabase()
+    .from('capture_items')
+    .delete()
+    .eq('user_id', userId)
+    .in('id', [...ids])
+    .select('id');
+  if (error) throw new CloudError(error.message);
+  return (data ?? []).length;
 };
 
 /**

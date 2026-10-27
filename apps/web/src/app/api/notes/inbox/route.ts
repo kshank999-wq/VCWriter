@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import {
+  ARCHIVED_STATUSES,
   WAITING_STATUSES,
   captureFromRow,
   captureItemSchema,
@@ -41,7 +43,38 @@ export async function GET(request: Request): Promise<Response> {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: 'Sign in first.' }, { status: 401 });
 
-  const projectId = new URL(request.url).searchParams.get('project');
+  const asked = new URL(request.url).searchParams;
+  const projectId = asked.get('project');
+
+  // **Every note waiting, any project, with the projects' names** (addendum 27
+  // §25): the desk's *On the phone* list, for notes said into a project the
+  // desk does not have open — or does not have at all.
+  if (asked.get('all')) {
+    const { data, error } = await serverClient()
+      .from('capture_items')
+      .select('*')
+      .in('status', [...WAITING_STATUSES])
+      .order('captured_at', { ascending: false })
+      .limit(500);
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    const notes = ((data ?? []) as Record<string, unknown>[]).map((row) => captureFromRow(row as Parameters<typeof captureFromRow>[0]));
+    const ids = [...new Set(notes.map((note) => note.projectId as string | null).filter((id): id is string => !!id))];
+    const named = ids.length ? await serverClient().from('projects').select('id, title').in('id', ids) : { data: [] };
+    return NextResponse.json({ notes, projects: named.data ?? [] });
+  }
+
+  // **The archive** (§25): what the desk has filed or set aside.
+  if (asked.get('archive')) {
+    const { data, error } = await serverClient()
+      .from('capture_items')
+      .select('*')
+      .in('status', [...ARCHIVED_STATUSES])
+      .order('reviewed_at', { ascending: false, nullsFirst: false })
+      .limit(500);
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    const notes = ((data ?? []) as Record<string, unknown>[]).map((row) => captureFromRow(row as Parameters<typeof captureFromRow>[0]));
+    return NextResponse.json({ notes });
+  }
 
   let query = serverClient()
     .from('capture_items')
@@ -86,4 +119,26 @@ export async function POST(request: Request): Promise<Response> {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ resolved: true });
+}
+
+/**
+ * **Delete notes for good** (addendum 27 §25, from Ken: *once the notes are
+ * transferred and verified, it'll give you the option to delete those notes.
+ * And you can also delete it from the actual desktop app*). The desk's archive
+ * and the phone's *Delete transferred notes* both come here. Whose notes they
+ * are is row-level security's to say (migration 0072): the caller's own, of
+ * any status, and nobody else's.
+ */
+const deleting = z.object({ ids: z.array(z.string().uuid()).min(1).max(500) });
+
+export async function DELETE(request: Request): Promise<Response> {
+  const user = await currentUser();
+  if (!user) return NextResponse.json({ error: 'Sign in first.' }, { status: 401 });
+
+  const parsed = deleting.safeParse(await request.json().catch(() => ({})));
+  if (!parsed.success) return NextResponse.json({ error: 'Which notes?' }, { status: 400 });
+
+  const { data, error } = await serverClient().from('capture_items').delete().in('id', parsed.data.ids).select('id');
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  return NextResponse.json({ deleted: (data ?? []).length });
 }

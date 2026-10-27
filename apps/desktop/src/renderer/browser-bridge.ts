@@ -17,6 +17,7 @@ import {
   suggestedBookFileName,
   suggestedExportFileName,
   type CaptureItem,
+  type PhoneProjectName,
   type ProjectFile,
   type LearningSuggestion,
   type RecoveryReason,
@@ -994,6 +995,47 @@ export const createBrowserBridge = (): BrowserBridge => {
         return ok(body.notes ?? []);
       } catch (cause) {
         return fail(cause instanceof Error ? cause.message : 'The phone’s notes could not be read');
+      }
+    },
+
+    /** Every note waiting on the phone, any project (addendum 27 §25). */
+    async listPhoneNotes() {
+      try {
+        const response = await fetch('/api/notes/inbox?all=1', { credentials: 'same-origin', cache: 'no-store' });
+        const body = (await response.json().catch(() => ({}))) as { notes?: CaptureItem[]; projects?: PhoneProjectName[]; error?: string };
+        if (!response.ok) return fail(body.error ?? 'The phone’s notes could not be read');
+        return ok({ notes: body.notes ?? [], projects: body.projects ?? [] });
+      } catch (cause) {
+        return fail(cause instanceof Error ? cause.message : 'The phone’s notes could not be read');
+      }
+    },
+
+    /** The archive (addendum 27 §25). */
+    async listArchivedNotes() {
+      try {
+        const response = await fetch('/api/notes/inbox?archive=1', { credentials: 'same-origin', cache: 'no-store' });
+        const body = (await response.json().catch(() => ({}))) as { notes?: CaptureItem[]; error?: string };
+        if (!response.ok) return fail(body.error ?? 'The archive could not be read');
+        return ok(body.notes ?? []);
+      } catch (cause) {
+        return fail(cause instanceof Error ? cause.message : 'The archive could not be read');
+      }
+    },
+
+    /** Delete notes for good (addendum 27 §25). */
+    async deleteCaptures(ids) {
+      try {
+        const response = await fetch('/api/notes/inbox', {
+          method: 'DELETE',
+          credentials: 'same-origin',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ ids }),
+        });
+        const body = (await response.json().catch(() => ({}))) as { deleted?: number; error?: string };
+        if (!response.ok) return fail(body.error ?? 'Those notes could not be deleted');
+        return ok(body.deleted ?? 0);
+      } catch (cause) {
+        return fail(cause instanceof Error ? cause.message : 'Those notes could not be deleted');
       }
     },
 

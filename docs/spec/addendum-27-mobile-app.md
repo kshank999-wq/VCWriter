@@ -1005,3 +1005,38 @@ And I would actually like to change the name from About to Title.*
 - **The first box is called Title**, whatever the kind (it was *About*, or
   *Who* for a kind that names somebody; the *MARA* placeholder still shows a
   name is wanted there). The *Dictate into* choice reads *Title | Note*.
+
+## 25. The phone's notes by hand, the archive, and deleting
+
+From Ken: *in the research section under the mobile app, it will show you the
+notes available on the phone, because if the projects don't match perfectly,
+it's not going to really work automatically transferring. So you'll be able to
+see which note groups are on the phone. You can select the project and it will
+sync and transfer those. Once they're transferred, those notes need to go into
+an archive. And on the app itself, once the notes are transferred and
+verified, that it'll give you the option to delete those notes. And you can
+also delete it from the actual desktop app.*
+
+A note is sent under the phone's project, and the desk's inbox lists the open
+project's own (and those with none). A project kept on this computer only, or
+a copy with another id, never met its notes.
+
+- **Research ▸ Mobile App has three tabs.** *This project* is the inbox as it
+  was. **On the phone** lists every note still waiting that the inbox does not
+  show, grouped by the phone project it was said in (`phoneNoteGroups`), each
+  group opening to its notes and carrying **Transfer to this project**.
+  **Archive** lists what has been filed or set aside (`ARCHIVED_STATUSES`).
+- **Transfer** is `transferNotes`: each note filed by its suggestion — the
+  folder for its kind, the person it names — and one with none into a *From
+  the phone* folder made the first time it is needed. Each is then marked
+  filed on the server, which is what moves it to the archive.
+- **Deleting.** The archive deletes a note, or all of them, after asking. The
+  phone's Review marks a filed note *✓ Transferred to VC Writer* and offers
+  **Delete transferred notes**, which deletes them from the account. What the
+  notes became in the project stays either way.
+- **Routes.** The desktop reads Supabase directly (`listPhoneNotes`,
+  `listArchivedNotes`, `deleteCaptures` in `cloud.ts`); the browser preview and
+  the phone use `/api/notes/inbox` — `?all=1`, `?archive=1`, and `DELETE`
+  with `ids`.
+- **Migration 0072** lets the writer delete their own note whatever its status;
+  0042's refusal to *change* a filed note stands.

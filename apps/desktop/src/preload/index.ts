@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 import type {
   Assignment,
   CaptureItem,
+  PhoneProjectName,
   Comment,
   DeskStanding,
   LearningAidKind,
@@ -359,6 +360,12 @@ export interface VcWriterApi {
   }): Promise<DesktopApiResult<{ file: ProjectFile; versionId: string | null; label: string }>>;
   listCaptures(projectId: string | null): Promise<DesktopApiResult<CaptureItem[]>>;
   resolveCapture(capture: CaptureItem): Promise<DesktopApiResult<true>>;
+  /** Every note waiting on the phone, any project, with their names (addendum 27 §25). */
+  listPhoneNotes(): Promise<DesktopApiResult<{ notes: CaptureItem[]; projects: PhoneProjectName[] }>>;
+  /** The archive: notes filed or set aside (addendum 27 §25). */
+  listArchivedNotes(): Promise<DesktopApiResult<CaptureItem[]>>;
+  /** Delete notes for good (addendum 27 §25). */
+  deleteCaptures(ids: string[]): Promise<DesktopApiResult<number>>;
   reviewScene(input: {
     sceneText: string;
     position?: string;
@@ -534,6 +541,9 @@ const api: VcWriterApi = {
   fetchRoomMaster: (input) => ipcRenderer.invoke('room:fetchMaster', input),
   listCaptures: (projectId) => ipcRenderer.invoke('cloud:captures', projectId),
   resolveCapture: (capture) => ipcRenderer.invoke('cloud:resolveCapture', capture),
+  listPhoneNotes: () => ipcRenderer.invoke('cloud:phoneNotes'),
+  listArchivedNotes: () => ipcRenderer.invoke('cloud:archivedNotes'),
+  deleteCaptures: (ids) => ipcRenderer.invoke('cloud:deleteCaptures', ids),
   reviewScene: (input) => ipcRenderer.invoke('cloud:reviewScene', input),
   sceneReviewStatus: () => ipcRenderer.invoke('cloud:sceneReviewStatus'),
   suggestLearningAid: (input) => ipcRenderer.invoke('cloud:suggestLearningAid', input),

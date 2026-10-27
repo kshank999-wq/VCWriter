@@ -12453,6 +12453,52 @@ dialog.projects-dialog {
   letter-spacing: 0.02em;
 }
 
+/* The phone's notes in three views (addendum 27 §25). */
+.mobile-section {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.mobile-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 6px 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.mobile-tabs button.on {
+  color: var(--gold);
+  box-shadow: inset 0 -2px 0 var(--gold);
+}
+
+.phone-group-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 10px;
+}
+
+.phone-group {
+  border-bottom: 1px solid var(--border);
+  padding: 8px 0;
+}
+
+.phone-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.phone-group-name {
+  text-align: left;
+}
+
+.phone-group-name .count {
+  margin-left: 8px;
+}
+
 /* The story of a collection a note was said for (addendum 27 §23). */
 .mobile-story {
   color: var(--gold);
@@ -21966,3 +22012,8 @@ dialog.track-dialog.format-inspector {
 .refs-bring-list li > label > .muted, .refs-bring-list li > .muted, .refs-bring-list li > label.muted { flex-basis: 100%; }
 .refs-bring-list .refs-have-differs { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
 .refs-bring-link { display: block; margin: 6px 0; }
+
+/* A ghost button that deletes, said in the danger colour (addendum 27 §25). */
+button.ghost.danger-text {
+  color: var(--danger);
+}

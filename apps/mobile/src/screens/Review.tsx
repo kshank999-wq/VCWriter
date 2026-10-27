@@ -7,7 +7,7 @@ import {
   type CaptureItem,
   type ProjectFormat,
 } from '@vcwriter/domain';
-import { correctNote, forgetNote, listNotes } from '../host/api';
+import { correctNote, deleteNotes, forgetNote, listNotes } from '../host/api';
 import { pendingCaptures, flush } from '../host/queue';
 import { colour, styles } from '../theme';
 
@@ -84,6 +84,33 @@ export function Review({
     await load();
   };
 
+  /**
+   * **The notes the desk has taken** (addendum 27 §25): filed into a project
+   * there, so the writer can see they arrived and clear them off the phone.
+   */
+  const transferred = notes.filter((note) => note.status === 'approved');
+  const clearTransferred = () => {
+    const ids = transferred.map((note) => note.id as string);
+    Alert.alert(
+      `Delete ${ids.length} transferred note${ids.length === 1 ? '' : 's'}?`,
+      'They are filed in VC Writer on your desktop. This takes the phone’s copies off this phone and your account; what they became in your project stays.',
+      [
+        { text: 'Keep them', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              const said = await deleteNotes(ids);
+              if (!said.ok) setError(said.error);
+              await load();
+            })();
+          },
+        },
+      ],
+    );
+  };
+
   const remove = (note: CaptureItem) => {
     Alert.alert('Delete this note?', 'It goes from the phone and from your account.', [
       { text: 'Keep it', style: 'cancel' },
@@ -122,6 +149,17 @@ export function Review({
         ) : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
         {loading ? <Text style={styles.muted}>Looking…</Text> : null}
+
+        {transferred.length > 0 ? (
+          <View style={[styles.row, { gap: 8 }]}>
+            <Text style={styles.text}>
+              ✓ {transferred.length} note{transferred.length === 1 ? ' has' : 's have'} been transferred to VC Writer on your desktop.
+            </Text>
+            <Pressable style={[styles.button, styles.secondary]} onPress={clearTransferred} accessibilityRole="button">
+              <Text style={[styles.buttonText, styles.secondaryText]}>Delete transferred notes</Text>
+            </Pressable>
+          </View>
+        ) : null}
 
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
           {['all', ...chips].map((one) => (
@@ -209,7 +247,9 @@ export function Review({
                 ) : (
                   // Filed at the desk, so it is the trail behind real work now.
                   // Shown and not edited, rather than quietly missing.
-                  <Text style={styles.muted}>Filed in VC Writer. Change it there.</Text>
+                  <Text style={[styles.muted, note.status === 'approved' ? { color: colour.sent } : null]}>
+                    {note.status === 'approved' ? '✓ Transferred to VC Writer.' : 'Set aside in VC Writer.'}
+                  </Text>
                 )
               ) : null}
             </View>

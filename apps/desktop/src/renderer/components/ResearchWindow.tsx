@@ -85,6 +85,7 @@ import { CharacterCreator, type CreatorTab } from './CharacterCreator';
 import { CharacterMap } from './CharacterMap';
 import { MobileInbox } from './MobileInbox';
 import { usePhoneNotes } from '../phone-notes';
+import { NoteArchive, PhoneGroups } from './PhoneTransfer';
 import { CharacterReview, type ReviewMode } from './CharacterReview';
 import { useModal } from '../use-modal';
 
@@ -329,6 +330,9 @@ export function ResearchBody({
    * removes from it have to be the same piece of state.
    */
   const phone = usePhoneNotes(file.project.id as string);
+  /** Which view of the phone's notes is open in Mobile App (addendum 27 §25). */
+  const [mobileTab, setMobileTab] = useState<'inbox' | 'phone' | 'archive'>('inbox');
+  const [archiveRead, setArchiveRead] = useState(0);
   const captures = phone.notes;
 
   const waiting = useMemo(
@@ -1171,6 +1175,42 @@ export function ResearchBody({
           ) : null}
 
           {selection.kind === 'mobile' ? (
+            // Three views of the phone's notes (addendum 27 §25): this
+            // project's inbox, every other group still on the phone, and the
+            // archive of what has been filed.
+            <div className="mobile-section">
+              <div className="mobile-tabs" role="tablist" aria-label="Phone notes">
+                {(
+                  [
+                    ['inbox', 'This project'],
+                    ['phone', 'On the phone'],
+                    ['archive', 'Archive'],
+                  ] as const
+                ).map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    role="tab"
+                    aria-selected={mobileTab === key}
+                    className={`ghost small${mobileTab === key ? ' on' : ''}`}
+                    onClick={() => setMobileTab(key)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {mobileTab === 'phone' ? (
+                <PhoneGroups
+                  file={file}
+                  onUpdate={onUpdate}
+                  onTransferred={() => {
+                    void phone.reload();
+                    setArchiveRead((n) => n + 1);
+                  }}
+                />
+              ) : mobileTab === 'archive' ? (
+                <NoteArchive file={file} refresh={archiveRead} />
+              ) : (
             <MobileInbox
               file={file}
               captures={captures}
@@ -1188,6 +1228,8 @@ export function ResearchBody({
               onRefresh={() => void phone.reload()}
               onFileGroup={(category, group) => void placeGroup(category, group)}
             />
+              )}
+            </div>
           ) : selection.kind === 'review' ? (
             <CharacterReview file={file} onOpenCreator={openCreator} openOn={reviewOn} />
           ) : selection.kind === 'charmap' ? (
