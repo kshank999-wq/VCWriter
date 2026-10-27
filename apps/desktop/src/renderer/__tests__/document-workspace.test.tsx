@@ -168,3 +168,34 @@ describe('the page', () => {
     expect(editorOf().getText()).toBe('Keep');
   });
 });
+
+/**
+ * The right-hand menu (addendum 42 §16, from Ken: *it'll have the functions
+ * that we talked about in a right-hand vertical menu along the right-hand side*).
+ */
+describe('the right-hand menu', () => {
+  it('holds the writer’s tools, and Research opens from it', () => {
+    const file = start('Dear Sam,');
+    const research = vi.fn();
+    render(
+      <DocumentWorkspace
+        file={file}
+        document={mainDocument(file)!}
+        onUpdate={() => undefined}
+        saveState="saved"
+        onSave={() => undefined}
+        onSaveAs={() => undefined}
+        onOpenResearch={research}
+      />,
+    );
+    const rail = screen.getByRole('navigation', { name: 'Writer’s tools' });
+    for (const name of ['Navigation pane', 'Research', 'Extract & Organize', 'Sources and style', 'Insert a citation', 'Find in document']) {
+      expect(rail.querySelector(`[aria-label="${name}"]`)).toBeTruthy();
+    }
+    expect(rail.querySelector('[role="tab"][aria-selected="true"]')?.textContent).toBe('Document');
+    fireEvent.click(screen.getByRole('button', { name: 'Research' }));
+    expect(research).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Navigation pane' }));
+    expect(screen.getByRole('navigation', { name: 'Navigation' })).toBeTruthy();
+  });
+});

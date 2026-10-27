@@ -240,3 +240,17 @@ describe('the round trip', () => {
     });
   });
 });
+
+describe('withMainDocument (addendum 42 §16)', () => {
+  it('gives a Document project with no document an empty one, and leaves the rest alone', async () => {
+    const { createProjectFile, withMainDocument, mainDocument } = await import('../index.js');
+    const made = createProjectFile({ title: 'From the phone', format: 'document' });
+    const bare = { ...made, documents: [] };
+    const mended = withMainDocument(bare);
+    expect(mainDocument(mended)?.title).toBe('From the phone');
+    expect(mainDocument(mended)?.projectId).toBe(made.project.id);
+    expect(withMainDocument(made)).toBe(made);
+    const novel = createProjectFile({ title: 'A novel', format: 'novel' });
+    expect(withMainDocument(novel)).toBe(novel);
+  });
+});

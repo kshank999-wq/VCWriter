@@ -1068,3 +1068,260 @@
   visibility: hidden;
   pointer-events: none;
 }
+
+/* --------------------------------------------- the right-hand menu (§16) */
+
+.wp-main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.wp-stage {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.wp-rail {
+  width: 78px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 6px;
+  overflow-y: auto;
+  border-left: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.wp-rail-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.wp-rail hr {
+  width: 100%;
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 6px 0;
+}
+
+.wp-rail .wp-rail-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 7px 2px 6px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.wp-rail .wp-rail-item:hover:not(:disabled) {
+  background: var(--wp-hover, rgba(127, 127, 127, 0.15));
+  border-color: transparent;
+}
+
+.wp-rail .wp-rail-item.on {
+  background: var(--wp-on, rgba(201, 164, 92, 0.18));
+  border-color: var(--wp-on-border, var(--gold-deep));
+  color: var(--accent);
+}
+
+.wp-rail .wp-rail-item:active:not(:disabled) {
+  transform: none;
+  box-shadow: none;
+}
+
+/* ------------------------------------------------ Word's own look (§16)
+
+   From Ken: *I don't want it to look like the other modules. I want it to look
+   just like a word processor, just like Microsoft Word.* A Document project
+   sets its window in Word's light scheme whatever scheme the program wears:
+   a blue title bar, a light ribbon with flat buttons, a grey canvas with the
+   white page on it, and a light status bar. Only the variables change, so
+   every part that reads them follows. */
+
+.workspace.wp-mode {
+  --ink: #ffffff;
+  --bg: #f3f3f3;
+  --panel: #f3f3f3;
+  --panel-2: #ffffff;
+  --border: #d4d4d4;
+  --gold: #185abd;
+  --gold-bright: #185abd;
+  --gold-deep: #a9c1e8;
+  --accent: #185abd;
+  --text: #252525;
+  --muted: #616161;
+  --display: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --wp-canvas: #e3e3e3;
+  --wp-hover: #e2e2e2;
+  --wp-on: #dce6f4;
+  --wp-on-border: #a9c1e8;
+  color-scheme: light;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.workspace.wp-mode button {
+  background: #fff;
+  box-shadow: none;
+  border-color: var(--border);
+}
+
+.workspace.wp-mode button:hover {
+  background: var(--wp-hover);
+  border-color: #c4c4c4;
+}
+
+.workspace.wp-mode button.ghost {
+  background: transparent;
+  border-color: transparent;
+}
+
+.workspace.wp-mode select,
+.workspace.wp-mode input {
+  background: #fff;
+  color: var(--text);
+  border: 1px solid #c8c8c8;
+  border-radius: 3px;
+}
+
+/* The title bar, Word's blue. */
+.workspace.wp-mode .titlebar {
+  --panel: #2b579a;
+  --text: #ffffff;
+  --muted: #dbe5f5;
+  --gold: #ffffff;
+  --border: #224a85;
+  background: #2b579a;
+  color: #fff;
+}
+
+.workspace.wp-mode .titlebar button,
+.workspace.wp-mode .titlebar button.ghost {
+  background: transparent;
+  border-color: transparent;
+  color: #fff;
+}
+
+.workspace.wp-mode .titlebar button:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.workspace.wp-mode .titlebar .project-title {
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.workspace.wp-mode .wordmark-svg {
+  filter: brightness(0) invert(1);
+  opacity: 0.85;
+}
+
+/* The ribbon: tabs as Word draws them, flat tools on a light band. */
+.workspace.wp-mode .wp-ribbon {
+  background: #f3f3f3;
+  border-bottom: 1px solid #d4d4d4;
+}
+
+.workspace.wp-mode .wp-tab {
+  background: transparent;
+  border: none;
+  color: #252525;
+  border-radius: 0;
+  padding: 6px 12px 5px;
+}
+
+.workspace.wp-mode .wp-tab:hover {
+  background: #e6e6e6;
+}
+
+.workspace.wp-mode .wp-tab.active {
+  background: transparent;
+  color: #185abd;
+  font-weight: 600;
+  box-shadow: inset 0 -3px 0 #185abd;
+}
+
+.workspace.wp-mode .wp-panel {
+  background: #fbfbfb;
+  border-top: 1px solid #e1e1e1;
+  margin: 0 6px 6px;
+  border: 1px solid #e1e1e1;
+  border-radius: 6px;
+}
+
+.workspace.wp-mode .wp-group {
+  border-right-color: #e1e1e1;
+}
+
+.workspace.wp-mode .wp-panel button {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.workspace.wp-mode .wp-panel button:hover:not(:disabled) {
+  background: #e6e6e6;
+  border-color: #d0d0d0;
+}
+
+.workspace.wp-mode .wp-panel button.active,
+.workspace.wp-mode .wp-panel button[aria-pressed='true'] {
+  background: #dce6f4;
+  border-color: #a9c1e8;
+}
+
+/* The status bar and the page bar under it, quiet as Word's. */
+.workspace.wp-mode .wp-status {
+  background: #f3f3f3;
+  color: #444;
+}
+
+.workspace.wp-mode .page-bar {
+  height: 30px;
+  background: #ececec;
+}
+
+.workspace.wp-mode button.page {
+  background: transparent;
+  border-color: transparent;
+  color: #555;
+}
+
+.workspace.wp-mode .wp-rail {
+  background: #f3f3f3;
+}
+
+.workspace.wp-mode .wp-rail .wp-rail-item {
+  background: transparent;
+  border-color: transparent;
+}
+
+.workspace.wp-mode .wp-rail .wp-rail-item:hover:not(:disabled) {
+  background: var(--wp-hover);
+}
+
+.workspace.wp-mode .wp-rail .wp-rail-item.on {
+  background: var(--wp-on);
+  border-color: var(--wp-on-border);
+  color: var(--accent);
+}
+
+.workspace.wp-mode .titlebar .room-format {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.5);
+  color: #fff;
+}

@@ -118,9 +118,6 @@ interface RibbonProps {
   onPaint(): void;
   words: number;
   characters: number;
-  /** Whether the Extract & Organize sidebar is open (addendum 42 §8). */
-  extracting: boolean;
-  onExtracting(): void;
   /** Headers, footers and page numbers (addendum 42 §15). */
   headerFooter: {
     open: boolean;
@@ -266,21 +263,6 @@ export function Ribbon(ribbon: RibbonProps) {
             {one.label}
           </button>
         ))}
-        <span className="wp-tabs-spacer" />
-        {/* The WP spec's button (§3): it opens and closes the sidebar without
-            losing the selection, so it takes the press on mouse-down. */}
-        <button
-          type="button"
-          className={`wp-extract-toggle${props.extracting ? ' active' : ''}`}
-          aria-pressed={props.extracting}
-          tabIndex={-1}
-          onMouseDown={(event) => {
-            event.preventDefault();
-            props.onExtracting();
-          }}
-        >
-          Extract &amp; Organize
-        </button>
       </div>
       <div className="wp-panel" role="tabpanel" aria-label={TABS.find((one) => one.id === tab)?.label}>
         {tab === 'file' ? <FileTab {...props} /> : null}

@@ -15,6 +15,7 @@ import {
   isProseFormat,
   isWordProcessor,
   mainDocument,
+  withMainDocument,
   LANE_DEFAULT,
   BEAT_CHIP_MAX,
   isInteractive,
@@ -1039,6 +1040,17 @@ export default function App() {
     if (openedId) setView('write');
   }, [openedId]);
 
+  /**
+   * A Document project is a word processor however it arrived (addendum 42
+   * §16): one made on the phone or brought down from the cloud has no
+   * document yet, and is given its empty page here rather than opening on the
+   * story workspace and its tracks.
+   */
+  const missingDocument = file !== null && isWordProcessor(file.project.format) && file.documents.length === 0;
+  useEffect(() => {
+    if (missingDocument && access.writable) project.update(withMainDocument);
+  }, [missingDocument, access.writable, project.update]);
+
   const activation = (
     <ActivationDialog
       open={activationOpen}
@@ -1270,10 +1282,38 @@ export default function App() {
     );
   };
 
+  /** Research, over the story workspace or the word processor alike. */
+  const researchWindow = (
+    <ResearchWindow
+      file={file}
+      open={researchOpen && !away.has('research')}
+      currentBeatId={selectedBeat?.id ?? null}
+      {...(researchView ? { openOn: researchView } : {})}
+      {...(researchAt ? { openAt: researchAt } : {})}
+      onGoToBeat={(beatId) => {
+        setSelectedBeatId(beatId);
+        setResearchOpen(false);
+      }}
+      onClose={() => {
+        setResearchOpen(false);
+        setResearchView(undefined);
+        setResearchAt(undefined);
+      }}
+      onUpdate={project.update}
+      onSaveAs={saveSomewhere}
+      onPopOut={() => {
+        setResearchOpen(false);
+        openPane('research');
+      }}
+    />
+  );
+
   return (
     <div
       className={[
         'workspace',
+        // A Document project looks like a word processor, not a module (addendum 42 §16).
+        wordProcessor ? 'wp-mode' : '',
         focused ? 'focus-mode' : '',
         paper ? 'script-paper' : '',
         showBottom && here('bottom') ? 'with-timeline' : '',
@@ -1395,6 +1435,7 @@ export default function App() {
         </p>
       ) : null}
 
+      {writing && wordProcessor && researchOpen ? researchWindow : null}
       {writing && wordProcessor && wpDocument ? (
         <DocumentWorkspace
           key={wpDocument.id}
@@ -1406,7 +1447,11 @@ export default function App() {
           onSaveAs={() => void saveSomewhere('as')}
           readOnly={!access.writable}
           projectPath={project.path}
+          onOpenResearch={() => (away.has('research') ? openPane('research') : setResearchOpen(true))}
         />
+      ) : writing && wordProcessor ? (
+        // Its page is being made (above); never the story workspace meanwhile.
+        <div className="workspace-body" />
       ) : writing ? (
         <div className="workspace-body">
           {focused ? (
@@ -1506,28 +1551,7 @@ export default function App() {
             step={findStep}
           />
           <MarkerDialog file={file} markerId={openMarkerId} onClose={() => setOpenMarkerId(null)} onUpdate={project.update} />
-          <ResearchWindow
-            file={file}
-            open={researchOpen && !away.has('research')}
-            currentBeatId={selectedBeat?.id ?? null}
-            {...(researchView ? { openOn: researchView } : {})}
-            {...(researchAt ? { openAt: researchAt } : {})}
-            onGoToBeat={(beatId) => {
-              setSelectedBeatId(beatId);
-              setResearchOpen(false);
-            }}
-            onClose={() => {
-              setResearchOpen(false);
-              setResearchView(undefined);
-              setResearchAt(undefined);
-            }}
-            onUpdate={project.update}
-            onSaveAs={saveSomewhere}
-            onPopOut={() => {
-              setResearchOpen(false);
-              openPane('research');
-            }}
-          />
+          {researchWindow}
           {/* The canvas over the workspace: a board is worked on whole, not
               in a corner of the stage (addendum 03 §2). */}
           <SculptorWindow

@@ -1,8 +1,11 @@
 import type { ProjectFile } from './project-file.js';
-import type { WpDocumentId } from './ids.js';
+import { newId, type WpDocumentId } from './ids.js';
 import { nowIso } from './entities/common.js';
+import { isWordProcessor } from './formats.js';
 import {
   PAPER_SIZES,
+  emptyDocContent,
+  wpDocumentSchema,
   documentPageSetupSchema,
   type DocNode,
   type DocumentPageSetup,
@@ -19,6 +22,36 @@ import {
 
 /** The project's document: a Document project holds exactly one. */
 export const mainDocument = (file: ProjectFile): WpDocument | null => file.documents[0] ?? null;
+
+/**
+ * **A Document project with its document**, given one if it has none
+ * (addendum 42 §16, from Ken: *for the new document section… I just want to
+ * take out the tracks*).
+ *
+ * A Document project made on the phone, or brought down from the cloud, has
+ * no document — documents are not in the sync tables — and the workspace,
+ * finding none, fell back to the story workspace with its tracks. A Document
+ * project is a word processor whatever route it came by, so it is given an
+ * empty page instead. Any other format, or one that has its document, is
+ * returned as it is.
+ */
+export const withMainDocument = (file: ProjectFile): ProjectFile => {
+  if (!isWordProcessor(file.project.format) || file.documents.length > 0) return file;
+  const at = nowIso();
+  return {
+    ...file,
+    documents: [
+      wpDocumentSchema.parse({
+        id: newId<WpDocumentId>(),
+        projectId: file.project.id,
+        title: file.project.title,
+        content: emptyDocContent(),
+        createdAt: at,
+        updatedAt: at,
+      }),
+    ],
+  };
+};
 
 const withDocument = (
   file: ProjectFile,

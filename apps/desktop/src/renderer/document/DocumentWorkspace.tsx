@@ -72,6 +72,7 @@ import { ReferencesPanel } from '../components/citations/ReferencesPanel';
 import { BringInSourcesDialog } from '../components/citations/BringInSourcesDialog';
 import { OutlinerWindow } from '../components/OutlinerWindow';
 import { SendExtractsDialog, type SendSubject } from './SendExtractsDialog';
+import { DocumentRail } from './DocumentRail';
 import { HeaderFooterBar } from './HeaderFooterBar';
 import { useDocumentSpeech } from './speech';
 import { ExtractSidebar, type SourceDisplay } from './ExtractSidebar';
@@ -109,6 +110,8 @@ interface DocumentWorkspaceProps {
   readOnly?: boolean;
   /** Where the open project is kept, so sending extracts does not offer it twice. */
   projectPath?: string | null;
+  /** Research, opened from the right-hand menu (addendum 42 §16). */
+  onOpenResearch?: () => void;
 }
 
 /** How long typing must pause before the tree is handed to the project. */
@@ -130,7 +133,7 @@ const SAVE_WORDS: Record<string, string> = {
 const download = async (name: string, bytes: Uint8Array, mediaType: string, kind: { name: string; extension: string }) =>
   window.vcwriter.saveFile({ name, bytes, mediaType, kind });
 
-export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave, onSaveAs, readOnly = false, projectPath = null }: DocumentWorkspaceProps) {
+export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave, onSaveAs, readOnly = false, projectPath = null, onOpenResearch }: DocumentWorkspaceProps) {
   const [tab, setTab] = useState<RibbonTab>('home');
   const [view, setView] = useState<ViewState>({ layout: 'print', navigation: false, marks: false, spelling: true, zoom: 1, fit: 'none' });
   const [finding, setFinding] = useState<'off' | 'find' | 'replace'>('off');
@@ -783,8 +786,6 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
         view={view}
         onView={(patch) => setView((current) => ({ ...current, ...patch }))}
         onFind={setFinding}
-        extracting={extracting}
-        onExtracting={() => setExtracting((current) => !current)}
         headerFooter={{
           open: headerFooterOpen,
           onToggle: () => setHeaderFooterOpen((current) => !current),
@@ -869,152 +870,167 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
         />
       ) : null}
 
-      <div className="wp-panes" role="tablist" aria-label="View">
-        <button type="button" role="tab" aria-selected={pane === 'document'} className={pane === 'document' ? 'on' : ''} onClick={() => setPane('document')}>
-          Document
-        </button>
-        <button type="button" role="tab" aria-selected={pane === 'outliner'} className={pane === 'outliner' ? 'on' : ''} onClick={openOutliner}>
-          Outliner
-        </button>
-      </div>
+      <div className="wp-main">
+        <div className="wp-stage">
+          {message ? (
+            <p className="notice banner" role="status">
+              {message}
+              <button type="button" className="ghost" onClick={() => setMessage(null)}>
+                Dismiss
+              </button>
+            </p>
+          ) : null}
 
-      {message ? (
-        <p className="notice banner" role="status">
-          {message}
-          <button type="button" className="ghost" onClick={() => setMessage(null)}>
-            Dismiss
-          </button>
-        </p>
-      ) : null}
-
-      {pane === 'outliner' && outlineId ? (
-        <div className="wp-outliner">
-          <OutlinerWindow
-            file={file}
-            open
-            page
-            onClose={() => setPane('document')}
-            onUpdate={updateFromOutline}
-            outlineId={outlineId}
-            promotion={false}
-            numbers={outlineNumbers}
-            onOpenRow={(item) => openRow(item.id as string)}
-            rowDetail={(item) => {
-              const sent = rowReceipts(document, item.id as string);
-              return sent.length ? (
-                <ul className="wp-row-sent" aria-label="Sent to">
-                  {sent.map((receipt) => (
-                    <li key={`${receipt.projectId}-${receipt.resultId}-${receipt.at}`} title={receipt.path ?? undefined}>
-                      Sent to {receipt.projectTitle || 'a project'} › {receipt.areaName}
-                    </li>
-                  ))}
-                </ul>
-              ) : null;
-            }}
-            onSendRows={
-              readOnly
-                ? undefined
-                : (items) => {
-                    flush(editor);
-                    setSending({
-                      kind: 'rows',
-                      documentId,
-                      itemIds: items.map((item) => item.id as string),
-                      titles: items.map((item) => item.title),
-                    });
-                  }
-            }
-            toolbar={
-              <label className="wp-numbering">
-                Numbering
-                <select
-                  aria-label="Heading numbering"
-                  value={document.headingNumbering}
-                  disabled={readOnly}
-                  onChange={(event) => onUpdate((current) => setHeadingNumbering(current, documentId, event.target.value as HeadingNumbering))}
-                >
-                  {HEADING_NUMBERINGS.map((one) => (
-                    <option key={one.value} value={one.value}>
-                      {one.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            }
-          />
-        </div>
-      ) : null}
-
-      <div className="wp-body" hidden={pane === 'outliner'}>
-        {view.navigation ? (
-          <nav className="wp-nav" aria-label="Navigation">
-            <h3>Headings</h3>
-            {headings.length ? (
-              <ul>
-                {headings.map((heading) => (
-                  <li key={`${heading.index}`} style={{ paddingLeft: `${(heading.level - 1) * 12}px` }}>
-                    <button type="button" className="ghost" onClick={() => jumpTo(heading.index)}>
-                      {heading.text || '(empty heading)'}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="muted small">Headings you add appear here. Use the Styles box on the Home tab.</p>
-            )}
-          </nav>
-        ) : null}
-        <div ref={canvas} className={`wp-canvas ${view.layout}`} style={{ zoom: view.zoom } as React.CSSProperties} onMouseDown={(event) => {
-          // A press on the grey around the page puts the cursor at the end.
-          if (event.target === event.currentTarget) {
-            event.preventDefault();
-            editor.commands.focus('end');
-          }
-        }}>
-          <div ref={sheet} className="wp-sheet" style={sheetStyle} spellCheck={view.spelling}>
-            {view.layout === 'print' && hasHeaderFooter(document) ? (
-              <PageBands
-                document={document}
-                pages={pages}
-                pageHeight={height}
-                onOpen={() => setHeaderFooterOpen(true)}
+          {pane === 'outliner' && outlineId ? (
+            <div className="wp-outliner">
+              <OutlinerWindow
+                file={file}
+                open
+                page
+                onClose={() => setPane('document')}
+                onUpdate={updateFromOutline}
+                outlineId={outlineId}
+                promotion={false}
+                numbers={outlineNumbers}
+                onOpenRow={(item) => openRow(item.id as string)}
+                rowDetail={(item) => {
+                  const sent = rowReceipts(document, item.id as string);
+                  return sent.length ? (
+                    <ul className="wp-row-sent" aria-label="Sent to">
+                      {sent.map((receipt) => (
+                        <li key={`${receipt.projectId}-${receipt.resultId}-${receipt.at}`} title={receipt.path ?? undefined}>
+                          Sent to {receipt.projectTitle || 'a project'} › {receipt.areaName}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null;
+                }}
+                onSendRows={
+                  readOnly
+                    ? undefined
+                    : (items) => {
+                        flush(editor);
+                        setSending({
+                          kind: 'rows',
+                          documentId,
+                          itemIds: items.map((item) => item.id as string),
+                          titles: items.map((item) => item.title),
+                        });
+                      }
+                }
+                toolbar={
+                  <label className="wp-numbering">
+                    Numbering
+                    <select
+                      aria-label="Heading numbering"
+                      value={document.headingNumbering}
+                      disabled={readOnly}
+                      onChange={(event) => onUpdate((current) => setHeadingNumbering(current, documentId, event.target.value as HeadingNumbering))}
+                    >
+                      {HEADING_NUMBERINGS.map((one) => (
+                        <option key={one.value} value={one.value}>
+                          {one.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                }
               />
+            </div>
+          ) : null}
+
+          <div className="wp-body" hidden={pane === 'outliner'}>
+            {view.navigation ? (
+              <nav className="wp-nav" aria-label="Navigation">
+                <h3>Headings</h3>
+                {headings.length ? (
+                  <ul>
+                    {headings.map((heading) => (
+                      <li key={`${heading.index}`} style={{ paddingLeft: `${(heading.level - 1) * 12}px` }}>
+                        <button type="button" className="ghost" onClick={() => jumpTo(heading.index)}>
+                          {heading.text || '(empty heading)'}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="muted small">Headings you add appear here. Use the Styles box on the Home tab.</p>
+                )}
+              </nav>
             ) : null}
-            <EditorContent editor={editor} />
-            {view.layout === 'print' ? (
-              // Where the page view measures its notes: the words' width, never seen.
-              <div className="wp-doc wp-notes-measure" aria-hidden="true" style={{ width: `${width - margins.left - margins.right}in` }}>
-                <div ref={notesMeasure} className="wp-page-notes" />
+            <div ref={canvas} className={`wp-canvas ${view.layout}`} style={{ zoom: view.zoom } as React.CSSProperties} onMouseDown={(event) => {
+              // A press on the grey around the page puts the cursor at the end.
+              if (event.target === event.currentTarget) {
+                event.preventDefault();
+                editor.commands.focus('end');
+              }
+            }}>
+              <div ref={sheet} className="wp-sheet" style={sheetStyle} spellCheck={view.spelling}>
+                {view.layout === 'print' && hasHeaderFooter(document) ? (
+                  <PageBands
+                    document={document}
+                    pages={pages}
+                    pageHeight={height}
+                    onOpen={() => setHeaderFooterOpen(true)}
+                  />
+                ) : null}
+                <EditorContent editor={editor} />
+                {view.layout === 'print' ? (
+                  // Where the page view measures its notes: the words' width, never seen.
+                  <div className="wp-doc wp-notes-measure" aria-hidden="true" style={{ width: `${width - margins.left - margins.right}in` }}>
+                    <div ref={notesMeasure} className="wp-page-notes" />
+                  </div>
+                ) : null}
               </div>
+            </div>
+            {extracting && palettesOf(file).length ? (
+              <ExtractSidebar
+                file={file}
+                document={document}
+                editor={editor}
+                onUpdate={onUpdate}
+                paletteId={paletteId}
+                onPalette={(id) => {
+                  setPaletteId(id);
+                  setExtractNotice(null);
+                }}
+                onCapture={capture}
+                onRemove={removeExtract}
+                onReveal={reveal}
+                onSend={(extracts) => {
+                  flush(editor);
+                  setSending({ kind: 'extracts', extracts });
+                }}
+                onAddToOutline={addToOutline}
+                display={display}
+                onDisplay={setDisplay}
+                onClose={() => setExtracting(false)}
+                readOnly={readOnly}
+                notice={extractNotice}
+              />
             ) : null}
           </div>
         </div>
-        {extracting && palettesOf(file).length ? (
-          <ExtractSidebar
-            file={file}
-            document={document}
-            editor={editor}
-            onUpdate={onUpdate}
-            paletteId={paletteId}
-            onPalette={(id) => {
-              setPaletteId(id);
-              setExtractNotice(null);
-            }}
-            onCapture={capture}
-            onRemove={removeExtract}
-            onReveal={reveal}
-            onSend={(extracts) => {
-              flush(editor);
-              setSending({ kind: 'extracts', extracts });
-            }}
-            onAddToOutline={addToOutline}
-            display={display}
-            onDisplay={setDisplay}
-            onClose={() => setExtracting(false)}
-            readOnly={readOnly}
-            notice={extractNotice}
-          />
-        ) : null}
+        <DocumentRail
+          state={{ pane, navigation: view.navigation, extracting, readOnly }}
+          actions={{
+            onDocument: () => setPane('document'),
+            onOutliner: openOutliner,
+            onNavigation: () => setView((current) => ({ ...current, navigation: !current.navigation })),
+            ...(onOpenResearch
+              ? {
+                  onResearch: () => {
+                    flush(editor);
+                    onOpenResearch();
+                  },
+                }
+              : {}),
+            onExtracting: () => setExtracting((current) => !current),
+            onSources: () => setLibraryOpen(true),
+            onCite: () => !readOnly && setCiting({ key: null }),
+            onFind: () => setFinding('find'),
+          }}
+        />
       </div>
 
       {citing ? (

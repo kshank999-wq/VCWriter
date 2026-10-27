@@ -95,8 +95,8 @@ Ours (`renderer/document/extensions.ts`):
 ## 4. The workspace
 
 `DocumentWorkspace` takes the place of the story workspace on the Write page.
-The title bar keeps Research and drops the story rooms (Sculptor, Outliner,
-the note sorter, Focus). The page tabs are Home, Write, Account and
+The title bar drops the story rooms (Sculptor, Outliner, the note sorter,
+Focus), and Research moved to the right-hand menu (§16). The page tabs are Home, Write, Account and
 Recovery.
 
 - **The ribbon** has six tabs:
@@ -831,3 +831,42 @@ the pages also numbers them, so each page's number is the page it is on.
   - the grouped font list, and the computer's own fonts
   - reading aloud a paragraph at a time from the cursor
   - dictation typed at the cursor
+
+## 16. Word's look, and a right-hand menu
+
+From Ken: *for the new document section, I don't want anything in it. I just
+want to take out the tracks. I don't want it to look like the other modules. I
+want it to look just like a word processor, just like Microsoft Word. It can
+have the functions where you have research and things… And then it'll have the
+functions that we talked about in a right-hand vertical menu along the
+right-hand side.*
+
+- **No tracks, ever.** Documents are not in the sync tables, so a Document
+  project made on the phone or brought down from the cloud arrived with no
+  document, and the workspace fell back to the story workspace with its
+  tracks. `withMainDocument` gives such a project its empty page, and the
+  app adds it on open; meanwhile the window shows an empty body, never the
+  story workspace. (Documents still do not sync: that is its own change.)
+- **Word's look.** A Document project's window carries `wp-mode`, which sets
+  Word's light scheme whatever scheme the program wears: a blue title bar,
+  a light ribbon with flat tools and an underlined active tab, a grey canvas
+  with the white page on it, a light status bar and a quiet page bar. Only
+  CSS variables change, so every part that reads them, Research included,
+  follows.
+- **The right-hand menu** (`DocumentRail`). One column down the right edge,
+  icon over label:
+
+  | Item | Does |
+  | --- | --- |
+  | Document, Outliner | The two views, as tabs (they were a row above the page) |
+  | Navigate | The headings pane |
+  | Research | Opens Research over the document |
+  | Extract | Extract & Organize (it was at the ribbon's right end) |
+  | Sources | The library and the citation style |
+  | Cite | Insert a citation at the cursor |
+  | Find | Find in the document |
+
+  Dictate and Read aloud stay on the ribbon, where Word keeps Dictate.
+- **Research works in a document.** The title bar's Research button set a
+  flag that only the story workspace read, so in a document it did nothing.
+  The window is now drawn over the word processor too, opened from the menu.

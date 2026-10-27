@@ -138,7 +138,8 @@ export function TitleBar({
           </button>
         ))}
 
-        {writing ? (
+        {/* A document's Research is on its right-hand menu (addendum 42 §16). */}
+        {writing && story ? (
           <button
             type="button"
             className="raised"
