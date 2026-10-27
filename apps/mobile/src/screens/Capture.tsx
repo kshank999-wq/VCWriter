@@ -352,7 +352,7 @@ export function Capture({
       for (const open of left.slice(walk.current.filed.length)) void put({ ...open, spoken: true });
       walk.current = emptySitting();
       setSitting(emptySitting());
-      setStatus(left.length === 1 ? '1 note from that walk' : `${left.length} notes from that walk`);
+      setStatus(left.length === 1 ? '1 note saved' : `${left.length} notes saved`);
       return;
     }
 
@@ -473,7 +473,7 @@ export function Capture({
 
           {sitting.filed.length > 0 ? (
             <Text style={styles.muted}>
-              {sitting.filed.length} note{sitting.filed.length === 1 ? '' : 's'} saved on this walk
+              {sitting.filed.length} note{sitting.filed.length === 1 ? '' : 's'} saved so far
             </Text>
           ) : null}
           {status ? <Text style={styles.muted}>{status}</Text> : null}
@@ -481,7 +481,7 @@ export function Capture({
 
         <View style={{ padding: 20 }}>
           <Pressable style={[styles.button, { backgroundColor: colour.live }]} onPress={() => void toggleWalk()}>
-            <Text style={[styles.buttonText, { color: '#fff' }]}>Stop the walk</Text>
+            <Text style={[styles.buttonText, { color: '#fff' }]}>Stop the note</Text>
           </Pressable>
         </View>
       </View>

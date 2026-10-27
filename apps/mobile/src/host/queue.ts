@@ -89,11 +89,7 @@ const fromRow = (row: Row): QueuedCapture => ({
   attempts: row.attempts,
 });
 
-export const newClientCaptureId = (): string =>
-  // React Native has had `crypto.randomUUID` since 0.74; the fallback is for
-  // anything older and for the test runner, and it is still unique per user
-  // per device, which is all the database asks of it.
-  crypto?.randomUUID?.() ?? `capture-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+export { newClientCaptureId } from './ids';
 
 export const enqueue = async (capture: QueuedCapture): Promise<void> => {
   const database = await open();

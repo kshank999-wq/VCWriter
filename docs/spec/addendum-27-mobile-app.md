@@ -856,3 +856,29 @@ relaying them. It is not done: the App Store privacy answers say the app
 sends no crash reports, and changing that is Ken's call. Everything is said
 on the screen instead.
 
+## 19. Why Save never worked: a global the phone does not have
+
+Build 7's new Save button said what no build before it could: *Could not save
+on this phone: Property 'crypto' doesn't exist.*
+
+- Every note is given an id on the phone (`newClientCaptureId`), and it was
+  made with `crypto?.randomUUID?.()`.
+- The `?.` was meant to cover a phone without `crypto`. It guards a missing
+  *property*, not a missing *global*, and Hermes, the phone's JavaScript
+  engine, has no `crypto` at all. Naming it threw.
+- So every Save, on every build, failed before the note reached even the
+  phone's own queue. Until build 7 the screen said nothing about it, and
+  nothing was ever sent.
+
+Now:
+- The id comes from `expo-crypto`, which is native and always present.
+- The fallback reads through `globalThis`, so naming it cannot throw.
+- `ids.test.ts` checks the generator with and without the module, and that
+  no file in the app names a bare `crypto` again.
+
+§17's server change (a batch read note by note) and this one were both
+needed. Either alone would still have lost every note.
+
+Also, from Ken: the hands-free button reads **Stop the note**, not *Stop the
+walk*, and the screen says *saved so far* and *notes saved*.
+
