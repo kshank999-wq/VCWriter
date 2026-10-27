@@ -84,7 +84,18 @@ export const mayHear = async (): Promise<boolean> => {
  * device has no local model, so a phone with signal and a phone without behave
  * the same way as far as this app is concerned.
  */
-export const startDictation = (handlers: DictationHandlers): DictationSession => {
+export const startDictation = (
+  handlers: DictationHandlers,
+  /**
+   * **A walk listens a phrase at a time** (addendum 27 §16). In continuous
+   * mode an iPhone confirms nothing until it is stopped, so *command done*
+   * said mid-walk was never acted on. Not continuous, it ends at each pause
+   * with that phrase confirmed, and the restart below picks up again — which
+   * is what makes a spoken command land when it is said. The typed screen
+   * keeps one continuous sitting, where a pause is not an instruction.
+   */
+  options: { continuous?: boolean } = {},
+): DictationSession => {
   let running = true;
   let heardAnything = false;
   let emptyRestarts = 0;
@@ -153,7 +164,7 @@ export const startDictation = (handlers: DictationHandlers): DictationSession =>
       },
       lang: 'en-US',
       interimResults: true,
-      continuous: true,
+      continuous: options.continuous ?? true,
       // On the device where the device has a model: a walk out of signal is
       // exactly when somebody is most likely to be using this.
       requiresOnDeviceRecognition: true,

@@ -40,6 +40,7 @@ import {
   speakBack,
   spokenFormatNames,
   WAKE,
+  COMMAND_WORD,
   type CaptureKey,
   type ProjectFormat,
   type Sitting,
@@ -506,10 +507,9 @@ export default function CaptureApp() {
     // A note that just closed goes to the device at once: a walk that filed
     // everything at the end would lose the lot to a dropped connection or a
     // flat battery, and the queue exists precisely so it does not have to.
-    if (after.filed.length > before.filed.length) {
-      const done = after.filed[after.filed.length - 1];
-      if (done) void fileOne(done).then(refreshQueue);
-    }
+    // Every one this breath closed: two commands said together can close one
+    // note and open the next (addendum 27 §16).
+    for (const done of after.filed.slice(before.filed.length)) void fileOne(done).then(refreshQueue);
 
     if (after.opened) beep('open');
     else if (after.open === null && before.open !== null) beep('close');
@@ -546,8 +546,8 @@ export default function CaptureApp() {
       // Whatever was still open is kept: a notebook that only kept what you
       // remembered to close is one you stop trusting after the first walk.
       const left = everything(walk.current);
-      const openOne = walk.current.open;
-      if (openOne && left.includes(openOne)) void fileOne(openOne).then(refreshQueue);
+      // The note still open, if it has anything in it, is the last of the list.
+      for (const openOne of left.slice(walk.current.filed.length)) void fileOne(openOne).then(refreshQueue);
       walk.current = emptySitting();
       setSitting(emptySitting());
       setStatus(left.length === 1 ? '1 note from that walk' : `${left.length} notes from that walk`);
@@ -766,8 +766,11 @@ export default function CaptureApp() {
               start the next, <strong>{WAKE} project</strong> and its name to move,{' '}
               <strong>{WAKE} new project</strong> and a title to start one.{' '}
               <strong>{WAKE} group</strong> and a word puts what follows under it, and{' '}
-              <strong>{WAKE} no group</strong> comes back out. Every command begins with
-              “{WAKE}”, so those words are still yours inside a note.
+              <strong>{WAKE} no group</strong> comes back out.{' '}
+              <strong>{COMMAND_WORD} next</strong> moves from a note's title to its body,{' '}
+              <strong>{COMMAND_WORD} erase word</strong> takes back the last word and{' '}
+              <strong>{COMMAND_WORD} erase all</strong> empties the note. Every command begins with
+              “{COMMAND_WORD}” or “{WAKE}”, so those words are still yours inside a note.
             </p>
           )}
 

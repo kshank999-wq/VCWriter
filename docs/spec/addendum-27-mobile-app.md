@@ -657,3 +657,65 @@ links is that they are there, that they are built from the one site address
 rather than a typed URL, and that the app typechecks. **The screenshots still
 cannot be made here and must not be faked**, which leaves them and the store
 accounts as the submission's only remaining work that is nobody else's.
+
+## 16. Erasing, and a note's title and body, out loud
+
+From Ken, after his first hands-free walk on the iPhone:
+
+> I tried to erase all because my title was wrong. There needs to be a way to
+> reset. Maybe we can say command erase all… And we can have it on the
+> screen, a little instruction thing. … There's also no way to switch from
+> the title or the character to the actual body… every time you say erase
+> word, it'll erase the next word.
+
+**The command word.** Either *command* or *dictate* begins a command
+(`WAKE_WORDS`). *Dictate* was addendum 09 §10's word and still works;
+*command* is the one Ken reached for, and the one the screens teach.
+
+**The new commands** (`readTurn`, `hear`):
+
+| Say | It does |
+| --- | --- |
+| *command erase word* | takes back the last word |
+| *command erase three words* | takes back three (a number said or written, up to ten) |
+| *command erase all* | empties the open note and starts it again on its title |
+| *command next* | what follows is the note's body |
+| *command title* | what follows is the note's title again |
+
+Each is spoken back (*Erased “tonight”.*, *Now the note.*), because from a
+pocket a command nobody hears is one somebody says again.
+
+**A title, then the body.** A note opened by a kind that takes a name
+(character, setting, dialogue, arc) with nothing said after it starts on its
+**title**: the next words are the name. *Command next* moves to the body.
+- A whole sentence said on the title (more than four words) is the note
+  itself. It goes to the body, and the note moves on with it, so addendum 09
+  §10's *dictate new setting*, then *the kitchen is too small for the table in
+  it* still lands as it always did.
+- The part being spoken into (`OpenNote.on`) is the sitting's business, and
+  is never filed with the note.
+
+**Several commands in one breath.** A recogniser hands back *command erase
+word command erase word* as one string. `splitTurns` cuts it where a command
+begins, and each is heard in turn.
+- The wake word in the middle of a sentence, with no command after it, stays
+  part of the sentence: *I command you to stop* is a line of dialogue.
+- Every note closed in the breath is filed, on the phone and on the website
+  alike.
+
+**The walk listens a phrase at a time.** In continuous mode an iPhone
+confirms nothing until it is stopped, so a command said mid-walk was never
+acted on. The walk now listens without `continuous`: it ends at each pause
+with that phrase confirmed, and restarts. The typed screen keeps one
+continuous sitting.
+
+**Backspace kept writing *erase all*.** The typed box shows the words plus
+the recogniser's current guess, and every key pressed wrote both back as the
+words, with the guess drawn on the end again.
+- Typing now ends the dictation it is typed over, and keeps what is in the
+  box once.
+- A stop always clears the guess, which the walk's stop used to leave behind
+  (the stop fix of build 4).
+
+**On screen.** The hands-free screen says whether the next words go into the
+title or the note, and lists the commands in the words to say them.

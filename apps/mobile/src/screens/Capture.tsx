@@ -13,7 +13,7 @@ import {
   readSpoken,
   sayBack,
   speakBack,
-  WAKE,
+  COMMAND_WORD,
   type CaptureKey,
   type ProjectFormat,
   type Sitting,
@@ -72,6 +72,8 @@ export function Capture({
    * fresh `text`.
    */
   const textRef = useRef('');
+  /** Set when typing took over a dictation: its last words are in the box already. */
+  const typedOver = useRef(false);
   const setText = (next: string | ((current: string) => string)) => {
     textRef.current = typeof next === 'function' ? next(textRef.current) : next;
     setTextState(textRef.current);
@@ -230,10 +232,9 @@ export function Capture({
     // A note that just closed goes to the device **and is sent** at once: a
     // walk that pushed everything at the end would lose the lot to a dropped
     // connection (addendum 09 §13).
-    if (after.filed.length > before.filed.length) {
-      const done = after.filed[after.filed.length - 1];
-      if (done) void put({ ...done, key: done.key, spoken: true });
-    }
+    // Every note this breath closed: two commands said together can close one
+    // and open the next (addendum 27 §16), and each one is filed.
+    for (const done of after.filed.slice(before.filed.length)) void put({ ...done, key: done.key, spoken: true });
 
     if (after.opened) beep('open');
     else if (after.open === null && before.open !== null) beep('close');
@@ -276,8 +277,9 @@ export function Capture({
       // Whatever was still open is kept: a notebook that only kept what you
       // remembered to close is one you stop trusting after the first walk.
       const left = everything(walk.current);
-      const open = walk.current.open;
-      if (open && left.includes(open)) void put({ ...open, spoken: true });
+      // The note still open, if it has anything in it: `everything` hands it
+      // back as the last of the list, past the ones already filed.
+      for (const open of left.slice(walk.current.filed.length)) void put({ ...open, spoken: true });
       walk.current = emptySitting();
       setSitting(emptySitting());
       setStatus(left.length === 1 ? '1 note from that walk' : `${left.length} notes from that walk`);
@@ -288,19 +290,25 @@ export function Capture({
       setStatus('VC Writer Notes needs the microphone and speech to hear you.');
       return;
     }
-    session.current = startDictation({
-      onFinal: heardHandsFree,
-      onInterim: setInterim,
-      onError: (message) => {
-        setStatus(message);
-        setHandsFree(false);
-        setListening(false);
+    session.current = startDictation(
+      {
+        onFinal: (chunk) => {
+          setInterim('');
+          heardHandsFree(chunk);
+        },
+        onInterim: setInterim,
+        onError: (message) => {
+          setStatus(message);
+          setHandsFree(false);
+          setListening(false);
+        },
+        onEnd: () => {
+          setInterim('');
+          setListening(false);
+        },
       },
-      onEnd: () => {
-        setInterim('');
-        setListening(false);
-      },
-    });
+      { continuous: false },
+    );
     setHandsFree(true);
     setListening(true);
     setStatus(null);
@@ -315,8 +323,13 @@ export function Capture({
       setStatus('VC Writer Notes needs the microphone and speech to hear you.');
       return;
     }
+    typedOver.current = false;
     session.current = startDictation({
-      onFinal: heardTyped,
+      onFinal: (chunk) => {
+        setInterim('');
+        if (typedOver.current) return;
+        heardTyped(chunk);
+      },
       onInterim: setInterim,
       onError: (message) => {
         setStatus(message);
@@ -349,6 +362,12 @@ export function Capture({
             {open ? captureKeyName(open.key ?? 'idea', formatNow()) : 'Between notes'}
             {open?.subjectName ? ` · ${open.subjectName}` : ''}
           </Text>
+          {/* Which part the next words go into (addendum 27 §16), said where it is read. */}
+          {open ? (
+            <Text style={[styles.muted, open.on === 'title' ? { color: colour.goldBright } : null]}>
+              {open.on === 'title' ? 'Now: the title' : 'Now: the note'}
+            </Text>
+          ) : null}
 
           {/* The writing, large, because it is the one thing a glance has to
               confirm. */}
@@ -365,11 +384,26 @@ export function Capture({
             </Text>
           ) : null}
 
-          <Text style={styles.muted}>
-            Say “{WAKE} done” to close a note, “{WAKE} group …” to put the next ones together, or a
-            kind — {vocabulary.slice(0, 4).map((one) => one.name.toLowerCase()).join(', ')} — to start
-            one.
-          </Text>
+          {/* The commands, in the words to say (addendum 27 §16, from Ken: *we can have it
+              on the screen, a little instruction thing*). Every one begins
+              with the command word, so those words stay yours inside a note. */}
+          <View style={{ gap: 4, marginTop: 8 }}>
+            <Text style={styles.label}>Say “{COMMAND_WORD}” and then</Text>
+            {[
+              [`${vocabulary.slice(0, 3).map((one) => one.name.toLowerCase()).join(' / ')}…`, 'start a note'],
+              ['next', 'from the title to the note'],
+              ['title', 'back to the title'],
+              ['erase word', 'take back the last word'],
+              ['erase all', 'empty this note and start again'],
+              ['done', 'save it'],
+              ['scratch that', 'throw it away'],
+              ['group …', 'put the next notes together'],
+            ].map(([say, does]) => (
+              <Text key={say} style={styles.muted}>
+                <Text style={{ color: colour.gold }}>{say}</Text> — {does}
+              </Text>
+            ))}
+          </View>
         </ScrollView>
 
         <View style={{ padding: 20 }}>
@@ -457,7 +491,22 @@ export function Capture({
         <TextInput
           style={[styles.input, { minHeight: 180, textAlignVertical: 'top', paddingTop: 12 }]}
           value={interim.length > 0 ? `${text}${text.length > 0 ? ' ' : ''}${interim}` : text}
-          onChangeText={setText}
+          onChangeText={(typed) => {
+            // **Typing ends the dictation it is typed over**, and what is in
+            // the box is what is kept — the guess included — once. The box used
+            // to show the words plus the recogniser's guess, and every key
+            // pressed wrote both back as the words with the guess drawn on the
+            // end again: Ken's backspace that kept writing *erase all*.
+            if (interim.length > 0 || listening) {
+              typedOver.current = true;
+              const was = session.current;
+              session.current = null;
+              setListening(false);
+              setInterim('');
+              void was?.stop();
+            }
+            setText(typed);
+          }}
           placeholder="What just occurred to you?"
           placeholderTextColor={colour.muted}
           multiline

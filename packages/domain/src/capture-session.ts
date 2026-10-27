@@ -69,6 +69,14 @@ export type SpokenTurn =
   | { kind: 'correction'; text: string }
   /** *dictate scratch that* — throw the open note away. */
   | { kind: 'scratch' }
+  /** *command erase all* — empty the open note and start it again (addendum 27 §16). */
+  | { kind: 'eraseAll' }
+  /** *command erase word* — take back the last word, or the last `count`. */
+  | { kind: 'eraseWords'; count: number }
+  /** *command next* — what follows is the note's body rather than its title. */
+  | { kind: 'toBody' }
+  /** *command title* — what follows is the note's title (its name) again. */
+  | { kind: 'toTitle' }
   /**
    * `dictate` followed by something this build does not know.
    *
@@ -83,6 +91,17 @@ export type SpokenTurn =
 
 /** The word every command begins with. Ken's, and the point of the design. */
 export const WAKE = 'dictate';
+
+/**
+ * **Either word starts a command** (addendum 27 §16, from Ken: *we need something like
+ * command next — some word that will be used a lot that will signal where
+ * we're about to give a command*). *Dictate* was the first and still works;
+ * *command* is the word he reached for on the walk, and it says what it is.
+ */
+export const WAKE_WORDS = ['command', WAKE] as const;
+
+/** The word the screens teach. */
+export const COMMAND_WORD = 'command';
 
 /** *dictate done*, and what else plainly means it. */
 const FINISH = ['done', 'save', 'save it', 'that is it', "that's it", 'end note', 'finished'];
@@ -103,6 +122,45 @@ const CORRECTION = ['correction', 'correct that'];
  */
 const GROUP = ['group', 'subgroup', 'subcategory', 'sub category', 'folder', 'topic', 'under'];
 const UNGROUP = ['no group', 'no folder', 'no topic', 'no subcategory', 'ungroup', 'out of that group'];
+/**
+ * Taking words back (addendum 27 §16, from Ken: *there needs to be a way to reset… and we
+ * need something where we can erase word and it'll go back each word*).
+ * Checked before everything else a command might open with, so *erase* is
+ * never read as the start of something else.
+ */
+const ERASE_ALL = [
+  'erase all',
+  'erase it all',
+  'erase everything',
+  'erase the whole thing',
+  'clear all',
+  'clear everything',
+  'delete all',
+  'delete everything',
+  'reset',
+  'start over',
+  'start again',
+];
+const ERASE_WORD = [
+  'erase word',
+  'erase a word',
+  'erase that word',
+  'erase last word',
+  'erase the last word',
+  'delete word',
+  'delete a word',
+  'delete last word',
+  'delete the last word',
+  'backspace',
+  'back space',
+];
+/** *Erase three words*: a count, said or written. */
+const ERASE_COUNT = /^(?:erase|delete)\s+(?:the\s+last\s+)?(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+words?\b/i;
+const COUNTS: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 };
+/** From the title to the body, and back (addendum 27 §16). */
+const TO_BODY = ['next', 'body', 'the body', 'go to the body', 'next part', 'now the note'];
+const TO_TITLE = ['title', 'the title', 'back to the title', 'go to the title', 'heading', 'name'];
+
 /** Fillers a writer says before a category and means nothing by. */
 const FILLER = ['new', 'a new', 'another', 'a'];
 
@@ -171,12 +229,26 @@ export const readTurn = (
   if (text.length === 0) return { kind: 'words', text: '' };
 
   const vocabulary = captureVocabulary(where.format);
-  const after0 = opensWith(text, WAKE);
+  const after0 = WAKE_WORDS.map((word) => opensWith(text, word)).find((rest) => rest !== null) ?? null;
   const after = after0 === null ? null : tidy(after0);
 
   if (after !== null) {
     // `dictate` on its own is a writer who has not finished the sentence.
     if (after.length === 0) return { kind: 'unknown', said: text };
+
+    // Erasing first: *erase all* must not be read as anything else.
+    if (opensWithAny(after, ERASE_ALL) !== null) return { kind: 'eraseAll' };
+    const counted = ERASE_COUNT.exec(after);
+    if (counted) {
+      const said = (counted[1] ?? '1').toLowerCase();
+      return { kind: 'eraseWords', count: Math.max(1, Number(said) || COUNTS[said] || 1) };
+    }
+    if (opensWithAny(after, ERASE_WORD) !== null) return { kind: 'eraseWords', count: 1 };
+    // A whole utterance only: *next* and *title* are ordinary words at the
+    // start of a sentence, so they are commands when they are all that was said.
+    const alone = after.replace(/[.!?]+$/, '').trim().toLowerCase();
+    if (TO_BODY.includes(alone)) return { kind: 'toBody' };
+    if (TO_TITLE.includes(alone)) return { kind: 'toTitle' };
 
     if (opensWithAny(after, FINISH) !== null) return { kind: 'finish' };
     if (opensWithAny(after, SCRATCH) !== null) return { kind: 'scratch' };
@@ -239,7 +311,48 @@ export interface OpenNote {
    * already sorted, and that filing the whole of one group is one press there.
    */
   group: string | null;
+  /**
+   * Which part of the note the next words go into (addendum 27 §16, from Ken: *there's no
+   * way to switch from the title or the character to the actual body*).
+   *
+   * A note opened by naming a person, a place or an arc with nothing after
+   * it starts on its **title** — the name — and *command next* moves to the
+   * body; *command title* goes back. Absent means the body, which is every
+   * note there was before this and every note opened with words after it.
+   */
+  on?: 'title' | 'body';
 }
+
+/**
+ * A note as it is filed: the part being spoken into is the sitting's business,
+ * not the note's.
+ */
+const asFiled = (open: OpenNote): OpenNote => {
+  const { on: _on, ...note } = open;
+  return note;
+};
+
+/**
+ * Whether a breath said on the title is a title (addendum 27 §16). A name is a few words;
+ * a sentence said there is the note itself, so it goes to the body and the
+ * note moves on with it — which is what Ken's first walk did (*dictate new
+ * setting*, then *the kitchen is too small for the table in it*), and what
+ * nobody should have to say *command next* to get.
+ */
+const TITLE_WORDS = 4;
+const isTitle = (words: string): boolean => words.trim().split(/\s+/).filter(Boolean).length <= TITLE_WORDS;
+
+/** The words of a note's title, for a name said over more than one breath. */
+const titleOf = (open: OpenNote): string => (open.subjectName ?? '').trim();
+
+/**
+ * Take the last `count` words off a piece of text, and say which went.
+ */
+const dropWords = (text: string, count: number): { text: string; gone: string } => {
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  const keep = words.slice(0, Math.max(0, words.length - count));
+  return { text: keep.join(' '), gone: words.slice(keep.length).join(' ') };
+};
 
 /**
  * A project being made, before it exists (§11).
@@ -380,6 +493,49 @@ const askAbout = (plan: ProjectPlan): string => {
  * that throws anything away is the one that says so out loud.
  */
 export const hear = (sitting: Sitting, said: string, format: ProjectFormat): Sitting => {
+  const turns = splitTurns(said, format, sitting.open !== null);
+  if (turns.length <= 1) return hearOne(sitting, said, format);
+  // Several commands in one breath (addendum 27 §16, from Ken: *command erase word
+  // command erase word*): each is heard in turn, and what the host is told is
+  // the whole of it — every note filed, and a beep if any opened.
+  let at = sitting;
+  let opened = false;
+  for (const one of turns) {
+    at = hearOne(at, one, format);
+    opened ||= at.opened;
+  }
+  return { ...at, opened };
+};
+
+/**
+ * One breath cut where a command begins (addendum 27 §16). A recogniser that hears
+ * *command erase word command erase word* hands back one string; it is two
+ * commands. A wake word in the middle of a sentence that is **not** followed
+ * by a command it knows stays part of the sentence — *I command you* is a
+ * line of dialogue.
+ */
+export const splitTurns = (said: string, format: ProjectFormat, open: boolean): string[] => {
+  const text = said.trim();
+  const at: number[] = [];
+  const wake = new RegExp(`\\b(?:${WAKE_WORDS.join('|')})\\b`, 'gi');
+  for (const match of text.matchAll(wake)) if ((match.index ?? 0) > 0) at.push(match.index ?? 0);
+  if (at.length === 0) return [text];
+  const pieces: string[] = [];
+  let from = 0;
+  for (const cut of at) {
+    const piece = text.slice(cut);
+    const next = at.find((one) => one > cut) ?? text.length;
+    const candidate = text.slice(cut, next);
+    // A cut only where what follows is a command this build knows.
+    if (readTurn(candidate, { open, format }).kind === 'unknown' && readTurn(piece, { open, format }).kind === 'unknown') continue;
+    pieces.push(text.slice(from, cut).trim());
+    from = cut;
+  }
+  pieces.push(text.slice(from).trim());
+  return pieces.filter((one) => one.replace(/^[\s,.:;—–-]+$/, '').length > 0);
+};
+
+const hearOne = (sitting: Sitting, said: string, format: ProjectFormat): Sitting => {
   const turn = readTurn(said, { open: sitting.open !== null, format });
   const base: Sitting = { ...sitting, opened: false, wants: null, makes: null, undone: sitting.undone };
 
@@ -434,7 +590,7 @@ export const hear = (sitting: Sitting, said: string, format: ProjectFormat): Sit
       return {
         ...base,
         open: null,
-        filed: [...sitting.filed, sitting.open],
+        filed: [...sitting.filed, asFiled(sitting.open)],
         said: `Saved. ${nameOf(sitting.open.key, format)}.`,
         undone: null,
       };
@@ -450,8 +606,12 @@ export const hear = (sitting: Sitting, said: string, format: ProjectFormat): Sit
       // Whatever was open is finished rather than lost (see the header).
       const keep =
         sitting.open && (sitting.open.text.trim().length > 0 || sitting.open.subjectName)
-          ? [...sitting.filed, sitting.open]
+          ? [...sitting.filed, asFiled(sitting.open)]
           : sitting.filed;
+      // A kind that takes a name, said with nothing after it, starts on its
+      // title (addendum 27 §16): the next words are the name, until *command next*.
+      const takesName = captureVocabulary(format).find((one) => one.key === turn.key)?.takesName ?? false;
+      const onTitle = takesName && turn.subjectName === null && turn.text.trim().length === 0;
       const made: OpenNote = {
         key: turn.key,
         subjectName: turn.subjectName,
@@ -459,6 +619,7 @@ export const hear = (sitting: Sitting, said: string, format: ProjectFormat): Sit
         // The sitting's group, because it sticks: that is what saying it once
         // over six notes is for (§12).
         group: sitting.group,
+        ...(onTitle ? { on: 'title' as const } : {}),
       };
       return {
         ...base,
@@ -468,8 +629,50 @@ export const hear = (sitting: Sitting, said: string, format: ProjectFormat): Sit
         undone: null,
         said: turn.subjectName
           ? `${nameOf(turn.key, format)}, ${turn.subjectName}.`
-          : `${nameOf(turn.key, format)}.`,
+          : onTitle
+            ? `${nameOf(turn.key, format)}. Say the name, then “${COMMAND_WORD} next”.`
+            : `${nameOf(turn.key, format)}.`,
       };
+    }
+
+    case 'eraseAll': {
+      if (!sitting.open) return { ...base, said: 'Nothing open to erase.' };
+      const takesName = captureVocabulary(format).find((one) => one.key === sitting.open?.key)?.takesName ?? false;
+      return {
+        ...base,
+        open: { ...sitting.open, subjectName: null, text: '', ...(takesName ? { on: 'title' as const } : { on: 'body' as const }) },
+        // What was there, so one press on the screen puts it back.
+        undone: sitting.open.text,
+        said: takesName ? 'Erased. Say the name again.' : 'Erased. Start again.',
+      };
+    }
+
+    case 'eraseWords': {
+      const open = sitting.open;
+      if (!open) return { ...base, said: 'Nothing open to erase.' };
+      // From the part being spoken into; once that is empty, from the other.
+      const fromTitle = (open.on === 'title' && titleOf(open).length > 0) || (open.text.trim().length === 0 && titleOf(open).length > 0);
+      if (fromTitle) {
+        const after = dropWords(titleOf(open), turn.count);
+        return {
+          ...base,
+          open: { ...open, subjectName: after.text.length > 0 ? after.text : null },
+          said: `Erased “${after.gone}”.`,
+        };
+      }
+      if (open.text.trim().length === 0) return { ...base, said: 'Nothing left to erase.' };
+      const after = dropWords(open.text, turn.count);
+      return { ...base, open: { ...open, text: after.text }, said: `Erased “${after.gone}”.` };
+    }
+
+    case 'toBody': {
+      if (!sitting.open) return { ...base, said: 'Nothing open. Say a kind of note to start one.' };
+      return { ...base, open: { ...sitting.open, on: 'body' }, said: 'Now the note.' };
+    }
+
+    case 'toTitle': {
+      if (!sitting.open) return { ...base, said: 'Nothing open. Say a kind of note to start one.' };
+      return { ...base, open: { ...sitting.open, on: 'title' }, said: 'Now the title.' };
     }
 
     case 'project':
@@ -520,7 +723,7 @@ export const hear = (sitting: Sitting, said: string, format: ProjectFormat): Sit
       // lose the thought that led to it.
       const keep =
         sitting.open && (sitting.open.text.trim().length > 0 || sitting.open.subjectName)
-          ? [...sitting.filed, sitting.open]
+          ? [...sitting.filed, asFiled(sitting.open)]
           : sitting.filed;
       // The kind may come in the same breath — *new project The Lamp, a novel*.
       const split = turn.name.search(/[,—–]|\s-\s/);
@@ -573,9 +776,18 @@ export const hear = (sitting: Sitting, said: string, format: ProjectFormat): Sit
       // a writer who just starts talking is still writing a note.
       const into: OpenNote =
         sitting.open ?? { key: null, subjectName: null, text: '', group: sitting.group };
+      // On the title, words are the name (addendum 27 §16), without the full stop a
+      // recogniser puts at the end of every breath.
+      if (into.on === 'title' && isTitle(turn.text)) {
+        const name = join(titleOf(into), turn.text.replace(/[.!?]+$/, '').trim());
+        return { ...base, open: { ...into, subjectName: name.length > 0 ? name : null }, said: turn.text };
+      }
+      // A sentence said on the title is the note itself: it goes to the body,
+      // and the note moves on with it.
+      const moved: OpenNote = into.on === 'title' ? { ...into, on: 'body' } : into;
       return {
         ...base,
-        open: { ...into, text: join(into.text, turn.text) },
+        open: { ...moved, text: join(moved.text, turn.text) },
         opened: sitting.open === null,
         said: turn.text,
       };
@@ -593,7 +805,7 @@ export const hear = (sitting: Sitting, said: string, format: ProjectFormat): Sit
  */
 export const everything = (sitting: Sitting): OpenNote[] =>
   sitting.open && (sitting.open.text.trim().length > 0 || sitting.open.subjectName)
-    ? [...sitting.filed, sitting.open]
+    ? [...sitting.filed, asFiled(sitting.open)]
     : sitting.filed;
 
 /**
@@ -667,6 +879,9 @@ export const speakBack = (before: Sitting, after: Sitting): string | null => {
    */
   if (after.making || before.making) return after.said;
   if (after.said.startsWith('Didn’t catch')) return after.said;
+  // Erasing and moving between title and body are heard (addendum 27 §16): from a pocket,
+  // a command nobody hears is one somebody says again.
+  if (/^(Erased|Nothing (open|left) to erase|Now the (note|title)|Nothing open\. Say)/.test(after.said)) return after.said;
   return null;
 };
 
