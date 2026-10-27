@@ -341,7 +341,7 @@ export function Capture({
    * nothing yet rather than a press that does nothing.
    */
   /**
-   * **Cancel the note in hand** (addendum 27 §27, from Ken: *we need a way to
+   * **Reset the note in hand** (addendum 27 §27, from Ken: *we need a way to
    * cancel the note… if you start writing a note and you have to go all the
    * way back out to the project screen and go back in*). Dictation stops
    * without keeping what it was hearing, and the title and note are emptied;
@@ -368,9 +368,9 @@ export function Capture({
       clear();
       return;
     }
-    Alert.alert('Cancel this note?', 'The title and the note are cleared and nothing is saved.', [
+    Alert.alert('Reset this note?', 'The title and the note are cleared and nothing is saved.', [
       { text: 'Keep writing', style: 'cancel' },
-      { text: 'Cancel the note', style: 'destructive', onPress: clear },
+      { text: 'Reset', style: 'destructive', onPress: clear },
     ]);
   };
 
@@ -721,11 +721,11 @@ export function Capture({
             <Pressable
               onPress={cancelNote}
               accessibilityRole="button"
-              accessibilityLabel="Cancel this note"
+              accessibilityLabel="Reset this note"
               hitSlop={8}
               style={[styles.button, styles.secondary, { paddingVertical: 6, paddingHorizontal: 12 }]}
             >
-              <Text style={[styles.buttonText, styles.secondaryText, { fontSize: 13 }]}>✕ Cancel</Text>
+              <Text style={[styles.buttonText, styles.secondaryText, { fontSize: 13 }]}>↺ Reset</Text>
             </Pressable>
           </View>
           <TextInput

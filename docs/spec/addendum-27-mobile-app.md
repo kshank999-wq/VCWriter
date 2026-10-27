@@ -1074,15 +1074,16 @@ other.*
   project's title and story names. `dictation-boxes.test.ts` holds every box
   to a seed.
 
-## 27. Cancelling a note
+## 27. Resetting a note
 
 From Ken: *we need a way to cancel the note. Maybe a little button on top.
 Because if you start writing a note and you have to go all the way back out to
 the project screen and go back in.*
 
-**✕ Cancel** sits at the top of the note, beside its heading. It stops a
+**↺ Reset** (Ken: *it can be like a reset button*) sits at the top of the note,
+beside its heading. It stops a
 dictation without keeping what it was hearing (`typedOver`, so the last words
 are not committed), empties the title and the note, and points Dictate back at
 the note; the kind and the story stay, as they do after a save. With anything
-written it asks first (*Keep writing* / *Cancel the note*); with nothing, it
-just clears.
+written it asks first (*Keep writing* / *Reset*); with nothing, it just
+clears.
