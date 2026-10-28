@@ -423,7 +423,23 @@ export function Capture({
   const append = (chunk: string) => {
     const words = chunk.trim();
     if (words.length === 0) return;
-    setText((current) => `${current}${current.length > 0 && !current.endsWith(' ') ? ' ' : ''}${words}`);
+    // After a space or a new line (§32) the words follow straight on.
+    setText((current) => `${current}${current.length > 0 && !/\s$/.test(current) ? ' ' : ''}${words}`);
+  };
+
+  /**
+   * **Enter** (addendum 27 §32, from Ken: *a little enter button… so you can
+   * organize your notes a little bit better and just tap enter so you can
+   * continue the note and make sections within the note*). A new line at the
+   * end of the note, where the next words — dictated or typed — begin. On the
+   * title, Enter moves on to the note, as Return does in a form.
+   */
+  const newLine = () => {
+    if (intoRef.current === 'title') {
+      aim('body');
+      return;
+    }
+    setText((current) => (current.trim().length === 0 ? current : `${current.replace(/[ \t]+$/, '')}\n`));
   };
 
   // ------------------------------------------------------ one turn of a walk
@@ -613,7 +629,7 @@ export function Capture({
     [titleKey],
   );
   const bodySeed = useMemo(
-    () => (into === 'body' && interim.length > 0 ? `${textRef.current}${textRef.current.length > 0 ? ' ' : ''}${interim}` : textRef.current),
+    () => (into === 'body' && interim.length > 0 ? `${textRef.current}${textRef.current.length > 0 && !/\s$/.test(textRef.current) ? ' ' : ''}${interim}` : textRef.current),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [bodyKey],
   );
@@ -759,7 +775,8 @@ export function Capture({
             key={bodyKey}
             style={[
               styles.input,
-              { flex: 1, textAlignVertical: 'top', paddingTop: 12 },
+              // Room under the words for the Enter button in the corner (§32).
+              { flex: 1, textAlignVertical: 'top', paddingTop: 12, paddingBottom: 44 },
               into === 'body' ? { borderColor: listening ? colour.live : colour.goldDeep } : null,
             ]}
             defaultValue={bodySeed}
@@ -776,6 +793,16 @@ export function Capture({
             multiline
             scrollEnabled
           />
+          {/* Enter, in the note box's bottom corner (§32). */}
+          <Pressable
+            onPress={newLine}
+            accessibilityRole="button"
+            accessibilityLabel="Enter: start a new line in the note"
+            hitSlop={8}
+            style={[styles.button, styles.secondary, { position: 'absolute', right: 24, bottom: undone ? 76 : 24, paddingVertical: 6, paddingHorizontal: 12 }]}
+          >
+            <Text style={[styles.buttonText, styles.secondaryText, { fontSize: 13 }]}>↵ Enter</Text>
+          </Pressable>
         {undone ? (
           <Pressable
             style={[styles.button, styles.secondary]}

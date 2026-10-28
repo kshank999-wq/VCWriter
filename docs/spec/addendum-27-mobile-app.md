@@ -1162,3 +1162,16 @@ a GitHub `macos-latest` runner with `eas build --local`, the newest Xcode on
 the runner, the signing EAS keeps and the next build number from EAS, then
 uploads the `.ipa` with `eas submit --path`; `expo` builds on Expo's servers
 as before. A Mac runner's minutes are charged at a higher rate than Linux's.
+
+## 32. Enter
+
+From Ken: *when using dictate mode, we need a little enter button… on the
+bottom corner of the screen with the text. So you can organize your notes a
+little bit better and just tap enter so you can continue the note and make
+sections within the note.*
+
+**↵ Enter** sits in the bottom-right corner of the note box. It ends the note's
+last line, so the next words — dictated or typed — start a new one; dictation
+in progress carries straight on after it. A new line is not added to an empty
+note, and on the title Enter moves to the note, as Return does in a form. The
+words that follow a new line or a space are joined without an extra space.
