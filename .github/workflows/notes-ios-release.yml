@@ -38,6 +38,9 @@ jobs:
     # needs nothing but Linux (addendum 27 §31).
     runs-on: ${{ inputs.where == 'github' && inputs.build_id == '' && 'macos-latest' || 'ubuntu-latest' }}
     environment: release
+    # A build takes 15–25 minutes. A Mac runner once sat two hours on a
+    # download crawling at 4 KB/s; this stops that from running up the bill.
+    timeout-minutes: 75
     defaults:
       run:
         working-directory: apps/mobile
