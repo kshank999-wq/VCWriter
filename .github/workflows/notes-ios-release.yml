@@ -22,11 +22,21 @@ on:
         description: Send this existing EAS build instead of making a new one (its id, from expo.dev or a previous run)
         type: string
         default: ''
+      where:
+        description: >-
+          Where the app is built. github = on a GitHub Mac runner (eas build --local,
+          paid from the GitHub Actions budget, no Expo build allowance used);
+          expo = on Expo's servers (uses the Expo plan's monthly iOS builds).
+        type: choice
+        options: [github, expo]
+        default: github
 
 jobs:
   ios:
     name: Build and upload
-    runs-on: ubuntu-latest
+    # A local build needs Xcode, so it runs on a Mac; on Expo's servers it
+    # needs nothing but Linux (addendum 27 §31).
+    runs-on: ${{ inputs.where == 'github' && inputs.build_id == '' && 'macos-latest' || 'ubuntu-latest' }}
     environment: release
     defaults:
       run:
@@ -105,9 +115,25 @@ jobs:
             | script -qec "eas credentials:configure-build --platform ios --profile production" /dev/null \
             | grep -v '^\s*$' || [ "${PIPESTATUS[1]}" = 0 ]
 
+      # **On GitHub's Mac** (addendum 27 §31): Expo's free plan ran out of iOS
+      # builds for the month, and Ken pays for GitHub Actions. `--local` builds
+      # here with the same signing EAS keeps, and still takes the next build
+      # number from EAS, so the numbering carries on unbroken.
+      - name: Build on this Mac
+        id: local
+        if: inputs.build_id == '' && inputs.where == 'github'
+        run: |
+          # The newest Xcode on the runner, which is what Expo's own servers use.
+          newest="$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)"
+          sudo xcode-select -s "$newest"
+          xcodebuild -version
+          eas build --platform ios --profile production --local --non-interactive --output "$RUNNER_TEMP/VCWriterNotes.ipa"
+          ls -l "$RUNNER_TEMP/VCWriterNotes.ipa"
+          echo "path=$RUNNER_TEMP/VCWriterNotes.ipa" >> "$GITHUB_OUTPUT"
+
       - name: Build
         id: build
-        if: inputs.build_id == ''
+        if: inputs.build_id == '' && inputs.where == 'expo'
         run: |
           set +e
           eas build --platform ios --profile production --non-interactive --json > build.json
@@ -147,5 +173,9 @@ jobs:
             eas.json > eas.submit.json && mv eas.submit.json eas.json
           # Verbose, so a refusal prints Apple's own words rather than
           # "Unknown error. See logs" with the logs left on expo.dev.
-          eas submit --platform ios --profile production --id "${{ inputs.build_id || steps.build.outputs.id }}" --non-interactive --wait --verbose
+          if [ -n "${{ steps.local.outputs.path }}" ]; then
+            eas submit --platform ios --profile production --path "${{ steps.local.outputs.path }}" --non-interactive --wait --verbose
+          else
+            eas submit --platform ios --profile production --id "${{ inputs.build_id || steps.build.outputs.id }}" --non-interactive --wait --verbose
+          fi
           echo "Uploaded. It appears in App Store Connect → TestFlight once Apple has processed it, usually 10–30 minutes."

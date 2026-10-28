@@ -1152,3 +1152,13 @@ this note? And it'll add, continue on where you were at.*
 - **Save** writes the note (`PATCH /api/notes/:id`); leaving with words unsaved
   asks *Save* or *Discard*. A note the desk has filed is read back and not
   added to — it is changed there (§7, `mayStillEdit`).
+
+## 31. Building on GitHub's Mac when Expo's builds run out
+
+Build 17 stopped at Expo: *This account has used its iOS builds from the Free
+plan this month*, until November 1. Ken pays for GitHub Actions, so the iOS
+release workflow takes a **where** input: `github` (the default now) builds on
+a GitHub `macos-latest` runner with `eas build --local`, the newest Xcode on
+the runner, the signing EAS keeps and the next build number from EAS, then
+uploads the `.ipa` with `eas submit --path`; `expo` builds on Expo's servers
+as before. A Mac runner's minutes are charged at a higher rate than Linux's.
