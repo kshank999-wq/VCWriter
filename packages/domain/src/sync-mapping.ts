@@ -1235,6 +1235,8 @@ export const captureFromRow = (row: Row): CaptureItem =>
     subjectName: nullableText(row['subject_name']),
     subcategory: nullableText(row['subcategory']),
     storyMarkerId: nullableText(row['story_marker_id']),
+    filedInto: nullableText(row['filed_into']),
+    clearedFromPhoneAt: nullableText(row['cleared_from_phone_at']),
     status: row['status'],
     reviewedAt: nullableText(row['reviewed_at']),
     resultRef:
@@ -1252,6 +1254,8 @@ export const captureReviewToRow = (capture: CaptureItem): Row => ({
   reviewed_at: capture.reviewedAt,
   result_type: capture.resultRef?.type ?? null,
   result_id: capture.resultRef?.id ?? null,
+  // The archive folder's project (addendum 27 §29).
+  filed_into: capture.filedInto,
 });
 
 const sculptorNodeFromRow = (row: Row): SculptorNode =>

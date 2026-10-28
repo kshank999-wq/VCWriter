@@ -112,3 +112,34 @@ export const transferNotes = (file: ProjectFile, notes: readonly CaptureItem[]):
 export const ARCHIVED_STATUSES: ReadonlyArray<CaptureStatus> = ['approved', 'rejected'];
 
 export const isArchived = (note: CaptureItem): boolean => ARCHIVED_STATUSES.includes(note.status);
+
+/** One folder of the archive: a day's filing into one project (§29). */
+export interface ArchiveFolder {
+  key: string;
+  /** The day it was filed, `YYYY-MM-DD`, or null where it never was. */
+  day: string | null;
+  /** The project it went into, or what stands for one. */
+  title: string;
+  notes: CaptureItem[];
+}
+
+/**
+ * **The archive in folders** (addendum 27 §29, from Ken: *put it in a single
+ * folder… by date and by title of that project… and then you can delete it by
+ * the folder*). One folder per day and project, newest first; a note set
+ * aside rather than filed has no project, and one filed before projects were
+ * recorded is *Earlier*.
+ */
+export const archiveFolders = (notes: readonly CaptureItem[]): ArchiveFolder[] => {
+  const folders = new Map<string, ArchiveFolder>();
+  for (const note of notes) {
+    if (!isArchived(note)) continue;
+    const day = note.reviewedAt ? note.reviewedAt.slice(0, 10) : null;
+    const title = note.status === 'rejected' ? 'Set aside' : (note.filedInto?.trim() || 'Earlier');
+    const key = `${day ?? ''}|${title}`;
+    const folder = folders.get(key) ?? { key, day, title, notes: [] };
+    folder.notes.push(note);
+    folders.set(key, folder);
+  }
+  return [...folders.values()].sort((a, b) => (b.day ?? '').localeCompare(a.day ?? '') || a.title.localeCompare(b.title));
+};

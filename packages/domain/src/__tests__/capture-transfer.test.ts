@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createProjectFile } from '../project-file.js';
 import { captureItemSchema, type CaptureItem } from '../entities/capture.js';
-import { FROM_THE_PHONE, isArchived, phoneNoteGroups, transferNotes } from '../capture-transfer.js';
+import { FROM_THE_PHONE, archiveFolders, isArchived, phoneNoteGroups, transferNotes } from '../capture-transfer.js';
 import { researchCategoriesInOrder } from '../selectors.js';
 import { newId, type CaptureItemId, type UserId } from '../ids.js';
 
@@ -70,5 +70,27 @@ describe('transferring a group', () => {
     const done = transferNotes(file, [note({ category: 'idea', status: 'approved' })]);
     expect(done.filed).toHaveLength(0);
     expect(done.file).toBe(file);
+  });
+});
+
+describe('the archive in folders (addendum 27 §29)', () => {
+  it('files a transfer under the project it went into, and folders the archive by day and project', () => {
+    const file = createProjectFile({ title: 'Blackout', format: 'screenplay' });
+    const done = transferNotes(file, [note({ category: 'idea' }), note({ category: 'idea' })]);
+    expect(done.filed.every((one) => one.filedInto === 'Blackout')).toBe(true);
+
+    const folders = archiveFolders([
+      ...done.filed.map((one) => ({ ...one, reviewedAt: '2026-10-28T09:00:00.000Z' })),
+      note({ status: 'approved', reviewedAt: '2026-10-27T09:00:00.000Z', filedInto: 'Harbour' }),
+      note({ status: 'rejected', reviewedAt: '2026-10-28T10:00:00.000Z' }),
+      note({ status: 'approved', reviewedAt: '2026-10-26T09:00:00.000Z' }),
+      note({ status: 'pending' }),
+    ]);
+    expect(folders.map((one) => [one.day, one.title, one.notes.length])).toEqual([
+      ['2026-10-28', 'Blackout', 2],
+      ['2026-10-28', 'Set aside', 1],
+      ['2026-10-27', 'Harbour', 1],
+      ['2026-10-26', 'Earlier', 1],
+    ]);
   });
 });

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
+  archiveFolders,
   captureKeyName,
   captureTitle,
   phoneNoteGroups,
@@ -28,6 +29,10 @@ import {
  * No bridge means no phone — the tests and a build without the cloud — which
  * is an empty list rather than an error, `usePhoneNotes`' rule.
  */
+
+/** A folder's day as a writer reads it. */
+const dayName = (day: string | null): string =>
+  day ? new Date(`${day}T12:00:00`).toLocaleDateString([], { dateStyle: 'medium' }) : 'Undated';
 
 const when = (iso: string | null): string => (iso ? new Date(iso).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : '');
 
@@ -158,6 +163,7 @@ export function NoteArchive({ file, refresh = 0 }: { file: ProjectFile; refresh?
   const [notes, setNotes] = useState<CaptureItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [open, setOpen] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (typeof window.vcwriter?.listArchivedNotes !== 'function') return;
@@ -187,13 +193,14 @@ export function NoteArchive({ file, refresh = 0 }: { file: ProjectFile; refresh?
   };
 
   const format = file.project.format as ProjectFormat;
+  const folders = archiveFolders(notes);
 
   return (
     <div className="mobile-inbox note-archive">
       <header className="mobile-inbox-head">
         <p className="muted small">
-          Notes from the phone that have been filed or set aside. Their words are in the project already; deleting
-          one here removes the phone&rsquo;s copy from your account.
+          Notes from the phone that have been transferred, in a folder for each day and project. Their words are
+          in the project already; this is the backup. Deleting a folder or a note removes it from your account.
         </p>
         <button type="button" className="ghost small" onClick={() => void load()} disabled={loading}>
           {loading ? 'Looking…' : 'Refresh'}
@@ -214,30 +221,64 @@ export function NoteArchive({ file, refresh = 0 }: { file: ProjectFile; refresh?
         ) : null}
       </header>
       {error ? <p className="muted small mobile-inbox-error">{error}</p> : null}
-      {notes.length === 0 ? (
+      {folders.length === 0 ? (
         <p className="muted empty-state">{loading ? 'Looking…' : 'The archive is empty.'}</p>
       ) : (
-        <ul className="mobile-list">
-          {notes.map((note) => (
-            <li key={note.id as string} className="mobile-note">
-              <div className="mobile-note-head">
-                <strong className="mobile-subject">
-                  {captureKeyName(note.category ?? 'idea', format)}
-                  {note.subjectName ? ` · ${note.subjectName}` : ''}
-                </strong>
-                <span className="muted small">
-                  {note.status === 'approved' ? 'Filed' : 'Set aside'} {when(note.reviewedAt)}
-                </span>
+        // **A folder per day and project** (addendum 27 §29, from Ken: *put it
+        // in a single folder… by date and by title of that project… and then
+        // you can delete it by the folder*). Closed until opened, so the
+        // archive reads as a shelf rather than a list.
+        <ul className="phone-group-list archive-folders">
+          {folders.map((folder) => (
+            <li key={folder.key} className="phone-group">
+              <div className="phone-group-head">
                 <button
                   type="button"
-                  className="ghost small"
-                  aria-label="Delete this archived note"
-                  onClick={() => void remove([note.id as string], 'Delete this archived note? What it became in your project stays.')}
+                  className="ghost phone-group-name"
+                  onClick={() => setOpen(open === folder.key ? null : folder.key)}
+                  aria-expanded={open === folder.key}
                 >
-                  Delete
+                  {open === folder.key ? '▾' : '▸'} 📁 <strong>{dayName(folder.day)} — {folder.title}</strong>
+                  <span className="count muted">{folder.notes.length}</span>
+                </button>
+                <button
+                  type="button"
+                  className="ghost small danger-text"
+                  aria-label={`Delete the folder ${dayName(folder.day)} — ${folder.title}`}
+                  onClick={() =>
+                    void remove(
+                      folder.notes.map((one) => one.id as string),
+                      `Delete the folder “${dayName(folder.day)} — ${folder.title}” and its ${folder.notes.length} note${folder.notes.length === 1 ? '' : 's'}? What they became in your project stays.`,
+                    )
+                  }
+                >
+                  Delete folder
                 </button>
               </div>
-              <p className="mobile-text">{note.rawText || captureTitle(note)}</p>
+              {open === folder.key ? (
+                <ul className="mobile-list">
+                  {folder.notes.map((note) => (
+                    <li key={note.id as string} className="mobile-note">
+                      <div className="mobile-note-head">
+                        <strong className="mobile-subject">
+                          {captureKeyName(note.category ?? 'idea', format)}
+                          {note.subjectName ? ` · ${note.subjectName}` : ''}
+                        </strong>
+                        <span className="muted small">{when(note.capturedAt)}</span>
+                        <button
+                          type="button"
+                          className="ghost small"
+                          aria-label="Delete this archived note"
+                          onClick={() => void remove([note.id as string], 'Delete this archived note? What it became in your project stays.')}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                      <p className="mobile-text">{note.rawText || captureTitle(note)}</p>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </li>
           ))}
         </ul>

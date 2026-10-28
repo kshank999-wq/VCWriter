@@ -7,7 +7,7 @@ import {
   type CaptureItem,
   type ProjectFormat,
 } from '@vcwriter/domain';
-import { correctNote, deleteNotes, forgetNote, listNotes } from '../host/api';
+import { clearNotes, correctNote, forgetNote, listNotes } from '../host/api';
 import { pendingCaptures, flush } from '../host/queue';
 import { colour, styles } from '../theme';
 
@@ -91,20 +91,27 @@ export function Review({
    * there, so the writer can see they arrived and clear them off the phone.
    */
   const transferred = notes.filter((note) => note.status === 'approved');
+  /**
+   * **Clear them off the phone** (§29, from Ken: *it should clear all
+   * transferred notes. And since they'll be in the archive, there's a
+   * backup*): the account keeps them, in the desk's archive; the phone stops
+   * listing them.
+   */
   const clearTransferred = () => {
     const ids = transferred.map((note) => note.id as string);
     Alert.alert(
-      `Delete ${ids.length} transferred note${ids.length === 1 ? '' : 's'}?`,
-      'They are filed in VC Writer on your desktop. This takes the phone’s copies off this phone and your account; what they became in your project stays.',
+      `Clear ${ids.length} transferred note${ids.length === 1 ? '' : 's'}?`,
+      'They come off this phone. They stay in the Archive in VC Writer on your desktop, as a backup.',
       [
         { text: 'Keep them', style: 'cancel' },
         {
-          text: 'Delete',
+          text: 'Clear',
           style: 'destructive',
           onPress: () => {
             void (async () => {
-              const said = await deleteNotes(ids);
+              const said = await clearNotes(ids);
               if (!said.ok) setError(said.error);
+              else if (said.data.cleared === 0) setError('Nothing was cleared. Pull to refresh and try again.');
               await load();
             })();
           },
@@ -158,7 +165,7 @@ export function Review({
               ✓ {transferred.length} note{transferred.length === 1 ? ' has' : 's have'} been transferred to VC Writer on your desktop.
             </Text>
             <Pressable style={[styles.button, styles.secondary]} onPress={clearTransferred} accessibilityRole="button">
-              <Text style={[styles.buttonText, styles.secondaryText]}>Delete transferred notes</Text>
+              <Text style={[styles.buttonText, styles.secondaryText]}>Clear transferred notes</Text>
             </Pressable>
           </View>
         ) : null}

@@ -56,18 +56,27 @@ describe('On the phone', () => {
 });
 
 describe('the archive', () => {
-  it('lists what was filed and deletes a note after asking', async () => {
-    const filed = note('Filed already.', { status: 'approved', reviewedAt: '2026-10-27T11:00:00.000Z' });
-    const deleteCaptures = vi.fn(async () => ({ ok: true, data: 1 }));
+  it('folders the archive by day and project, opens a folder, and deletes a note or the folder after asking', async () => {
+    const filed = note('Filed already.', { status: 'approved', reviewedAt: '2026-10-27T11:00:00.000Z', filedInto: 'Blackout' });
+    const also = note('Filed too.', { status: 'approved', reviewedAt: '2026-10-27T12:00:00.000Z', filedInto: 'Blackout' });
+    const deleteCaptures = vi.fn(async (ids: string[]) => ({ ok: true, data: ids.length }));
     (window as unknown as { vcwriter: unknown }).vcwriter = {
-      listArchivedNotes: vi.fn(async () => ({ ok: true, data: [filed] })),
+      listArchivedNotes: vi.fn(async () => ({ ok: true, data: [filed, also] })),
       deleteCaptures,
     };
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     render(<NoteArchive file={createProjectFile({ title: 'Blackout', format: 'screenplay' })} />);
-    expect(await screen.findByText('Filed already.')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Delete this archived note' }));
+
+    const folder = await screen.findByRole('button', { expanded: false });
+    expect(folder.textContent).toMatch(/— Blackout/);
+    expect(screen.queryByText('Filed already.')).toBeNull();
+    fireEvent.click(folder);
+    expect(screen.getByText('Filed already.')).toBeTruthy();
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Delete this archived note' })[0]!);
     await waitFor(() => expect(deleteCaptures).toHaveBeenCalledWith([filed.id]));
-    await waitFor(() => expect(screen.queryByText('Filed already.')).toBeNull());
+    fireEvent.click(screen.getByRole('button', { name: /^Delete the folder/ }));
+    await waitFor(() => expect(deleteCaptures).toHaveBeenLastCalledWith([also.id]));
+    await waitFor(() => expect(screen.getByText('The archive is empty.')).toBeTruthy());
   });
 });

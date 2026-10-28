@@ -1106,3 +1106,29 @@ those things up or make them smaller.*
 - **The kinds come first in the controls, smaller and unlabelled**: *This is
   a* is gone, the buttons are smaller, and they sit at the top of the controls
   where a turned phone shows them.
+
+## 29. The archive in folders, and clearing the phone
+
+From Ken, on build 15: *when you transfer the notes off the phone and it goes
+into the archive, put it in a single folder… by date and by title of that
+project… and then you can delete it by the folder if you need to. In the notes
+app, I attempted to delete the ones that were transferred. And nothing
+happened. It should clear all transferred notes. And since they'll be in the
+archive, there's a backup.*
+
+- **Why nothing happened.** The phone's delete went to a rule the database had
+  not been given yet (migration 0072 was written but not applied), and a
+  refused delete under row-level security matches no rows rather than
+  failing. 0072 is applied now, as an `alter policy` rather than a drop.
+- **Clearing, not deleting.** *Clear transferred notes* on the phone stamps
+  `cleared_from_phone_at` (`POST /api/notes/cleared`, written with the service
+  key for the caller's own filed notes, since 0042 keeps filed notes from being
+  changed) and the phone's list leaves those out. The notes stay on the
+  account, in the desk's archive: that is the backup.
+- **The archive in folders.** A note filed at the desk records the project it
+  went into (`filed_into`, set by `approveCapture`); `archiveFolders` groups
+  the archive by the day it was filed and that project — *Oct 28, 2026 —
+  Blackout* — with *Set aside* for discarded notes and *Earlier* for notes
+  filed before the project was recorded. A folder opens to its notes, and
+  **Delete folder** deletes the lot after asking; a note can still be deleted
+  on its own.

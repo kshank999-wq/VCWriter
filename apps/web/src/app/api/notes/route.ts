@@ -85,6 +85,8 @@ export async function GET(request: Request): Promise<Response> {
   let query = serverClient()
     .from('capture_items')
     .select('*')
+    // Cleared off the phone, kept in the desk's archive (addendum 27 §29).
+    .is('cleared_from_phone_at', null)
     .order('captured_at', { ascending: false })
     .limit(500);
   // No project means the ones caught before a project was chosen, which is a

@@ -158,6 +158,13 @@ export const deleteNotes = async (ids: string[]): Promise<Answer<{ deleted: numb
   ask('/api/notes/inbox', { method: 'DELETE', body: JSON.stringify({ ids }) });
 
 /**
+ * Clear transferred notes off this phone (addendum 27 §29): they stay on the
+ * account, in the desk's archive, which is the backup.
+ */
+export const clearNotes = async (ids: string[]): Promise<Answer<{ cleared: number }>> =>
+  ask('/api/notes/cleared', { method: 'POST', body: JSON.stringify({ ids }) });
+
+/**
  * Delete the account this phone is signed into (addendum 27 §12).
  *
  * **In the app rather than at a link to the website**, which is what the App

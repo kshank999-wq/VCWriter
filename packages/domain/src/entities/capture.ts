@@ -157,6 +157,18 @@ export const captureItemSchema = z.object({
    * writer chose none.
    */
   storyMarkerId: id<StoryMarkerId>().nullable().default(null),
+  /**
+   * The title of the project the desk filed it into (addendum 27 §29): with
+   * the day it was filed, it names the archive folder it sits in. Text, for the
+   * writer to read, because the desk's project may be a file the server has
+   * never seen.
+   */
+  filedInto: z.string().nullable().default(null),
+  /**
+   * When the phone was told to stop showing it (§29). **Clearing is not
+   * deleting**: it stays on the account, in the desk's archive.
+   */
+  clearedFromPhoneAt: isoDateTime().nullable().default(null),
   status: captureStatusSchema.default('pending'),
   reviewedAt: isoDateTime().nullable().default(null),
   /** What the approved capture became, once the writer confirmed it. */

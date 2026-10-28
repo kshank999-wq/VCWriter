@@ -594,7 +594,8 @@ export const approveCapture = (
 
   return {
     file: next,
-    capture: { ...capture, status: 'approved', reviewedAt, resultRef },
+    // Which project it went into names its archive folder (addendum 27 §29).
+    capture: { ...capture, status: 'approved', reviewedAt, resultRef, filedInto: file.project.title },
     resultRef,
   };
 };
