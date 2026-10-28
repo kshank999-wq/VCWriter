@@ -1132,3 +1132,23 @@ archive, there's a backup.*
   filed before the project was recorded. A folder opens to its notes, and
   **Delete folder** deletes the lot after asking; a note can still be deleted
   on its own.
+
+## 30. A note full screen: read it back, then add on
+
+From Ken, on build 16: *in the review section, you can select a note and it
+brings it up full screen. And you can then add to the note or read it back. Or
+actually read it back, and then it'll ask you, would you like to add on to
+this note? And it'll add, continue on where you were at.*
+
+- **Review opens a note full screen** (`NoteView`): its title as a heading, its
+  words large, and *Open ›* under each note in the list.
+- **🔊 Read it back** reads the note (`sayBack`), then — on a note still
+  waiting — asks *Would you like to add on to this note?* and listens.
+  `addOnAnswer` hears yes (*yes*, *sure*, *keep going*…) and no (*no*, *that's
+  it*, *done*…); yes goes on listening, and what follows is added to the end;
+  no stops; anything else is taken as the writer already adding, and is
+  added. *■ Stop* ends either.
+- **🎙 Add to it** skips the question and listens straight away.
+- **Save** writes the note (`PATCH /api/notes/:id`); leaving with words unsaved
+  asks *Save* or *Discard*. A note the desk has filed is read back and not
+  added to — it is changed there (§7, `mayStillEdit`).

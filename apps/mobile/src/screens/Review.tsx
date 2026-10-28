@@ -10,6 +10,7 @@ import {
 import { clearNotes, correctNote, forgetNote, listNotes } from '../host/api';
 import { pendingCaptures, flush } from '../host/queue';
 import { colour, styles } from '../theme';
+import { NoteView } from './NoteView';
 
 /**
  * What the phone caught (addendum 27 §8).
@@ -41,6 +42,8 @@ export function Review({
   const [error, setError] = useState<string | null>(null);
   const [only, setOnly] = useState<string>('all');
   const [editing, setEditing] = useState<string | null>(null);
+  /** The note open full screen (addendum 27 §30), or null for the list. */
+  const [viewing, setViewing] = useState<CaptureItem | null>(null);
   const [draft, setDraft] = useState('');
   /** What the edit box starts with, set once when it opens (addendum 27 §26). */
   const [seed, setSeed] = useState('');
@@ -136,6 +139,20 @@ export function Review({
       },
     ]);
   };
+
+  if (viewing) {
+    return (
+      <NoteView
+        note={viewing}
+        format={format}
+        onBack={() => setViewing(null)}
+        onSaved={() => {
+          setViewing(null);
+          void load();
+        }}
+      />
+    );
+  }
 
   return (
     <View style={styles.screen}>
@@ -237,7 +254,13 @@ export function Review({
                   </View>
                 </>
               ) : (
-                <Text style={styles.text}>{note.rawText}</Text>
+                // A touch opens it full screen, to read back and add to (§30).
+                <Pressable onPress={() => setViewing(note)} accessibilityRole="button" accessibilityHint="Opens the note full screen">
+                  <Text style={styles.text} numberOfLines={4}>
+                    {note.rawText}
+                  </Text>
+                  <Text style={{ color: colour.gold, fontSize: 13, marginTop: 4 }}>Open ›</Text>
+                </Pressable>
               )}
 
               {!open ? (

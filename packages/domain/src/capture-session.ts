@@ -1325,3 +1325,24 @@ export const hearPause = (sitting: Sitting): Sitting => {
 /** What the walk is asking now, in words, for the screen (§18). */
 export const guidedQuestion = (sitting: Sitting, format: ProjectFormat): string =>
   questionFor(sitting.ask ?? 'kind', sitting.open, format);
+
+// ------------------------------------------- adding on to a note (§30)
+
+/** What a note read back asks before it listens for more (addendum 27 §30). */
+export const ADD_ON_QUESTION = 'Would you like to add on to this note?';
+
+const ADD_ON_YES = ['yes', 'yeah', 'yep', 'sure', 'ok', 'okay', 'add', 'add on', 'add to it', 'add more', 'continue', 'keep going', 'yes please', 'go ahead', 'please'];
+const ADD_ON_NO = ['no', 'nope', 'no thanks', 'no thank you', "that's it", 'thats it', 'done', "i'm done", 'im done', 'stop', 'not now', 'nothing'];
+
+/**
+ * **The answer to *would you like to add on?*** (§30, from Ken: *read it back,
+ * and then it'll ask you, would you like to add on to this note? And it'll add,
+ * continue on where you were at*). Yes, no, or — for anything else — null, which
+ * the phone takes as the writer already adding: they started talking.
+ */
+export const addOnAnswer = (said: string): 'yes' | 'no' | null => {
+  const words = plain(said);
+  if (ADD_ON_YES.includes(words)) return 'yes';
+  if (ADD_ON_NO.includes(words)) return 'no';
+  return null;
+};
