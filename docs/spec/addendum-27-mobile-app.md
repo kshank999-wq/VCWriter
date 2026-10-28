@@ -1087,3 +1087,22 @@ are not committed), empties the title and the note, and points Dictate back at
 the note; the kind and the story stay, as they do after a save. With anything
 written it asks first (*Keep writing* / *Reset*); with nothing, it just
 clears.
+
+## 28. Title first, a keyboard tab in the corner, and smaller kinds
+
+From Ken, on build 14: *the default is note. So I'd like to just be able to
+hit the dictate button and it defaults to where it's set to title first… The
+keyboard obscures one of the titles when you rotate it in landscape mode… just
+put a small tab in the right or left corner that says keyboard… like a folder
+tab… you can take out "this is a" or move the section, subsection, ideas,
+those things up or make them smaller.*
+
+- **Dictate starts on the title.** A new note, a saved one and a reset one all
+  point *Dictate into* at **Title**; a title heard moves it on to the note
+  (§22), so Dictate, title, pause, the note is the whole of it.
+- **The keyboard's tab is a folder tab** in the bottom-right corner, not a bar
+  across the screen: *⌨ Keyboard* while it is down, *⌄ Hide* on it while it is
+  up. The controls leave room at their foot so it covers nothing.
+- **The kinds come first in the controls, smaller and unlabelled**: *This is
+  a* is gone, the buttons are smaller, and they sit at the top of the controls
+  where a turned phone shows them.

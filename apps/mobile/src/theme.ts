@@ -114,13 +114,35 @@ export const styles = StyleSheet.create({
     borderBottomColor: colour.border,
   },
 
-  /** The tab that brings the keyboard up or puts it away (addendum 27 §22). */
+  /**
+   * The tab that brings the keyboard up or puts it away (addendum 27 §22):
+   * a folder tab in the bottom-right corner rather than a bar across the
+   * screen (§28), so nothing under it is covered.
+   */
   keyTab: {
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: colour.border,
+    position: 'absolute',
+    right: 12,
+    bottom: 0,
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    borderColor: colour.border,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
     backgroundColor: colour.raised,
   },
-  keyTabText: { color: colour.gold, fontSize: 14, letterSpacing: 0.4 },
+  /** The same tab, sitting on the keyboard while it is up. */
+  keyTabOn: {
+    marginRight: 12,
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    borderColor: colour.border,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+    backgroundColor: colour.raised,
+  },
+  keyTabText: { color: colour.gold, fontSize: 13, letterSpacing: 0.4 },
 });

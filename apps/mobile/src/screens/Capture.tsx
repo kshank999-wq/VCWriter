@@ -140,8 +140,11 @@ export function Capture({
    * the body portion*). The box last touched, or the one chosen beside the
    * button; a title heard moves it on to the note, as the hands-free walk does.
    */
-  const [into, setInto] = useState<'title' | 'body'>('body');
-  const intoRef = useRef<'title' | 'body'>('body');
+  // **Title first** (addendum 27 §28, from Ken: *I'd like to just be able to
+  // hit the dictate button and it defaults to where it's set to title first*):
+  // a new note starts on its title, and a title heard moves it on to the note.
+  const [into, setInto] = useState<'title' | 'body'>('title');
+  const intoRef = useRef<'title' | 'body'>('title');
   const aim = (box: 'title' | 'body') => {
     intoRef.current = box;
     setInto(box);
@@ -333,6 +336,8 @@ export function Capture({
     putTitle('');
     setUndone(null);
     setHeard(null);
+    // The next note starts on its title, as the first did.
+    aim('title');
   };
 
   /**
@@ -361,7 +366,7 @@ export function Capture({
       setUndone(null);
       setHeard(null);
       setStatus(null);
-      aim('body');
+      aim('title');
     };
     const anything = textRef.current.trim().length > 0 || subjectRef.current.trim().length > 0 || interim.length > 0;
     if (!anything) {
@@ -786,9 +791,40 @@ export function Capture({
 
         <ScrollView
           style={{ flex: 1, borderColor: colour.border, ...(wide ? { borderLeftWidth: 1 } : { borderTopWidth: 1 }) }}
-          contentContainerStyle={styles.body}
+          // Room at the foot for the keyboard's tab in the corner (§28).
+          contentContainerStyle={[styles.body, { paddingBottom: 56 }]}
           keyboardShouldPersistTaps="handled"
         >
+          {/* The kinds, small and first, with no label over them (§28): a
+              turned phone has half the height, and they were what the
+              keyboard's tab sat on. */}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5 }} accessibilityLabel="Kind of note">
+            {vocabulary.map((one) => (
+              <Pressable
+                key={one.key}
+                onPress={() => setCategory(one.key)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: chosenKey === one.key }}
+                style={[
+                  styles.button,
+                  styles.secondary,
+                  { paddingVertical: 5, paddingHorizontal: 9 },
+                  chosenKey === one.key ? { borderColor: colour.gold } : null,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.buttonText,
+                    styles.secondaryText,
+                    { fontSize: 11, letterSpacing: 0.3 },
+                    chosenKey === one.key ? { color: colour.goldBright } : null,
+                  ]}
+                >
+                  {one.name}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
           {onSubscribe ? (
             <Pressable onPress={onSubscribe} style={styles.row}>
               <Text style={[styles.muted, { flex: 1 }]}>
@@ -895,63 +931,33 @@ export function Capture({
 
           {collection ? <StoryPicker projectId={project.id} storyId={story?.id ?? null} onChoose={chooseStory} /> : null}
 
-        <View style={styles.field}>
-          <Text style={styles.label}>This is a</Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-            {vocabulary.map((one) => (
-              <Pressable
-                key={one.key}
-                onPress={() => setCategory(one.key)}
-                style={[
-                  styles.button,
-                  styles.secondary,
-                  { paddingVertical: 9, paddingHorizontal: 12 },
-                  chosenKey === one.key ? { borderColor: colour.gold } : null,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.buttonText,
-                    styles.secondaryText,
-                    { fontSize: 12, letterSpacing: 0.4 },
-                    chosenKey === one.key ? { color: colour.goldBright } : null,
-                  ]}
-                >
-                  {one.name}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-
           {heard ? <Text style={styles.muted}>Heard: {heard}</Text> : null}
           {status ? <Text style={styles.muted}>{status}</Text> : null}
         </ScrollView>
       </View>
 
-      {/* **The keyboard is the writer's to call** (§22, from Ken: *it should
-          be collapsible because it gets in the way*). Down, a tab at the foot
-          brings it up on the box Dictate writes into; up, the bar on it puts
-          it away — on iOS fixed to the keyboard, elsewhere at the foot. */}
+      {/* **The keyboard is the writer's to call** (§22), and its tab is a
+          small one in the corner (§28, from Ken: *a small tab in the right or
+          left corner that says keyboard, so it doesn't run across the entire
+          bottom, that it's just like a folder tab*). Down, the tab brings it up
+          on the box Dictate writes into; up, the same tab on it puts it away —
+          on the iPhone fixed to the keyboard, elsewhere at the foot. */}
       {!keyboardUp ? (
-        <Pressable
-          style={styles.keyTab}
-          onPress={showKeyboard}
-          accessibilityRole="button"
-          accessibilityLabel="Show the keyboard"
-        >
+        <Pressable style={styles.keyTab} onPress={showKeyboard} accessibilityRole="button" accessibilityLabel="Show the keyboard">
           <Text style={styles.keyTabText}>⌨ Keyboard</Text>
         </Pressable>
       ) : Platform.OS !== 'ios' ? (
         <Pressable style={styles.keyTab} onPress={hideKeyboard} accessibilityRole="button" accessibilityLabel="Hide the keyboard">
-          <Text style={styles.keyTabText}>⌄ Hide keyboard</Text>
+          <Text style={styles.keyTabText}>⌄ Hide</Text>
         </Pressable>
       ) : null}
       {Platform.OS === 'ios' ? (
-        <InputAccessoryView nativeID={KEYS}>
-          <Pressable style={styles.keyTab} onPress={hideKeyboard} accessibilityRole="button" accessibilityLabel="Hide the keyboard">
-            <Text style={styles.keyTabText}>⌄ Hide keyboard</Text>
-          </Pressable>
+        <InputAccessoryView nativeID={KEYS} backgroundColor="transparent">
+          <View style={{ alignItems: 'flex-end' }}>
+            <Pressable style={styles.keyTabOn} onPress={hideKeyboard} accessibilityRole="button" accessibilityLabel="Hide the keyboard">
+              <Text style={styles.keyTabText}>⌄ Hide</Text>
+            </Pressable>
+          </View>
         </InputAccessoryView>
       ) : null}
     </View>
