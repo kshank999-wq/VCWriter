@@ -111,9 +111,16 @@ jobs:
         if: inputs.build_id == ''
         run: |
           set -o pipefail
+          # `script` is util-linux's on Ubuntu and BSD's on a Mac, and the two
+          # take the command differently (addendum 27 §31).
+          if [ "$(uname)" = Darwin ]; then
+            run() { script -q /dev/null eas credentials:configure-build --platform ios --profile production; }
+          else
+            run() { script -qec "eas credentials:configure-build --platform ios --profile production" /dev/null; }
+          fi
           (for _ in $(seq 120); do sleep 1; echo 2>/dev/null || break; done) \
-            | script -qec "eas credentials:configure-build --platform ios --profile production" /dev/null \
-            | grep -v '^\s*$' || [ "${PIPESTATUS[1]}" = 0 ]
+            | run \
+            | grep -v '^[[:space:]]*$' || [ "${PIPESTATUS[1]}" = 0 ]
 
       # **On GitHub's Mac** (addendum 27 §31): Expo's free plan ran out of iOS
       # builds for the month, and Ken pays for GitHub Actions. `--local` builds
