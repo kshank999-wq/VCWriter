@@ -143,6 +143,16 @@ interface RibbonProps {
     onFootnote(): void;
     onEndnote(): void;
   };
+  /** Comments (addendum 42 §20). */
+  comments: {
+    /** Open (unresolved) comments. */
+    count: number;
+    shown: boolean;
+    onNew(): void;
+    onPrevious(): void;
+    onNext(): void;
+    onShow(): void;
+  };
   /** A line for the writer, where something did not work. */
   onSay(message: string): void;
 }
@@ -829,9 +839,24 @@ function ReferencesTab({ references }: TabProps) {
   );
 }
 
-function ReviewTab({ view, onView, words, characters, speech }: TabProps) {
+function ReviewTab({ view, onView, words, characters, speech, comments }: TabProps) {
   return (
     <>
+      {/* Word's Review tab: comments first (addendum 42 §20). */}
+      <Group label="Comments">
+        <Tool label="New comment" title="A comment on the selected words (Ctrl+Alt+M)" onPress={comments.onNew} wide>
+          New comment
+        </Tool>
+        <Tool label="Previous comment" title="The comment before this one" onPress={comments.onPrevious} disabled={comments.count === 0} wide>
+          Previous
+        </Tool>
+        <Tool label="Next comment" title="The comment after this one" onPress={comments.onNext} disabled={comments.count === 0} wide>
+          Next
+        </Tool>
+        <Tool label="Show comments" title="Show or hide the comments beside the page" active={comments.shown} onPress={comments.onShow} wide>
+          Show comments
+        </Tool>
+      </Group>
       <Group label="Speech">
         <Tool
           label={speech.dictating ? 'Stop dictating' : 'Dictate'}

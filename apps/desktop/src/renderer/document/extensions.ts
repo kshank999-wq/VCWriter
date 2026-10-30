@@ -667,6 +667,108 @@ export const Citation = Node.create({
   },
 });
 
+declare module '@tiptap/core' {
+  interface Commands<ReturnType> {
+    comment: {
+      /** Mark the selection as the passage of this comment. */
+      setComment: (commentId: string) => ReturnType;
+      /** Take a comment's mark off wherever it is. */
+      unsetComment: (commentId: string) => ReturnType;
+    };
+  }
+}
+
+/** What a click on a commented passage does (addendum 42 §20). */
+export interface CommentStorage {
+  onSelect: ((commentId: string | null) => void) | null;
+}
+
+/** Where a comment's passage is: from its first marked character to its last. */
+export const commentRange = (doc: PmNode, commentId: string): { from: number; to: number } | null => {
+  let from = -1;
+  let to = -1;
+  doc.descendants((node, pos) => {
+    if (!node.isText) return true;
+    if (node.marks.some((mark) => mark.type.name === 'comment' && mark.attrs['commentId'] === commentId)) {
+      if (from < 0) from = pos;
+      to = pos + node.nodeSize;
+    }
+    return true;
+  });
+  return from < 0 ? null : { from, to };
+};
+
+/**
+ * **A comment's passage** (addendum 42 §20): a mark naming the comment, so it
+ * moves, copies and undoes with the words; the comment itself is kept on the
+ * document. Comments may overlap, as in Word. A click inside one tells the
+ * pane which to show.
+ */
+export const CommentMark = Mark.create({
+  name: 'comment',
+  inclusive: false,
+  excludes: '',
+  addAttributes() {
+    return {
+      commentId: {
+        default: null,
+        parseHTML: (element: HTMLElement) => element.getAttribute('data-comment-id'),
+        renderHTML: (attributes: Record<string, unknown>) => ({ 'data-comment-id': attributes['commentId'] }),
+      },
+    };
+  },
+  parseHTML() {
+    return [{ tag: 'span[data-comment-id]' }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ['span', mergeAttributes({ class: 'wp-comment' }, HTMLAttributes), 0];
+  },
+  addStorage(): CommentStorage {
+    return { onSelect: null };
+  },
+  addCommands() {
+    return {
+      setComment:
+        (commentId: string) =>
+        ({ commands }) =>
+          commands.setMark(this.name, { commentId }),
+      unsetComment:
+        (commentId: string) =>
+        ({ state, dispatch }) => {
+          const type = state.schema.marks['comment'];
+          if (!type) return false;
+          const tr = state.tr;
+          state.doc.descendants((node, pos) => {
+            if (!node.isText) return true;
+            for (const mark of node.marks) {
+              if (mark.type === type && mark.attrs['commentId'] === commentId) tr.removeMark(pos, pos + node.nodeSize, mark);
+            }
+            return true;
+          });
+          if (!tr.docChanged) return false;
+          if (dispatch) dispatch(tr);
+          return true;
+        },
+    };
+  },
+  addProseMirrorPlugins() {
+    const storage = this.storage as CommentStorage;
+    return [
+      new Plugin({
+        props: {
+          handleClick: (view, pos) => {
+            if (!storage.onSelect) return false;
+            const marks = view.state.doc.resolve(pos).marks();
+            const comment = marks.find((mark) => mark.type.name === 'comment');
+            storage.onSelect(comment ? String(comment.attrs['commentId']) : null);
+            return false;
+          },
+        },
+      }),
+    ];
+  },
+});
+
 /** One of the writer's own notes, as the editor holds it (addendum 42 §18). */
 export interface WriterNoteAttrs {
   id: string;
@@ -932,4 +1034,5 @@ export const documentExtensions = () => [
   Footnote,
   Bibliography,
   TableOfContents,
+  CommentMark,
 ];

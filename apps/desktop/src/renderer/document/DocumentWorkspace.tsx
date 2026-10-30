@@ -57,6 +57,12 @@ import {
   citationSettingsOf,
   citeDocumentHtml,
   withWriterNotes,
+  addComment,
+  commentListing,
+  deleteComment,
+  editComment,
+  replyToComment,
+  resolveComment,
   contentsDocumentHtml,
   DOCUMENT_CONTENTS_CSS,
   contentsEntries,
@@ -71,12 +77,13 @@ import { readDocxParts } from '../read-docx';
 import { footNotedPrintHtml } from './foot-notes';
 import { PageView, layOutPageView, pageViewKey } from './page-view';
 import { DecorationSet } from '@tiptap/pm/view';
-import { documentExtensions, extractRange, findMatches, headingPosition, type CitationStorage, type ContentsStorage, type SearchState } from './extensions';
+import { documentExtensions, extractRange, findMatches, headingPosition, type CitationStorage, type CommentStorage, type ContentsStorage, commentRange, type SearchState } from './extensions';
 import { CitationDialog, type CitationChoice } from '../components/citations/CitationDialog';
 import { ReferencesPanel } from '../components/citations/ReferencesPanel';
 import { BringInSourcesDialog } from '../components/citations/BringInSourcesDialog';
 import { OutlinerWindow } from '../components/OutlinerWindow';
 import { SendExtractsDialog, type SendSubject } from './SendExtractsDialog';
+import { CommentsPane } from './CommentsPane';
 import { DocumentRail } from './DocumentRail';
 import { HeaderFooterBar } from './HeaderFooterBar';
 import { useDocumentSpeech } from './speech';
@@ -214,6 +221,12 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
         }
         // Word's keys for a footnote and an endnote (addendum 42 §18). By
         // the key's place, since Option changes the letter on a Mac.
+        // Word's key for a new comment (addendum 42 §20).
+        if ((event.ctrlKey || event.metaKey) && event.altKey && event.code === 'KeyM' && !readOnly) {
+          event.preventDefault();
+          newCommentRef.current();
+          return true;
+        }
         if ((event.ctrlKey || event.metaKey) && event.altKey && (event.code === 'KeyF' || event.code === 'KeyD') && !readOnly) {
           event.preventDefault();
           setNoting({ id: null, kind: event.code === 'KeyD' ? 'end' : 'foot', text: '' });
@@ -230,6 +243,8 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
 
   const editorRef = useRef<Editor | null>(null);
   editorRef.current = editor;
+  /** New comment, as the key handler set up with the editor reaches it. */
+  const newCommentRef = useRef<() => void>(() => undefined);
 
   // Dictate and read aloud (addendum 42 §15).
   const speech = useDocumentSpeech(editor, setMessage);
@@ -320,6 +335,85 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
       storage.onOpenNote = null;
     };
   }, [editor, readOnly]);
+
+  // ------------------------------------------------------ comments
+
+  /**
+   * **Comments** (addendum 42 §20). The passage carries a `comment` mark; the
+   * record is on the document. The pane opens by itself when there are any,
+   * and New comment opens it on the comment being written.
+   */
+  const [commentsShown, setCommentsShown] = useState(document.comments.length > 0);
+  const [activeComment, setActiveComment] = useState<string | null>(null);
+  const [editingComment, setEditingComment] = useState<string | null>(null);
+  const [commentAuthor, setCommentAuthor] = useState<string>(() => {
+    try {
+      return window.localStorage.getItem('vcwriter-comment-author') || file.project.author || '';
+    } catch {
+      return file.project.author || '';
+    }
+  });
+  const nameAuthor = (name: string) => {
+    setCommentAuthor(name);
+    try {
+      window.localStorage.setItem('vcwriter-comment-author', name);
+    } catch {
+      // A browser that keeps nothing still lets the name be used now.
+    }
+  };
+  const commentContent = (editor?.getJSON() as DocNode | undefined) ?? document.content;
+  const comments = commentListing({ content: commentContent, comments: document.comments });
+  const selectComment = (commentId: string) => {
+    setActiveComment(commentId);
+    const range = editor ? commentRange(editor.state.doc, commentId) : null;
+    if (range && editor) editor.chain().setTextSelection(range).scrollIntoView().run();
+  };
+  const newComment = () => {
+    if (!editor || readOnly) return;
+    const { from, to } = editor.state.selection;
+    if (from === to) {
+      setMessage('Select the words the comment is about, then press New comment.');
+      return;
+    }
+    const id = crypto.randomUUID();
+    editor.chain().focus().setComment(id).run();
+    onUpdate((current) => addComment(current, documentId, { id, author: commentAuthor || 'Me', text: '' }));
+    setCommentsShown(true);
+    setActiveComment(id);
+    setEditingComment(id);
+  };
+  const removeComment = (commentId: string) => {
+    editor?.chain().unsetComment(commentId).run();
+    onUpdate((current) => deleteComment(current, documentId, commentId));
+    if (activeComment === commentId) setActiveComment(null);
+    if (editingComment === commentId) setEditingComment(null);
+  };
+  /** The comment beside the cursor's or before it, for Previous and Next. */
+  const stepComment = (direction: 1 | -1) => {
+    const order = comments.filter((one) => !one.orphan).map((one) => one.comment.id);
+    if (order.length === 0) return;
+    const at = activeComment ? order.indexOf(activeComment) : -1;
+    const next = order[(at + direction + order.length) % order.length] as string;
+    setCommentsShown(true);
+    selectComment(next);
+  };
+  useEffect(() => {
+    if (!editor) return undefined;
+    const storage = (editor.storage as unknown as { comment: CommentStorage }).comment;
+    storage.onSelect = (commentId) => {
+      if (commentId) {
+        setCommentsShown(true);
+        setActiveComment(commentId);
+      } else {
+        setActiveComment(null);
+      }
+    };
+    return () => {
+      storage.onSelect = null;
+    };
+  }, [editor]);
+
+  newCommentRef.current = newComment;
 
   // ------------------------------------------------ footnotes and endnotes
 
@@ -886,6 +980,14 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
           onPageNumbers: (preset) => onUpdate((current) => setPageNumbers(current, documentId, preset)),
         }}
         speech={speech}
+        comments={{
+          count: comments.filter((one) => !one.comment.resolved).length,
+          shown: commentsShown,
+          onNew: newComment,
+          onPrevious: () => stepComment(-1),
+          onNext: () => stepComment(1),
+          onShow: () => setCommentsShown((now) => !now),
+        }}
         references={{
           style: REFERENCE_STYLE_NAMES[citationSettingsOf(file).style],
           cited: cites.occurrences.length,
@@ -1079,7 +1181,31 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
                 ) : null}
               </div>
             </div>
-            {extracting && palettesOf(file).length ? (
+            {commentsShown && pane === 'document' ? (
+          <CommentsPane
+            listing={comments}
+            active={activeComment}
+            editing={editingComment}
+            author={commentAuthor}
+            readOnly={readOnly}
+            onAuthor={nameAuthor}
+            onSelect={selectComment}
+            onEdit={(commentId, text) => {
+              // A comment being posted takes the name in the box now (addendum 42 §20).
+              const posting = editingComment === commentId;
+              onUpdate((current) => editComment(current, documentId, commentId, text, posting ? commentAuthor || 'Me' : undefined));
+              if (editingComment === commentId) setEditingComment(null);
+            }}
+            onCancelNew={removeComment}
+            onReply={(commentId, text) =>
+              onUpdate((current) => replyToComment(current, documentId, commentId, { id: crypto.randomUUID(), author: commentAuthor || 'Me', text }))
+            }
+            onResolve={(commentId, resolved) => onUpdate((current) => resolveComment(current, documentId, commentId, resolved))}
+            onDelete={removeComment}
+            onClose={() => setCommentsShown(false)}
+          />
+        ) : null}
+        {extracting && palettesOf(file).length ? (
               <ExtractSidebar
                 file={file}
                 document={document}

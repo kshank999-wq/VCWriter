@@ -101,6 +101,31 @@ export const documentHeaderFooterSchema = z.object({
 });
 export type DocumentHeaderFooter = z.infer<typeof documentHeaderFooterSchema>;
 
+/** One answer under a comment (addendum 42 §20). */
+export const documentCommentReplySchema = z.object({
+  id: z.string().min(1),
+  author: z.string().max(120).default(''),
+  text: z.string().max(20_000).default(''),
+  createdAt: z.string(),
+});
+export type DocumentCommentReply = z.infer<typeof documentCommentReplySchema>;
+
+/**
+ * **A comment on a passage** (addendum 42 §20, from Ken: *go ahead with
+ * comments and tracked changes*). The passage carries a `comment` mark naming
+ * this id; the words, the author, the answers and whether it is resolved are
+ * kept here, on the document, so they travel with it and sync with it.
+ */
+export const documentCommentSchema = z.object({
+  id: z.string().min(1),
+  author: z.string().max(120).default(''),
+  text: z.string().max(20_000).default(''),
+  createdAt: z.string(),
+  resolved: z.boolean().default(false),
+  replies: z.array(documentCommentReplySchema).default([]),
+});
+export type DocumentComment = z.infer<typeof documentCommentSchema>;
+
 /** Bumped when the stored tree changes shape in a way a reader must know about. */
 export const DOCUMENT_SCHEMA_VERSION = 1;
 
@@ -139,6 +164,10 @@ export const wpDocumentSchema = z.object({
   rowReceipts: z.array(rowReceiptSchema).default([]),
   /** Headers, footers and page numbers (addendum 42 §15). */
   headerFooter: documentHeaderFooterSchema.default({}),
+  /** The comments on its passages (addendum 42 §20). */
+  comments: z.array(documentCommentSchema).default([]),
+  /** Whether changes are being tracked (addendum 42 §21): kept with the document, as Word keeps it. */
+  trackChanges: z.boolean().default(false),
   ...timestamps,
 });
 export type WpDocument = z.infer<typeof wpDocumentSchema>;

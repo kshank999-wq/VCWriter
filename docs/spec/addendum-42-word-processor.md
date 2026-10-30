@@ -951,3 +951,29 @@ From Ken: *go ahead with the table of contents.*
 - The editor's stored data is per editor and copied by the library: the
   table's `set` writes through `this`, or the screen draws from a copy that
   never changed (found by looking at it — the tests drew the table regardless).
+
+## 20. Comments
+
+From Ken: *go ahead with comments and tracked changes.* Comments first.
+
+- **A comment is two things, as in Word.** A `comment` mark on the passage,
+  naming the comment's id — it moves, copies and undoes with the words, and
+  comments may overlap — and the record on the document (`comments`: author,
+  words, time, answers, resolved), which travels and syncs with it
+  (`documentCommentSchema`; no migration, the document syncs whole, §17).
+- **Review ▸ Comments**: *New comment* (Ctrl+Alt+M, Word's key) on the
+  selected words, *Previous*, *Next*, and *Show comments*.
+- **The column beside the page** (`CommentsPane`): each comment in the order
+  its passage stands (`commentListing`), the passage quoted, who and when, its
+  words, its answers, and *Reply*, *Edit*, *Resolve*/*Reopen* and *Delete*.
+  The chosen one is outlined and its passage selected; a click in a passage
+  chooses its comment. A resolved one is greyed. One whose passage was
+  deleted stays, *Its passage was deleted*, until it is deleted. The pane
+  opens by itself on a document with comments.
+- **Who wrote it**: *Commenting as* at the top of the pane, remembered on this
+  computer, the project's author until set. A new comment takes the name in
+  the box when it is posted.
+- **Print** sets the words without the comments. **Word** gets Word's own
+  comments (`comments.xml`, a range around each passage, answers in the same
+  balloon named, *(Resolved)* where it is).
+- Not yet: Word comments in a file being imported are not read in.

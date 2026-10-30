@@ -6,6 +6,7 @@ import type { DocMark, DocNode, DocumentBand, WpDocument } from './entities/docu
 import { parseInline } from './entities/inline.js';
 import type { DocumentCitations } from './document-citations.js';
 import { contentsEntries, type TocEntry } from './document-contents.js';
+import { commentIdsIn } from './document-comments.js';
 
 /**
  * **A document as a Word file** (addendum 42 §4, spec §4.1 and §7.2).
@@ -74,6 +75,10 @@ interface Context {
   contents: TocEntry[];
   /** Set once a table of contents is written, so Word is asked to fill it in on opening. */
   hasContents: boolean;
+  /** Each comment's Word number, by its id (addendum 42 §20): only comments still on a passage. */
+  commentNumbers: Map<string, number>;
+  /** Comments whose range has been written and closed. */
+  commentsDone: Set<string>;
 }
 
 type ListKind = 'bullet' | 'decimal' | 'lowerLetter' | 'upperLetter' | 'lowerRoman' | 'upperRoman';
@@ -296,8 +301,35 @@ const pictureRun = (node: DocNode, context: Context): string => {
 const inlineXml = (nodes: readonly DocNode[], context: Context): string => {
   let out = '';
   let index = 0;
+  /**
+   * Comments open in this paragraph (addendum 42 §20): a Word comment's range
+   * starts before the first run carrying its mark and ends after the last,
+   * with the reference that shows the balloon. A passage running over more
+   * than one paragraph keeps its first paragraph's range.
+   */
+  const open: string[] = [];
+  const close = (id: string) => {
+    const n = context.commentNumbers.get(id);
+    if (n === undefined) return;
+    out += `<w:commentRangeEnd w:id="${n}"/><w:r><w:rPr><w:rStyle w:val="CommentReference"/></w:rPr><w:commentReference w:id="${n}"/></w:r>`;
+    open.splice(open.indexOf(id), 1);
+    context.commentsDone.add(id);
+  };
+  const commentsAt = (node: DocNode) => {
+    const here = (node.marks ?? [])
+      .filter((mark) => mark.type === 'comment')
+      .map((mark) => String(mark.attrs?.['commentId'] ?? ''))
+      .filter((id) => context.commentNumbers.has(id));
+    for (const id of [...open]) if (!here.includes(id)) close(id);
+    for (const id of here) {
+      if (open.includes(id) || context.commentsDone.has(id)) continue;
+      out += `<w:commentRangeStart w:id="${context.commentNumbers.get(id)}"/>`;
+      open.push(id);
+    }
+  };
   while (index < nodes.length) {
     const node = nodes[index] as DocNode;
+    commentsAt(node);
     const link = node.marks?.find((mark) => mark.type === 'link');
     if (node.type === 'text' && link) {
       const href = String(link.attrs?.['href'] ?? '');
@@ -321,6 +353,7 @@ const inlineXml = (nodes: readonly DocNode[], context: Context): string => {
     else if (node.type === 'footnote') out += writerNoteRun(node, context);
     index += 1;
   }
+  for (const id of [...open]) close(id);
   return out;
 };
 
@@ -601,6 +634,8 @@ export const DOCUMENT_STYLES_XML =
   '<w:style w:type="paragraph" w:styleId="EndnoteText"><w:name w:val="endnote text"/><w:basedOn w:val="Normal"/>' +
   '<w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:rPr><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr></w:style>' +
   '<w:style w:type="character" w:styleId="EndnoteReference"><w:name w:val="endnote reference"/><w:rPr><w:vertAlign w:val="superscript"/></w:rPr></w:style>' +
+  '<w:style w:type="paragraph" w:styleId="CommentText"><w:name w:val="annotation text"/><w:basedOn w:val="Normal"/><w:rPr><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr></w:style>' +
+  '<w:style w:type="character" w:styleId="CommentReference"><w:name w:val="annotation reference"/><w:rPr><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr></w:style>' +
   '<w:style w:type="paragraph" w:styleId="TOCHeading"><w:name w:val="TOC Heading"/><w:basedOn w:val="Heading1"/><w:next w:val="Normal"/><w:qFormat/></w:style>' +
   [1, 2, 3, 4, 5, 6, 7, 8, 9]
     .map(
@@ -670,6 +705,8 @@ export const documentBodyXml = (document: WpDocument, cites: DocumentCitations |
     endnotes: [],
     contents: contentsEntries(document),
     hasContents: false,
+    commentNumbers: new Map(commentIdsIn(document.content).filter((id) => document.comments.some((one) => one.id === id)).map((id, at) => [id, at])),
+    commentsDone: new Set(),
   };
   const body = (document.content.content ?? []).map((block) => blockXml(block, context)).join('');
   return {
@@ -694,6 +731,33 @@ const footnotesXml = (notes: readonly string[]): string =>
     )
     .join('') +
   '</w:footnotes>';
+
+/** The document's comments as Word's own (addendum 42 §20); answers follow in the same balloon, named. */
+const commentsXml = (document: WpDocument, numbers: ReadonlyMap<string, number>): string =>
+  '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+  '<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+  [...numbers]
+    .map(([id, n]) => {
+      const comment = document.comments.find((one) => one.id === id);
+      if (!comment) return '';
+      const initials = comment.author
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((word) => word[0])
+        .join('')
+        .slice(0, 3);
+      const paragraph = (text: string, first: boolean) =>
+        '<w:p><w:pPr><w:pStyle w:val="CommentText"/></w:pPr>' +
+        (first ? '<w:r><w:rPr><w:rStyle w:val="CommentReference"/></w:rPr><w:annotationRef/></w:r>' : '') +
+        `${textRun(text, [])}</w:p>`;
+      const lines = [
+        paragraph(`${comment.text}${comment.resolved ? ' (Resolved)' : ''}`, true),
+        ...comment.replies.map((reply) => paragraph(`${reply.author || 'Reply'}: ${reply.text}`, false)),
+      ];
+      return `<w:comment w:id="${n}" w:author="${xml(comment.author || 'Author')}" w:date="${xml(comment.createdAt)}" w:initials="${xml(initials)}">${lines.join('')}</w:comment>`;
+    })
+    .join('') +
+  '</w:comments>';
 
 /** The writer's endnotes as Word's own (addendum 42 §18), after Word's two separators. */
 const endnotesXml = (notes: readonly string[]): string =>
@@ -721,6 +785,7 @@ export const buildDocumentDocx = async (
   const notes = context.footnotes.length > 0;
   const ends = context.endnotes.length > 0;
   const fields = context.hasContents;
+  const commented = context.commentsDone.size > 0;
   const extensions = [...new Set(context.pictures.map((picture) => picture.extension))];
   const contentTypes =
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
@@ -733,6 +798,7 @@ export const buildDocumentDocx = async (
     '<Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>' +
     (notes ? '<Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/>' : '') +
     (ends ? '<Override PartName="/word/endnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml"/>' : '') +
+    (commented ? '<Override PartName="/word/comments.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"/>' : '') +
     (notes || ends || fields
       ? '<Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>'
       : '') +
@@ -757,6 +823,7 @@ export const buildDocumentDocx = async (
     '<Relationship Id="rIdNumbering" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>' +
     (notes ? '<Relationship Id="rIdFootnotes" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/>' : '') +
     (ends ? '<Relationship Id="rIdEndnotes" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes" Target="endnotes.xml"/>' : '') +
+    (commented ? '<Relationship Id="rIdComments" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="comments.xml"/>' : '') +
     (notes || ends || fields
       ? '<Relationship Id="rIdSettings" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>'
       : '') +
@@ -795,6 +862,7 @@ export const buildDocumentDocx = async (
     { path: 'word/numbering.xml', data: utf8(numberingXml(context.lists)) },
     ...(notes ? [{ path: 'word/footnotes.xml', data: utf8(footnotesXml(context.footnotes)) }] : []),
     ...(ends ? [{ path: 'word/endnotes.xml', data: utf8(endnotesXml(context.endnotes)) }] : []),
+    ...(commented ? [{ path: 'word/comments.xml', data: utf8(commentsXml(document, context.commentNumbers)) }] : []),
     ...(notes || ends || fields
       ? [
           {

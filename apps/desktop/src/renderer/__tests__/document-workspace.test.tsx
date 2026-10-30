@@ -252,3 +252,26 @@ describe('the table of contents', () => {
     });
   });
 });
+
+/** Comments (addendum 42 §20). */
+describe('comments', () => {
+  it('marks the selected words, keeps the comment on the document, and deletes both together', async () => {
+    window.localStorage.setItem('vcwriter-comment-author', 'Ken Shank');
+    render(<Harness start={start('The bridge is out.')} />);
+    act(() => {
+      editorOf().chain().focus().setTextSelection({ from: 5, to: 11 }).run();
+    });
+    fireEvent.click(screen.getByRole('tab', { name: 'Review' }));
+    fireEvent.mouseDown(screen.getByRole('button', { name: 'New comment' }));
+    fireEvent.change(await screen.findByLabelText('The comment'), { target: { value: 'Which bridge?' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Post' }));
+    await waitFor(() => {
+      const comments = mainDocument(latest!)!.comments;
+      expect(comments.map((one) => [one.author, one.text])).toEqual([['Ken Shank', 'Which bridge?']]);
+    });
+    expect(editorOf().getHTML()).toContain('data-comment-id=');
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    await waitFor(() => expect(mainDocument(latest!)!.comments).toHaveLength(0));
+    expect(editorOf().getHTML()).not.toContain('data-comment-id=');
+  });
+});

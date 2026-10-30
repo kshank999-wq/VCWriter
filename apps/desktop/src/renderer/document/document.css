@@ -1344,3 +1344,35 @@
 .ProseMirror .wp-toc-block.ProseMirror-selectednode { outline: 2px solid rgba(24, 90, 189, 0.5); }
 .ProseMirror .wp-toc-block a { cursor: pointer; }
 .ProseMirror .wp-toc-block a:hover .wp-toc-text { text-decoration: underline; }
+
+/* Comments (addendum 42 §20): the passage tinted as Word tints it, and the
+   column of comments beside the page. */
+.ProseMirror .wp-comment { background: rgba(255, 214, 92, 0.35); border-bottom: 1px solid rgba(214, 160, 0, 0.7); }
+.wp-comments {
+  width: 300px;
+  flex: none;
+  overflow-y: auto;
+  padding: 10px 12px;
+  border-left: 1px solid var(--border);
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 13px;
+}
+.wp-comments-head { display: flex; align-items: center; justify-content: space-between; }
+.wp-comments-head h3 { margin: 0; font-size: 14px; }
+.wp-comments-author { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+.wp-comments-author input { flex: 1; min-width: 0; }
+.wp-comment-card { background: var(--panel-2, #fff); border: 1px solid var(--border); border-left: 3px solid #d6a000; border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; cursor: default; }
+.wp-comment-card.active { border-color: #185abd; border-left-color: #185abd; box-shadow: 0 1px 4px rgba(24, 90, 189, 0.25); }
+.wp-comment-card.resolved { opacity: 0.6; border-left-color: #9a9a9a; }
+.wp-comment-card header { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.wp-comment-passage { margin: 0; color: var(--muted); font-style: italic; }
+.wp-comment-passage.orphan { color: #c0392b; }
+.wp-comment-text { margin: 0; white-space: pre-wrap; }
+.wp-comment-card textarea { width: 100%; resize: vertical; font: inherit; padding: 6px; }
+.wp-comment-actions { display: flex; justify-content: flex-end; gap: 4px; }
+.wp-comment-reply { border-top: 1px solid var(--border); padding-top: 6px; }
+.wp-comment-reply p { margin: 2px 0 0; white-space: pre-wrap; }
+.wp-comment-reply-form input { width: 100%; }
