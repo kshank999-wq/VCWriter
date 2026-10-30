@@ -96,13 +96,14 @@ const rowsOf = (editor: Editor, scale: number, origin: number): Row[] => {
   const rows: Row[] = [];
   const y = (client: number) => (client - origin) / scale;
   const keysIn = (dom: Element, top: number, bottom: number): string[] =>
-    [...dom.querySelectorAll('sup[data-cite]')]
+    // A citation, or the writer's own footnote (addendum 42 §18), by the key its note is filed under.
+    [...dom.querySelectorAll('sup[data-cite], sup[data-footnote][data-kind="foot"]')]
       .filter((sup) => {
         const rect = sup.getBoundingClientRect();
         const mid = y((rect.top + rect.bottom) / 2);
         return mid >= top - 1 && mid <= bottom + 1;
       })
-      .map((sup) => sup.getAttribute('data-cite') ?? '')
+      .map((sup) => sup.getAttribute('data-cite') ?? (sup.getAttribute('data-footnote') ? `fn:${sup.getAttribute('data-footnote')}` : ''))
       .filter(Boolean);
   view.state.doc.descendants((node: PmNode, pos: number) => {
     const dom = view.nodeDOM(pos) as HTMLElement | null;
@@ -183,7 +184,8 @@ export const layOutPageView = (
   const top = setup.top * PX_PER_INCH;
   const room = H - top - setup.bottom * PX_PER_INCH;
   const numberOf = new Map(cites.notes.map((note, at) => [note.key, at + 1]));
-  const raised = cites.raised && cites.notes.length > 0;
+  // Notes at the foot: a footnote style's citations, or the writer's own footnotes (addendum 42 §18).
+  const raised = cites.notes.length > 0;
   /** What is carried onto the page being set, and what goes on past it again. */
   let carried: string | null = null;
   let carriedOn: string | null = null;

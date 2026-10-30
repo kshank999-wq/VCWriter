@@ -524,6 +524,8 @@ export interface CitationView {
 export interface CitationStorage {
   bibliographyHtml: string;
   onOpen: ((key: string) => void) | null;
+  /** What a click on one of the writer's own notes does (addendum 42 §18). */
+  onOpenNote?: ((id: string) => void) | null;
 }
 
 export const citationViewKey = new PluginKey<{ view: CitationView; decorations: DecorationSet; version: number }>('wpCitations');
@@ -544,6 +546,18 @@ const citationDecorations = (doc: PmNode, view: CitationView, version: number): 
         Decoration.node(pos, pos + node.nodeSize, {
           'data-marker': said || '?',
           class: `wp-cite${said ? '' : ' missing'}${view.raised ? '' : ' in-text'}`,
+        }),
+      );
+      return false;
+    }
+    if (node.type.name === 'footnote') {
+      // The writer's note, numbered with the citations' notes (addendum 42 §18).
+      const end = node.attrs['kind'] === 'end';
+      const said = view.markers.get(`${end ? 'en' : 'fn'}:${String(node.attrs['id'] ?? '')}`) ?? '';
+      decorations.push(
+        Decoration.node(pos, pos + node.nodeSize, {
+          'data-marker': said || '•',
+          class: `wp-cite wp-writer-note${end ? ' end' : ''}`,
         }),
       );
       return false;
@@ -639,6 +653,10 @@ export const Citation = Node.create({
           decorations: (state) => citationViewKey.getState(state)?.decorations ?? null,
           // A click on a marker opens its citation, as in the manuscript.
           handleClickOn: (_view, _pos, node) => {
+            if (node.type.name === 'footnote' && storage.onOpenNote) {
+              storage.onOpenNote(String(node.attrs['id'] ?? ''));
+              return true;
+            }
             if (node.type.name !== 'citation' || !storage.onOpen) return false;
             storage.onOpen(String(node.attrs['key'] ?? ''));
             return true;
@@ -646,6 +664,111 @@ export const Citation = Node.create({
         },
       }),
     ];
+  },
+});
+
+/** One of the writer's own notes, as the editor holds it (addendum 42 §18). */
+export interface WriterNoteAttrs {
+  id: string;
+  kind: 'foot' | 'end';
+  text: string;
+}
+
+declare module '@tiptap/core' {
+  interface Commands<ReturnType> {
+    footnote: {
+      /** A footnote or endnote at the cursor, after the selection. */
+      insertWriterNote: (note: WriterNoteAttrs) => ReturnType;
+      /** Change a note's words, or turn a footnote into an endnote. */
+      updateWriterNote: (id: string, patch: Partial<Omit<WriterNoteAttrs, 'id'>>) => ReturnType;
+      removeWriterNote: (id: string) => ReturnType;
+    };
+  }
+}
+
+/**
+ * **The writer's own footnote or endnote** (addendum 42 §18, from Ken:
+ * *let's get the word processor going*). An inline node holding its words, so
+ * it moves, copies and undoes with the sentence it hangs on. Its HTML is an
+ * empty `<sup data-footnote>`; the screen draws its number over it (numbered
+ * with a footnote style's citation notes, as Word keeps one sequence), and
+ * print sets the note at the foot of its page — or, for an endnote, at the end.
+ */
+export const Footnote = Node.create({
+  name: 'footnote',
+  group: 'inline',
+  inline: true,
+  atom: true,
+  selectable: true,
+  addAttributes() {
+    return {
+      id: {
+        default: '',
+        parseHTML: (element: HTMLElement) => element.getAttribute('data-footnote') ?? '',
+        renderHTML: (attributes: Record<string, unknown>) => ({ 'data-footnote': attributes['id'] }),
+      },
+      kind: {
+        default: 'foot',
+        parseHTML: (element: HTMLElement) => (element.getAttribute('data-kind') === 'end' ? 'end' : 'foot'),
+        renderHTML: (attributes: Record<string, unknown>) => ({ 'data-kind': attributes['kind'] }),
+      },
+      text: {
+        default: '',
+        parseHTML: (element: HTMLElement) => element.getAttribute('data-note') ?? '',
+        renderHTML: (attributes: Record<string, unknown>) => ({ 'data-note': attributes['text'] }),
+      },
+    };
+  },
+  parseHTML() {
+    return [{ tag: 'sup[data-footnote]' }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ['sup', mergeAttributes({ class: 'wp-footnote' }, HTMLAttributes)];
+  },
+  addCommands() {
+    const find = (doc: PmNode, id: string): number[] => {
+      const found: number[] = [];
+      doc.descendants((node, pos) => {
+        if (node.type.name === 'footnote' && node.attrs['id'] === id) found.push(pos);
+      });
+      return found;
+    };
+    return {
+      insertWriterNote:
+        (note: WriterNoteAttrs) =>
+        ({ state, chain }) =>
+          chain()
+            .setTextSelection(state.selection.to)
+            .insertContent({ type: this.name, attrs: { ...note } })
+            .run(),
+      updateWriterNote:
+        (id: string, patch: Partial<Omit<WriterNoteAttrs, 'id'>>) =>
+        ({ state, dispatch }) => {
+          const found = find(state.doc, id);
+          if (found.length === 0) return false;
+          if (dispatch) {
+            const tr = state.tr;
+            for (const pos of found) {
+              const node = tr.doc.nodeAt(pos);
+              if (node) tr.setNodeMarkup(pos, undefined, { ...node.attrs, ...patch });
+            }
+            dispatch(tr);
+          }
+          return true;
+        },
+      removeWriterNote:
+        (id: string) =>
+        ({ state, dispatch }) => {
+          const found = find(state.doc, id);
+          if (found.length === 0) return false;
+          if (dispatch) {
+            const tr = state.tr;
+            for (const pos of found.reverse()) tr.delete(pos, pos + 1);
+            dispatch(tr);
+          }
+          return true;
+        },
+    };
   },
 });
 
@@ -718,5 +841,6 @@ export const documentExtensions = () => [
   ExtractMark,
   HeadingIds,
   Citation,
+  Footnote,
   Bibliography,
 ];

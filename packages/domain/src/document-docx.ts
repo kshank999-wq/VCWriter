@@ -65,8 +65,10 @@ interface Context {
   headingNumbers: ReadonlyMap<string, string>;
   /** What the document's citations print as (addendum 43 §11); null where it cites nothing. */
   cites: DocumentCitations | null;
-  /** Word footnotes made so far, in order: one per citation in a footnote style. */
+  /** Word footnotes made so far, in order: one per citation in a footnote style, and the writer's own. */
   footnotes: string[];
+  /** Word endnotes made so far, in order (addendum 42 §18). */
+  endnotes: string[];
 }
 
 type ListKind = 'bullet' | 'decimal' | 'lowerLetter' | 'upperLetter' | 'lowerRoman' | 'upperRoman';
@@ -192,6 +194,17 @@ const citationRun = (node: DocNode, context: Context): string => {
   return textRun(' ', []) + markedRuns(said);
 };
 
+/** The writer's footnote or endnote (addendum 42 §18): Word's own, numbered by Word. */
+const writerNoteRun = (node: DocNode, context: Context): string => {
+  const text = String(node.attrs?.['text'] ?? '');
+  if (node.attrs?.['kind'] === 'end') {
+    context.endnotes.push(text);
+    return `<w:r><w:rPr><w:rStyle w:val="EndnoteReference"/></w:rPr><w:endnoteReference w:id="${context.endnotes.length}"/></w:r>`;
+  }
+  context.footnotes.push(text);
+  return `<w:r><w:rPr><w:rStyle w:val="FootnoteReference"/></w:rPr><w:footnoteReference w:id="${context.footnotes.length}"/></w:r>`;
+};
+
 /** Reads the pixel size a PNG, GIF or JPEG declares, so a picture keeps its shape. */
 export const pictureSize = (bytes: Uint8Array): { width: number; height: number } | null => {
   const at = (index: number) => bytes[index] ?? 0;
@@ -300,6 +313,7 @@ const inlineXml = (nodes: readonly DocNode[], context: Context): string => {
     else if (node.type === 'hardBreak') out += '<w:r><w:br/></w:r>';
     else if (node.type === 'image') out += pictureRun(node, context);
     else if (node.type === 'citation') out += citationRun(node, context);
+    else if (node.type === 'footnote') out += writerNoteRun(node, context);
     index += 1;
   }
   return out;
@@ -560,6 +574,9 @@ export const DOCUMENT_STYLES_XML =
   '<w:style w:type="paragraph" w:styleId="FootnoteText"><w:name w:val="footnote text"/><w:basedOn w:val="Normal"/>' +
   '<w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:rPr><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr></w:style>' +
   '<w:style w:type="character" w:styleId="FootnoteReference"><w:name w:val="footnote reference"/><w:rPr><w:vertAlign w:val="superscript"/></w:rPr></w:style>' +
+  '<w:style w:type="paragraph" w:styleId="EndnoteText"><w:name w:val="endnote text"/><w:basedOn w:val="Normal"/>' +
+  '<w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:rPr><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr></w:style>' +
+  '<w:style w:type="character" w:styleId="EndnoteReference"><w:name w:val="endnote reference"/><w:rPr><w:vertAlign w:val="superscript"/></w:rPr></w:style>' +
   '<w:style w:type="table" w:styleId="TableGrid"><w:name w:val="Table Grid"/><w:tblPr><w:tblBorders>' +
   ['top', 'left', 'bottom', 'right', 'insideH', 'insideV']
     .map((side) => `<w:${side} w:val="single" w:sz="4" w:space="0" w:color="auto"/>`)
@@ -618,6 +635,7 @@ export const documentBodyXml = (document: WpDocument, cites: DocumentCitations |
     headingNumbers: headingNumbers(document.content, document.headingNumbering),
     cites,
     footnotes: [],
+    endnotes: [],
   };
   const body = (document.content.content ?? []).map((block) => blockXml(block, context)).join('');
   return {
@@ -643,6 +661,21 @@ const footnotesXml = (notes: readonly string[]): string =>
     .join('') +
   '</w:footnotes>';
 
+/** The writer's endnotes as Word's own (addendum 42 §18), after Word's two separators. */
+const endnotesXml = (notes: readonly string[]): string =>
+  '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+  '<w:endnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+  '<w:endnote w:type="separator" w:id="-1"><w:p><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:r><w:separator/></w:r></w:p></w:endnote>' +
+  '<w:endnote w:type="continuationSeparator" w:id="0"><w:p><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:r><w:continuationSeparator/></w:r></w:p></w:endnote>' +
+  notes
+    .map(
+      (text, index) =>
+        `<w:endnote w:id="${index + 1}"><w:p><w:pPr><w:pStyle w:val="EndnoteText"/></w:pPr>` +
+        `<w:r><w:rPr><w:rStyle w:val="EndnoteReference"/></w:rPr><w:endnoteRef/></w:r>${textRun(' ', [])}${markedRuns(text)}</w:p></w:endnote>`,
+    )
+    .join('') +
+  '</w:endnotes>';
+
 const MEDIA_TYPES: Record<string, string> = { png: 'image/png', jpeg: 'image/jpeg', gif: 'image/gif' };
 
 /** The whole `.docx`, as bytes (spec §7.2: *a conventional editable word-processing file*). */
@@ -652,6 +685,7 @@ export const buildDocumentDocx = async (
 ): Promise<Uint8Array> => {
   const { xml: body, context } = documentBodyXml(document, options.citations ?? null);
   const notes = context.footnotes.length > 0;
+  const ends = context.endnotes.length > 0;
   const extensions = [...new Set(context.pictures.map((picture) => picture.extension))];
   const contentTypes =
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
@@ -662,9 +696,10 @@ export const buildDocumentDocx = async (
     '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
     '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>' +
     '<Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>' +
-    (notes
-      ? '<Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/>' +
-        '<Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>'
+    (notes ? '<Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/>' : '') +
+    (ends ? '<Override PartName="/word/endnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml"/>' : '') +
+    (notes || ends
+      ? '<Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>'
       : '') +
     (bandUsed(document.headerFooter.header)
       ? '<Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>'
@@ -685,9 +720,10 @@ export const buildDocumentDocx = async (
     '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
     '<Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
     '<Relationship Id="rIdNumbering" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>' +
-    (notes
-      ? '<Relationship Id="rIdFootnotes" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/>' +
-        '<Relationship Id="rIdSettings" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>'
+    (notes ? '<Relationship Id="rIdFootnotes" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/>' : '') +
+    (ends ? '<Relationship Id="rIdEndnotes" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes" Target="endnotes.xml"/>' : '') +
+    (notes || ends
+      ? '<Relationship Id="rIdSettings" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>'
       : '') +
     (bandUsed(document.headerFooter.header)
       ? '<Relationship Id="rIdHeader1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>'
@@ -722,14 +758,17 @@ export const buildDocumentDocx = async (
     { path: 'word/document.xml', data: utf8(body) },
     { path: 'word/styles.xml', data: utf8(DOCUMENT_STYLES_XML) },
     { path: 'word/numbering.xml', data: utf8(numberingXml(context.lists)) },
-    ...(notes
+    ...(notes ? [{ path: 'word/footnotes.xml', data: utf8(footnotesXml(context.footnotes)) }] : []),
+    ...(ends ? [{ path: 'word/endnotes.xml', data: utf8(endnotesXml(context.endnotes)) }] : []),
+    ...(notes || ends
       ? [
-          { path: 'word/footnotes.xml', data: utf8(footnotesXml(context.footnotes)) },
           {
             path: 'word/settings.xml',
             data: utf8(
               '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
-                '<w:footnotePr><w:footnote w:id="-1"/><w:footnote w:id="0"/></w:footnotePr></w:settings>',
+                (notes ? '<w:footnotePr><w:footnote w:id="-1"/><w:footnote w:id="0"/></w:footnotePr>' : '') +
+                (ends ? '<w:endnotePr><w:numFmt w:val="lowerRoman"/><w:endnote w:id="-1"/><w:endnote w:id="0"/></w:endnotePr>' : '') +
+                '</w:settings>',
             ),
           },
         ]

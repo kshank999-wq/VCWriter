@@ -7,6 +7,7 @@ import { citationSettingsOf, citedReferences, normalizeDoi, occurrencesIn, refer
 import { bibliographyHeadingOf, citationInText, citationNotes, referenceBibliography, usesFootnotes } from './citation-style.js';
 import type { ReferenceId } from './ids.js';
 import type { ProjectFile } from './project-file.js';
+import type { DocNode } from './entities/document.js';
 
 /**
  * **The Reference Library in the word processor** (addendum 43 §11).
@@ -38,6 +39,12 @@ export interface DocumentCitations {
   heading: string;
   /** The bibliography's entries, in inline marks. */
   bibliography: string[];
+  /**
+   * The writer's own endnotes, in order (addendum 42 §18): set at the end of
+   * the document under *Endnotes*, numbered i, ii, iii as Word numbers them.
+   * Their footnotes are in `notes`, numbered with the citations' notes.
+   */
+  endnotes: { key: string; marker: string; text: string }[];
 }
 
 export const documentCitations = (file: ProjectFile, documentId: string): DocumentCitations => {
@@ -52,7 +59,89 @@ export const documentCitations = (file: ProjectFile, documentId: string): Docume
     notes: citationNotes(file, occurrences).map((note) => ({ key: note.occurrence.key, marker: note.marker, text: note.text })),
     heading: bibliographyHeadingOf(settings),
     bibliography: referenceBibliography(file, occurrences).map((entry) => entry.text),
+    endnotes: [],
   };
+};
+
+// ------------------------------------------------- the writer's own notes
+
+/** A footnote or endnote the writer wrote (addendum 42 §18), as the editor holds it. */
+export interface WriterNote {
+  id: string;
+  kind: 'foot' | 'end';
+  text: string;
+}
+
+/** The writer's notes in a document, in the order they stand. */
+export const writerNotesIn = (content: DocNode): WriterNote[] => {
+  const found: WriterNote[] = [];
+  const walk = (node: DocNode) => {
+    if (node.type === 'footnote') {
+      found.push({
+        id: String(node.attrs?.['id'] ?? ''),
+        kind: node.attrs?.['kind'] === 'end' ? 'end' : 'foot',
+        text: String(node.attrs?.['text'] ?? ''),
+      });
+    }
+    for (const child of node.content ?? []) walk(child);
+  };
+  walk(content);
+  return found;
+};
+
+const ROMAN: ReadonlyArray<[number, string]> = [
+  [1000, 'm'], [900, 'cm'], [500, 'd'], [400, 'cd'], [100, 'c'], [90, 'xc'],
+  [50, 'l'], [40, 'xl'], [10, 'x'], [9, 'ix'], [5, 'v'], [4, 'iv'], [1, 'i'],
+];
+/** An endnote's number as Word sets it: i, ii, iii. */
+export const romanNumeral = (n: number): string => {
+  let left = n;
+  let out = '';
+  for (const [value, letters] of ROMAN) {
+    while (left >= value) {
+      out += letters;
+      left -= value;
+    }
+  }
+  return out;
+};
+
+/**
+ * **The writer's footnotes and endnotes, with the citations' notes**
+ * (addendum 42 §18, from Ken: *let's get the word processor going*). One
+ * sequence of notes at the foot of the page, as Word keeps: a footnote style's
+ * citation notes and the writer's footnotes numbered together in the order
+ * they stand, 1, 2, 3 — so where there are footnotes the citations' own
+ * markers give way to the shared count. Endnotes are their own sequence,
+ * i, ii, iii, set at the end. Keyed `fn:<id>` and `en:<id>` beside the
+ * citations' keys, so the page view and print find them the same way.
+ */
+export const withWriterNotes = (cites: DocumentCitations, content: DocNode): DocumentCitations => {
+  const writer = writerNotesIn(content);
+  if (writer.length === 0) return cites;
+  const notes: DocumentCitations['notes'] = [];
+  const endnotes: DocumentCitations['endnotes'] = [];
+  let citeAt = 0;
+  const walk = (node: DocNode) => {
+    if (node.type === 'citation' && cites.raised) {
+      const note = cites.notes[citeAt];
+      citeAt += 1;
+      if (note) notes.push(note);
+    } else if (node.type === 'footnote') {
+      const id = String(node.attrs?.['id'] ?? '');
+      const text = String(node.attrs?.['text'] ?? '');
+      if (node.attrs?.['kind'] === 'end') endnotes.push({ key: `en:${id}`, marker: '', text });
+      else notes.push({ key: `fn:${id}`, marker: '', text });
+    }
+    for (const child of node.content ?? []) walk(child);
+  };
+  walk(content);
+  const inText = new Map(cites.inText);
+  const numbered = notes.map((note, at) => ({ ...note, marker: String(at + 1) }));
+  for (const note of numbered) inText.set(note.key, note.marker);
+  const ended = endnotes.map((note, at) => ({ ...note, marker: romanNumeral(at + 1) }));
+  for (const note of ended) inText.set(note.key, note.marker);
+  return { ...cites, notes: numbered, endnotes: ended, inText };
 };
 
 // ------------------------------------------------------------------ print
@@ -77,6 +166,13 @@ export const noteHtml = (cites: DocumentCitations, n: number): string => {
   const note = cites.notes[n - 1];
   if (!note) return '';
   return `<p class="wp-note" id="wp-note-${n}"><a href="#wp-ref-${n}">${escape(markOf(note.marker))}</a> ${inlineMarksHtml(note.text)}</p>`;
+};
+
+/** The nth endnote (from 1), as the end of the document sets it (addendum 42 §18). */
+export const endnoteHtml = (cites: DocumentCitations, n: number): string => {
+  const note = cites.endnotes[n - 1];
+  if (!note) return '';
+  return `<p class="wp-note wp-endnote-text" id="wp-endnote-${n}"><a href="#wp-endref-${n}">${escape(markOf(note.marker))}</a> ${inlineMarksHtml(note.text)}</p>`;
 };
 
 /** The bibliography as the page sets it: its heading and one hanging entry per source. */
@@ -104,21 +200,45 @@ export const citeDocumentHtml = (
   notesAtEnd = true,
 ): string => {
   let at = 0;
+  let endAt = 0;
   const set = html
-    .replace(/<sup\b[^>]*\bdata-cite="([0-9a-f]{6})"[^>]*>\s*<\/sup>/g, (_whole, key: string) => {
-      const said = cites.inText.get(key);
-      if (!said) return '';
-      if (cites.raised) {
+    // Citations and the writer's notes in one pass, so the notes at the foot
+    // number in the order they stand (addendum 42 §18).
+    .replace(
+      /<sup\b[^>]*\bdata-cite="([0-9a-f]{6})"[^>]*>\s*<\/sup>|<sup\b([^>]*\bdata-footnote="([^"]*)"[^>]*)>[^<]*<\/sup>/g,
+      (_whole, key: string | undefined, attrs: string | undefined, id: string | undefined) => {
+        if (key) {
+          const said = cites.inText.get(key);
+          if (!said) return '';
+          if (cites.raised) {
+            at += 1;
+            return `<sup class="wp-cite"><a href="#wp-note-${at}" id="wp-ref-${at}">${escape(said)}</a></sup>`;
+          }
+          return ` <span class="wp-cite-text">${inlineMarksHtml(said)}</span>`;
+        }
+        const end = /\bdata-kind="end"/.test(attrs ?? '');
+        const said = cites.inText.get(`${end ? 'en' : 'fn'}:${id ?? ''}`);
+        if (!said) return '';
+        if (end) {
+          endAt += 1;
+          return `<sup class="wp-cite wp-endref"><a href="#wp-endnote-${endAt}" id="wp-endref-${endAt}">${escape(said)}</a></sup>`;
+        }
         at += 1;
         return `<sup class="wp-cite"><a href="#wp-note-${at}" id="wp-ref-${at}">${escape(said)}</a></sup>`;
-      }
-      return ` <span class="wp-cite-text">${inlineMarksHtml(said)}</span>`;
-    })
+      },
+    )
     .replace(/<div\b[^>]*\bdata-bibliography\b[^>]*>\s*<\/div>/g, () => bibliographyHtml(cites));
-  if (!notesAtEnd || !cites.raised || cites.notes.length === 0) return set;
-  const notes = cites.notes.map((_note, index) => noteHtml(cites, index + 1)).join('');
-  const section = `<section class="wp-notes"><h2>Notes</h2>${notes}</section>`;
+  const sections: string[] = [];
+  if (notesAtEnd && cites.notes.length > 0) {
+    sections.push(`<section class="wp-notes"><h2>Notes</h2>${cites.notes.map((_note, index) => noteHtml(cites, index + 1)).join('')}</section>`);
+  }
+  // Endnotes always stand at the end, on paper as on the screen.
+  if (cites.endnotes.length > 0) {
+    sections.push(`<section class="wp-notes wp-endnotes"><h2>Endnotes</h2>${cites.endnotes.map((_note, index) => endnoteHtml(cites, index + 1)).join('')}</section>`);
+  }
+  if (sections.length === 0) return set;
   // Notes come before the bibliography, as a paper sets them; with none, at the end.
+  const section = sections.join('');
   const bibliographyAt = set.indexOf('<section class="wp-bibliography">');
   return bibliographyAt >= 0 ? `${set.slice(0, bibliographyAt)}${section}${set.slice(bibliographyAt)}` : `${set}${section}`;
 };

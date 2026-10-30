@@ -327,7 +327,9 @@ const DOCUMENT_MENUS: readonly Menu[] = [
       null,
       { command: 'editor.find', label: 'Find…', accelerator: 'CmdOrCtrl+F' },
       { command: 'editor.findNext', label: 'Find next', accelerator: 'CmdOrCtrl+G' },
-      { command: 'editor.replace', label: 'Replace…', accelerator: 'CmdOrCtrl+Alt+F' },
+      // Word's own key for Replace: Ctrl+Alt+F is Word's footnote, and a
+      // document takes it for that (addendum 42 §18).
+      { command: 'editor.replace', label: 'Replace…', accelerator: 'CmdOrCtrl+H' },
     ],
   },
   {

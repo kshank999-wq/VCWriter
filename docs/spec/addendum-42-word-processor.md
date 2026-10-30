@@ -897,3 +897,32 @@ Nothing was lost on a computer that already had the file: the merge keeps
   whole, and a project merged from the cloud has its words.
 - Still not in the cloud: pictures (`assets`), import batches, and the game
   collections, which VC Game Studio keeps.
+
+## 18. Footnotes and endnotes
+
+From Ken: *let's start with number three. Let's get the word processor going.*
+The first of §7's list.
+
+- **The writer's own note** is an inline node, `footnote`, holding its words
+  (`id`, `kind: foot | end`, `text`), so it moves, copies and undoes with the
+  sentence it hangs on. Its HTML is an empty `<sup data-footnote data-kind
+  data-note>`.
+- **References ▸ Footnotes**: *Insert footnote* (Ctrl+Alt+F, Word's key) and
+  *Insert endnote* (Ctrl+Alt+D). A small box takes the note's words and
+  whether it is a footnote or an endnote; a click on a marker in the page
+  opens it again to change it, turn it into the other kind, or remove it.
+  *Replace…* in a document's Edit menu moves to Ctrl+H, Word's key, to free
+  Ctrl+Alt+F.
+- **One sequence at the foot of the page**, as Word keeps: a footnote style's
+  citation notes and the writer's footnotes are numbered together, 1, 2, 3,
+  in the order they stand (`withWriterNotes`, keys `fn:<id>` beside the
+  citations'). Endnotes are their own sequence, i, ii, iii.
+- **Where they are set.** On the screen's page view and in print and PDF,
+  footnotes stand at the foot of their page under a short rule, by the same
+  page setter citations use (addendum 43 §23, §25); endnotes stand at the end
+  under *Endnotes*, before the bibliography. In Word they are Word's own
+  footnotes and endnotes (`footnotes.xml`, `endnotes.xml`, lower-roman
+  endnote numbering).
+- Not yet: endnotes are shown at the end in print, PDF and Word but not on the
+  screen's page view; Word's footnotes imported still arrive as citations
+  (addendum 43 §9).

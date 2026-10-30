@@ -199,3 +199,29 @@ describe('the right-hand menu', () => {
     expect(screen.getByRole('navigation', { name: 'Navigation' })).toBeTruthy();
   });
 });
+
+/** Footnotes and endnotes (addendum 42 §18). */
+describe('footnotes and endnotes', () => {
+  it('inserts a footnote from the References tab, and an endnote, into the document', async () => {
+    render(<Harness start={start('The bridge is out.')} />);
+    act(() => {
+      editorOf().commands.focus('end');
+    });
+    fireEvent.click(screen.getByRole('tab', { name: 'References' }));
+    fireEvent.mouseDown(screen.getByRole('button', { name: 'Insert footnote' }));
+    fireEvent.change(screen.getByLabelText('The note'), { target: { value: 'It fell in 1987.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Insert' }));
+    fireEvent.mouseDown(screen.getByRole('button', { name: 'Insert endnote' }));
+    fireEvent.change(screen.getByLabelText('The note'), { target: { value: 'See the flood records.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Insert' }));
+    const notes: { kind: unknown; text: unknown }[] = [];
+    editorOf().state.doc.descendants((node) => {
+      if (node.type.name === 'footnote') notes.push({ kind: node.attrs['kind'], text: node.attrs['text'] });
+    });
+    expect(notes).toEqual([
+      { kind: 'foot', text: 'It fell in 1987.' },
+      { kind: 'end', text: 'See the flood records.' },
+    ]);
+    expect(editorOf().getHTML()).toContain('data-footnote=');
+  });
+});

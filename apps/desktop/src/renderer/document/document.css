@@ -1325,3 +1325,15 @@
   border-color: rgba(255, 255, 255, 0.5);
   color: #fff;
 }
+
+/* The writer's own footnotes and endnotes (addendum 42 §18): drawn as the
+   citation markers are, in the page's blue so they read as the writer's. */
+.ProseMirror sup.wp-writer-note { color: #1f5fa8; }
+.ProseMirror sup.wp-writer-note.end { font-style: italic; }
+.wp-note-dialog { width: min(520px, 92vw); display: flex; flex-direction: column; gap: 10px; }
+.wp-note-dialog header { display: flex; align-items: center; justify-content: space-between; }
+.wp-note-dialog header h3 { margin: 0; }
+.wp-note-kind { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.wp-note-dialog textarea { width: 100%; resize: vertical; font: inherit; padding: 8px; }
+.wp-note-dialog footer { display: flex; align-items: center; gap: 8px; }
+.wp-endnotes h2 { font-size: 1.1em; }

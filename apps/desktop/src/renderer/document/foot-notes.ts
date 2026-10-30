@@ -352,7 +352,8 @@ export const setPages = (doc: Document, document: WpDocument, cites: DocumentCit
  * parentheses), so the plain print stands.
  */
 export const footNotedPrintHtml = async (document: WpDocument, cites: DocumentCitations, editorHtml: string): Promise<string | null> => {
-  if (!cites.raised || cites.notes.length === 0) return null;
+  // Notes at the foot: a footnote style's citations, or the writer's own footnotes (addendum 42 §18).
+  if (cites.notes.length === 0) return null;
   const frame = window.document.createElement('iframe');
   frame.setAttribute('aria-hidden', 'true');
   frame.tabIndex = -1;

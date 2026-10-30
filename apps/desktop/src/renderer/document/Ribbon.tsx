@@ -137,6 +137,9 @@ interface RibbonProps {
     onBibliography(): void;
     onLibrary(): void;
     onBringIn(): void;
+    /** The writer's own notes (addendum 42 §18). */
+    onFootnote(): void;
+    onEndnote(): void;
   };
   /** A line for the writer, where something did not work. */
   onSay(message: string): void;
@@ -784,6 +787,15 @@ function LayoutTab({ pageSetup, onPageSetup, editor }: TabProps) {
 function ReferencesTab({ references }: TabProps) {
   return (
     <>
+      {/* Word keeps its notes first on this tab (addendum 42 §18). */}
+      <Group label="Footnotes">
+        <Tool label="Insert footnote" title="A footnote at the cursor, set at the foot of its page (Ctrl+Alt+F)" onPress={references.onFootnote} wide>
+          Insert footnote
+        </Tool>
+        <Tool label="Insert endnote" title="An endnote at the cursor, set at the end of the document (Ctrl+Alt+D)" onPress={references.onEndnote} wide>
+          Insert endnote
+        </Tool>
+      </Group>
       <Group label="Citations">
         <Tool label="Insert citation" title="Cite a source from the library at the cursor (Ctrl+Shift+C)" onPress={references.onCite} wide>
           Insert citation

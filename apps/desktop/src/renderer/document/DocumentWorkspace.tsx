@@ -56,6 +56,7 @@ import {
   citationByKey,
   citationSettingsOf,
   citeDocumentHtml,
+  withWriterNotes,
   documentCitations,
   insertCitation,
   plainInline,
@@ -201,6 +202,13 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
           setCiting({ key: null });
           return true;
         }
+        // Word's keys for a footnote and an endnote (addendum 42 §18). By
+        // the key's place, since Option changes the letter on a Mac.
+        if ((event.ctrlKey || event.metaKey) && event.altKey && (event.code === 'KeyF' || event.code === 'KeyD') && !readOnly) {
+          event.preventDefault();
+          setNoting({ id: null, kind: event.code === 'KeyD' ? 'end' : 'foot', text: '' });
+          return true;
+        }
         return false;
       },
     },
@@ -230,6 +238,18 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
     return node.isBlock || node.type.name === 'doc';
   });
   const citeOrder = citeKeys.join(' ');
+  /**
+   * The writer's own notes, with the citations, in the order they stand
+   * (addendum 42 §18): what their numbers are worked out from, and so what
+   * `cites` is read again on.
+   */
+  const noteParts: string[] = [];
+  editor?.state.doc.descendants((node) => {
+    if (node.type.name === 'citation') noteParts.push(`c:${String(node.attrs['key'] ?? '')}`);
+    else if (node.type.name === 'footnote') noteParts.push(`f:${String(node.attrs['kind'])}:${String(node.attrs['id'])}:${String(node.attrs['text'])}`);
+    return node.isBlock || node.type.name === 'doc';
+  });
+  const noteOrder = noteParts.some((one) => one.startsWith('f:')) ? noteParts.join('\u0001') : '';
   /** The project with this document's citations in the editor's order: all the reading needs. */
   const withEditorOrder = useCallback(
     (current: ProjectFile, keys: readonly string[]): ProjectFile => ({
@@ -241,10 +261,13 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
     [documentId],
   );
   const cites = useMemo(
-    () => documentCitations(withEditorOrder(file, citeOrder ? citeOrder.split(' ') : []), documentId),
+    () => {
+      const read = documentCitations(withEditorOrder(file, citeOrder ? citeOrder.split(' ') : []), documentId);
+      return noteOrder ? withWriterNotes(read, (editor?.getJSON() as DocNode | undefined) ?? document.content) : read;
+    },
     // The library, the citations, the style and the order are all it reads.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [citeOrder, file.references, file.citations, file.settings.citations, documentId, withEditorOrder],
+    [citeOrder, noteOrder, file.references, file.citations, file.settings.citations, documentId, withEditorOrder],
   );
 
   useEffect(() => {
@@ -254,6 +277,8 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
       if (markers.has(occurrence.key)) continue;
       markers.set(occurrence.key, occurrence.citation && occurrence.reference ? plainInline(cites.inText.get(occurrence.key) ?? '') : '');
     }
+    // The writer's notes are numbered beside the citations (addendum 42 §18).
+    for (const note of [...cites.notes, ...cites.endnotes]) if (note.key.includes(':')) markers.set(note.key, note.marker);
     editor.commands.setCitationView({ markers, raised: cites.raised, bibliographyHtml: bibliographyHtml(cites) });
   }, [editor, cites]);
 
@@ -261,10 +286,42 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
     if (!editor) return undefined;
     const storage = (editor.storage as unknown as { citation: CitationStorage }).citation;
     storage.onOpen = readOnly ? null : (key) => setCiting({ key });
+    storage.onOpenNote = readOnly ? null : (id) => openNote(id);
     return () => {
       storage.onOpen = null;
+      storage.onOpenNote = null;
     };
   }, [editor, readOnly]);
+
+  // ------------------------------------------------ footnotes and endnotes
+
+  /**
+   * **The writer's own note being written** (addendum 42 §18): a new one (no
+   * id yet) placed at the cursor on Save, or one clicked in the page.
+   */
+  const [noting, setNoting] = useState<{ id: string | null; kind: 'foot' | 'end'; text: string } | null>(null);
+  const openNote = (id: string) => {
+    let found: { kind: 'foot' | 'end'; text: string } | null = null;
+    editorRef.current?.state.doc.descendants((node) => {
+      if (node.type.name === 'footnote' && node.attrs['id'] === id) {
+        found = { kind: node.attrs['kind'] === 'end' ? 'end' : 'foot', text: String(node.attrs['text'] ?? '') };
+        return false;
+      }
+      return true;
+    });
+    if (found) setNoting({ id, ...(found as { kind: 'foot' | 'end'; text: string }) });
+  };
+  const saveNote = () => {
+    if (!noting || !editor) return;
+    const text = noting.text.trim();
+    if (noting.id) {
+      if (text.length === 0) editor.chain().focus().removeWriterNote(noting.id).run();
+      else editor.chain().focus().updateWriterNote(noting.id, { kind: noting.kind, text }).run();
+    } else if (text.length > 0) {
+      editor.chain().focus().insertWriterNote({ id: crypto.randomUUID(), kind: noting.kind, text }).run();
+    }
+    setNoting(null);
+  };
 
   /** The dialog's choice: a new citation at the cursor, or the one opened changed. */
   const placeCitation = (choice: CitationChoice) => {
@@ -394,7 +451,14 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
   }, [document, flush]);
 
   /** This document's citations as print and Word set them, from the editor as it stands. */
-  const citesNow = useCallback(() => documentCitations(withEditorOrder(file, citeKeysOf(editorRef.current)), documentId), [file, documentId, withEditorOrder]);
+  const citesNow = useCallback(
+    () =>
+      withWriterNotes(
+        documentCitations(withEditorOrder(file, citeKeysOf(editorRef.current)), documentId),
+        (editorRef.current?.getJSON() as DocNode | undefined) ?? document.content,
+      ),
+    [file, documentId, withEditorOrder, document.content],
+  );
 
   /**
    * The page the printer and the PDF are made from. In a footnote style the
@@ -800,6 +864,8 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
           onCite: () => !readOnly && setCiting({ key: null }),
           onBibliography: () => !readOnly && editor?.chain().focus().insertBibliography().run(),
           onLibrary: () => setLibraryOpen(true),
+          onFootnote: () => !readOnly && setNoting({ id: null, kind: 'foot', text: '' }),
+          onEndnote: () => !readOnly && setNoting({ id: null, kind: 'end', text: '' }),
           onBringIn: () => !readOnly && setBringing(true),
         }}
         onSay={setMessage}
@@ -1051,6 +1117,74 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
           }
           onClose={() => setCiting(null)}
         />
+      ) : null}
+      {noting ? (
+        <div className="cite-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setNoting(null)}>
+          <form
+            className="cite-dialog wp-note-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-label={noting.kind === 'end' ? 'Endnote' : 'Footnote'}
+            onSubmit={(event) => {
+              event.preventDefault();
+              saveNote();
+            }}
+          >
+            <header>
+              <h3>{noting.id ? 'Edit' : 'Insert'} {noting.kind === 'end' ? 'endnote' : 'footnote'}</h3>
+              <button type="button" className="ghost" aria-label="Close" onClick={() => setNoting(null)}>
+                ×
+              </button>
+            </header>
+            <div className="wp-note-kind" role="radiogroup" aria-label="Where it goes">
+              {(['foot', 'end'] as const).map((kind) => (
+                <label key={kind}>
+                  <input type="radio" name="wp-note-kind" checked={noting.kind === kind} onChange={() => setNoting({ ...noting, kind })} />{' '}
+                  {kind === 'foot' ? 'Footnote — at the foot of the page' : 'Endnote — at the end of the document'}
+                </label>
+              ))}
+            </div>
+            <textarea
+              aria-label="The note"
+              autoFocus
+              rows={5}
+              value={noting.text}
+              placeholder="The note’s words"
+              onChange={(event) => setNoting({ ...noting, text: event.target.value })}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+                  event.preventDefault();
+                  saveNote();
+                } else if (event.key === 'Escape') {
+                  event.preventDefault();
+                  setNoting(null);
+                  editor?.commands.focus();
+                }
+              }}
+            />
+            <footer>
+              {noting.id ? (
+                <button
+                  type="button"
+                  className="ghost danger-text"
+                  onClick={() => {
+                    editor?.chain().focus().removeWriterNote(noting.id as string).run();
+                    setNoting(null);
+                  }}
+                >
+                  Remove the note
+                </button>
+              ) : null}
+              <span className="wp-status-spacer" />
+              <button type="button" className="ghost" onClick={() => setNoting(null)}>
+                Cancel
+              </button>
+              <button type="submit" disabled={noting.text.trim().length === 0 && !noting.id}>
+                {noting.id ? 'Save' : 'Insert'}
+              </button>
+            </footer>
+          </form>
+        </div>
       ) : null}
       {libraryOpen ? (
         <div className="cite-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setLibraryOpen(false)}>
