@@ -14,6 +14,14 @@ import {
 // renderer's `img-src 'self'` policy covers it.
 import logo from '../assets/logo-stacked.webp';
 
+/** A project found in the projects folder (addendum 34 §9). */
+interface FolderProject {
+  path: string;
+  title: string;
+  format: string | null;
+  modifiedAt: string;
+}
+
 interface WelcomeProps {
   onCreate(input: { title: string; format: ProjectFormat; author?: string }): void;
   onOpen(): void;
@@ -124,6 +132,25 @@ export function Welcome({
       if (result.ok && result.data) setRecents(result.data);
     });
   }, [projectsChanged]);
+
+  /**
+   * **Every project in the projects folder** (addendum 34 §9, from Ken: *if you
+   * have the program installed on a Mac or a PC or both and different
+   * computers, that you can point them all to the same drive. And then when you
+   * open it on any computer, that always has the relevant file*). Recents are
+   * this machine's memory; the folder is shared, so this is the list that is
+   * the same on every computer pointed at it. Read again when the folder
+   * changes. Absent where the host cannot list a folder.
+   */
+  const [inFolder, setInFolder] = useState<{ projects: FolderProject[]; notDownloaded: number } | null>(null);
+  const folderPath = home && home !== 'asking' ? home.path : null;
+  useEffect(() => {
+    const ask = window.vcwriter.projectsInFolder?.();
+    if (!ask) return;
+    void ask
+      .then((result) => setInFolder(result.ok && result.data ? { projects: result.data.projects, notDownloaded: result.data.notDownloaded } : null))
+      .catch(() => setInFolder(null));
+  }, [projectsChanged, folderPath]);
 
   useEffect(() => {
     const ask = window.vcwriter.projectsFolder?.();
@@ -280,6 +307,31 @@ export function Welcome({
         <button type="button" onClick={onProjects}>
           Projects on this machine…
         </button>
+        {inFolder && (inFolder.projects.length > 0 || inFolder.notDownloaded > 0) ? (
+          <>
+            <h3 className="welcome-subhead">In your projects folder</h3>
+            <ul className="recents">
+              {inFolder.projects.map((one) => (
+                <li key={one.path}>
+                  <button type="button" className="link" onClick={() => onOpenPath(one.path)}>
+                    {one.title || one.path.split(/[\\/]/).pop()}
+                  </button>
+                  <span className="path">
+                    {one.format ? `${formatName(one.format as ProjectFormat)} · ` : ''}
+                    {new Date(one.modifiedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {inFolder.notDownloaded > 0 ? (
+              <p className="muted small">
+                {inFolder.notDownloaded} more {inFolder.notDownloaded === 1 ? 'is' : 'are'} in the cloud drive but not on
+                this computer yet. Open the folder in Finder or File Explorer to bring {inFolder.notDownloaded === 1 ? 'it' : 'them'} down.
+              </p>
+            ) : null}
+            <h3 className="welcome-subhead">Opened on this computer</h3>
+          </>
+        ) : null}
         {recents.length > 0 ? (
           <ul className="recents">
             {recents.map((recent) => (

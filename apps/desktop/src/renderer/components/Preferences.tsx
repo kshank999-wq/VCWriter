@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { isProseFormat, nounsFor, type ProjectFormat } from '@vcwriter/domain';
 import { SCHEMES, type SchemeId } from '../themes';
 
@@ -37,6 +37,33 @@ export function Preferences({
 }: PreferencesProps) {
   const dialog = useRef<HTMLDialogElement>(null);
 
+  /**
+   * **The projects folder** (addendum 34 §9, from Ken: *in the preferences,
+   * you can set a default path so you have all your projects, no matter where
+   * you are… point them all to the same drive*). The same folder the New
+   * project screen shows, set here too, and kept once chosen. Absent where the
+   * host has no folders (the browser preview).
+   */
+  const [folder, setFolder] = useState<string | null>(null);
+  const [canChoose, setCanChoose] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    const ask = window.vcwriter?.projectsFolder?.();
+    if (!ask) return;
+    void ask
+      .then((result) => {
+        if (result.ok && result.data) {
+          setFolder(result.data.path);
+          setCanChoose(result.data.canChoose);
+        }
+      })
+      .catch(() => undefined);
+  }, [open]);
+  const chooseFolder = async () => {
+    const result = await window.vcwriter?.chooseProjectsFolder?.();
+    if (result?.ok && result.data) setFolder(result.data.path);
+  };
+
   useEffect(() => {
     const node = dialog.current;
     if (!node) return;
@@ -56,6 +83,24 @@ export function Preferences({
           ×
         </button>
       </header>
+
+      {folder !== null ? (
+        <section>
+          <h3>Projects folder</h3>
+          <p className="path">{folder}</p>
+          {canChoose ? (
+            <button type="button" onClick={() => void chooseFolder()}>
+              Change…
+            </button>
+          ) : null}
+          <p className="muted small">
+            New projects are saved here, and the home screen lists every project in it. Choose a folder in your cloud
+            drive — iCloud Drive, Dropbox, OneDrive or Google Drive — and choose the same one on each computer, and every
+            computer has every project. Open a project on one computer at a time: two computers saving the same file at
+            once leave the cloud drive to choose between them.
+          </p>
+        </section>
+      ) : null}
 
       <section>
         <h3>Colour scheme</h3>

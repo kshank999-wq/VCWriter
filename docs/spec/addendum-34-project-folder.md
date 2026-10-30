@@ -142,3 +142,32 @@ not a place on a disk.
 **The folder is not per project.** It is where *new* ones go; moving an
 existing one is `File ▸ Save as…`, which addendum 29 built and which now opens
 at this folder and remembers where it lands.
+
+## 9. One folder for every computer
+
+From Ken: *I also want to be able to set a default drive path to my cloud drive.
+And so in the preferences, you can set a default path so you have all your
+projects, no matter where you are… if you have the program installed on a Mac
+or a PC or both and different computers, that you can point them all to the
+same drive. And then when you open it on any computer, that always has the
+relevant file.*
+
+§3 kept the folder a fact about the machine, and it still is: each computer is
+pointed at the folder, the folder is not written into a project. What was
+missing is that **the home screen only knew what this computer had opened**.
+
+- **Preferences ▸ Projects folder**: the folder, *Change…*, and the sentence
+  that says a cloud drive's folder chosen on each computer gives every computer
+  every project, and to open a project on one computer at a time.
+- **A chosen folder stays chosen.** `projects-folder.json` records `chosen`;
+  §3's *remembered by being used* now only moves a folder the program guessed,
+  never one the writer set (here or on the New project page).
+- **The home screen lists the folder.** *In your projects folder* above
+  *Opened on this computer*: every `.vcw` in the folder and the folders
+  directly in it, newest first, each with its title and format read from the
+  head of its file (`project:inFolder`). A cloud drive's placeholder for a
+  file not yet downloaded (iCloud's `.Name.vcw.icloud`) is counted and said,
+  not listed: it cannot be opened until the drive brings it down.
+- Not here: two computers saving one file at the same moment. The cloud drive
+  keeps one and, usually, a conflicted copy beside it; the sentence asks for one
+  computer at a time.

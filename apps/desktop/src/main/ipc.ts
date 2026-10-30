@@ -121,8 +121,94 @@ const readHome = async (): Promise<string> => {
  * not, because a colleague's file read out of Downloads must not move where
  * your own books are written.
  */
-const rememberHome = async (folder: string): Promise<void> => {
-  await writeFile(homePath(), JSON.stringify({ folder }), 'utf8').catch(() => undefined);
+const rememberHome = async (folder: string, chosen = false): Promise<void> => {
+  // **A folder chosen on purpose stays chosen** (addendum 34 §9, from Ken:
+  // *in the preferences, you can set a default path so you have all your
+  // projects, no matter where you are*). Saving one file somewhere else does
+  // not move a folder the writer set; it only moves one the program guessed.
+  if (!chosen) {
+    try {
+      const was = JSON.parse(await readFile(homePath(), 'utf8')) as { chosen?: unknown };
+      if (was?.chosen === true) return;
+    } catch {
+      // Nothing remembered yet: this is the first guess.
+    }
+  }
+  await writeFile(homePath(), JSON.stringify({ folder, chosen }), 'utf8').catch(() => undefined);
+};
+
+/** One project found in the projects folder (addendum 34 §9). */
+interface FolderProject {
+  path: string;
+  title: string;
+  format: string | null;
+  modifiedAt: string;
+}
+
+/**
+ * The project's title and format, read from the head of its file rather than
+ * the whole of it: the project record is written near the start, and a folder
+ * of forty books is not forty whole parses.
+ */
+const headOf = async (path: string): Promise<{ title: string; format: string | null }> => {
+  const { open } = await import('node:fs/promises');
+  const handle = await open(path, 'r');
+  try {
+    const buffer = Buffer.alloc(32 * 1024);
+    const { bytesRead } = await handle.read(buffer, 0, buffer.length, 0);
+    const head = buffer.subarray(0, bytesRead).toString('utf8');
+    const project = head.slice(Math.max(0, head.indexOf('"project"')));
+    const title = /"title"\s*:\s*"((?:[^"\\]|\\.)*)"/.exec(project)?.[1];
+    const format = /"format"\s*:\s*"([a-z_]+)"/.exec(project)?.[1] ?? null;
+    return { title: title ? (JSON.parse(`"${title}"`) as string) : '', format };
+  } finally {
+    await handle.close();
+  }
+};
+
+/**
+ * **Every project in the projects folder** (addendum 34 §9). Recents are this
+ * machine's memory; the folder is shared. Pointed at the same cloud-drive
+ * folder, every computer lists every project in it, whichever one made it.
+ * The folder itself and the folders directly in it are read, newest first.
+ * A cloud drive's placeholder for a file not yet downloaded (iCloud's
+ * `.Name.vcw.icloud`) is counted, not listed: it cannot be opened until the
+ * drive brings it down.
+ */
+const projectsInFolder = async (): Promise<{ folder: string; projects: FolderProject[]; notDownloaded: number }> => {
+  const folder = await readHome();
+  const found: FolderProject[] = [];
+  let notDownloaded = 0;
+  const ending = `.${PROJECT_EXTENSION}`;
+  const look = async (dir: string, depth: number) => {
+    const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
+    for (const entry of entries) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (depth === 0 && !entry.name.startsWith('.')) await look(full, 1);
+        continue;
+      }
+      if (entry.name.startsWith('.') && entry.name.endsWith(`${ending}.icloud`)) {
+        notDownloaded += 1;
+        continue;
+      }
+      if (!entry.name.endsWith(ending) || entry.name.startsWith('.')) continue;
+      try {
+        const [info, head] = await Promise.all([stat(full), headOf(full)]);
+        found.push({
+          path: full,
+          title: head.title || entry.name.slice(0, -ending.length),
+          format: head.format,
+          modifiedAt: info.mtime.toISOString(),
+        });
+      } catch {
+        // A file that cannot be read is skipped, not fatal to the list.
+      }
+    }
+  };
+  await look(folder, 0);
+  found.sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt));
+  return { folder, projects: found.slice(0, 200), notDownloaded };
 };
 
 /**
@@ -307,7 +393,8 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
       // Dismissing is not a failure and must not paint one (addendum 29 §1):
       // the writer changed their mind, and nothing has moved.
       if (choice.canceled || !folder) return ok({ path: await readHome(), canChoose: true });
-      await rememberHome(folder);
+      // Chosen on purpose, so it stays (§9).
+      await rememberHome(folder, true);
       return ok({ path: folder, canChoose: true });
     } catch (cause) {
       return fail(cause);
@@ -446,6 +533,17 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
         await rememberHome(dirname(saved.path));
         await rememberRecent(saved.path, file.project.title);
         return ok({ path: saved.path, file, contentHash: saved.contentHash });
+      } catch (cause) {
+        return fail(cause);
+      }
+    },
+  );
+
+  ipcMain.handle(
+    'project:inFolder',
+    async (): Promise<DesktopApiResult<{ folder: string; projects: FolderProject[]; notDownloaded: number }>> => {
+      try {
+        return ok(await projectsInFolder());
       } catch (cause) {
         return fail(cause);
       }

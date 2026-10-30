@@ -180,6 +180,13 @@ export interface VcWriterApi {
   chooseProjectsFolder(): Promise<DesktopApiResult<ProjectFolder>>;
   recentProjects(): Promise<DesktopApiResult<string[]>>;
   /**
+   * Every project in the projects folder, newest first (addendum 34 §9): the
+   * folder is shared across computers where recents are not.
+   */
+  projectsInFolder?(): Promise<
+    DesktopApiResult<{ folder: string; projects: { path: string; title: string; format: string | null; modifiedAt: string }[]; notDownloaded: number }>
+  >;
+  /**
    * Every project this machine has, with enough about each to choose between
    * them: the title, when it was last written, how big it is (spec §4).
    *
@@ -517,6 +524,7 @@ const api: VcWriterApi = {
   projectsFolder: () => ipcRenderer.invoke('project:home'),
   chooseProjectsFolder: () => ipcRenderer.invoke('project:chooseHome'),
   recentProjects: () => ipcRenderer.invoke('project:recents'),
+  projectsInFolder: () => ipcRenderer.invoke('project:inFolder'),
   listProjects: () => ipcRenderer.invoke('project:list'),
   readProject: (path) => ipcRenderer.invoke('project:read', path),
   pickProject: () => ipcRenderer.invoke('project:pick'),

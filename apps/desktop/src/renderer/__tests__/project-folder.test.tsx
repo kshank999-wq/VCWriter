@@ -113,3 +113,34 @@ describe('the New project page', () => {
     expect(screen.getByRole('button', { name: 'Create project' })).toBeTruthy();
   });
 });
+
+/**
+ * Every project in the folder, on every computer (addendum 34 §9, from Ken:
+ * *point them all to the same drive. And then when you open it on any
+ * computer, that always has the relevant file*).
+ */
+describe('the projects folder on the home screen', () => {
+  it('lists every project in the folder, whichever computer made it, and opens one', async () => {
+    const onOpenPath = vi.fn();
+    (window as unknown as { vcwriter: unknown }).vcwriter = api({
+      projectsInFolder: vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          data: {
+            folder: '/Users/ken/Dropbox/Scripts',
+            projects: [
+              { path: '/Users/ken/Dropbox/Scripts/Blackout.vcw', title: 'Blackout', format: 'screenplay', modifiedAt: '2026-10-30T10:00:00.000Z' },
+              { path: '/Users/ken/Dropbox/Scripts/Letters/Letter.vcw', title: 'Letter to Sam', format: 'document', modifiedAt: '2026-10-29T10:00:00.000Z' },
+            ],
+            notDownloaded: 1,
+          },
+        }),
+      ),
+    });
+    render(<Welcome onCreate={vi.fn()} onOpen={vi.fn()} onImport={vi.fn()} onProjects={vi.fn()} onOpenPath={onOpenPath} error={null} />);
+    expect(await screen.findByText('In your projects folder')).toBeTruthy();
+    expect(screen.getByText(/1 more is in the cloud drive but not on this computer yet/)).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: 'Letter to Sam' }));
+    expect(onOpenPath).toHaveBeenCalledWith('/Users/ken/Dropbox/Scripts/Letters/Letter.vcw');
+  });
+});
