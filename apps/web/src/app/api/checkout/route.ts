@@ -7,6 +7,7 @@ import { priceIdFor } from '@/lib/pricing';
 import { stripe } from '@/lib/stripe';
 import { currentUser } from '@/lib/supabase';
 import { RULES, rateLimit } from '@/lib/rate-limit';
+import { OWN_PRODUCT } from '@/lib/checkout-kind';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -73,6 +74,8 @@ export async function POST(request: Request): Promise<Response> {
       ...(email ? { customer_email: email } : {}),
       // Read back by the webhook; the platform choice is recorded on the order.
       metadata: {
+        // Whose sale this is, for every VC product's webhook (lib/checkout-kind.ts).
+        product: OWN_PRODUCT,
         platform: parsed.data.platform,
         supabase_user_id: user?.id ?? '',
         plan: parsed.data.plan,
@@ -84,6 +87,7 @@ export async function POST(request: Request): Promise<Response> {
       // alone rather than written somewhere.
       subscription_data: {
         metadata: {
+          product: OWN_PRODUCT,
           kind: 'desktop',
           supabase_user_id: user?.id ?? '',
           plan: parsed.data.plan,

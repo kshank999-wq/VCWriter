@@ -8,6 +8,7 @@ import { fulfillCheckout, parsePlatform } from '@/lib/fulfillment';
 import { sendPurchaseEmail } from '@/lib/email';
 import { recordSubscription, subscriptionKind } from '@/lib/room-billing';
 import { recordDesktopSubscription } from '@/lib/desktop-subscription';
+import { checkoutKind } from '@/lib/checkout-kind';
 
 /**
  * When the subscription is paid up to, asked of Stripe rather than guessed.
@@ -83,7 +84,12 @@ export async function POST(request: Request): Promise<Response> {
       // 100%-off code completed checkout and fulfilled nothing — and threw
       // nothing either (addendum 31 §9). `purchaseSettled` is the one reading
       // of Stripe's three words, and `unpaid` is still refused by it.
-      if (purchaseSettled(session.payment_status)) {
+      // **Only VC Writer's own desktop checkouts make a licence.** Stripe sends
+      // every VC product's events here, and a Writers Room seat checkout is
+      // billed through its subscription events instead (`checkoutKind`).
+      if (checkoutKind(session) !== 'desktop') {
+        // Another product's sale, or a room's seats: nothing to fulfil here.
+      } else if (purchaseSettled(session.payment_status)) {
         const email = session.customer_details?.email ?? session.customer_email;
         if (!email) throw new Error(`Checkout session ${session.id} has no customer email`);
 
