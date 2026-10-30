@@ -870,3 +870,30 @@ right-hand side.*
 - **Research works in a document.** The title bar's Research button set a
   flag that only the story workspace read, so in a document it did nothing.
   The window is now drawn over the word processor too, opened from the menu.
+
+## 17. The document in the cloud
+
+From Ken: *you mentioned that opening in one computer or another, the file comes
+out blank… let's fix that first so I can start working in the program on
+different computers.*
+
+A Document project's document — and the extracts taken from it, with their
+palettes and buttons — were never in `SYNC_TABLES`. A project brought down from
+the cloud on a second computer arrived with no document (§16 then gave it an
+empty page), and a Document project made on the phone was made without one.
+Nothing was lost on a computer that already had the file: the merge keeps
+`...local` for what it does not carry.
+
+- **Four collections now sync**: `documents`, `extractPalettes`,
+  `extractCategories`, `extracts`, into `wp_documents`, `wp_extract_palettes`,
+  `wp_extract_categories` and `wp_extracts` (migration 0073). Each row holds
+  the record **whole as `data`**, beside `id`, `project_id`, `created_at` and
+  `updated_at`, so a field added to a document later travels without another
+  migration. A category and an extract carry no project of their own; the
+  row's `project_id` is the file's, and is dropped again on the way back.
+- They merge like every other record (`mergeProjects`), and the phone's
+  *new project* route writes a Document project's document with the rest.
+- `sync-documents.test.ts`: the round trip is exact, the row keeps the record
+  whole, and a project merged from the cloud has its words.
+- Still not in the cloud: pictures (`assets`), import batches, and the game
+  collections, which VC Game Studio keeps.

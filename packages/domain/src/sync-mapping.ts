@@ -120,6 +120,19 @@ export const SYNC_TABLES = {
    */
   noteSessions: 'note_sessions',
   noteSources: 'note_sources',
+  /**
+   * **The word processor** (addendum 42 §17). A Document project's document,
+   * and the extracts taken from it with their palettes and buttons. Each row
+   * holds the record whole, as `data`, beside the columns sync and row-level
+   * security need: a document is one editor tree and a run of settings, and a
+   * field added to it next month must travel without a migration — the reason
+   * a document that came down from the cloud used to arrive empty is that it
+   * was never in this list at all.
+   */
+  documents: 'wp_documents',
+  extractPalettes: 'wp_extract_palettes',
+  extractCategories: 'wp_extract_categories',
+  extracts: 'wp_extracts',
 } as const;
 
 export type SyncCollection = keyof typeof SYNC_TABLES;
@@ -587,8 +600,62 @@ const outlineItemToRow = (item: OutlineItem, projectId: ProjectId): Row => ({
   updated_at: item.updatedAt,
 });
 
+// ---------------------------------------------------------------------------
+// The word processor, as whole records (addendum 42 §17)
+// ---------------------------------------------------------------------------
+
+type Whole = { id: string; createdAt: string; updatedAt: string };
+
+/** A record as one row: its id, its project, its times, and the rest as `data`. */
+const wholeToRow = (projectId: string, record: Whole): Row => {
+  const { id, createdAt, updatedAt, ...data } = record as Whole & Record<string, unknown>;
+  // The project is the row's, not the record's: it is filled from the column.
+  delete (data as Record<string, unknown>)['projectId'];
+  return { id, project_id: projectId, data, created_at: createdAt, updated_at: updatedAt };
+};
+
+const wholeFromRow = (row: Row): Record<string, unknown> => ({
+  ...((row['data'] as Record<string, unknown> | null) ?? {}),
+  id: row['id'],
+  projectId: row['project_id'],
+  createdAt: row['created_at'],
+  updatedAt: row['updated_at'],
+});
+
+const wordProcessorRows = (file: ProjectFile) => {
+  const projectId = file.project.id as string;
+  const rows = (records: readonly unknown[] | undefined) => (records ?? []).map((one) => wholeToRow(projectId, one as Whole));
+  return {
+    documents: rows(file.documents),
+    extractPalettes: rows(file.extractPalettes),
+    extractCategories: rows(file.extractCategories),
+    extracts: rows(file.extracts),
+  };
+};
+
+/**
+ * The records back. A category and an extract carry no project of their own
+ * (they hang off a palette and a document), so the column's is dropped again
+ * before the schema reads them.
+ */
+const wordProcessorFromRows = (rows: ProjectRows) => {
+  const whole = (list: Row[] | undefined, keepProject: boolean) =>
+    (list ?? []).map((row) => {
+      const record = wholeFromRow(row);
+      if (!keepProject) delete record['projectId'];
+      return record;
+    });
+  return {
+    documents: whole(rows.documents, true),
+    extractPalettes: whole(rows.extractPalettes, true),
+    extractCategories: whole(rows.extractCategories, false),
+    extracts: whole(rows.extracts, false),
+  };
+};
+
 export const toRows = (file: ProjectFile): ProjectRows => ({
   project: projectToRow(file),
+  ...wordProcessorRows(file),
   tracks: file.tracks.map(trackToRow),
   units: file.units.map(unitToRow),
   beats: file.beats.map(beatToRow),
@@ -1457,6 +1524,7 @@ const plansFromRows = (rows: ProjectRows): Pick<ProjectFile, 'boards' | 'outline
 
 export const fromRows = (rows: ProjectRows): ProjectFile =>
   projectFileSchema.parse({
+    ...wordProcessorFromRows(rows),
     formatVersion: PROJECT_FORMAT_VERSION,
     generator: 'vcwriter-sync',
     savedAt: new Date().toISOString(),
