@@ -1,5 +1,9 @@
 import {
   citeDocumentHtml,
+  contentsDocumentHtml,
+  fillContentsPages,
+  hasContents,
+  headingPagesIn,
   documentMeasureHtml,
   documentPageBox,
   documentPagedHtml,
@@ -352,8 +356,11 @@ export const setPages = (doc: Document, document: WpDocument, cites: DocumentCit
  * parentheses), so the plain print stands.
  */
 export const footNotedPrintHtml = async (document: WpDocument, cites: DocumentCitations, editorHtml: string): Promise<string | null> => {
-  // Notes at the foot: a footnote style's citations, or the writer's own footnotes (addendum 42 §18).
-  if (cites.notes.length === 0) return null;
+  // Notes at the foot: a footnote style's citations, or the writer's own
+  // footnotes (addendum 42 §18); or a table of contents, which needs the pages
+  // to know its page numbers (§19).
+  const contents = hasContents(document.content);
+  if (cites.notes.length === 0 && !contents) return null;
   const frame = window.document.createElement('iframe');
   frame.setAttribute('aria-hidden', 'true');
   frame.tabIndex = -1;
@@ -366,8 +373,10 @@ export const footNotedPrintHtml = async (document: WpDocument, cites: DocumentCi
     doc.write(documentMeasureHtml(document));
     doc.close();
     await doc.fonts?.ready;
-    const body = numberHeadingsHtml(document, citeDocumentHtml(cites, editorHtml, false));
-    return documentPagedHtml(document, setPages(doc, document, cites, body), cites);
+    const body = contentsDocumentHtml(document, numberHeadingsHtml(document, citeDocumentHtml(cites, editorHtml, false)));
+    const pages = setPages(doc, document, cites, body);
+    const paged = documentPagedHtml(document, pages, cites);
+    return contents ? fillContentsPages(paged, headingPagesIn(pages)) : paged;
   } finally {
     frame.remove();
   }

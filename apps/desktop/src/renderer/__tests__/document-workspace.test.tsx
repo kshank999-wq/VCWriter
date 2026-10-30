@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { Editor } from '@tiptap/core';
 import {
   createProjectFile,
@@ -223,5 +223,32 @@ describe('footnotes and endnotes', () => {
       { kind: 'end', text: 'See the flood records.' },
     ]);
     expect(editorOf().getHTML()).toContain('data-footnote=');
+  });
+});
+
+/** A table of contents (addendum 42 §19). */
+describe('the table of contents', () => {
+  it('is inserted from the References tab and lists the document’s headings', async () => {
+    const file = createProjectFile({ title: 'Letter', format: 'document' });
+    const withHeadings = setDocumentContent(file, mainDocument(file)!.id, {
+      type: 'doc',
+      content: [
+        { type: 'paragraph' },
+        { type: 'heading', attrs: { level: 1, headingId: 'a' }, content: [{ type: 'text', text: 'Arrival' }] },
+        { type: 'heading', attrs: { level: 2, headingId: 'b' }, content: [{ type: 'text', text: 'The Harbour' }] },
+      ],
+    });
+    render(<Harness start={withHeadings} />);
+    act(() => {
+      editorOf().commands.setTextSelection(1);
+    });
+    fireEvent.click(screen.getByRole('tab', { name: 'References' }));
+    fireEvent.mouseDown(screen.getByRole('button', { name: 'Table of contents' }));
+    expect(editorOf().getHTML()).toContain('data-toc');
+    await waitFor(() => {
+      const table = document.querySelector('.wp-toc-block');
+      expect(table?.textContent).toContain('Arrival');
+      expect(table?.textContent).toContain('The Harbour');
+    });
   });
 });

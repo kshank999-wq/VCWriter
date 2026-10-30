@@ -114,6 +114,7 @@ export * from './title-builder.js';
 export * from './docx-export.js';
 export * from './book-docx.js';
 export * from './document-citations.js';
+export * from './document-contents.js';
 export * from './format-templates.js';
 export * from './beat-peek.js';
 export * from './back-matter.js';

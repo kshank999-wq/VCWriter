@@ -1,6 +1,7 @@
 import { DOCUMENT_CITATION_CSS, noteHtml, type DocumentCitations } from './document-citations.js';
 import { pageSize } from './document.js';
 import { headingNumbers } from './document-outline.js';
+import { DOCUMENT_CONTENTS_CSS } from './document-contents.js';
 import { headerFooterCss, printedDate } from './document-pages.js';
 import type { WpDocument } from './entities/document.js';
 
@@ -95,6 +96,7 @@ const printHead = (document: WpDocument, extra = ''): string => {
     '* { -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
     DOCUMENT_CONTENT_CSS +
     DOCUMENT_CITATION_CSS +
+    DOCUMENT_CONTENTS_CSS +
     extra +
     '</style></head>'
   );

@@ -820,6 +820,94 @@ export const Bibliography = Node.create({
   },
 });
 
+/** What the workspace hands the table of contents (addendum 42 §19): its markup, and a way to draw it again. */
+export interface ContentsStorage {
+  html: string;
+  /** Each table in the page draws itself again when this is called. */
+  views: Set<() => void>;
+  set: (html: string) => void;
+}
+
+declare module '@tiptap/core' {
+  interface Commands<ReturnType> {
+    tableOfContents: {
+      insertTableOfContents: () => ReturnType;
+    };
+  }
+}
+
+/**
+ * **A table of contents where the writer puts it** (addendum 42 §19): a block
+ * with nothing typed in it, drawn from the document's headings and the page
+ * each stands on, as the bibliography is drawn from the sources. A click on a
+ * line goes to its heading. Print and Word set the same table in its place.
+ */
+export const TableOfContents = Node.create({
+  name: 'tableOfContents',
+  group: 'block',
+  atom: true,
+  selectable: true,
+  parseHTML() {
+    return [{ tag: 'div[data-toc]' }];
+  },
+  renderHTML() {
+    return ['div', { 'data-toc': '', class: 'wp-toc-block' }];
+  },
+  addStorage(): ContentsStorage {
+    return {
+      html: '',
+      views: new Set(),
+      // Through `this`: the editor keeps its own copy of what this returns,
+      // and the table draws from that copy.
+      set(this: ContentsStorage, html: string) {
+        if (html === this.html) return;
+        this.html = html;
+        for (const draw of this.views) draw();
+      },
+    };
+  },
+  addCommands() {
+    return {
+      insertTableOfContents:
+        () =>
+        ({ commands }) =>
+          commands.insertContent({ type: this.name }),
+    };
+  },
+  addNodeView() {
+    const storage = this.storage as ContentsStorage;
+    return ({ editor }) => {
+      const dom = document.createElement('div');
+      dom.className = 'wp-toc-block';
+      dom.contentEditable = 'false';
+      dom.setAttribute('data-toc', '');
+      const draw = () => {
+        dom.innerHTML = storage.html || '<nav class="wp-toc"><h2 class="wp-toc-heading">Contents</h2></nav>';
+      };
+      draw();
+      storage.views.add(draw);
+      // A line goes to its heading, and puts the cursor at its start.
+      const go = (event: MouseEvent) => {
+        const link = (event.target as HTMLElement | null)?.closest('a[data-toc-target]');
+        if (!link) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const at = headingPosition(editor.state.doc, link.getAttribute('data-toc-target') ?? '');
+        if (at !== null) editor.chain().focus().setTextSelection(at).scrollIntoView().run();
+      };
+      dom.addEventListener('mousedown', go);
+      return {
+        dom,
+        update: (node) => node.type.name === 'tableOfContents',
+        destroy: () => {
+          storage.views.delete(draw);
+          dom.removeEventListener('mousedown', go);
+        },
+      };
+    };
+  },
+});
+
 /** Everything the document editor is built from. */
 export const documentExtensions = () => [
   StarterKit.configure({
@@ -843,4 +931,5 @@ export const documentExtensions = () => [
   Citation,
   Footnote,
   Bibliography,
+  TableOfContents,
 ];

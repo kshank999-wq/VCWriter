@@ -1337,3 +1337,10 @@
 .wp-note-dialog textarea { width: 100%; resize: vertical; font: inherit; padding: 8px; }
 .wp-note-dialog footer { display: flex; align-items: center; gap: 8px; }
 .wp-endnotes h2 { font-size: 1.1em; }
+
+/* The table of contents in the page (addendum 42 §19): the print's own
+   stylesheet sets its lines; the block is outlined when chosen. */
+.ProseMirror .wp-toc-block { margin: 0 0 12pt; padding: 2px 6px; border-left: 2px solid rgba(24, 90, 189, 0.35); cursor: default; }
+.ProseMirror .wp-toc-block.ProseMirror-selectednode { outline: 2px solid rgba(24, 90, 189, 0.5); }
+.ProseMirror .wp-toc-block a { cursor: pointer; }
+.ProseMirror .wp-toc-block a:hover .wp-toc-text { text-decoration: underline; }

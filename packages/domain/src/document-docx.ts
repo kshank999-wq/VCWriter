@@ -5,6 +5,7 @@ import { BAND_SLOTS, printedDate } from './document-pages.js';
 import type { DocMark, DocNode, DocumentBand, WpDocument } from './entities/document.js';
 import { parseInline } from './entities/inline.js';
 import type { DocumentCitations } from './document-citations.js';
+import { contentsEntries, type TocEntry } from './document-contents.js';
 
 /**
  * **A document as a Word file** (addendum 42 §4, spec §4.1 and §7.2).
@@ -69,6 +70,10 @@ interface Context {
   footnotes: string[];
   /** Word endnotes made so far, in order (addendum 42 §18). */
   endnotes: string[];
+  /** The headings a table of contents lists (addendum 42 §19). */
+  contents: TocEntry[];
+  /** Set once a table of contents is written, so Word is asked to fill it in on opening. */
+  hasContents: boolean;
 }
 
 type ListKind = 'bullet' | 'decimal' | 'lowerLetter' | 'upperLetter' | 'lowerRoman' | 'upperRoman';
@@ -460,6 +465,25 @@ const blockXml = (node: DocNode, context: Context): string => {
       return tableXml(node, context);
     case 'image':
       return `<w:p>${pictureRun(node, context)}</w:p>`;
+    case 'tableOfContents': {
+      // Word's own table of contents (addendum 42 §19): a TOC field over the
+      // headings' outline levels, its lines written now for a reader that
+      // does not update fields, and Word asked to update it on opening so the
+      // page numbers are its own.
+      context.hasContents = true;
+      const lines = context.contents.map(
+        (entry) =>
+          `<w:p><w:pPr><w:pStyle w:val="TOC${Math.min(9, entry.level)}"/><w:tabs><w:tab w:val="right" w:leader="dot" w:pos="9350"/></w:tabs></w:pPr>` +
+          `${textRun(`${entry.number ? `${entry.number} ` : ''}${entry.text}`, [])}<w:r><w:tab/></w:r></w:p>`,
+      );
+      const begin = '<w:r><w:fldChar w:fldCharType="begin" w:dirty="true"/></w:r><w:r><w:instrText xml:space="preserve"> TOC \\o "1-3" \\h \\z \\u </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r>';
+      const end = '<w:r><w:fldChar w:fldCharType="end"/></w:r>';
+      const heading = `<w:p><w:pPr><w:pStyle w:val="TOCHeading"/></w:pPr>${textRun('Contents', [])}</w:p>`;
+      if (lines.length === 0) return `${heading}<w:p>${begin}${end}</w:p>`;
+      const first = (lines[0] as string).replace('</w:pPr>', `</w:pPr>${begin}`);
+      const last = lines.length === 1 ? first.replace(/<\/w:p>$/, `${end}</w:p>`) : (lines[lines.length - 1] as string).replace(/<\/w:p>$/, `${end}</w:p>`);
+      return heading + (lines.length === 1 ? last : [first, ...lines.slice(1, -1), last].join(''));
+    }
     case 'bibliography': {
       // Filled from the sources the document cites, as the page shows it.
       const cites = context.cites;
@@ -577,6 +601,14 @@ export const DOCUMENT_STYLES_XML =
   '<w:style w:type="paragraph" w:styleId="EndnoteText"><w:name w:val="endnote text"/><w:basedOn w:val="Normal"/>' +
   '<w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr><w:rPr><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr></w:style>' +
   '<w:style w:type="character" w:styleId="EndnoteReference"><w:name w:val="endnote reference"/><w:rPr><w:vertAlign w:val="superscript"/></w:rPr></w:style>' +
+  '<w:style w:type="paragraph" w:styleId="TOCHeading"><w:name w:val="TOC Heading"/><w:basedOn w:val="Heading1"/><w:next w:val="Normal"/><w:qFormat/></w:style>' +
+  [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    .map(
+      (level) =>
+        `<w:style w:type="paragraph" w:styleId="TOC${level}"><w:name w:val="toc ${level}"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/>` +
+        `<w:pPr><w:spacing w:after="100"/><w:ind w:left="${(level - 1) * 220}"/></w:pPr></w:style>`,
+    )
+    .join('') +
   '<w:style w:type="table" w:styleId="TableGrid"><w:name w:val="Table Grid"/><w:tblPr><w:tblBorders>' +
   ['top', 'left', 'bottom', 'right', 'insideH', 'insideV']
     .map((side) => `<w:${side} w:val="single" w:sz="4" w:space="0" w:color="auto"/>`)
@@ -636,6 +668,8 @@ export const documentBodyXml = (document: WpDocument, cites: DocumentCitations |
     cites,
     footnotes: [],
     endnotes: [],
+    contents: contentsEntries(document),
+    hasContents: false,
   };
   const body = (document.content.content ?? []).map((block) => blockXml(block, context)).join('');
   return {
@@ -686,6 +720,7 @@ export const buildDocumentDocx = async (
   const { xml: body, context } = documentBodyXml(document, options.citations ?? null);
   const notes = context.footnotes.length > 0;
   const ends = context.endnotes.length > 0;
+  const fields = context.hasContents;
   const extensions = [...new Set(context.pictures.map((picture) => picture.extension))];
   const contentTypes =
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
@@ -698,7 +733,7 @@ export const buildDocumentDocx = async (
     '<Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>' +
     (notes ? '<Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/>' : '') +
     (ends ? '<Override PartName="/word/endnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml"/>' : '') +
-    (notes || ends
+    (notes || ends || fields
       ? '<Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>'
       : '') +
     (bandUsed(document.headerFooter.header)
@@ -722,7 +757,7 @@ export const buildDocumentDocx = async (
     '<Relationship Id="rIdNumbering" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>' +
     (notes ? '<Relationship Id="rIdFootnotes" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/>' : '') +
     (ends ? '<Relationship Id="rIdEndnotes" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes" Target="endnotes.xml"/>' : '') +
-    (notes || ends
+    (notes || ends || fields
       ? '<Relationship Id="rIdSettings" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>'
       : '') +
     (bandUsed(document.headerFooter.header)
@@ -760,12 +795,14 @@ export const buildDocumentDocx = async (
     { path: 'word/numbering.xml', data: utf8(numberingXml(context.lists)) },
     ...(notes ? [{ path: 'word/footnotes.xml', data: utf8(footnotesXml(context.footnotes)) }] : []),
     ...(ends ? [{ path: 'word/endnotes.xml', data: utf8(endnotesXml(context.endnotes)) }] : []),
-    ...(notes || ends
+    ...(notes || ends || fields
       ? [
           {
             path: 'word/settings.xml',
             data: utf8(
               '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+                // Word fills in the table of contents' page numbers on opening (§19).
+                (fields ? '<w:updateFields w:val="true"/>' : '') +
                 (notes ? '<w:footnotePr><w:footnote w:id="-1"/><w:footnote w:id="0"/></w:footnotePr>' : '') +
                 (ends ? '<w:endnotePr><w:numFmt w:val="lowerRoman"/><w:endnote w:id="-1"/><w:endnote w:id="0"/></w:endnotePr>' : '') +
                 '</w:settings>',

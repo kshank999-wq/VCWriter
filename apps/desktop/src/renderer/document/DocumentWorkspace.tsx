@@ -57,6 +57,10 @@ import {
   citationSettingsOf,
   citeDocumentHtml,
   withWriterNotes,
+  contentsDocumentHtml,
+  DOCUMENT_CONTENTS_CSS,
+  contentsEntries,
+  contentsHtml,
   documentCitations,
   insertCitation,
   plainInline,
@@ -67,7 +71,7 @@ import { readDocxParts } from '../read-docx';
 import { footNotedPrintHtml } from './foot-notes';
 import { PageView, layOutPageView, pageViewKey } from './page-view';
 import { DecorationSet } from '@tiptap/pm/view';
-import { documentExtensions, extractRange, findMatches, headingPosition, type CitationStorage, type SearchState } from './extensions';
+import { documentExtensions, extractRange, findMatches, headingPosition, type CitationStorage, type ContentsStorage, type SearchState } from './extensions';
 import { CitationDialog, type CitationChoice } from '../components/citations/CitationDialog';
 import { ReferencesPanel } from '../components/citations/ReferencesPanel';
 import { BringInSourcesDialog } from '../components/citations/BringInSourcesDialog';
@@ -100,6 +104,10 @@ const citeKeysOf = (editor: Editor | null): string[] => {
   });
   return keys;
 };
+
+/** Two readings of the headings' pages that say the same thing, so a redraw is not asked for twice. */
+const sameMap = (a: ReadonlyMap<string, number>, b: ReadonlyMap<string, number>): boolean =>
+  a.size === b.size && [...a].every(([key, value]) => b.get(key) === value);
 
 interface DocumentWorkspaceProps {
   file: ProjectFile;
@@ -143,6 +151,8 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
   const [message, setMessage] = useState<string | null>(null);
   const [painter, setPainter] = useState<readonly Mark[] | null>(null);
   const [pages, setPages] = useState(1);
+  /** The page each heading stands on in the page view, for the table of contents (addendum 42 §19). */
+  const [headingPages, setHeadingPages] = useState<ReadonlyMap<string, number>>(new Map());
   // Extract & Organize (addendum 42 §8).
   const [extracting, setExtracting] = useState(false);
   const [paletteId, setPaletteId] = useState<ExtractPaletteId | null>(null);
@@ -281,6 +291,24 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
     for (const note of [...cites.notes, ...cites.endnotes]) if (note.key.includes(':')) markers.set(note.key, note.marker);
     editor.commands.setCitationView({ markers, raised: cites.raised, bibliographyHtml: bibliographyHtml(cites) });
   }, [editor, cites]);
+
+  /**
+   * **The table of contents, drawn from the headings as they stand** (addendum
+   * 42 §19), with each heading's page in the page view; none in web layout,
+   * which has no pages.
+   */
+  const tocSignature: string[] = [];
+  editor?.state.doc.forEach((node) => {
+    if (node.type.name === 'heading') tocSignature.push(`${String(node.attrs['level'])}:${String(node.attrs['headingId'])}:${node.textContent}`);
+    else if (node.type.name === 'tableOfContents') tocSignature.push('toc');
+  });
+  const tocKey = tocSignature.includes('toc') ? tocSignature.join('\u0001') : '';
+  useEffect(() => {
+    if (!editor || !tocKey) return;
+    const storage = (editor.storage as unknown as { tableOfContents: ContentsStorage }).tableOfContents;
+    const entries = contentsEntries({ content: editor.getJSON() as DocNode, headingNumbering: document.headingNumbering });
+    storage.set(contentsHtml(entries, view.layout === 'print' ? headingPages : undefined));
+  }, [editor, tocKey, headingPages, document.headingNumbering, view.layout]);
 
   useEffect(() => {
     if (!editor) return undefined;
@@ -476,7 +504,7 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
       paged = null;
     }
     return {
-      html: paged ?? documentPrintHtml(current, citeDocumentHtml(cites, html)),
+      html: paged ?? documentPrintHtml(current, contentsDocumentHtml(current, citeDocumentHtml(cites, html))),
       paper: pageSize(current.pageSetup),
     };
   }, [docOf, citesNow]);
@@ -623,6 +651,7 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
       if (!box || editor.isDestroyed) return;
       const laid = layOutPageView(editor, cites, { pageHeight: height, top: margins.top, bottom: margins.bottom }, box);
       setPages(laid.pages);
+      setHeadingPages((was) => (sameMap(was, laid.headingPages) ? was : laid.headingPages));
     };
     const schedule = () => {
       if (timer !== null) window.clearTimeout(timer);
@@ -839,7 +868,7 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
 
   return (
     <div className={`wp-workspace${view.marks ? ' show-marks' : ''} extracts-${display}`}>
-      <style>{DOCUMENT_CONTENT_CSS + DOCUMENT_CITATION_CSS}</style>
+      <style>{DOCUMENT_CONTENT_CSS + DOCUMENT_CITATION_CSS + DOCUMENT_CONTENTS_CSS}</style>
       <Ribbon
         editor={editor}
         tab={tab}
@@ -864,6 +893,7 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
           onCite: () => !readOnly && setCiting({ key: null }),
           onBibliography: () => !readOnly && editor?.chain().focus().insertBibliography().run(),
           onLibrary: () => setLibraryOpen(true),
+          onContents: () => !readOnly && editor?.chain().focus().insertTableOfContents().run(),
           onFootnote: () => !readOnly && setNoting({ id: null, kind: 'foot', text: '' }),
           onEndnote: () => !readOnly && setNoting({ id: null, kind: 'end', text: '' }),
           onBringIn: () => !readOnly && setBringing(true),

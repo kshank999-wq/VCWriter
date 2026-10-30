@@ -137,6 +137,8 @@ interface RibbonProps {
     onBibliography(): void;
     onLibrary(): void;
     onBringIn(): void;
+    /** A table of contents at the cursor (addendum 42 §19). */
+    onContents(): void;
     /** The writer's own notes (addendum 42 §18). */
     onFootnote(): void;
     onEndnote(): void;
@@ -787,6 +789,12 @@ function LayoutTab({ pageSetup, onPageSetup, editor }: TabProps) {
 function ReferencesTab({ references }: TabProps) {
   return (
     <>
+      {/* Word's References tab begins with its table of contents (addendum 42 §19). */}
+      <Group label="Table of contents">
+        <Tool label="Table of contents" title="A table of contents here, from the document's headings, with the page each is on; it keeps itself current" onPress={references.onContents} wide>
+          Table of contents
+        </Tool>
+      </Group>
       {/* Word keeps its notes first on this tab (addendum 42 §18). */}
       <Group label="Footnotes">
         <Tool label="Insert footnote" title="A footnote at the cursor, set at the foot of its page (Ctrl+Alt+F)" onPress={references.onFootnote} wide>

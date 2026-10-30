@@ -194,8 +194,8 @@ Recovery.
 
 Not in phase 1, and not shown as buttons:
 
-- footnotes and endnotes (headers, footers and page numbers are built: §15)
-- a table of contents, bookmarks and cross-references (WP spec §4.3, "staged")
+- (footnotes and endnotes are built: §18; headers, footers and page numbers: §15)
+- bookmarks and cross-references (WP spec §4.3, "staged"); the table of contents is built (§19)
 - comments and tracked changes (WP spec §4.3: only if robustly supported)
 - columns and section breaks
 - RTF import and export
@@ -926,3 +926,28 @@ The first of §7's list.
 - Not yet: endnotes are shown at the end in print, PDF and Word but not on the
   screen's page view; Word's footnotes imported still arrive as citations
   (addendum 43 §9).
+
+## 19. A table of contents
+
+From Ken: *go ahead with the table of contents.*
+
+- **References ▸ Table of contents** puts a block where the cursor is
+  (`tableOfContents`, `<div data-toc>`). Like the bibliography it has nothing
+  typed in it: it is drawn from the document's headings, levels 1 to 3, each
+  with its number where the document numbers its headings (§14), dot leaders,
+  and the page it is on (`contentsEntries`, `contentsHtml`).
+- **The page numbers** come from whoever has the pages. On the screen, the
+  page view reads each heading's page once it has set the gaps
+  (`headingPages`); in web layout there are no pages and no numbers. Print
+  and PDF now always set the pages first when a document has a table of
+  contents (as they already did for notes at the foot), then fill each line's
+  number from the page its heading landed on (`headingPagesIn`,
+  `fillContentsPages`). Each line links to its heading, which a PDF keeps.
+- **A click on a line** goes to its heading.
+- **In Word** it is Word's own table of contents: a `TOC \o "1-3" \h \z \u`
+  field over the headings' outline levels, its lines written now for a reader
+  that does not update fields, Word's `TOC1`–`TOC9` and `TOC Heading` styles,
+  and `updateFields` set so Word fills in its own page numbers on opening.
+- The editor's stored data is per editor and copied by the library: the
+  table's `set` writes through `this`, or the screen draws from a copy that
+  never changed (found by looking at it — the tests drew the table regardless).

@@ -157,6 +157,8 @@ const scrollerOf = (from: HTMLElement): HTMLElement | null => {
 
 export interface PageViewLayout {
   pages: number;
+  /** The page each heading stands on, from 1, by its id: what a table of contents shows (addendum 42 §19). */
+  headingPages: Map<string, number>;
 }
 
 /**
@@ -352,7 +354,16 @@ export const layOutPageView = (
 
   view.dispatch(view.state.tr.setMeta(pageViewKey, DecorationSet.create(view.state.doc, decorations)).setMeta('addToHistory', false));
   if (scroller) scroller.scrollTop = scrolled;
-  return { pages: index + 1 };
+  // Each heading's page, read off the page now the gaps are in.
+  const headingPages = new Map<string, number>();
+  const wordsTop = words.getBoundingClientRect().top;
+  for (const element of words.querySelectorAll('[data-heading-id]')) {
+    const id = element.getAttribute('data-heading-id');
+    if (!id || headingPages.has(id)) continue;
+    const at = (element.getBoundingClientRect().top - wordsTop) / scale;
+    headingPages.set(id, Math.max(1, Math.floor((at + top) / H) + 1));
+  }
+  return { pages: index + 1, headingPages };
 };
 
 /** A page's notes as the page view sets them: the same as the print's (`pageNotesHtml`). */
