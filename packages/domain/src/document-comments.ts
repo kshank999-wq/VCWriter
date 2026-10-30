@@ -130,3 +130,7 @@ export const commentListing = (document: Pick<WpDocument, 'content' | 'comments'
   const orphans = document.comments.filter((one) => !order.includes(one.id)).map((comment) => ({ comment, passage: '', orphan: true }));
   return [...placed, ...orphans];
 };
+
+/** Tracking turned on or off (addendum 42 §21), kept with the document as Word keeps it. */
+export const setTrackChanges = (file: ProjectFile, documentId: WpDocumentId, on: boolean): ProjectFile =>
+  withDocument(file, documentId, (document) => ({ ...document, trackChanges: on, updatedAt: nowIso() }));

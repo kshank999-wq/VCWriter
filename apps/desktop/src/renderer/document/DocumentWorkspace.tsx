@@ -63,6 +63,7 @@ import {
   editComment,
   replyToComment,
   resolveComment,
+  setTrackChanges,
   contentsDocumentHtml,
   DOCUMENT_CONTENTS_CSS,
   contentsEntries,
@@ -84,6 +85,7 @@ import { BringInSourcesDialog } from '../components/citations/BringInSourcesDial
 import { OutlinerWindow } from '../components/OutlinerWindow';
 import { SendExtractsDialog, type SendSubject } from './SendExtractsDialog';
 import { CommentsPane } from './CommentsPane';
+import { changesIn, type TrackChangesStorage } from './track-changes';
 import { DocumentRail } from './DocumentRail';
 import { HeaderFooterBar } from './HeaderFooterBar';
 import { useDocumentSpeech } from './speech';
@@ -221,6 +223,12 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
         }
         // Word's keys for a footnote and an endnote (addendum 42 §18). By
         // the key's place, since Option changes the letter on a Mac.
+        // Word's key for Track Changes (addendum 42 §21).
+        if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.code === 'KeyE' && !readOnly) {
+          event.preventDefault();
+          toggleTrackRef.current();
+          return true;
+        }
         // Word's key for a new comment (addendum 42 §20).
         if ((event.ctrlKey || event.metaKey) && event.altKey && event.code === 'KeyM' && !readOnly) {
           event.preventDefault();
@@ -245,6 +253,7 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
   editorRef.current = editor;
   /** New comment, as the key handler set up with the editor reaches it. */
   const newCommentRef = useRef<() => void>(() => undefined);
+  const toggleTrackRef = useRef<() => void>(() => undefined);
 
   // Dictate and read aloud (addendum 42 §15).
   const speech = useDocumentSpeech(editor, setMessage);
@@ -414,6 +423,25 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
   }, [editor]);
 
   newCommentRef.current = newComment;
+
+  // ------------------------------------------------ tracked changes
+
+  /**
+   * **Track changes** (addendum 42 §21): the switch is the document's, so it
+   * travels with it; the changes are made under the same name the comments
+   * are. The editor reads both from its storage on every edit.
+   */
+  useEffect(() => {
+    if (!editor) return;
+    const storage = (editor.storage as unknown as { trackChanges: TrackChangesStorage }).trackChanges;
+    storage.enabled = document.trackChanges && !readOnly;
+    storage.author = commentAuthor || 'Me';
+  }, [editor, document.trackChanges, commentAuthor, readOnly]);
+  const changeCount = editor ? changesIn(editor.state.doc).length : 0;
+  const toggleTracking = () => {
+    if (!readOnly) onUpdate((current) => setTrackChanges(current, documentId, !document.trackChanges));
+  };
+  toggleTrackRef.current = toggleTracking;
 
   // ------------------------------------------------ footnotes and endnotes
 
@@ -980,6 +1008,17 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
           onPageNumbers: (preset) => onUpdate((current) => setPageNumbers(current, documentId, preset)),
         }}
         speech={speech}
+        changes={{
+          tracking: document.trackChanges,
+          count: changeCount,
+          onTrack: toggleTracking,
+          onAccept: () => !readOnly && editor?.chain().focus().acceptChange().goToChange(1).run(),
+          onReject: () => !readOnly && editor?.chain().focus().rejectChange().goToChange(1).run(),
+          onAcceptAll: () => !readOnly && editor?.chain().focus().acceptAllChanges().run(),
+          onRejectAll: () => !readOnly && editor?.chain().focus().rejectAllChanges().run(),
+          onPrevious: () => editor?.chain().focus().goToChange(-1).run(),
+          onNext: () => editor?.chain().focus().goToChange(1).run(),
+        }}
         comments={{
           count: comments.filter((one) => !one.comment.resolved).length,
           shown: commentsShown,
@@ -1375,6 +1414,7 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
         <span>{characters.toLocaleString()} characters</span>
         {painter ? <span className="wp-status-note">Format painter: select text to paint</span> : null}
         {readOnly ? <span className="wp-status-note">Read-only</span> : null}
+        {document.trackChanges ? <span className="wp-status-note wp-tracking">Tracking changes</span> : null}
         {speech.dictating ? (
           <span className="wp-status-note wp-dictating" role="status">
             Dictating{speech.heard ? `: ${speech.heard}` : '…'}

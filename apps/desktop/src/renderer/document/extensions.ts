@@ -4,6 +4,7 @@ import { Plugin, PluginKey, type EditorState, type Transaction } from '@tiptap/p
 import { headingNumbers, type DocNode, type HeadingNumbering } from '@vcwriter/domain';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import StarterKit from '@tiptap/starter-kit';
+import { DeletionMark, InsertionMark, TrackChanges } from './track-changes';
 import { TextStyleKit } from '@tiptap/extension-text-style';
 import Highlight from '@tiptap/extension-highlight';
 import TextAlign from '@tiptap/extension-text-align';
@@ -1035,4 +1036,8 @@ export const documentExtensions = () => [
   Bibliography,
   TableOfContents,
   CommentMark,
+  // Tracked changes (addendum 42 §21).
+  InsertionMark,
+  DeletionMark,
+  TrackChanges,
 ];

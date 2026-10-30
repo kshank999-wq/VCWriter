@@ -143,6 +143,18 @@ interface RibbonProps {
     onFootnote(): void;
     onEndnote(): void;
   };
+  /** Tracked changes (addendum 42 §21). */
+  changes: {
+    tracking: boolean;
+    count: number;
+    onTrack(): void;
+    onAccept(): void;
+    onReject(): void;
+    onAcceptAll(): void;
+    onRejectAll(): void;
+    onPrevious(): void;
+    onNext(): void;
+  };
   /** Comments (addendum 42 §20). */
   comments: {
     /** Open (unresolved) comments. */
@@ -839,7 +851,7 @@ function ReferencesTab({ references }: TabProps) {
   );
 }
 
-function ReviewTab({ view, onView, words, characters, speech, comments }: TabProps) {
+function ReviewTab({ view, onView, words, characters, speech, comments, changes }: TabProps) {
   return (
     <>
       {/* Word's Review tab: comments first (addendum 42 §20). */}
@@ -855,6 +867,37 @@ function ReviewTab({ view, onView, words, characters, speech, comments }: TabPro
         </Tool>
         <Tool label="Show comments" title="Show or hide the comments beside the page" active={comments.shown} onPress={comments.onShow} wide>
           Show comments
+        </Tool>
+      </Group>
+      <Group label="Tracking">
+        <Tool
+          label="Track changes"
+          title="While on, what is typed is underlined and what is deleted is struck through, until accepted or rejected (Ctrl+Shift+E)"
+          active={changes.tracking}
+          onPress={changes.onTrack}
+          wide
+        >
+          Track changes
+        </Tool>
+      </Group>
+      <Group label={changes.count === 1 ? '1 change' : `${changes.count} changes`}>
+        <Tool label="Accept" title="Keep this change and go to the next" onPress={changes.onAccept} disabled={changes.count === 0} wide>
+          Accept
+        </Tool>
+        <Tool label="Reject" title="Undo this change and go to the next" onPress={changes.onReject} disabled={changes.count === 0} wide>
+          Reject
+        </Tool>
+        <Tool label="Accept all" title="Keep every change in the document" onPress={changes.onAcceptAll} disabled={changes.count === 0} wide>
+          Accept all
+        </Tool>
+        <Tool label="Reject all" title="Undo every change in the document" onPress={changes.onRejectAll} disabled={changes.count === 0} wide>
+          Reject all
+        </Tool>
+        <Tool label="Previous change" title="The change before the cursor" onPress={changes.onPrevious} disabled={changes.count === 0} wide>
+          Previous
+        </Tool>
+        <Tool label="Next change" title="The change after the cursor" onPress={changes.onNext} disabled={changes.count === 0} wide>
+          Next
         </Tool>
       </Group>
       <Group label="Speech">

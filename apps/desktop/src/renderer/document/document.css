@@ -1376,3 +1376,8 @@
 .wp-comment-reply { border-top: 1px solid var(--border); padding-top: 6px; }
 .wp-comment-reply p { margin: 2px 0 0; white-space: pre-wrap; }
 .wp-comment-reply-form input { width: 100%; }
+
+/* Tracked changes (addendum 42 §21), as Word draws them. */
+.ProseMirror ins.wp-ins { color: #1f5fa8; text-decoration: underline; text-decoration-color: #1f5fa8; }
+.ProseMirror del.wp-del { color: #c0392b; text-decoration: line-through; }
+.wp-status-note.wp-tracking { color: #c0392b; font-weight: 600; }

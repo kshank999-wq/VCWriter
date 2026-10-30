@@ -196,7 +196,7 @@ Not in phase 1, and not shown as buttons:
 
 - (footnotes and endnotes are built: §18; headers, footers and page numbers: §15)
 - bookmarks and cross-references (WP spec §4.3, "staged"); the table of contents is built (§19)
-- comments and tracked changes (WP spec §4.3: only if robustly supported)
+- (comments and tracked changes are built: §20, §21)
 - columns and section breaks
 - RTF import and export
 - style creation and modification (the built-in styles are there)
@@ -977,3 +977,31 @@ From Ken: *go ahead with comments and tracked changes.* Comments first.
   comments (`comments.xml`, a range around each passage, answers in the same
   balloon named, *(Resolved)* where it is).
 - Not yet: Word comments in a file being imported are not read in.
+
+## 21. Tracked changes
+
+- **Review ▸ Tracking ▸ Track changes** (Ctrl+Shift+E, Word's key) turns it
+  on for the document; the switch is kept on the document (`trackChanges`),
+  so it travels and syncs with it. *Tracking changes* stands in the status
+  bar while it is on.
+- **While tracking**, nothing typed or deleted changes the words outright
+  (`track-changes.ts`). Each edit is taken as ProseMirror makes it, and what it
+  removed is put back in front of what it inserted: what was typed is an
+  `insertion` (underlined, blue), what was deleted a `deletion` (struck
+  through, red), each with its author — the *Commenting as* name (§20) — and
+  time, shown on hover. Backspace leaves the cursor before what it struck, as
+  Word does; deleting words typed under tracking simply removes them;
+  deleting words already struck only moves past them. Undo and redo undo the
+  tracked edit whole.
+- **Reviewing**: *Accept* and *Reject* (the change at the cursor or in the
+  selection, then on to the next), *Accept all*, *Reject all*, *Previous*,
+  *Next*, with the count of changes over them.
+- **Print and PDF** show the changes as the screen does. **Word** gets Word's
+  own `w:ins` and `w:del` with author and date, and `trackRevisions` where the
+  document has tracking on.
+- **Not tracked**: formatting, and joining or splitting a paragraph; only words
+  are. Word's tracked changes in a file being imported are not read in.
+- `track-changes.test.ts`: typing, deleting with the cursor's place, typing
+  over a selection, deleting a tracked insertion, accepting and rejecting one
+  or all, and nothing changing with tracking off. Looked at in the browser
+  preview: typing over a word, Backspace over a word, and Accept all.

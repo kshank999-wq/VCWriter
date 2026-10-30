@@ -79,6 +79,8 @@ interface Context {
   commentNumbers: Map<string, number>;
   /** Comments whose range has been written and closed. */
   commentsDone: Set<string>;
+  /** Tracked changes written so far, each Word's own revision id (addendum 42 §21). */
+  revision: number;
 }
 
 type ListKind = 'bullet' | 'decimal' | 'lowerLetter' | 'upperLetter' | 'lowerRoman' | 'upperRoman';
@@ -202,6 +204,21 @@ const citationRun = (node: DocNode, context: Context): string => {
     return `<w:r><w:rPr><w:rStyle w:val="FootnoteReference"/></w:rPr><w:footnoteReference w:id="${context.footnotes.length}"/></w:r>`;
   }
   return textRun(' ', []) + markedRuns(said);
+};
+
+/**
+ * A run with its tracked change (addendum 42 §21): an insertion as Word's
+ * `w:ins`, a deletion as `w:del` with its words in `w:delText`, each with who
+ * made it and when.
+ */
+const trackedRun = (node: DocNode, context: Context): string => {
+  const run = textRun(node.text ?? '', node.marks ?? []);
+  const change = (node.marks ?? []).find((mark) => mark.type === 'insertion' || mark.type === 'deletion');
+  if (!change) return run;
+  context.revision += 1;
+  const who = `w:id="${context.revision}" w:author="${xml(String(change.attrs?.['author'] ?? '') || 'Author')}" w:date="${xml(String(change.attrs?.['date'] ?? ''))}"`;
+  if (change.type === 'insertion') return `<w:ins ${who}>${run}</w:ins>`;
+  return `<w:del ${who}>${run.replace(/<w:t(\s|>)/g, '<w:delText$1').replace(/<\/w:t>/g, '</w:delText>')}</w:del>`;
 };
 
 /** The writer's footnote or endnote (addendum 42 §18): Word's own, numbered by Word. */
@@ -346,7 +363,7 @@ const inlineXml = (nodes: readonly DocNode[], context: Context): string => {
       out += `<w:hyperlink r:id="${rid}">${runs}</w:hyperlink>`;
       continue;
     }
-    if (node.type === 'text') out += textRun(node.text ?? '', node.marks ?? []);
+    if (node.type === 'text') out += trackedRun(node, context);
     else if (node.type === 'hardBreak') out += '<w:r><w:br/></w:r>';
     else if (node.type === 'image') out += pictureRun(node, context);
     else if (node.type === 'citation') out += citationRun(node, context);
@@ -707,6 +724,7 @@ export const documentBodyXml = (document: WpDocument, cites: DocumentCitations |
     hasContents: false,
     commentNumbers: new Map(commentIdsIn(document.content).filter((id) => document.comments.some((one) => one.id === id)).map((id, at) => [id, at])),
     commentsDone: new Set(),
+    revision: 0,
   };
   const body = (document.content.content ?? []).map((block) => blockXml(block, context)).join('');
   return {
@@ -786,6 +804,8 @@ export const buildDocumentDocx = async (
   const ends = context.endnotes.length > 0;
   const fields = context.hasContents;
   const commented = context.commentsDone.size > 0;
+  // Word keeps tracking on where the document had it on, and shows the changes made either way.
+  const tracking = document.trackChanges;
   const extensions = [...new Set(context.pictures.map((picture) => picture.extension))];
   const contentTypes =
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
@@ -799,7 +819,7 @@ export const buildDocumentDocx = async (
     (notes ? '<Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/>' : '') +
     (ends ? '<Override PartName="/word/endnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml"/>' : '') +
     (commented ? '<Override PartName="/word/comments.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml"/>' : '') +
-    (notes || ends || fields
+    (notes || ends || fields || tracking
       ? '<Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>'
       : '') +
     (bandUsed(document.headerFooter.header)
@@ -824,7 +844,7 @@ export const buildDocumentDocx = async (
     (notes ? '<Relationship Id="rIdFootnotes" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/>' : '') +
     (ends ? '<Relationship Id="rIdEndnotes" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes" Target="endnotes.xml"/>' : '') +
     (commented ? '<Relationship Id="rIdComments" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="comments.xml"/>' : '') +
-    (notes || ends || fields
+    (notes || ends || fields || tracking
       ? '<Relationship Id="rIdSettings" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>'
       : '') +
     (bandUsed(document.headerFooter.header)
@@ -863,13 +883,14 @@ export const buildDocumentDocx = async (
     ...(notes ? [{ path: 'word/footnotes.xml', data: utf8(footnotesXml(context.footnotes)) }] : []),
     ...(ends ? [{ path: 'word/endnotes.xml', data: utf8(endnotesXml(context.endnotes)) }] : []),
     ...(commented ? [{ path: 'word/comments.xml', data: utf8(commentsXml(document, context.commentNumbers)) }] : []),
-    ...(notes || ends || fields
+    ...(notes || ends || fields || tracking
       ? [
           {
             path: 'word/settings.xml',
             data: utf8(
               '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
                 // Word fills in the table of contents' page numbers on opening (§19).
+                (tracking ? '<w:trackRevisions/>' : '') +
                 (fields ? '<w:updateFields w:val="true"/>' : '') +
                 (notes ? '<w:footnotePr><w:footnote w:id="-1"/><w:footnote w:id="0"/></w:footnotePr>' : '') +
                 (ends ? '<w:endnotePr><w:numFmt w:val="lowerRoman"/><w:endnote w:id="-1"/><w:endnote w:id="0"/></w:endnotePr>' : '') +

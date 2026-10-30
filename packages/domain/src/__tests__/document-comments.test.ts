@@ -75,3 +75,32 @@ describe('comments', () => {
     expect(body.context.commentsDone.size).toBe(2);
   });
 });
+
+describe('tracked changes in Word (addendum 42 §21)', () => {
+  it('writes insertions and deletions as Word’s own, and keeps tracking on', async () => {
+    const { buildDocumentDocx, setTrackChanges } = await import('../index.js');
+    let file = createProjectFile({ title: 'Letter', format: 'document' });
+    const id = mainDocument(file)!.id;
+    const change = (type: string) => [{ type, attrs: { author: 'Ken Shank', date: '2026-10-30T12:00:00.000Z' } }];
+    file = setDocumentContent(file, id, {
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [
+            { type: 'text', text: 'The ' },
+            { type: 'text', text: 'bridge', marks: change('deletion') },
+            { type: 'text', text: 'ferry', marks: change('insertion') },
+            { type: 'text', text: ' is out.' },
+          ],
+        },
+      ],
+    });
+    file = setTrackChanges(file, id, true);
+    const body = documentBodyXml(mainDocument(file) as WpDocument);
+    expect(body.xml).toMatch(/<w:del w:id="1" w:author="Ken Shank" w:date="2026-10-30T12:00:00.000Z"><w:r>.*<w:delText[^>]*>bridge<\/w:delText><\/w:r><\/w:del>/);
+    expect(body.xml).toMatch(/<w:ins w:id="2" w:author="Ken Shank"[^>]*><w:r>.*<w:t[^>]*>ferry<\/w:t><\/w:r><\/w:ins>/);
+    const names = new TextDecoder('latin1').decode(await buildDocumentDocx(mainDocument(file) as WpDocument));
+    expect(names).toContain('word/settings.xml');
+  });
+});

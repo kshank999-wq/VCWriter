@@ -46,6 +46,8 @@ export const DOCUMENT_CONTENT_CSS = `
 .wp-doc mark { padding: 0; }
 .wp-doc .wp-heading-number { margin-right: 0.5em; }
 .wp-doc .wp-page-break { break-after: page; page-break-after: always; height: 0; border: none; margin: 0; }
+.wp-doc ins.wp-ins { color: #1f5fa8; text-decoration: underline; }
+.wp-doc del.wp-del { color: #c0392b; text-decoration: line-through; }
 `;
 
 const escape = (value: string): string =>
