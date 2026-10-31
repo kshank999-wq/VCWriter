@@ -33,6 +33,7 @@ import {
   isPromoted,
   isUnder,
   moveItem,
+  dropPlacement,
   nudgeItem,
   numberOfSub,
   numberOfUnit,
@@ -522,7 +523,10 @@ export function OutlinerWindow({
           beforeId: 'beforeId' in where ? where.beforeId : undefined,
         }).file;
       }
-      return moveItem(current, id, held.id, where);
+      // A row carries everything under it, and lands where the book's shape
+      // says: a section beside sections, a subsection inside one.
+      const placed = live ? dropPlacement(live, held.id as OutlineItemId, targetId, zone) : null;
+      return placed ? moveItem(current, id, held.id as OutlineItemId, placed) : current;
     });
     if (held.kind === 'row') setSelected(held.id);
   };
@@ -1627,6 +1631,8 @@ function Row({
 }) {
   const { item, depth, childCount } = row;
   const input = useRef<HTMLTextAreaElement | null>(null);
+  /** Whether the name is being typed in; until it is, dragging it drags the row. */
+  const [typing, setTyping] = useState(false);
 
   useEffect(() => {
     if (editing) input.current?.focus();
@@ -1764,8 +1770,20 @@ function Row({
             aria-label={`${nameOf(item.kind, format)}: what it is`}
             placeholder={placeholderOf(item.kind, format)}
             value={title}
-            onFocus={() => onEdit(true)}
-            onBlur={() => onEdit(false)}
+            // **The name picks the row up** (from Ken: *when you drag an
+            // outline section up it won't move*). A text box drags its words
+            // rather than the row it sits in, and the name is what a writer
+            // grabs — so until it is being typed in, the box is draggable and
+            // the drag is the row's. A click still puts the caret in it.
+            draggable={!typing}
+            onFocus={() => {
+              setTyping(true);
+              onEdit(true);
+            }}
+            onBlur={() => {
+              setTyping(false);
+              onEdit(false);
+            }}
             onChange={(event) => onTitle(event.target.value)}
             onKeyDown={(event) => {
               // Return makes the next row rather than a new line inside this

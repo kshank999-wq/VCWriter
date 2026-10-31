@@ -657,3 +657,39 @@ fixing here rather than later.
 **What is not built**: a case per kind. One setting names every row, which is
 what *make it consistent* asks for; if chapters alone should be cast, that is
 one line to say and a small change.
+
+---
+
+## Dragging chapters, sections and subsections
+
+From Ken: *when you drag an outline section up it won't move. If a section or
+subsection has subsections below, it won't move. Subsections should move with
+a section.*
+
+**What was wrong.** A row's name is a text box. A drag that starts in a text
+box selects the words instead of moving the row it sits in. The name is what a
+writer grabs, so only the empty strip to the right of the name picked a row
+up. Driven in the preview, a section with subsections moved correctly when
+dragged from that strip, its subsections coming with it, because `moveItem`
+changes only the row's own parent.
+
+**The fix.** While the name is not being typed in, its text box is
+`draggable`, so a drag that starts on the name drags the row. A click still
+puts the caret in the name.
+
+**Where it lands** is decided by `dropPlacement` (in `outline.ts`):
+
+- **Rank.** Chapter (and heading) is above section, which is above
+  subsection. Notes, ideas and other rows have no rank and land exactly where
+  they are dropped.
+- **Dropped on a deeper row.** A section dropped on a subsection goes after
+  that subsection's section, never inside the subsection. A chapter dropped
+  anywhere stays at the top level.
+- **Dropped *into* a row of the same rank.** It goes after that row instead,
+  so one section never hangs inside another.
+- **A subsection dropped beside a section.** Just below the section's line,
+  it goes to the top of that section. Just above it, it goes to the end of the
+  section before.
+- **Into itself.** A row cannot be put inside itself; the drop is refused.
+
+Tests: `outline-drop.test.ts`.

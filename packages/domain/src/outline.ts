@@ -349,6 +349,83 @@ export const depthOf = (outline: Outline, item: OutlineItem): number => {
   return depth;
 };
 
+/** Where a dragged row is dropped against a target row. */
+export type DropZone = 'before' | 'after' | 'into';
+
+/** Chapter above section above subsection; everything else is free. */
+const STRUCTURE_RANK: Record<string, number> = { chapter: 0, heading: 0, scene: 1, beat: 2 };
+
+/**
+ * Where a dragged row actually lands, keeping the book's shape (from Ken:
+ * *subsections should move with a section; fix the chapter, section,
+ * subsection drag movement*).
+ *
+ * A row always moves with everything under it (`moveItem` changes only its
+ * own parent). This decides the parent so the structure reads right:
+ *
+ *  - dropped on a row **deeper** in the structure than itself — a section on
+ *    a subsection — it goes beside that row's own section instead, before or
+ *    after it as the drop said; a section is never tucked into a subsection;
+ *  - dropped **into** a row of its own rank or deeper, it goes after it
+ *    instead, one section never hanging inside another;
+ *  - dropped **beside** a row shallower than itself — a subsection beside a
+ *    section — it goes into a section: the top of that one just below its
+ *    line, the end of the one before just above it; a subsection never
+ *    stands loose among sections.
+ *
+ * Notes, ideas and the rest have no rank and land exactly where dropped.
+ */
+export const dropPlacement = (
+  outline: Outline,
+  heldId: OutlineItemId,
+  targetId: OutlineItemId,
+  zone: DropZone,
+): { parentId: OutlineItemId | null; afterId?: OutlineItemId | null; beforeId?: OutlineItemId | null } | null => {
+  const held = findOutlineItem(outline, heldId);
+  let target = findOutlineItem(outline, targetId);
+  if (!held || !target || held.id === target.id) return null;
+  const rank = STRUCTURE_RANK[held.kind];
+  const plain = (row: OutlineItem, where: DropZone) => ({
+    parentId: where === 'into' ? row.id : row.parentId,
+    ...(where === 'before' ? { beforeId: row.id } : {}),
+    ...(where === 'after' ? { afterId: row.id } : {}),
+  });
+  if (rank === undefined) return plain(target, zone);
+
+  // Up to the row of the dragged row's own rank, or the one above it.
+  let where = zone;
+  for (let step = 0; step <= outline.items.length; step += 1) {
+    const targetRank = STRUCTURE_RANK[target.kind];
+    if (targetRank === undefined || targetRank > rank) {
+      const parent = outlineParent(outline, target);
+      if (!parent) break;
+      target = parent;
+      // Dropped among a section's subsections, a section goes after that
+      // section: anywhere in its block reads as *after this one*.
+      where = 'after';
+      continue;
+    }
+    break;
+  }
+  if (target.id === held.id || isUnder(outline, target.id, held.id)) return null;
+
+  const targetRank = STRUCTURE_RANK[target.kind];
+  if (targetRank === rank || targetRank === undefined) {
+    return plain(target, where === 'into' ? 'after' : where);
+  }
+  // A shallower row: the dragged one goes inside it. Just below a section's
+  // own line is the top of that section; just above it is the end of the
+  // section before, where there is one of the same rank.
+  if (where === 'before') {
+    const siblings = outlineChildren(outline, target.parentId);
+    const before = siblings[siblings.findIndex((one) => one.id === target!.id) - 1];
+    if (before && STRUCTURE_RANK[before.kind] === targetRank && before.id !== held.id) return { parentId: before.id };
+  }
+  if (where === 'into') return { parentId: target.id };
+  const first = outlineChildren(outline, target.id).find((one) => one.id !== held.id);
+  return first ? { parentId: target.id, beforeId: first.id } : { parentId: target.id };
+};
+
 // --------------------------------------------------------- writing it
 
 /**
