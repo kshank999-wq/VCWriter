@@ -145,6 +145,13 @@ export const researchItemSchema = z.object({
    */
   comment: z.string().default(''),
   /**
+   * The writer's rewrite of this note, made beside the original in the
+   * rewrite screen (addendum 28 §7). The note's own words stay as they were
+   * caught; this is what goes on the track when it is placed. Empty on every
+   * note nobody has rewritten.
+   */
+  rewrite: z.string().default(''),
+  /**
    * Where this card was pulled out of, and the exact stretch it took
    * (addendum 26 §3). Null on every research item that was not extracted,
    * which is all of them until somebody opens the Note Sorter.

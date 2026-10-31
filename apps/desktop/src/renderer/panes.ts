@@ -145,7 +145,8 @@ export type PaneKey =
   | 'narrative'
   | 'layout'
   | 'sorter'
-  | `beat:${string}`;
+  | `beat:${string}`
+  | `folder:${string}`;
 
 /** The rooms: whole screens rather than sections of the workspace. */
 export const ROOM_PANES = [
@@ -182,5 +183,6 @@ export const ROOM_NAMES: Record<RoomPane, string> = {
 export const paneTitle = (pane: string, format: ProjectFormat | null = null): string => {
   if (isRoomPane(pane)) return ROOM_NAMES[pane];
   if (beatIdOf(pane)) return 'Beat';
+  if (pane.startsWith('folder:')) return 'Research folder';
   return paneNamesFor(format)[pane as PaneId] ?? 'VC Writer';
 };

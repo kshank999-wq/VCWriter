@@ -325,6 +325,8 @@ const researchItemToRow = (item: ResearchItem): Row => ({
   source: item.source,
   // A note about the card rather than in it (addendum 26 §16b).
   comment: item.comment,
+  // The rewrite made beside the original (addendum 28 §7).
+  rewrite: item.rewrite,
   // Where this card was pulled out of, and the stretch it took (addendum 26
   // §3). Null on every research item nobody extracted, which is most of them.
   source_id: item.sourceId,
@@ -1178,6 +1180,7 @@ const researchItemFromRow = (row: Row): ResearchItem =>
     tags: list(row['tags']),
     source: text(row['source']),
     comment: text(row['comment']),
+    rewrite: text(row['rewrite']),
     sourceId: nullableText(row['source_id']),
     sourceFrom: row['source_from'] === null || row['source_from'] === undefined ? null : Number(row['source_from']),
     sourceTo: row['source_to'] === null || row['source_to'] === undefined ? null : Number(row['source_to']),

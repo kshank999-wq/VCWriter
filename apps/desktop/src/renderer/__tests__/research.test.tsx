@@ -36,13 +36,13 @@ import { TitleBar } from '../components/TitleBar';
 
 afterEach(cleanup);
 
-function Harness({ initial }: { initial: ProjectFile }) {
+function Harness({ initial, writingFirstBeat = false }: { initial: ProjectFile; writingFirstBeat?: boolean }) {
   const [file, setFile] = useState(initial);
   return (
     <ResearchWindow
       file={file}
       open
-      currentBeatId={null}
+      currentBeatId={writingFirstBeat ? (file.beats[0]?.id ?? null) : null}
       onClose={() => undefined}
       onUpdate={(mutate) => setFile((current) => mutate(current))}
     />
@@ -133,10 +133,13 @@ describe('the research window', () => {
   });
 
   it('moves a note to used and back, with the record surviving both', () => {
-    render(<Harness initial={withNotes()} />);
+    // Used means in a beat on the track (addendum 28 §7), so it is marked
+    // against the beat being written.
+    render(<Harness initial={withNotes()} writingFirstBeat />);
+    fireEvent.click(screen.getByRole('button', { name: 'Show every note instead' }));
     const notes = () => within(screen.getByLabelText('Notes'));
     fireEvent.click(notes().getByText('A revolver in the drawer'));
-    fireEvent.click(screen.getByRole('button', { name: /mark used/i }));
+    fireEvent.click(screen.getByRole('button', { name: /used in the beat i am writing/i }));
 
     // It leaves the working inventory and turns up under what has been used.
     fireEvent.click(screen.getByRole('button', { name: /Not yet used/ }));
@@ -195,6 +198,8 @@ describe('the research window', () => {
       );
     }
     render(<Watched />);
+    // *All research* opens on its folders (addendum 28 §8); the notes are one press away.
+    fireEvent.click(screen.getByRole('button', { name: 'Show every note instead' }));
     const notes = () => within(screen.getByLabelText('Notes'));
     fireEvent.click(notes().getByText('A revolver in the drawer'));
     // One act, on the card; archiving is still the detail's.

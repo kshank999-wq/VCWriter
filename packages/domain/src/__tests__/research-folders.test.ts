@@ -70,7 +70,9 @@ describe('research as a tree', () => {
   it('has smart folders for what is used, what is not, and what was put away', () => {
     let { file } = nested();
     const [first] = file.researchItems;
-    file = markResearchUsed(file, { itemId: first!.id, confirmed: true });
+    // Used means on the track (addendum 28 §7): marked with no beat it is not.
+    expect(researchItemsIn(markResearchUsed(file, { itemId: first!.id, confirmed: true }), { view: 'used' })).toEqual([]);
+    file = markResearchUsed(file, { itemId: first!.id, beatId: file.beats[0]!.id, confirmed: true });
 
     expect(researchItemsIn(file, { view: 'used' }).map((item) => item.title)).toEqual(['Wears his father’s coat']);
     expect(researchItemsIn(file, { view: 'unused' }).map((item) => item.title)).toEqual(['Stops believing']);

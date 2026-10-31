@@ -720,3 +720,116 @@ moves is told from one that does not.
 Deliberately **not** built: a ⧉ to send the note to a second monitor. That is
 §6d's other half and a different gesture — a page drawn inside a window cannot
 leave it, and what leaves is a window of its own. Ken asked for the bar.
+
+---
+
+## 7. The outline beside the notes, and the rewrite screen
+
+From Ken:
+
+> Under the research section the organization is not there. I want to be able
+> to bundle ideas in folders by dragging from the notes screen into the right
+> side bar, which will have the sections or categories from the outline:
+> chapter and subsections. This is especially important for instructional
+> books… When you click on a note within a folder, double-click it and it
+> brings up a rewrite screen like the beat screen, with a side split showing
+> you the original note, so you can cut and paste or rewrite, and you can
+> place that on the track.
+
+> And that will be tracked as used or unused. Until it is in the timeline
+> track it will show as not used. When used, a red X will be placed in the
+> corner and it moves to the "used in book" folder.
+
+### The sidebar
+
+On every notes screen (each view, each folder, and Mobile App's *This
+project*) a column now stands between the notes and the detail: **Outline**.
+`outlineFolders` lists every Chapter, Section, Subsection and Idea row of the
+Outliner in the outline's order, each at its own depth, numbered 1, 1.1, 1.1.1
+(ideas carry no number). After those come any chapter or section in the book
+that the outline does not have.
+
+§4c left subsections and ideas out of the table of contents. Ken now names
+them, so the sidebar lists them. The table of contents itself is unchanged.
+
+**Filing is still `fileNoteUnder`**, which writes one field on the note: a
+reference to the outline row. That reference is read through the row's binding
+(`placeNow`), so promoting a row loses nothing, and the sidebar and the table of
+contents agree on where a note is. A phone note dropped on a folder is first
+taken into the folder in hand and then filed. Notes filed in a folder are listed
+under it, and they can be dragged to another folder. Folders fold. The column
+hides with › and comes back from **‹ Outline**. Whether it is shown is
+remembered on this computer.
+
+### The rewrite screen
+
+Double-clicking a note in the sidebar, or pressing **Rewrite and place…** in
+the detail, opens `NoteRewrite`. The original note sits on the left; nothing
+here edits it. **Bring across →** copies the selected words into the rewrite at
+the cursor, or the whole note if nothing is selected. The rewrite sits on the
+right and is saved as you type into a new `rewrite` field on the research item
+(migration 0074, one text column, applied live). The note's `body` stays as it
+was captured.
+
+**Place on the track** (`placeNoteOnTrack`) makes a beat out of the rewrite, or
+out of the note where nothing has been rewritten. Each paragraph becomes a line
+in the format's default style. The beat goes where the note is filed:
+
+- **Section**: at the end of that section.
+- **Chapter**: at the end of the chapter's last section.
+- **Subsection or idea**: just after the subsection's own beat, and after
+  anything already placed there, so notes keep the order they were placed in.
+- **Part of the outline that is still a plan**: that part is added to the track
+  first. This is the Outliner's own *Add to track*, applied to the highest
+  promotable row above the note, so its sections and subsections come with it.
+- **Chapter with no section, a note filed nowhere, or an empty note**: refused
+  with a sentence saying what to do instead.
+
+### Used means on the track
+
+`noteOnTrack` reads the beats: a note is used while a beat it was placed in (or
+an outline row bound to a beat that references it) still exists. *Used in the
+book* and *Not yet used* now read this instead of the stored `usage` flag. So a
+note moves between them when it is placed or its beat is cut, with nothing run.
+*Mark used* with no beat in hand is gone, because it could no longer mean
+anything. *Used in the beat I am writing* remains. *Back to not used* now also
+releases the beats the note was marked used in.
+
+On the track, a note carries a **red ✕ in its corner**: on its card, in the
+sidebar and in the folder window. Each sidebar folder counts *used/total*.
+
+## 8. Research as folders, each openable in a window of its own
+
+From Ken: *on the research screen it has all your rough notes on the screen,
+but that research area should be folders with categories. So you can open that
+and it'll bring a pop-up box that you can take to another monitor… and you can
+see your research.*
+
+*All research* now shows the research folders as tiles: each tile has the
+folder's name, its note count, how many of those notes are used, how many
+subfolders it has, and the first few note titles. Clicking a tile shows that
+folder's notes in the room. **⧉** or a double-click opens the folder in its own
+window. In the desktop app that is the `folder:<id>` pane, a real OS window that
+can be dragged to the other monitor. In the browser preview it is a pop-up
+window. The window edits the live project like every other pane window.
+
+`ResearchFolderView` draws the window. The notes are listed down the left, each
+with its red ✕ when used. The chosen note is on the right to read and edit.
+**Up** and the subfolder chips move through the tree. A double-click opens the
+rewrite screen there too. Where the program has no windows to open, the same
+view opens as a movable box. **Show every note instead** brings the flat list
+back. A folder's own screen also offers **⧉ Open this folder in its own
+window**.
+
+### Where the code is
+
+- `packages/domain/src/note-rewrite.ts`: `outlineFolders`, `setNoteRewrite`,
+  `textToPlace`, `placeNoteOnTrack`.
+- `packages/domain/src/selectors.ts`: `noteBeatIds` and `noteOnTrack`. The
+  `used` and `unused` views, `unusedResearch` and `usedResearch` read these.
+- `apps/desktop/src/renderer/components/OutlineSidebar.tsx`, `NoteRewrite.tsx`,
+  `ResearchFolderView.tsx`, and the `FolderGrid` and `FolderBox` components in
+  `ResearchWindow.tsx`. The `folder:` pane is handled in `Satellite.tsx`,
+  `panes.ts` and `main/windows.ts`.
+- Tests: `note-rewrite.test.ts` (domain) and `outline-sidebar.test.tsx`
+  (desktop).

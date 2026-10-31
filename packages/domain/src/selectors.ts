@@ -205,6 +205,42 @@ export const shelvedItems = (file: ProjectFile): ResearchItem[] => {
 };
 
 /**
+ * Which beats a note is on the track in, counting only beats that still exist
+ * (addendum 28 §2, §7).
+ *
+ * Two sources, and the second is the older spelling of the first: an outline
+ * row that references the note and is bound to a beat, and `usedInBeatIds`,
+ * which placing a note on the track writes. Both are filtered through the
+ * beats the project actually has, so cutting the beat takes the note back to
+ * unused with nothing run.
+ */
+export const noteBeatIds = (file: ProjectFile, item: ResearchItem): BeatId[] => {
+  const alive = new Set(file.beats.map((beat) => beat.id as string));
+  const found = new Set<string>();
+  for (const beatId of item.usedInBeatIds) {
+    if (alive.has(beatId as string)) found.add(beatId as string);
+  }
+  for (const outline of file.outlines ?? []) {
+    for (const row of outline.items) {
+      if (row.source?.type !== 'research_item') continue;
+      if ((row.source.id as string) !== (item.id as string)) continue;
+      if (row.boundBeatId && alive.has(row.boundBeatId as string)) found.add(row.boundBeatId as string);
+    }
+  }
+  return [...found] as BeatId[];
+};
+
+/**
+ * Whether a note is **used**: on the track, in a beat that still exists
+ * (addendum 28 §7, from Ken: *until it is in the timeline track it will show
+ * as not used*).
+ *
+ * A reading rather than the stored `usage` flag, so a note marked used by hand
+ * whose beat was cut, or one never placed, reads unused.
+ */
+export const noteOnTrack = (file: ProjectFile, item: ResearchItem): boolean => noteBeatIds(file, item).length > 0;
+
+/**
  * What the contents pane shows: a folder and everything under it, or one of
  * the smart folders, narrowed by the search box.
  */
@@ -224,8 +260,11 @@ export const researchItemsIn = (
     const items = live.filter((item) => {
       if (where.view === 'archived') return item.archived;
       if (item.archived) return false;
-      if (where.view === 'used') return item.usage === 'used';
-      if (where.view === 'unused') return item.usage === 'unused';
+      // Used means on the track (addendum 28 §7), read off the beats rather
+      // than the flag, so a note moves into *Used in the book* the moment it
+      // is placed and back out if its beat is cut.
+      if (where.view === 'used') return noteOnTrack(file, item);
+      if (where.view === 'unused') return !noteOnTrack(file, item);
       return true;
     });
     return sortByOrderKey(items.filter((item) => matches(item, query)));
@@ -260,10 +299,10 @@ export const researchItemsForCategory = (
 
 /** Working inventory of material not yet incorporated into the story (§7.2). */
 export const unusedResearch = (file: ProjectFile): ResearchItem[] =>
-  sortByOrderKey(onlyLiving(file.researchItems).filter((item) => item.usage === 'unused' && !item.archived));
+  sortByOrderKey(onlyLiving(file.researchItems).filter((item) => !noteOnTrack(file, item) && !item.archived));
 
 export const usedResearch = (file: ProjectFile): ResearchItem[] =>
-  sortByOrderKey(onlyLiving(file.researchItems).filter((item) => item.usage === 'used' && !item.archived));
+  sortByOrderKey(onlyLiving(file.researchItems).filter((item) => noteOnTrack(file, item) && !item.archived));
 
 /**
  * Setups the writer has not yet paid off, and payoffs not yet established

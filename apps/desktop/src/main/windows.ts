@@ -38,6 +38,8 @@ const SHAPES: Record<string, { width: number; height: number }> = {
   beat: { width: 900, height: 1040 },
   script: { width: 860, height: 1040 },
   research: { width: 1280, height: 860 },
+  // One research folder on its own (addendum 28 §8): a list beside a note.
+  folder: { width: 900, height: 820 },
   viewer: { width: 1240, height: 560 },
   tracks: { width: 1240, height: 620 },
   // The inspector is a column beside the writing, so it opens as one rather

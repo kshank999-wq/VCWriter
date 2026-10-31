@@ -558,6 +558,9 @@ export const restoreResearchItem = (file: ProjectFile, itemId: ResearchItemId): 
     ...item,
     usage: 'unused' as const,
     usedAt: null,
+    // Used is a reading of the beats (addendum 28 §7), so returning a note to
+    // unused lets go of the beats it was marked as used in.
+    usedInBeatIds: [],
     usedConfirmed: false,
     archived: false,
   });

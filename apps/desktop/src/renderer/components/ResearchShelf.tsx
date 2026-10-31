@@ -23,6 +23,7 @@ import {
   type ProjectFormat,
   captureKeyName,
   captureTitle,
+  noteOnTrack,
 } from '@vcwriter/domain';
 
 /**
@@ -151,7 +152,7 @@ export function ResearchShelf({ file, from, reveal, notes = [], notesError = nul
     return (
     <div
       key={item.id as string}
-      className={['shelf-item', revealed?.id === item.id ? 'revealed' : '', item.usage === 'used' ? 'used' : '']
+      className={['shelf-item', revealed?.id === item.id ? 'revealed' : '', (() => { const full = file.researchItems.find((one) => one.id === item.id); return full ? noteOnTrack(file, full) : item.usage === 'used'; })() ? 'used' : '']
         .filter(Boolean)
         .join(' ')}
       style={who ? ({ '--room-colour': who.colour } as React.CSSProperties) : undefined}

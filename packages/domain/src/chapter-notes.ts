@@ -1,4 +1,4 @@
-import { unitsInStoryOrder } from './selectors.js';
+import { noteBeatIds, unitsInStoryOrder } from './selectors.js';
 import { onlyLiving } from './graveyard.js';
 import { outlineNumbers, structureNumbers } from './numbering.js';
 import { outlineRows, rowTitle } from './outline.js';
@@ -165,22 +165,7 @@ export type NoteProgress = 'unfiled' | 'planned' | 'written';
  * through the beats the project actually has — which is the whole fix: a
  * hand-marked note whose beat was cut stops reading *written* by itself.
  */
-export const noteInBeats = (file: ProjectFile, item: ResearchItem): BeatId[] => {
-  const alive = new Set(file.beats.map((beat) => beat.id as string));
-  const found = new Set<string>();
-
-  for (const beatId of item.usedInBeatIds) {
-    if (alive.has(beatId as string)) found.add(beatId as string);
-  }
-  for (const outline of file.outlines ?? []) {
-    for (const row of outline.items) {
-      if (row.source?.type !== 'research_item') continue;
-      if ((row.source.id as string) !== (item.id as string)) continue;
-      if (row.boundBeatId && alive.has(row.boundBeatId as string)) found.add(row.boundBeatId as string);
-    }
-  }
-  return [...found] as BeatId[];
-};
+export const noteInBeats = (file: ProjectFile, item: ResearchItem): BeatId[] => noteBeatIds(file, item);
 
 /** Whether any outline row references this note, bound or not. */
 const plannedInOutline = (file: ProjectFile, item: ResearchItem): boolean =>

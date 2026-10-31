@@ -16,6 +16,7 @@ import {
   type StoryMarkerId,
   type StructuralUnitId,
   type SaveKind,
+  type ResearchCategoryId,
 } from '@vcwriter/domain';
 import { useLinkedProject } from './use-linked-project';
 import { useBuildStanding } from './use-build-standing';
@@ -33,6 +34,7 @@ import { DEFAULT_PAGE_STYLE, type PageStyle } from './components/ScriptOptions';
 import { DEFAULT_PRINT_SETUP, type PrintSetup } from './components/PageSetup';
 import { usePrinting } from './printing';
 import { ResearchBody } from './components/ResearchWindow';
+import { ResearchFolderView } from './components/ResearchFolderView';
 import { SculptorWindow } from './components/SculptorWindow';
 import { LayoutWindow } from './components/LayoutWindow';
 import { NoteSorterWindow } from './components/NoteSorterWindow';
@@ -273,6 +275,20 @@ function Section({
     return (
       <div className="satellite-body writer-window">
         <BeatWriter file={file} beat={beat} onUpdate={onUpdate} />
+      </div>
+    );
+  }
+
+  // One research folder, out on its own (addendum 28 §8).
+  if (pane.startsWith('folder:')) {
+    return (
+      <div className="satellite-body research-folder-window">
+        <ResearchFolderView
+          file={file}
+          categoryId={pane.slice('folder:'.length) as ResearchCategoryId}
+          currentBeatId={selectedBeat?.id ?? null}
+          onUpdate={onUpdate}
+        />
       </div>
     );
   }

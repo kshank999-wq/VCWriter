@@ -65,6 +65,9 @@ import {
   reviewRows,
   type SaveKind,
   isWordProcessor,
+  fileNoteUnder,
+  noteOnTrack,
+  type NotePlace,
 } from '@vcwriter/domain';
 import { PopOutButton } from './PopOutButton';
 import { InlineText } from './InlineText';
@@ -74,6 +77,10 @@ import { GraphicsPanel } from './GraphicsPanel';
 import { ContentsPanel } from './ContentsPanel';
 import { ReferencesPanel } from './citations/ReferencesPanel';
 import { NoteDialog } from './NoteDialog';
+import { NoteRewrite } from './NoteRewrite';
+import { OutlineSidebar } from './OutlineSidebar';
+import { ResearchFolderView } from './ResearchFolderView';
+import { useMovedDialog } from '../use-moved-dialog';
 import { ChapterPageDialog } from './ChapterPageDialog';
 import { GraveyardPanel } from './GraveyardPanel';
 import { ImportNotesPanel } from './ImportNotesPanel';
@@ -279,6 +286,44 @@ export function ResearchBody({
    * itself a fortnight later is one you go looking for (addendum 02 §6d).
    */
   const [writing, setWriting] = useState<{ id: ResearchItemId; on: 'title' | 'body' } | null>(null);
+  /**
+   * *All research* shows the folders rather than every rough note (addendum
+   * 28 §8, from Ken: *that research area should be folders with categories*).
+   * The flat list is still one press away.
+   */
+  const [everyNote, setEveryNote] = useState(false);
+  /** A folder open in a box of its own, where there are no windows to open. */
+  const [folderBox, setFolderBox] = useState<ResearchCategoryId | null>(null);
+  /**
+   * Open a folder on its own — a window in the desktop app, which can go to
+   * another monitor, or a movable box in the browser.
+   */
+  const openFolder = (id: ResearchCategoryId) => {
+    const panes = window.vcwriter?.panes;
+    if (panes) void panes.open(`folder:${id as string}`);
+    else setFolderBox(id);
+  };
+  /** The note open in the rewrite screen (addendum 28 §7). */
+  const [rewriting, setRewriting] = useState<ResearchItemId | null>(null);
+  /**
+   * Whether the outline stands beside the notes (addendum 28 §7). Shown unless
+   * the writer hid it, and remembered on this computer.
+   */
+  const [outlineShown, setOutlineShown] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem('vcwriter.research.outline') !== 'hidden';
+    } catch {
+      return true;
+    }
+  });
+  const showOutline = (shown: boolean) => {
+    setOutlineShown(shown);
+    try {
+      window.localStorage.setItem('vcwriter.research.outline', shown ? 'shown' : 'hidden');
+    } catch {
+      // A per-computer convenience; nothing is lost without it.
+    }
+  };
   /**
    * Where opening somebody came from, so **Back** goes there rather than
    * somewhere plausible. Opening from the map should return to the map.
@@ -514,6 +559,35 @@ export function ResearchBody({
     }
   };
 
+  /**
+   * A note dropped on an outline folder (addendum 28 §7): filed there. A note
+   * from the phone is taken into the project first, into the folder in hand,
+   * and then filed.
+   */
+  const fileUnder = async (what: { kind: 'item' | 'capture'; id: string }, place: NotePlace) => {
+    setDragging(null);
+    if (what.kind === 'item') {
+      onUpdate((current) => fileNoteUnder(current, what.id as ResearchItemId, place));
+      setSelectedItemId(what.id as ResearchItemId);
+      return;
+    }
+    const capture = captures.find((one) => (one.id as string) === what.id);
+    const categoryId = homeFolder();
+    if (!capture || !categoryId) return;
+    phone.setError(null);
+    try {
+      const result = approveCapture(file, capture, { kind: 'research', categoryId });
+      const made = result.file.researchItems.find((one) => !file.researchItems.some((had) => had.id === one.id));
+      const filed = made ? fileNoteUnder(result.file, made.id, place) : result.file;
+      onUpdate(() => filed);
+      if (made) setSelectedItemId(made.id);
+      const why = await phone.resolve(result.capture);
+      if (why) phone.setError(why);
+    } catch (cause) {
+      phone.setError(cause instanceof Error ? cause.message : 'That note could not be filed');
+    }
+  };
+
   const discardCapture = async (capture: CaptureItem) => {
     const why = await phone.resolve(rejectCapture(capture));
     if (why) phone.setError(why);
@@ -551,6 +625,14 @@ export function ResearchBody({
     selection.kind === 'creator'
       ? (file.characters.find((person) => person.id === selection.id && living(person)) ?? null)
       : null;
+
+  /**
+   * The notes screens, where the outline stands beside the notes (addendum 28
+   * §7): every folder and view of notes, and what came in from the phone.
+   */
+  const sortingScreen =
+    selection.kind === 'view' || selection.kind === 'folder' || (selection.kind === 'mobile' && mobileTab === 'inbox');
+  const outlineBeside = sortingScreen && outlineShown;
 
   // …and the room goes back where they came from rather than staying pointed
   // at somebody who is not there: a selection with nobody behind it drew a
@@ -654,8 +736,8 @@ export function ResearchBody({
           selection.kind === 'references' ||
           selection.kind === 'review' ||
           selection.kind === 'mobile'
-            ? 'research-body creating'
-            : 'research-body'
+            ? `research-body creating${outlineBeside ? ' with-outline' : ''}`
+            : `research-body${outlineBeside ? ' with-outline' : ''}`
         }
       >
         {/* The side menu: what is not a place, then the folders. */}
@@ -1093,6 +1175,11 @@ export function ResearchBody({
             <>
           <header className="research-contents-head">
             <h3>{title}</h3>
+            {sortingScreen && !outlineShown ? (
+              <button type="button" className="ghost small research-outline-show" onClick={() => showOutline(true)}>
+                ‹ Outline
+              </button>
+            ) : null}
             {selection.kind === 'plots' ||
             selection.kind === 'setups' ||
             selection.kind === 'thematics' ||
@@ -1313,6 +1400,14 @@ export function ResearchBody({
                 {...(onGoToBeat ? { onGoTo: onGoToBeat } : {})}
               />
             </div>
+          ) : selection.kind === 'view' && selection.view === 'all' && !everyNote && query.length === 0 ? (
+            <FolderGrid
+              file={file}
+              folders={tree}
+              onChoose={(id) => setSelection({ kind: 'folder', id })}
+              onOpen={openFolder}
+              onEveryNote={() => setEveryNote(true)}
+            />
           ) : items.length === 0 ? (
             <p className="muted empty-state">
               {query.length > 0
@@ -1322,6 +1417,16 @@ export function ResearchBody({
                   : 'Nothing filed here yet. + Note puts something in it.'}
             </p>
           ) : (
+            <>
+            {selection.kind === 'view' && selection.view === 'all' && everyNote ? (
+              <button type="button" className="ghost small research-back-to-folders" onClick={() => setEveryNote(false)}>
+                ‹ Show the folders
+              </button>
+            ) : selection.kind === 'folder' ? (
+              <button type="button" className="ghost small research-back-to-folders" onClick={() => openFolder(selection.id)}>
+                ⧉ Open this folder in its own window
+              </button>
+            ) : null}
             <ul className="research-cards" aria-label="Notes">
               {items.map((item) => (
                 <NoteCard
@@ -1345,10 +1450,27 @@ export function ResearchBody({
                 />
               ))}
             </ul>
+            </>
           )}
             </>
           )}
         </section>
+
+        {outlineBeside && !creator ? (
+          <OutlineSidebar
+            file={file}
+            dragging={dragging}
+            selectedId={selectedItemId}
+            onFile={(what, place) => void fileUnder(what, place)}
+            onDragNote={(id) => setDragging(id ? { kind: 'item', id: id as string } : null)}
+            onSelect={(item) => setSelectedItemId(item.id)}
+            onRewrite={(item) => {
+              setSelectedItemId(item.id);
+              setRewriting(item.id);
+            }}
+            onHide={() => showOutline(false)}
+          />
+        ) : null}
 
         {/* The thing itself. The Creator has the whole pane, so there is no
             second selection to show beside it. */}
@@ -1364,6 +1486,7 @@ export function ResearchBody({
               currentBeatId={currentBeatId}
               onUpdate={onUpdate}
               onGoToFolder={(id) => setSelection({ kind: 'folder', id })}
+              onRewrite={() => setRewriting(selectedItem.id)}
             />
           ) : (
             <p className="muted empty-state">Pick something to see it here.</p>
@@ -1403,6 +1526,24 @@ export function ResearchBody({
         }}
       </NoteDialog>
 
+      <FolderBox
+        file={file}
+        categoryId={folderBox}
+        currentBeatId={currentBeatId}
+        onClose={() => setFolderBox(null)}
+        onUpdate={onUpdate}
+        {...(onGoToBeat ? { onGoToBeat } : {})}
+      />
+
+      <NoteRewrite
+        file={file}
+        item={rewriting ? (file.researchItems.find((one) => one.id === rewriting) ?? null) : null}
+        currentBeatId={currentBeatId}
+        onClose={() => setRewriting(null)}
+        onUpdate={onUpdate}
+        {...(onGoToBeat ? { onGoToBeat } : {})}
+      />
+
       <ChapterPageDialog
         file={file}
         open={chapterPageFor !== null}
@@ -1411,6 +1552,122 @@ export function ResearchBody({
         onUpdate={onUpdate}
       />
     </>
+  );
+}
+
+/**
+ * *All research*, as folders (addendum 28 §8, from Ken: *it has all your just
+ * rough notes on the screen, but that research area should be folders with
+ * categories. So you can open that and it'll bring a pop-up box that you can
+ * take to another monitor*).
+ *
+ * Each folder a tile: its name, how much is in it and how much of that is on
+ * the track, and the first few notes. A press shows it here; ⧉ or a
+ * double-click opens it on its own, in a window of its own in the desktop app.
+ */
+function FolderGrid({
+  file,
+  folders,
+  onChoose,
+  onOpen,
+  onEveryNote,
+}: {
+  file: ProjectFile;
+  folders: ResearchFolder[];
+  onChoose(id: ResearchCategoryId): void;
+  onOpen(id: ResearchCategoryId): void;
+  onEveryNote(): void;
+}) {
+  return (
+    <div className="research-folder-grid-wrap">
+      <p className="muted small research-folder-grid-hint">
+        Click a folder to see its notes here. ⧉ or a double-click opens it in its own window, to put on another monitor.{' '}
+        <button type="button" className="ghost small" onClick={onEveryNote}>
+          Show every note instead
+        </button>
+      </p>
+      <ul className="research-folder-grid" aria-label="Research folders by category">
+        {folders.map((folder) => {
+          const notes = researchItemsIn(file, { categoryId: folder.category.id });
+          const used = notes.filter((one) => noteOnTrack(file, one)).length;
+          return (
+            <li key={folder.category.id} className="research-folder-tile" style={{ borderTopColor: folder.category.color ?? undefined }}>
+              <button
+                type="button"
+                className="research-folder-tile-main"
+                aria-label={`${folder.category.name}, ${notes.length} ${notes.length === 1 ? 'note' : 'notes'}`}
+                onClick={() => onChoose(folder.category.id)}
+                onDoubleClick={() => onOpen(folder.category.id)}
+              >
+                <span className="research-folder-tile-icon" aria-hidden="true">
+                  🗀
+                </span>
+                <span className="research-folder-tile-name">{folder.category.name}</span>
+                <span className="muted small">
+                  {notes.length} {notes.length === 1 ? 'note' : 'notes'}
+                  {used > 0 ? ` · ${used} used` : ''}
+                  {folder.children.length > 0 ? ` · ${folder.children.length} ${folder.children.length === 1 ? 'folder' : 'folders'}` : ''}
+                </span>
+                {notes.length > 0 ? (
+                  <span className="research-folder-tile-peek muted small">
+                    {notes.slice(0, 3).map((one) => (
+                      <span key={one.id}>{one.title}</span>
+                    ))}
+                  </span>
+                ) : null}
+              </button>
+              <button
+                type="button"
+                className="ghost small research-folder-tile-open"
+                aria-label={`Open ${folder.category.name} in its own window`}
+                title="Open in its own window — put it on another monitor"
+                onClick={() => onOpen(folder.category.id)}
+              >
+                ⧉
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+/** A folder in a movable box, where the program cannot open a window. */
+function FolderBox({
+  file,
+  categoryId,
+  currentBeatId,
+  onClose,
+  onUpdate,
+  onGoToBeat,
+}: {
+  file: ProjectFile;
+  categoryId: ResearchCategoryId | null;
+  currentBeatId: BeatId | null;
+  onClose(): void;
+  onUpdate: ResearchWindowProps['onUpdate'];
+  onGoToBeat?(beatId: BeatId): void;
+}) {
+  const dialog = useModal(categoryId !== null);
+  const { placed, grab } = useMovedDialog(dialog, categoryId);
+  if (!categoryId) return null;
+  return (
+    <dialog ref={dialog} className="research-folder-box" aria-label="Research folder" style={placed} onClose={onClose} onCancel={onClose}>
+      <header className="bar-grab" onPointerDown={grab}>
+        <span className="muted small">Research folder · drag this bar to move it</span>
+        <button type="button" className="ghost" aria-label="Close the folder" onClick={onClose}>
+          ×
+        </button>
+      </header>
+      <ResearchFolderView
+        file={file}
+        categoryId={categoryId}
+        currentBeatId={currentBeatId}
+        onUpdate={onUpdate}
+        {...(onGoToBeat ? { onGoToBeat } : {})}
+      />
+    </dialog>
   );
 }
 
@@ -1809,25 +2066,35 @@ function Detail({
   currentBeatId,
   onUpdate,
   onGoToFolder,
+  onRewrite,
 }: {
   file: ProjectFile;
   item: ResearchItem;
   currentBeatId: BeatId | null;
   onUpdate: ResearchWindowProps['onUpdate'];
   onGoToFolder(id: ResearchCategoryId): void;
+  /** Open the rewrite screen (addendum 28 §7). */
+  onRewrite?(): void;
 }) {
   const where = file.beats.filter((beat) => item.usedInBeatIds.includes(beat.id));
+  // Used means on the track (addendum 28 §7), read off the beats.
+  const used = noteOnTrack(file, item);
 
   return (
     <>
       <NoteFields file={file} item={item} rows={10} onUpdate={onUpdate} onGoToFolder={onGoToFolder} />
 
       <div className="research-actions">
-        {item.usage === 'used' ? (
+        {onRewrite ? (
+          <button type="button" onClick={onRewrite}>
+            Rewrite and place…
+          </button>
+        ) : null}
+        {used ? (
           <button type="button" className="ghost" onClick={() => onUpdate((current) => restoreResearchItem(current, item.id))}>
             Back to not used
           </button>
-        ) : (
+        ) : currentBeatId ? (
           <button
             type="button"
             onClick={() =>
@@ -1840,9 +2107,9 @@ function Detail({
               )
             }
           >
-            {currentBeatId ? 'Used in the beat I am writing' : 'Mark used'}
+            Used in the beat I am writing
           </button>
-        )}
+        ) : null}
         <button
           type="button"
           className="ghost"
@@ -2045,12 +2312,14 @@ function NoteCard({
         >
           <span className="research-card-head">
             <span className="research-card-title">{item.title}</span>
-            {item.usage === 'used' ? (
-              <span className="used-mark" title="Used in the script">
-                ✓
-              </span>
-            ) : null}
           </span>
+          {/* Used means on the track (addendum 28 §7, from Ken: *when used a
+              red X will be placed in the corner*). */}
+          {noteOnTrack(file, item) ? (
+            <span className="used-x research-card-used" title="Used in the book" aria-label="Used in the book">
+              ✕
+            </span>
+          ) : null}
           {item.body.trim().length > 0 ? <span className="research-card-body">{item.body}</span> : null}
           <span className="research-card-foot muted">
             {folderName}
