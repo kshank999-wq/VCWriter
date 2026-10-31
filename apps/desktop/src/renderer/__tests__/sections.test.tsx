@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import {
   addBeat,
   addItem,
@@ -320,7 +320,7 @@ describe('the Chapter row', () => {
     expect(screen.queryByText('+ Chapter')).toBeNull();
   });
 
-  it('is made at the top, and Return under it makes a section', () => {
+  it('is made at the top; Return makes another, and Tab moves that in to a section', async () => {
     render(<Outliner start={outlined()} />);
     fireEvent.pointerDown(rowOf('Refraction'));
     fireEvent.click(screen.getByText('+ Chapter'));
@@ -329,9 +329,21 @@ describe('the Chapter row', () => {
     const chapter = screen.getByPlaceholderText('name the chapter');
     expect(chapter.closest('[role="treeitem"]')?.getAttribute('aria-level')).toBe('1');
 
+    // Typed into, as a person does: the box has the caret.
+    fireEvent.focus(chapter);
     fireEvent.change(chapter, { target: { value: 'Wave optics' } });
     fireEvent.keyDown(chapter, { key: 'Enter' });
-    // The new section is the empty one, under the chapter.
+    // Return makes another chapter, right after it (from Ken: *hit Enter it
+    // gives you another, and if you hit Tab then it moves in*).
+    const next = screen
+      .getAllByPlaceholderText('name the chapter')
+      .find((box) => (box as HTMLTextAreaElement).value === '')!;
+    expect(next.closest('[role="treeitem"]')?.getAttribute('aria-level')).toBe('1');
+    // The new row is chosen a moment after it is made, as a keypress waits for.
+    await act(async () => undefined);
+    fireEvent.focus(next);
+    fireEvent.keyDown(next, { key: 'Tab' });
+    // Tab moved it in under Wave optics, and it is a section now.
     const section = screen
       .getAllByPlaceholderText('name the section')
       .find((box) => (box as HTMLTextAreaElement).value === '')!;

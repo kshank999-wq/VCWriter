@@ -3,6 +3,8 @@ import { nowIso } from './entities/common.js';
 import { initialOrderKeys, orderKeyBetween } from './ordering.js';
 import { outlineSchema, type Outline, type OutlineItem } from './entities/outline.js';
 import { retitleScript } from './planning.js';
+import { isInstructional, isWordProcessor } from './formats.js';
+import type { ProjectFormat } from './entities/project.js';
 import type { ResearchItem } from './entities/research.js';
 import type { ProjectFile } from './project-file.js';
 import type { OutlineId, OutlineItemId, ResearchItemId } from './ids.js';
@@ -609,7 +611,12 @@ export const moveItem = (
  * the screen, which is not what the key means. The first row of a group has
  * nothing above it at its own level, and nothing happens.
  */
-export const indentItem = (file: ProjectFile, outlineId: OutlineId, itemId: OutlineItemId): ProjectFile => {
+export const indentItem = (
+  file: ProjectFile,
+  outlineId: OutlineId,
+  itemId: OutlineItemId,
+  levels: readonly string[] = [],
+): ProjectFile => {
   const outline = findOutline(file, outlineId);
   const item = outline ? findOutlineItem(outline, itemId) : null;
   if (!outline || !item) return file;
@@ -619,8 +626,66 @@ export const indentItem = (file: ProjectFile, outlineId: OutlineId, itemId: Outl
   const above = at > 0 ? siblings[at - 1] : null;
   if (!above) return file;
 
-  return moveItem(file, outlineId, itemId, { parentId: above.id, afterId: null });
+  // Only a row that is part of the structure is retyped on the way in.
+  const kind = levels.includes(item.kind) ? levelUnder(levels, above.kind) : null;
+  const retyped = relevel(file, outlineId, itemId, kind, levels);
+  return moveItem(retyped, outlineId, itemId, { parentId: above.id, afterId: null });
 };
+
+/**
+ * The structural level a row takes under a parent of this kind (from Ken:
+ * *if you hit Tab then it moves in to section or subsection*): the level one
+ * down from the parent's, or the top level under nothing. Null where the
+ * parent is not part of the structure, which leaves the row's kind alone.
+ */
+const levelUnder = (levels: readonly string[], parentKind: string | null): string | null => {
+  if (levels.length === 0) return null;
+  if (parentKind === null) return levels[0] ?? null;
+  const at = levels.indexOf(parentKind);
+  if (at === -1) return null;
+  return levels[Math.min(at + 1, levels.length - 1)] ?? null;
+};
+
+/**
+ * Retype a structural row to a new level, and everything structural under it
+ * by the same number of steps, so a chapter moved in becomes a section and its
+ * sections become subsections. Rows outside the structure keep their kind.
+ */
+const relevel = (file: ProjectFile, outlineId: OutlineId, itemId: OutlineItemId, kind: string | null, levels?: readonly string[]): ProjectFile => {
+  const outline = findOutline(file, outlineId);
+  const item = outline ? findOutlineItem(outline, itemId) : null;
+  if (!outline || !item || kind === null || item.kind === kind) return file;
+  const ladder = levels ?? LADDERS.find((one) => one.includes(item.kind) && one.includes(kind)) ?? [];
+  const from = ladder.indexOf(item.kind);
+  const to = ladder.indexOf(kind);
+  if (from === -1 || to === -1) return file;
+  const shift = to - from;
+  const under = new Set(outlineSubtree(outline, itemId).map((one) => one.id as string));
+  return withOutline(file, outlineId, (current) => ({
+    ...current,
+    items: current.items.map((candidate) => {
+      if (!under.has(candidate.id as string)) return candidate;
+      const at = ladder.indexOf(candidate.kind);
+      if (at === -1) return candidate;
+      const next = ladder[Math.max(0, Math.min(ladder.length - 1, at + shift))]!;
+      return next === candidate.kind ? candidate : touch({ ...candidate, kind: next });
+    }),
+  }));
+};
+
+/**
+ * The structural levels of a format's outline, top first: what Tab and
+ * Shift+Tab step a row through. A book's chapter, section and subsection; a
+ * story's scene and beat; nothing in a document, whose headings are free.
+ */
+export const outlineLevels = (format: ProjectFormat): readonly string[] =>
+  isInstructional(format) ? ['chapter', 'scene', 'beat'] : isWordProcessor(format) ? [] : ['scene', 'beat'];
+
+/** The structural ladders the outline knows: a book's, and a story's. */
+const LADDERS: ReadonlyArray<readonly string[]> = [
+  ['chapter', 'scene', 'beat'],
+  ['scene', 'beat'],
+];
 
 /**
  * One step out: a sibling of its parent, directly after it.
@@ -631,13 +696,22 @@ export const indentItem = (file: ProjectFile, outlineId: OutlineId, itemId: Outl
  * stay where they were, under the parent — outdenting moves one branch, not
  * the rest of the trunk.
  */
-export const outdentItem = (file: ProjectFile, outlineId: OutlineId, itemId: OutlineItemId): ProjectFile => {
+export const outdentItem = (
+  file: ProjectFile,
+  outlineId: OutlineId,
+  itemId: OutlineItemId,
+  levels: readonly string[] = [],
+): ProjectFile => {
   const outline = findOutline(file, outlineId);
   const item = outline ? findOutlineItem(outline, itemId) : null;
   const parent = outline && item ? outlineParent(outline, item) : null;
   if (!outline || !item || !parent) return file;
 
-  return moveItem(file, outlineId, itemId, { parentId: parent.parentId, afterId: parent.id });
+  const grand = parent.parentId ? findOutlineItem(outline, parent.parentId) : null;
+  // Only a row that is part of the structure is retyped on the way out.
+  const kind = levels.includes(item.kind) ? levelUnder(levels, grand?.kind ?? null) : null;
+  const retyped = relevel(file, outlineId, itemId, kind, levels);
+  return moveItem(retyped, outlineId, itemId, { parentId: parent.parentId, afterId: parent.id });
 };
 
 /** A row moved one place among its siblings, keeping everything under it. */

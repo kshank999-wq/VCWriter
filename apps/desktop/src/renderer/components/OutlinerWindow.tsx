@@ -30,6 +30,7 @@ import {
   type OutlineCase,
   followOutline,
   indentItem,
+  outlineLevels,
   isPromoted,
   isUnder,
   moveItem,
@@ -448,6 +449,9 @@ export function OutlinerWindow({
   };
 
   /** Whether this row is somewhere the carried one could actually go. */
+  /** The structural levels Tab and Shift+Tab step a row through. */
+  const levels = useMemo(() => outlineLevels(file.project.format), [file.project.format]);
+
   const canDrop = useCallback(
     (targetId: OutlineItemId): boolean => {
       const held = carrying.current;
@@ -600,7 +604,7 @@ export function OutlinerWindow({
 
     if (event.key === 'Tab') {
       event.preventDefault();
-      write((current, id) => (event.shiftKey ? outdentItem : indentItem)(current, id, selected));
+      write((current, id) => (event.shiftKey ? outdentItem : indentItem)(current, id, selected, levels));
       return;
     }
     if ((event.key === 'ArrowUp' || event.key === 'ArrowDown') && (event.altKey || event.metaKey)) {
@@ -909,14 +913,14 @@ export function OutlinerWindow({
           <button
             type="button"
             className="ghost small"
-            onClick={() => write((current, id) => picked.reduce((file2, one) => indentItem(file2, id, one), current))}
+            onClick={() => write((current, id) => picked.reduce((file2, one) => indentItem(file2, id, one, levels), current))}
           >
             Move in
           </button>
           <button
             type="button"
             className="ghost small"
-            onClick={() => write((current, id) => picked.reduce((file2, one) => outdentItem(file2, id, one), current))}
+            onClick={() => write((current, id) => picked.reduce((file2, one) => outdentItem(file2, id, one, levels), current))}
           >
             Move out
           </button>
@@ -996,7 +1000,7 @@ export function OutlinerWindow({
               }
               onNudge={(direction) => write((current, id) => nudgeItem(current, id, row.item.id, direction))}
               onIndent={(deeper) =>
-                write((current, id) => (deeper ? indentItem : outdentItem)(current, id, row.item.id))
+                write((current, id) => (deeper ? indentItem : outdentItem)(current, id, row.item.id, levels))
               }
               onEnter={() => {
                 setSelected(row.item.id);
@@ -1522,9 +1526,17 @@ function Promotion({
  * Return makes a **section** under it for the same reason — a chapter is a
  * page, and the writing begins at its first section (addendum 19 §2).
  */
+/**
+ * What Return makes after a row: **another of the same kind, right after it**
+ * (from Ken: *if you select a chapter, section or subsection and hit Enter it
+ * gives you another, and if you hit Tab then it moves in to section or
+ * subsection*). It went one level in — a chapter made a section, a section a
+ * subsection — and as that row's *last* child, so on a row with anything
+ * under it the new one appeared at the bottom of the branch, out of sight of
+ * where the writer was typing. Going in is Tab's job.
+ */
 const nextAfter = (here: OutlineItem | null): [kind: string, beside: boolean] => {
-  if (!here || here.kind === 'scene') return ['beat', false];
-  if (here.kind === 'chapter') return ['scene', false];
+  if (!here) return ['beat', false];
   return [here.kind, true];
 };
 

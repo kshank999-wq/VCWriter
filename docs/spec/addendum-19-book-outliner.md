@@ -693,3 +693,35 @@ puts the caret in the name.
 - **Into itself.** A row cannot be put inside itself; the drop is refused.
 
 Tests: `outline-drop.test.ts`.
+
+## Return and Tab
+
+From Ken: *normally if you select a chapter, section or subsection and hit
+Enter it gives you another, and if you hit Tab then it moves in to section or
+subsection. If there is anything below it, it will not work.*
+
+**What was wrong.**
+
+- **Return went one level in, at the end of the branch.** A chapter made a
+  section and a section made a subsection, each added as the row's *last*
+  child. On a row with anything under it, the new row appeared at the bottom
+  of the branch, away from where the writer was typing.
+- **Tab kept the row's kind.** It moved a row in but left it a Section, one
+  level deeper. A chapter could not move in at all, because a chapter may
+  only stand at the top.
+
+**Now**, like the outline view of a word processor:
+
+- **Return** makes another row of the same kind directly after the one being
+  typed in, after everything under it (`nextAfter`).
+- **Tab** moves a row in, under the row of its own level above it, and
+  retypes it one level down: chapter → section → subsection.
+- **Shift+Tab** moves a row out and retypes it one level up.
+- **What is under it** comes along and shifts by the same number of levels, so
+  a chapter moved in becomes a section and its sections become subsections.
+  Ideas and notes keep their kind.
+- **The levels** come from `outlineLevels(format)`: chapter, section,
+  subsection on a book; scene, beat on a story; none in a document. The
+  retyping is in `indentItem` and `outdentItem` (`relevel`).
+
+Tests: `outline-drop.test.ts`, and `sections.test.tsx` for Return then Tab.

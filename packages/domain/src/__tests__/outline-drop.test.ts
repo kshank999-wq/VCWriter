@@ -4,6 +4,8 @@ import {
   createOutline,
   createProjectFile,
   dropPlacement,
+  indentItem,
+  outdentItem,
   findOutline,
   moveItem,
   outlineRows,
@@ -90,5 +92,57 @@ describe('dragging the structure', () => {
   it('refuses to put a row inside itself', () => {
     const made = book();
     expect(dropPlacement(findOutline(made.file, made.id)!, made.rows['s1']!, made.rows['b1']!, 'after')).toBeNull();
+  });
+});
+
+describe('Tab and Shift+Tab step a row through the structure', () => {
+  const levels = ['chapter', 'scene', 'beat'];
+  const kinds = (file: ProjectFile, id: ReturnType<typeof book>['id']) =>
+    outlineRows(findOutline(file, id)!, new Set(findOutline(file, id)!.items.map((one) => one.id as string))).map(
+      ({ item, depth }) => `${'  '.repeat(depth)}${item.title}:${item.kind}`,
+    );
+
+  it('moves a section with subsections in, and it becomes a subsection with them under it', () => {
+    const made = book();
+    const file = indentItem(made.file, made.id, made.rows['s2']!, levels);
+    expect(kinds(file, made.id)).toEqual([
+      'One:chapter',
+      '  Division:scene',
+      '    Long:beat',
+      '    Short:beat',
+      '    Times:beat',
+      '      Tables:beat',
+      'Two:chapter',
+      '  Fractions:scene',
+    ]);
+  });
+
+  it('moves a chapter in to a section, its sections becoming subsections', () => {
+    const made = book();
+    const file = indentItem(made.file, made.id, made.rows['c2']!, levels);
+    expect(kinds(file, made.id).slice(-2)).toEqual(['  Two:scene', '    Fractions:beat']);
+  });
+
+  it('moves a section out to a chapter, its subsections becoming sections', () => {
+    const made = book();
+    const file = outdentItem(made.file, made.id, made.rows['s2']!, levels);
+    expect(kinds(file, made.id)).toEqual([
+      'One:chapter',
+      '  Division:scene',
+      '    Long:beat',
+      '    Short:beat',
+      'Times:chapter',
+      '  Tables:scene',
+      'Two:chapter',
+      '  Fractions:scene',
+    ]);
+  });
+
+  it('leaves ideas and notes their own kind', () => {
+    let { file, id, rows } = book();
+    const idea = addItem(file, id, { kind: 'idea', title: 'Thought', parentId: rows['s1']! });
+    file = idea.file;
+    file = outdentItem(file, id, idea.itemId!, levels);
+    expect(findOutline(file, id)!.items.find((one) => one.id === idea.itemId)!.kind).toBe('idea');
   });
 });
