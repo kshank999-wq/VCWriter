@@ -2880,3 +2880,22 @@ character moment*. That menu now starts with the same items:
   `replaceRange` in `writing-edit.ts`.
 - **In the browser preview** there is no spellchecker to ask, so the
   spelling items are absent there. The editing items still work.
+
+### Read back: Daniel by default, and the script lit as it is read
+
+From Ken: *the voices are just terrible. Let's make Daniel the British male the
+default voice since he's the best one. Also, you need to be able to see the
+script or manuscript as you're listening… and it needs to highlight as it's
+reading so you can follow along and find your errors.*
+
+- **The default voice** is `preferredDefaultVoice`. It picks Daniel where the
+  computer has him (macOS ships him), otherwise a British English male, then
+  any British English voice, then the system's own default. It reads the
+  narrator and anyone without a voice of their own. The voice choosers name
+  it, as *Default voice — Daniel*.
+- **The script is shown while it plays**, on a page. Narration runs full
+  width; dialogue is set in from the margins, with the speaker's name above
+  it. A book is set in a serif face and a script in Courier.
+- **What is being read is lit.** The current line is highlighted and scrolled
+  into view. Inside it, the word being spoken is marked from the speech
+  engine's word events (`onboundary`). Clicking any line reads from there.

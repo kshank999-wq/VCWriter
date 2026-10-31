@@ -5,6 +5,8 @@ import {
   estimatedSpokenSeconds,
   findUnit,
   playbackPlan,
+  isProseFormat,
+  preferredDefaultVoice,
   sortVoices,
   suggestVoiceAssignments,
   toAssignment,
@@ -35,7 +37,16 @@ export function ReadBackPanel({ file, currentUnitId, onUpdate }: ReadBackPanelPr
   const [rate, setRate] = useState(1);
   const [playing, setPlaying] = useState(false);
   const [nowPlaying, setNowPlaying] = useState<number | null>(null);
+  /** The word being spoken in the line being read, as character offsets. */
+  const [spoken, setSpoken] = useState<{ index: number; from: number; to: number } | null>(null);
   const cancelled = useRef(false);
+  const current = useRef<HTMLParagraphElement | null>(null);
+  /**
+   * The voice used where nothing is chosen: Daniel, the British male, where
+   * the computer has him (from Ken: *the voices are just terrible. Let's make
+   * Daniel the British male the default voice*).
+   */
+  const fallback = useMemo(() => preferredDefaultVoice(voices), [voices]);
 
   // The voice list arrives asynchronously on most platforms.
   useEffect(() => {
@@ -66,28 +77,50 @@ export function ReadBackPanel({ file, currentUnitId, onUpdate }: ReadBackPanelPr
     window.speechSynthesis?.cancel();
     setPlaying(false);
     setNowPlaying(null);
+    setSpoken(null);
   }, []);
+
+  // The line being read stays in view, so the reading can be followed.
+  useEffect(() => {
+    if (nowPlaying !== null) current.current?.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+  }, [nowPlaying]);
 
   // Never leave a voice talking to an empty room.
   useEffect(() => stop, [stop]);
 
-  const play = useCallback(async () => {
+  /** Read from a line — the first, or the one clicked in the script. */
+  const play = useCallback(async (from = 0) => {
     const synthesis = window.speechSynthesis;
     if (!synthesis || plan.steps.length === 0) return;
 
+    synthesis.cancel();
     cancelled.current = false;
     setPlaying(true);
 
     const available = synthesis.getVoices();
-    for (const step of plan.steps) {
+    const daniel = fallback ? available.find((voice) => voice.voiceURI === fallback.id) : undefined;
+    for (const step of plan.steps.slice(from)) {
       if (cancelled.current) break;
       setNowPlaying(step.index);
+      setSpoken(null);
 
       await new Promise<void>((resolve) => {
         const utterance = new SpeechSynthesisUtterance(step.text);
         const match = step.voice ? available.find((voice) => voice.voiceURI === step.voice?.voiceId) : undefined;
-        if (match) utterance.voice = match;
+        const voice = match ?? daniel;
+        if (voice) {
+          utterance.voice = voice;
+          utterance.lang = voice.lang;
+        }
         utterance.rate = rate * (step.voice?.rate ?? 1);
+        // **The word being read is lit** (from Ken: *it needs to highlight as
+        // it's reading so you can follow along and find your errors*).
+        utterance.onboundary = (event) => {
+          if (event.name && event.name !== 'word') return;
+          const fromAt = event.charIndex;
+          const length = event.charLength || (step.text.slice(fromAt).match(/^\S+/)?.[0].length ?? 0);
+          setSpoken({ index: step.index, from: fromAt, to: fromAt + length });
+        };
         utterance.onend = () => resolve();
         // An error must not stall the queue — the next line still gets read.
         utterance.onerror = () => resolve();
@@ -95,9 +128,12 @@ export function ReadBackPanel({ file, currentUnitId, onUpdate }: ReadBackPanelPr
       });
     }
 
-    setPlaying(false);
-    setNowPlaying(null);
-  }, [plan, rate]);
+    if (!cancelled.current) {
+      setPlaying(false);
+      setNowPlaying(null);
+      setSpoken(null);
+    }
+  }, [plan, rate, fallback]);
 
   const seconds = estimatedSpokenSeconds(plan);
   const unit = currentUnitId ? findUnit(file, currentUnitId) : null;
@@ -127,7 +163,7 @@ export function ReadBackPanel({ file, currentUnitId, onUpdate }: ReadBackPanelPr
             />
             <span className="muted">{rate.toFixed(1)}×</span>
           </label>
-          <button type="button" className="primary" disabled={!supported || playing} onClick={() => void play()}>
+          <button type="button" className="primary" disabled={!supported || playing} onClick={() => void play(0)}>
             Play
           </button>
           <button type="button" disabled={!playing} onClick={stop}>
@@ -144,6 +180,44 @@ export function ReadBackPanel({ file, currentUnitId, onUpdate }: ReadBackPanelPr
         {plan.steps.length} {plan.steps.length === 1 ? 'line' : 'lines'} · about {Math.round(seconds / 60)} min
         {nowPlaying !== null ? ` · reading line ${nowPlaying + 1}` : ''}
       </p>
+
+      {/* **The script, as it is read** (from Ken: *you need to be able to see
+          the script or manuscript as you're listening… it needs to highlight
+          as it's reading so you can follow along and find your errors*). The
+          line being read is lit and kept in view, and the word being spoken
+          is marked inside it; a click on any line reads from there. */}
+      <div className={`readback-script${isProseFormat(file.project.format) ? ' prose' : ''}`} aria-label="The script being read">
+        {plan.steps.length === 0 ? (
+          <p className="muted">Nothing to read here yet.</p>
+        ) : (
+          plan.steps.map((step) => {
+            const on = nowPlaying === step.index;
+            const word = on && spoken?.index === step.index ? spoken : null;
+            return (
+              <p
+                key={step.index}
+                ref={on ? current : undefined}
+                className={`readback-line ${step.kind}${on ? ' reading' : ''}`}
+                title="Read from here"
+                onClick={() => void play(step.index)}
+              >
+                {step.kind === 'dialogue' && step.speaker ? <span className="readback-speaker">{step.speaker}</span> : null}
+                <span className="readback-words">
+                  {word ? (
+                    <>
+                      {step.text.slice(0, word.from)}
+                      <mark className="readback-word">{step.text.slice(word.from, word.to)}</mark>
+                      {step.text.slice(word.to)}
+                    </>
+                  ) : (
+                    step.text
+                  )}
+                </span>
+              </p>
+            );
+          })
+        )}
+      </div>
 
       {plan.unassigned.length > 0 ? (
         <p className="notice">
@@ -187,7 +261,7 @@ export function ReadBackPanel({ file, currentUnitId, onUpdate }: ReadBackPanelPr
               }));
             }}
           >
-            <option value="">Default voice</option>
+            <option value="">{fallback ? `Default voice — ${fallback.name}` : 'Default voice'}</option>
             {voices.map((voice) => (
               <option key={voice.id} value={voice.id}>
                 {voice.name}
@@ -214,7 +288,7 @@ export function ReadBackPanel({ file, currentUnitId, onUpdate }: ReadBackPanelPr
                   );
                 }}
               >
-                <option value="">No voice — read as narration</option>
+                <option value="">{fallback ? `No voice of their own — ${fallback.name}` : 'No voice — read as narration'}</option>
                 {voices.map((voice) => (
                   <option key={voice.id} value={voice.id}>
                     {voice.name}

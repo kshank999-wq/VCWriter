@@ -119,6 +119,21 @@ export const sortVoices = (voices: readonly VoiceDescriptor[]): VoiceDescriptor[
     return a.name.localeCompare(b.name);
   });
 
+/**
+ * **The voice read-back uses where nothing else is chosen** (from Ken: *the
+ * voices are just terrible. Let's make Daniel the British male the default
+ * voice since the best one*).
+ *
+ * Daniel where the computer has him (macOS ships him); otherwise a British
+ * English male, then any British English voice, then whatever the system
+ * would have used — null, which leaves the system's own default.
+ */
+export const preferredDefaultVoice = (voices: readonly VoiceDescriptor[]): VoiceDescriptor | null =>
+  voices.find((voice) => /\bdaniel\b/i.test(voice.name)) ??
+  voices.find((voice) => /^en[-_]GB/i.test(voice.lang) && voice.gender === 'male') ??
+  voices.find((voice) => /^en[-_]GB/i.test(voice.lang)) ??
+  null;
+
 export const toAssignment = (voice: VoiceDescriptor, overrides: Partial<VoiceAssignment> = {}): VoiceAssignment => ({
   providerId: voice.providerId,
   voiceId: voice.id,

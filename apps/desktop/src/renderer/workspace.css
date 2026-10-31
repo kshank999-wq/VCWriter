@@ -22621,3 +22621,62 @@ dialog.research-folder-box > header {
 .outline-row.selected .outline-grip {
   opacity: 1;
 }
+
+/* ---------------------------------------------- the script, as it is read */
+/* From Ken: see the manuscript while listening, lit as it is read. */
+.readback-script {
+  flex: 1 1 auto;
+  min-height: 220px;
+  max-height: 58vh;
+  overflow-y: auto;
+  margin: 8px 0 14px;
+  padding: 18px 26px;
+  background: var(--paper, #fbf8f1);
+  color: var(--paper-ink, #1d1a14);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  font-family: 'Courier Prime', 'Courier New', Courier, monospace;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.readback-line {
+  margin: 0 0 12px;
+  padding: 3px 8px;
+  border-radius: 3px;
+  border-left: 3px solid transparent;
+  cursor: pointer;
+}
+
+.readback-line:hover {
+  background: color-mix(in srgb, var(--gold) 10%, transparent);
+}
+
+.readback-line.dialogue {
+  margin-left: 18%;
+  margin-right: 14%;
+}
+
+.readback-speaker {
+  display: block;
+  margin-left: 22%;
+  text-transform: uppercase;
+}
+
+.readback-line.reading {
+  background: color-mix(in srgb, #f2d15c 35%, transparent);
+  border-left-color: #c9a227;
+}
+
+.readback-word {
+  background: #f2b33d;
+  color: #1d1a14;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+/* A book is read in a book's face; a script keeps Courier. */
+.readback-script.prose {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 15px;
+}
