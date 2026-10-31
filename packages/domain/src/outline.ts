@@ -87,7 +87,46 @@ const byOrder = (a: { orderKey: string }, b: { orderKey: string }): number =>
 
 /** The rows directly under one, or the top of the outline when null. */
 export const outlineChildren = (outline: Outline, parentId: OutlineItemId | null): OutlineItem[] =>
-  outline.items.filter((item) => item.parentId === parentId).sort(byOrder);
+  outline.items
+    .filter((item) => item.parentId === parentId)
+    // Ties break on the id, so two rows that share a key still have one order.
+    .sort((a, b) => byOrder(a, b) || ((a.id as string) < (b.id as string) ? -1 : (a.id as string) > (b.id as string) ? 1 : 0));
+
+const KEY_CHARS = /^[0-9A-Za-z]+$/;
+
+/**
+ * **The rows under one parent, given keys that can be put between** (from
+ * Ken: *dragging the sections around doesn't work, it just snaps back… even
+ * the little arrows don't work all the time*).
+ *
+ * A move works out a key between two neighbours, and that refuses — throws —
+ * where two rows share a key or carry one it cannot read. An outline built over
+ * months by imports, sends and syncs can hold such a pair, and then every move
+ * near them failed whole and the row stayed where it was. So before a move
+ * the siblings are checked, and where any pair is not strictly in order they
+ * are re-keyed evenly in the order they are drawn: nothing on the screen
+ * moves, and the move that follows has room.
+ */
+const withSpacedSiblings = (file: ProjectFile, outlineId: OutlineId, parentId: OutlineItemId | null): ProjectFile => {
+  const outline = findOutline(file, outlineId);
+  if (!outline) return file;
+  const siblings = outlineChildren(outline, parentId);
+  const sound = siblings.every(
+    (item, index) =>
+      KEY_CHARS.test(item.orderKey) &&
+      !item.orderKey.endsWith('0') &&
+      (index === 0 || (siblings[index - 1] as OutlineItem).orderKey < item.orderKey),
+  );
+  if (sound) return file;
+  const keys = initialOrderKeys(siblings.length);
+  const keyOf = new Map(siblings.map((item, index) => [item.id as string, keys[index] as string]));
+  return withOutline(file, outlineId, (current) => ({
+    ...current,
+    items: current.items.map((item) =>
+      keyOf.has(item.id as string) ? { ...item, orderKey: keyOf.get(item.id as string) as string } : item,
+    ),
+  }));
+};
 
 export const findOutlineItem = (outline: Outline, itemId: OutlineItemId): OutlineItem | null =>
   outline.items.find((item) => item.id === itemId) ?? null;
@@ -413,7 +452,12 @@ export const dropPlacement = (
 
   const targetRank = STRUCTURE_RANK[target.kind];
   if (targetRank === rank || targetRank === undefined) {
-    return plain(target, where === 'into' ? 'after' : where);
+    // **Dropped on a row of its own level, it takes that row's place**: above
+    // it when dragged up, below it when dragged down. It went *after* the
+    // row whatever the direction, so 1.2 dropped on 1.1 landed where it had
+    // been — the snap back Ken saw.
+    if (where === 'into') where = readsBefore(outline, held.id, target.id) ? 'after' : 'before';
+    return plain(target, where);
   }
   // A shallower row: the dragged one goes inside it. Just below a section's
   // own line is the top of that section; just above it is the end of the
@@ -426,6 +470,19 @@ export const dropPlacement = (
   if (where === 'into') return { parentId: target.id };
   const first = outlineChildren(outline, target.id).find((one) => one.id !== held.id);
   return first ? { parentId: target.id, beforeId: first.id } : { parentId: target.id };
+};
+
+/** Whether one row reads above another, top to bottom, folds ignored. */
+const readsBefore = (outline: Outline, a: OutlineItemId, b: OutlineItemId): boolean => {
+  const order: string[] = [];
+  const walk = (parentId: OutlineItemId | null): void => {
+    for (const child of outlineChildren(outline, parentId)) {
+      order.push(child.id as string);
+      walk(child.id);
+    }
+  };
+  walk(null);
+  return order.indexOf(a as string) < order.indexOf(b as string);
 };
 
 // --------------------------------------------------------- writing it
@@ -498,8 +555,9 @@ export const addItem = (
   outlineId: OutlineId,
   input: { parentId?: OutlineItemId | null; afterId?: OutlineItemId | null; kind?: string; title?: string } = {},
 ): { file: ProjectFile; itemId: OutlineItemId | null } => {
-  const outline = findOutline(file, outlineId);
-  if (!outline) return { file, itemId: null };
+  if (!findOutline(file, outlineId)) return { file, itemId: null };
+  file = withSpacedSiblings(file, outlineId, input.parentId ?? null);
+  const outline = findOutline(file, outlineId) as Outline;
 
   const parentId = input.parentId ?? null;
   if (parentId !== null && !findOutlineItem(outline, parentId)) return { file, itemId: null };
@@ -590,9 +648,11 @@ export const moveItem = (
   if (to.parentId !== null && isUnder(outline, to.parentId, itemId)) return file;
   if (!mayHang(item.kind, to.parentId)) return file;
 
+  file = withSpacedSiblings(file, outlineId, to.parentId);
+  const spaced = findOutline(file, outlineId) as Outline;
   // The dragged row is lifted out of the list before the key is worked out,
   // so "after the row below me" is a real move rather than a no-op.
-  const siblings = outlineChildren(outline, to.parentId).filter((candidate) => candidate.id !== itemId);
+  const siblings = outlineChildren(spaced, to.parentId).filter((candidate) => candidate.id !== itemId);
   const orderKey = keyFor(siblings, to);
 
   return withOutline(file, outlineId, (current) => ({
@@ -721,14 +781,34 @@ export const nudgeItem = (
   itemId: OutlineItemId,
   direction: -1 | 1,
 ): ProjectFile => {
-  const outline = findOutline(file, outlineId);
-  const item = outline ? findOutlineItem(outline, itemId) : null;
-  if (!outline || !item) return file;
+  const found = findOutline(file, outlineId);
+  const item = found ? findOutlineItem(found, itemId) : null;
+  if (!found || !item) return file;
 
+  file = withSpacedSiblings(file, outlineId, item.parentId);
+  const outline = findOutline(file, outlineId) as Outline;
   const siblings = outlineChildren(outline, item.parentId);
   const at = siblings.findIndex((candidate) => candidate.id === itemId);
   const to = at + direction;
-  if (at === -1 || to < 0 || to >= siblings.length) return file;
+  if (at === -1) return file;
+  if (to < 0 || to >= siblings.length) {
+    // **Past the end of its own group, into the next one** (from Ken: *even
+    // the little arrows don't work all the time*): the first subsection of a
+    // section goes up to the end of the section above, the last goes down to
+    // the top of the section below — beside rows of its parent's own kind only.
+    const parent = item.parentId ? findOutlineItem(outline, item.parentId) : null;
+    if (!parent) return file;
+    const uncles = outlineChildren(outline, parent.parentId);
+    const next = uncles[uncles.findIndex((one) => one.id === parent.id) + direction];
+    if (!next || next.kind !== parent.kind) return file;
+    const inside = outlineChildren(outline, next.id);
+    return moveItem(
+      file,
+      outlineId,
+      itemId,
+      direction === -1 ? { parentId: next.id, afterId: null } : inside[0] ? { parentId: next.id, beforeId: inside[0].id } : { parentId: next.id },
+    );
+  }
 
   const before = direction === 1 ? siblings[to]?.orderKey ?? null : siblings[to - 1]?.orderKey ?? null;
   const after = direction === 1 ? siblings[to + 1]?.orderKey ?? null : siblings[to]?.orderKey ?? null;

@@ -266,7 +266,7 @@ describe('the Outliner toolbar', () => {
 
     // Both sections real, and Light's two subsections with it — and the
     // badge reads the noun table, so a book's rows are in the book.
-    expect(screen.getAllByLabelText('In the book')).toHaveLength(4);
+    expect(screen.getAllByLabelText('In the track')).toHaveLength(4);
   });
 });
 
@@ -434,7 +434,7 @@ describe('the Chapter row', () => {
     fireEvent.click(toolbar(/^Add to track$/));
 
     // The chapter, both sections and Light's two subsections are real.
-    expect(screen.getAllByLabelText('In the book')).toHaveLength(5);
+    expect(screen.getAllByLabelText('In the track')).toHaveLength(5);
     expect(screen.getByText(/This/)).toBeTruthy();
     expect(screen.getByText(/a page before 2 sections/)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Take it out of the book' })).toBeTruthy();

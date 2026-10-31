@@ -49,6 +49,7 @@ import {
   promotableUnits,
   promoteKindOf,
   promoteRow,
+  promoteAll,
   promotedOf,
   removeItems,
   rowOutOfStep,
@@ -397,6 +398,10 @@ export function OutlinerWindow({
     if (selected) ids.add(selected as string);
     return [...ids] as OutlineItemId[];
   }, [alsoPicked, selected]);
+  /** How many chapters, sections and subsections are not in the track yet: the red dots. */
+  const missing = outline ? outline.items.filter((one) => promoteKindOf(one) !== null && !isPromoted(one)).length : 0;
+  /** And how many in the track stand somewhere other than where the outline now has them. */
+  const outOfStep = outline ? outline.items.filter((one) => isPromoted(one) && rowOutOfStep(file, outline, one.id) !== null).length : 0;
   /** Whether Add to track has anything to do: one chosen row the rules would take. */
   const sendable =
     outline !== null &&
@@ -763,6 +768,24 @@ export function OutlinerWindow({
             >
               Add to track
             </button>
+            ) : null}
+            {/* **Add all to track** (from Ken: *take everything that's missing
+                and that you've added and put it in the track where it's
+                supposed to be*). Every red dot, in the outline's order. */}
+            {promotion ? (
+              <button
+                type="button"
+                className="tool"
+                disabled={missing === 0 && outOfStep === 0}
+                title={
+                  missing === 0 && outOfStep === 0
+                    ? 'Everything in the outline is in the track, in the outline’s order'
+                    : `Put the ${missing} not in the track yet on the track, each where it belongs${outOfStep > 0 ? `, and move ${outOfStep} already there to match the outline` : ''}`
+                }
+                onClick={() => write((current, id) => promoteAll(current, id).file)}
+              >
+                Add all to track{missing > 0 ? ` (${missing})` : ''}
+              </button>
             ) : null}
             {onSendRows ? (
               <button
@@ -1722,6 +1745,8 @@ function Row({
   onDrop(zone: OutlineZone): void;
 }) {
   const { item, depth, childCount } = row;
+  /** Whether this kind of row can go on the track at all, and so carries a dot. */
+  const canGo = promoteKindOf(item) !== null;
   /** A row folds where it has rows under it, or words of its own. */
   const foldable = childCount > 0 || item.body.trim().length > 0;
   const input = useRef<HTMLTextAreaElement | null>(null);
@@ -1788,6 +1813,11 @@ function Row({
         <span key={level} className="outline-guide" style={{ left: `${8 + level * STEP + 7}px` }} aria-hidden="true" />
       ))}
 
+      {/* A handle that always drags the row, even while its name is being
+          typed in (from Ken: *dragging the sections around doesn't work*). */}
+      <span className="outline-grip" title="Drag to move it, with everything under it" aria-hidden="true">
+        ⠿
+      </span>
       {foldable ? (
         <button
           type="button"
@@ -1822,16 +1852,17 @@ function Row({
         </span>
       ) : null}
 
-      {/* The badge §6 asks for: a glance says how much of the outline is in
-          the script. A row that is still a plan carries no mark. */}
-      {promoted ? (
+      {/* **In the track or not, at a glance** (from Ken: *it's difficult to
+          tell what's in the track and what's not… either red, and then when
+          it's in the track, it turns green*). Every row that can go on the
+          track carries a dot: red while it is a plan, green once it is in.
+          Notes and ideas cannot go, and carry none. */}
+      {canGo ? (
         <span
-          className="outline-real"
-          title={`This is in the ${nounsFor(format).manuscript.toLowerCase()}`}
-          aria-label={`In the ${nounsFor(format).manuscript.toLowerCase()}`}
-        >
-          ●
-        </span>
+          className={promoted ? 'outline-real in' : 'outline-real out'}
+          title={promoted ? 'In the track' : 'Not in the track yet — Add to track, or Add all to track'}
+          aria-label={promoted ? 'In the track' : 'Not in the track yet'}
+        />
       ) : null}
 
       {/*

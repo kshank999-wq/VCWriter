@@ -312,6 +312,68 @@ const promoteChapter = (
 };
 
 /**
+ * **Add all to track** (from Ken: *it's difficult to tell what's in the track
+ * and what's not. You need to be able to have add all to track, which will
+ * take everything that's missing and put it in the track where it's supposed
+ * to be*).
+ *
+ * Every chapter, section and subsection still a plan is promoted, in the
+ * outline's own order, each by `promoteRow` — so it lands where a single *Add
+ * to track* would put it, and a section brings its subsections. Rows that
+ * cannot go yet (a chapter with no section) are left as plans and counted, so
+ * the press can say what it did and what it could not.
+ */
+export const promoteAll = (file: ProjectFile, outlineId: OutlineId): { file: ProjectFile; added: number; left: number } => {
+  let current = file;
+  let added = 0;
+  // Rounds, because a subsection can go only once its section has.
+  for (let round = 0; round < 4; round += 1) {
+    const outline = findOutline(current, outlineId);
+    if (!outline) break;
+    let moved = false;
+    for (const row of outlineRowsInOrder(outline)) {
+      const live = findOutline(current, outlineId);
+      const item = live ? findOutlineItem(live, row.id) : null;
+      if (!live || !item || promoteKindOf(item) === null || isPromoted(item)) continue;
+      if (canPromote(current, live, item) !== null) continue;
+      const before = current;
+      current = promoteRow(current, outlineId, item.id).file;
+      if (current !== before) {
+        moved = true;
+        const after = findOutline(current, outlineId);
+        added += after ? after.items.filter((one) => isPromoted(one)).length - live.items.filter((one) => isPromoted(one)).length : 0;
+      }
+    }
+    if (!moved) break;
+  }
+  // And what is in the track already but has been moved in the outline goes
+  // where the outline now has it — *where it's supposed to be*.
+  for (let round = 0; round < 3; round += 1) {
+    const outline = findOutline(current, outlineId);
+    if (!outline) break;
+    const stepped = outlineRowsInOrder(outline).filter((row) => rowOutOfStep(current, outline, row.id) !== null);
+    if (stepped.length === 0) break;
+    for (const row of stepped) current = followOutline(current, outlineId, row.id);
+  }
+  const final = findOutline(current, outlineId);
+  const left = final ? final.items.filter((one) => promoteKindOf(one) !== null && !isPromoted(one)).length : 0;
+  return { file: current, added, left };
+};
+
+/** Every row, top to bottom as the outline reads, folds ignored. */
+const outlineRowsInOrder = (outline: Outline): OutlineItem[] => {
+  const out: OutlineItem[] = [];
+  const walk = (parentId: OutlineItemId | null): void => {
+    for (const child of outlineChildren(outline, parentId)) {
+      out.push(child);
+      walk(child.id);
+    }
+  };
+  walk(null);
+  return out;
+};
+
+/**
  * Both stay, no longer joined.
  *
  * The scene keeps its place in the script and everything written in it; the row

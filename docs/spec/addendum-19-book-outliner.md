@@ -725,3 +725,40 @@ subsection. If there is anything below it, it will not work.*
   retyping is in `indentItem` and `outdentItem` (`relevel`).
 
 Tests: `outline-drop.test.ts`, and `sections.test.tsx` for Return then Tab.
+
+## In the track or not, Add all to track, and moves that snapped back
+
+From Ken: *it's difficult to tell what's in the track and what's not… it needs
+to be a different colour, red, and when it's in the track it turns green. You
+need to be able to have Add all to track… Dragging the sections around still
+doesn't work. It just snaps back… even the little arrows don't work all the
+time.*
+
+- **Every row that can go on the track carries a dot.** It is red while the
+  row is a plan and green once it is in the track. Notes and ideas cannot go
+  on the track and carry no dot.
+- **Add all to track** (`promoteAll`) is beside Add to track and shows how
+  many rows are missing.
+  - It promotes every chapter, section and subsection still a plan, in the
+    outline's order, each through `promoteRow`, so each lands where it
+    belongs.
+  - It then moves anything already in the track that has been moved in the
+    outline to the outline's place (`followOutline`).
+- **Why a move snapped back.** Two rows under one parent could share an order
+  key, after imports, sends or syncs. Working out a key between them throws,
+  and every move or arrow press near them failed whole.
+  `withSpacedSiblings` now re-keys such siblings evenly, in the order they are
+  drawn, before any move, add or arrow press. Ties in drawing break on the id,
+  so the order is stable.
+- **Dropped on the middle of a row of its own level**, a row now takes that
+  row's place: above it when dragged up, below it when dragged down. Before,
+  it always went *after*, so 1.2 dropped on 1.1 landed back where it was.
+- **The arrows cross into the next group.** The first subsection of a section
+  moves up to the end of the section above, and the last moves down to the
+  top of the section below.
+- **A grip (⠿) on every row** always drags the row, even while its name is
+  being typed in.
+
+Tests: `outline-drop.test.ts` covers colliding keys, taking a row's place,
+crossing arrows, and Add all to track. The moves, the arrows and Add all to
+track were driven in the preview on an outline whose section keys collide.

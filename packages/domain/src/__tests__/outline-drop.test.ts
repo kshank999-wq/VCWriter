@@ -6,6 +6,10 @@ import {
   dropPlacement,
   indentItem,
   outdentItem,
+  nudgeItem,
+  promoteAll,
+  isPromoted,
+  unitsInStoryOrder,
   findOutline,
   moveItem,
   outlineRows,
@@ -65,10 +69,13 @@ describe('dragging the structure', () => {
     expect(shape(file, made.id)).toEqual(['One', '  Division', '    Long', '    Short', '  Fractions', '  Times', '    Tables', 'Two']);
   });
 
-  it('does not tuck a section into another section', () => {
+  it('does not tuck a section into another: dropped on one, it takes its place', () => {
     const made = book();
-    const file = drag(made, 's2', 's1', 'into');
-    expect(shape(file, made.id)).toEqual(['One', '  Division', '    Long', '    Short', '  Times', '    Tables', 'Two', '  Fractions']);
+    // Dragged up onto Division: above it, with its subsections (from Ken: *if I
+    // wanted to drag section 1.2 above section 1.1 and reverse the numbering*).
+    expect(shape(drag(made, 's2', 's1', 'into'), made.id)).toEqual(['One', '  Times', '    Tables', '  Division', '    Long', '    Short', 'Two', '  Fractions']);
+    // Dragged down onto Times: below it.
+    expect(shape(drag(made, 's1', 's2', 'into'), made.id)).toEqual(['One', '  Times', '    Tables', '  Division', '    Long', '    Short', 'Two', '  Fractions']);
   });
 
   it('moves a chapter with everything in it, and keeps it at the top', () => {
@@ -144,5 +151,80 @@ describe('Tab and Shift+Tab step a row through the structure', () => {
     file = idea.file;
     file = outdentItem(file, id, idea.itemId!, levels);
     expect(findOutline(file, id)!.items.find((one) => one.id === idea.itemId)!.kind).toBe('idea');
+  });
+});
+
+describe('rows whose keys collide still move (from Ken: *it just snaps back*)', () => {
+  const sameKeys = () => {
+    const made = book();
+    // Division and Times share a key, as an outline built by imports can.
+    const outline = findOutline(made.file, made.id)!;
+    const key = outline.items.find((one) => one.id === made.rows['s1'])!.orderKey;
+    const file = {
+      ...made.file,
+      outlines: made.file.outlines!.map((one) =>
+        one.id === made.id
+          ? { ...one, items: one.items.map((item) => (item.id === made.rows['s2'] ? { ...item, orderKey: key } : item)) }
+          : one,
+      ),
+    };
+    return { ...made, file };
+  };
+
+  it('drags a section above its twin', () => {
+    const made = sameKeys();
+    const before = shape(made.file, made.id);
+    const second = before.indexOf('  Times') > before.indexOf('  Division') ? 's2' : 's1';
+    const first = second === 's2' ? 's1' : 's2';
+    const file = drag(made, second, first, 'before');
+    const after = shape(file, made.id);
+    expect(after.indexOf(`  ${second === 's2' ? 'Times' : 'Division'}`)).toBeLessThan(after.indexOf(`  ${first === 's2' ? 'Times' : 'Division'}`));
+  });
+
+  it('nudges a section up with the arrows', () => {
+    const made = sameKeys();
+    const before = shape(made.file, made.id);
+    const lower = before.indexOf('  Times') > before.indexOf('  Division') ? 's2' : 's1';
+    const file = nudgeItem(made.file, made.id, made.rows[lower]!, -1);
+    expect(shape(file, made.id)).not.toEqual(before);
+  });
+});
+
+describe('Add all to track', () => {
+  it('puts every chapter, section and subsection in the track, in order', () => {
+    const made = book();
+    const done = promoteAll(made.file, made.id);
+    const rows = findOutline(done.file, made.id)!.items;
+    expect(rows.filter((one) => ['chapter', 'scene', 'beat'].includes(one.kind)).every((one) => isPromoted(one))).toBe(true);
+    expect(done.left).toBe(0);
+    expect(done.added).toBe(8);
+    // Sections land in the outline's order.
+    const units = unitsInStoryOrder(done.file).map((one) => one.title);
+    expect(units.indexOf('Division')).toBeLessThan(units.indexOf('Times'));
+    expect(units.indexOf('Times')).toBeLessThan(units.indexOf('Fractions'));
+  });
+});
+
+describe('the arrows cross into the next section', () => {
+  it('moves a first subsection up to the end of the section above, and a last one down', () => {
+    const made = book();
+    expect(shape(nudgeItem(made.file, made.id, made.rows['b3']!, -1), made.id)).toEqual([
+      'One', '  Division', '    Long', '    Short', '    Tables', '  Times', 'Two', '  Fractions',
+    ]);
+    expect(shape(nudgeItem(made.file, made.id, made.rows['b2']!, 1), made.id)).toEqual([
+      'One', '  Division', '    Long', '  Times', '    Short', '    Tables', 'Two', '  Fractions',
+    ]);
+  });
+});
+
+describe('Add all to track puts what was moved back in line', () => {
+  it('moves a section already in the track to where the outline now has it', () => {
+    const made = book();
+    let file = promoteAll(made.file, made.id).file;
+    // Times moved above Division in the outline, after both were in the track.
+    file = moveItem(file, made.id, made.rows['s2']!, { parentId: made.rows['c1']!, beforeId: made.rows['s1']! });
+    file = promoteAll(file, made.id).file;
+    const units = unitsInStoryOrder(file).map((one) => one.title);
+    expect(units.indexOf('Times')).toBeLessThan(units.indexOf('Division'));
   });
 });

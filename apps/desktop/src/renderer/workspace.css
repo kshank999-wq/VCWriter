@@ -22581,3 +22581,43 @@ dialog.research-folder-box > header {
 .outliner-body .research-shelf {
   flex: 0 0 clamp(260px, 24%, 360px);
 }
+
+/* In the track or not (from Ken): red while a plan, green once in. */
+.outline-real {
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  margin: 0 2px;
+  border-radius: 50%;
+  align-self: center;
+  font-size: 0;
+}
+
+.outline-real.out {
+  background: #d64545;
+  box-shadow: 0 0 0 2px color-mix(in srgb, #d64545 25%, transparent);
+}
+
+.outline-real.in {
+  background: #3fae5a;
+  box-shadow: 0 0 0 2px color-mix(in srgb, #3fae5a 25%, transparent);
+}
+
+/* The row's handle: always a drag, even while its name is being typed in. */
+.outline-grip {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 22px;
+  line-height: 22px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  opacity: 0.45;
+  cursor: grab;
+  user-select: none;
+}
+
+.outline-row:hover .outline-grip,
+.outline-row.selected .outline-grip {
+  opacity: 1;
+}
