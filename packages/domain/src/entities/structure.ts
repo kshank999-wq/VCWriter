@@ -273,6 +273,13 @@ export const structuralUnitSchema = z.object({
    * to hold a scene in reserve without deleting it.
    */
   inScript: z.boolean().default(true),
+  /**
+   * Whether this section's heading — *1.1 Why Do You Want to Write?* — is
+   * printed in a book's manuscript (from Ken: *you need the option to be able
+   * to turn those on or off. So if you want to merge two sections, you can
+   * just turn off that label*). On by default.
+   */
+  headingShown: z.boolean().default(true),
   /** The writer's own structural reading of the scene (spec §8.2). */
   grid: sceneGridSchema.default({}),
   /** The last AI read of this scene, if one has been asked for. */
@@ -314,6 +321,8 @@ export const beatSchema = z.object({
    * losing it.
    */
   inScript: z.boolean().default(true),
+  /** Whether this subsection's heading is printed in a book's manuscript. On by default. */
+  headingShown: z.boolean().default(true),
   /** The working text: the revision named by `revisionName`. */
   manuscript: manuscriptSegmentSchema.default({ elements: [] }),
   /** The name of the working revision; the others are in `revisions`. */

@@ -329,5 +329,8 @@ export const addNoteToOutline = (
   const made = addItem(file, outlineId, { parentId, kind, title: item.title });
   if (!made.itemId) return { file, rowId: null };
   const written = updateItem(made.file, outlineId, made.itemId, { body: textToPlace(item) });
-  return { file: setResearchArchived(written, item.id, true), rowId: made.itemId };
+  // Worked in: used (from Ken: *once the research note has been moved into
+  // the outline, that will be considered used*) and archived, out of the way.
+  const used = markResearchUsed(written, { itemId: item.id, confirmed: true });
+  return { file: setResearchArchived(used, item.id, true), rowId: made.itemId };
 };

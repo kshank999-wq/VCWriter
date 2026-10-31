@@ -22680,3 +22680,65 @@ dialog.research-folder-box > header {
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 15px;
 }
+
+/* A book's section and subsection headings in its manuscript (from Ken: the
+   number to the left and bold, the title in title case, each switchable). */
+.book-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 0.8em;
+  margin: 1.4em 0 0.6em;
+  font-family: inherit;
+  color: inherit;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.book-heading.section {
+  font-size: 1.2em;
+}
+
+.book-heading.subsection {
+  font-size: 1.05em;
+  margin-top: 1em;
+}
+
+.book-heading-number {
+  font-weight: 700;
+  min-width: 2.6em;
+}
+
+.book-heading-title {
+  font-weight: 600;
+}
+
+.book-heading.off .book-heading-number,
+.book-heading.off .book-heading-title {
+  opacity: 0.35;
+  text-decoration: line-through;
+}
+
+.book-heading-toggle {
+  margin-left: auto;
+  font-size: 10px;
+  opacity: 0;
+  font-family: var(--ui-font, inherit);
+}
+
+.book-heading:hover .book-heading-toggle,
+.book-heading.off .book-heading-toggle,
+.book-heading-toggle:focus-visible {
+  opacity: 1;
+}
+
+/* Yellow: in the outline, its words not in the manuscript yet (addendum 28 §10). */
+.outline-real.wait {
+  background: #e3b62e;
+  box-shadow: 0 0 0 2px color-mix(in srgb, #e3b62e 30%, transparent);
+}
+
+/* A note sorted into a part of the outline, waiting to be worked in. */
+.research-outline-note.waiting {
+  border-left-color: #e3b62e;
+  background: color-mix(in srgb, #e3b62e 12%, var(--panel-2));
+}

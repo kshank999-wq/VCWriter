@@ -155,6 +155,7 @@ export * from './entities/note-sorter.js';
 export * from './outline.js';
 export * from './outline-binding.js';
 export * from './outline-link.js';
+export * from './book-headings.js';
 export * from './outline-case.js';
 export * from './account-password.js';
 export * from './saving.js';

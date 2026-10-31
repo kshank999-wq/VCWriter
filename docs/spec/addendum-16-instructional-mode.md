@@ -436,3 +436,32 @@ left:
   been pointed at instructional research.
 - Dropping files onto the Research window from **outside** it. The importer's
   own drop zone works; dragging a folder onto the folder tree does not.
+
+---
+
+## A book's section and subsection headings, in its manuscript
+
+From Ken: *I'm not sure why each paragraph is numbered and there is a line
+between it. It just needs to look like the manuscript. So you have the
+chapter, and then you'll have section 1.1… then all the little subsections as
+titles… And you need the option to be able to turn those on or off. So if you
+want to merge two sections, you can just turn off that label… section numbers
+to the left and bold. Title case.*
+
+- **The dashed line with a number was a page break**, page 2 starting there,
+  drawn the way a script draws it. A book's editing view is the manuscript,
+  not the printed page. The book column and the subsection editor no longer
+  draw page rules on a prose format; pages are shown in the page view,
+  Preview and Layout.
+- **Every section and subsection prints its heading** (`book-headings.ts`).
+  The number comes from `structureNumbers`, bold and to the left; the title is
+  in title case (`titleCase`, which leaves words typed in capitals alone).
+  Headings appear in the book column, at the top of the subsection editor,
+  and in the printed book (`book-plan.ts`). There, a section's heading goes
+  before its first subsection's, the section's at 15pt and the subsection's
+  at 13pt, each kept with what follows.
+- **Each heading switches off** with `headingShown` on the section or
+  subsection: migration 0075, one boolean on `structural_units` and `beats`,
+  applied live, on by default. A heading switched off prints nothing, so two
+  sections or subsections read as one. In the editing view it stays visible,
+  faint and struck through, with the switch to put it back.

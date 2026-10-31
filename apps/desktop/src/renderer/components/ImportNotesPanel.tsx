@@ -59,7 +59,7 @@ const readWord = async (one: File): Promise<ImportedFile[]> => {
 };
 
 /** Text out of a file, or a data URI where it is a picture. The host's half (§4). */
-const readOne = (one: File): Promise<ImportedFile[]> => {
+export const readOne = (one: File): Promise<ImportedFile[]> => {
   if (/\.docx$/i.test(one.name)) return readWord(one);
   return new Promise((resolve) => {
     const reader = new FileReader();

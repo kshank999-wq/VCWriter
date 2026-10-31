@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
-  noteOnTrack,
+  noteUsed,
   researchItemsIn,
   researchTree,
   updateResearchItem,
@@ -60,7 +60,7 @@ export function ResearchFolderView({
         <span className="research-folder-dot" style={{ background: folder.category.color ?? undefined }} />
         <h3>{folder.category.name}</h3>
         <span className="muted small">
-          {notes.length} {notes.length === 1 ? 'note' : 'notes'} · {notes.filter((one) => noteOnTrack(file, one)).length} used
+          {notes.length} {notes.length === 1 ? 'note' : 'notes'} · {notes.filter((one) => noteUsed(file, one)).length} used
         </span>
       </header>
       {folder.children.length > 0 ? (
@@ -78,7 +78,7 @@ export function ResearchFolderView({
         ) : (
           <ul className="research-folder-view-list" aria-label="Notes in this folder">
             {notes.map((note) => {
-              const used = noteOnTrack(file, note);
+              const used = noteUsed(file, note);
               return (
                 <li key={note.id}>
                   <button

@@ -227,6 +227,19 @@ const addChoices = (parentKind: string, levels: readonly string[], format: Proje
   return kinds.map((kind) => ({ kind, label: nameOf(kind, format) }));
 };
 
+/**
+ * Whether a row's own words are not in the manuscript yet: it has words, and
+ * it is a plan, or the subsection it became has nothing written in it.
+ */
+const wordsNotInBook = (file: ProjectFile, item: OutlineItem): boolean => {
+  if (item.body.trim().length === 0) return false;
+  if (item.boundBeatId) {
+    const beat = file.beats.find((one) => one.id === item.boundBeatId);
+    return !beat || beat.manuscript.elements.every((element) => element.text.trim().length === 0);
+  }
+  return !isPromoted(item);
+};
+
 const nameOf = (kind: string, format: ProjectFormat): string =>
   kindsFor(format)[kind]?.name ?? kind.replace(/_/g, ' ');
 
@@ -1069,6 +1082,7 @@ export function OutlinerWindow({
               title={rowTitle(file, row.item)}
               linked={row.item.source?.type === 'research_item'}
               promoted={isPromoted(row.item)}
+              wordsOut={wordsNotInBook(file, row.item)}
               selected={selected === row.item.id}
               picked={alsoPicked.has(row.item.id as string)}
               hit={filtering && found.hits.has(row.item.id as string)}
@@ -1517,7 +1531,7 @@ function Promotion({
     return (
       <section className="outline-promotion in-script">
         <p className="small">
-          <span className="outline-real">●</span> This <strong>is</strong> the {what} <em>{name}</em>, in the{' '}
+          <span className="outline-real in" /> This <strong>is</strong> the {what} <em>{name}</em>, in the{' '}
           {nouns.manuscript.toLowerCase()}
           {promoted.kind === 'marker'
             ? ` — a page before ${covers === 1 ? `one ${unit}` : `${covers} ${units}`}`
@@ -1678,6 +1692,7 @@ function Row({
   title,
   linked,
   promoted,
+  wordsOut,
   selected,
   picked,
   hit,
@@ -1709,6 +1724,8 @@ function Row({
   linked: boolean;
   /** In the script, so the row wears the badge (§6). */
   promoted: boolean;
+  /** The row has words of its own that are not in the manuscript yet: a yellow dot. */
+  wordsOut: boolean;
   selected: boolean;
   /** One of several chosen at once (§8). */
   picked: boolean;
@@ -1857,12 +1874,20 @@ function Row({
           it's in the track, it turns green*). Every row that can go on the
           track carries a dot: red while it is a plan, green once it is in.
           Notes and ideas cannot go, and carry none. */}
-      {canGo ? (
+      {canGo && !promoted ? (
+        <span className="outline-real out" title="Not in the track yet — Add to track, or Add all to track" aria-label="Not in the track yet" />
+      ) : wordsOut ? (
+        // **Yellow: its words are not in the manuscript yet** (addendum 28
+        // §10, from Ken: *if the node is still yellow, then you know the text
+        // isn't in the manuscript yet*) — a note worked into the outline, or
+        // a subsection in the track whose writing is still only here.
         <span
-          className={promoted ? 'outline-real in' : 'outline-real out'}
-          title={promoted ? 'In the track' : 'Not in the track yet — Add to track, or Add all to track'}
-          aria-label={promoted ? 'In the track' : 'Not in the track yet'}
+          className="outline-real wait"
+          title={canGo ? 'In the track, but its words are not in the manuscript yet' : 'Its words are not in the manuscript yet'}
+          aria-label="Not in the manuscript yet"
         />
+      ) : canGo ? (
+        <span className="outline-real in" title="In the track" aria-label="In the track" />
       ) : null}
 
       {/*

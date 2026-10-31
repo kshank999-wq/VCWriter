@@ -368,6 +368,7 @@ export const updateBeat = (
       | 'color'
       | 'revisionName'
       | 'inScript'
+      | 'headingShown'
       // A row of an AV sheet: what is seen, and how long it runs (addendum 05).
       | 'visual'
       | 'seconds'
@@ -1242,7 +1243,7 @@ export const removeTrack = (file: ProjectFile, trackId: TrackId): ProjectFile =>
 export const updateUnit = (
   file: ProjectFile,
   unitId: StructuralUnitId,
-  patch: Partial<Pick<StructuralUnit, 'title' | 'sequenceLabel' | 'summary' | 'notes' | 'status' | 'collapsed' | 'inScript'>>,
+  patch: Partial<Pick<StructuralUnit, 'title' | 'sequenceLabel' | 'summary' | 'notes' | 'status' | 'collapsed' | 'inScript' | 'headingShown'>>,
 ): ProjectFile => {
   if (!file.units.some((unit) => unit.id === unitId)) {
     throw new DomainError(`Scene/chapter ${unitId} does not exist`);

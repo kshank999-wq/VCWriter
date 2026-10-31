@@ -1,7 +1,9 @@
-import { addBeat, addMarker, addUnit, moveBeat, moveUnit, removeMarker, removeUnit } from './mutations.js';
+import { addBeat, addMarker, addUnit, moveBeat, moveUnit, removeMarker, removeUnit, updateBeat } from './mutations.js';
+import { manuscriptElementSchema } from './entities/manuscript.js';
+import { newId, type ManuscriptElementId } from './ids.js';
 import { beatsForUnit, tracksInOrder, unitsInStoryOrder } from './selectors.js';
 import { orderKeyBetween } from './ordering.js';
-import { holdsWholeWorks, isCollection, nounsFor } from './formats.js';
+import { holdsWholeWorks, isCollection, isInstructional, nounsFor } from './formats.js';
 import { defaultMarkerKind } from './markers.js';
 import { nowIso } from './entities/common.js';
 import { findOutline, findOutlineItem, outlineChildren, outlineParent, outlinesOf, sectionRowOf } from './outline.js';
@@ -235,8 +237,27 @@ const promoteOne = (
   const inSection = beatRowsIn(outline, section.id);
   void siblings;
   const made = addBeat(file, { unitId, title, index: indexAmong(item, inSection, beatPlaces(order), order.length) });
+  // **A book's subsection takes its words with it** (addendum 28 §10, from
+  // Ken: *if the node is still yellow, then you know the text isn't in the
+  // manuscript yet*). A note worked into the outline carries its rewrite as
+  // the row's words, and on the track they become the subsection's text — a
+  // paragraph each. A screenplay's beat row keeps its words as planning.
+  const words = isInstructional(file.project.format) ? item.body.trim() : '';
+  const withWords = words
+    ? updateBeat(made.file, made.beat.id, {
+        manuscript: {
+          elements: words
+            .split(/\n\s*\n/)
+            .map((paragraph) => paragraph.replace(/\s*\n\s*/g, ' ').trim())
+            .filter((paragraph) => paragraph.length > 0)
+            .map((paragraph) =>
+              manuscriptElementSchema.parse({ id: newId<ManuscriptElementId>(), type: 'paragraph', text: paragraph, characterId: null, attributes: {} }),
+            ),
+        },
+      })
+    : made.file;
   return {
-    file: writeRow(made.file, outlineId, itemId, { boundBeatId: made.beat.id }),
+    file: writeRow(withWords, outlineId, itemId, { boundBeatId: made.beat.id }),
     unitId,
     beatId: made.beat.id,
   };

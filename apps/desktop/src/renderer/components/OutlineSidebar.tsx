@@ -1,5 +1,5 @@
 import { useMemo, useState, type DragEvent } from 'react';
-import { noteOnTrack, outlineFolders, type NotePlace, type OutlineFolder, type ProjectFile, type ResearchItem, type ResearchItemId } from '@vcwriter/domain';
+import { noteUsed, outlineFolders, type NotePlace, type OutlineFolder, type ProjectFile, type ResearchItem, type ResearchItemId } from '@vcwriter/domain';
 
 /**
  * The outline beside the notes (addendum 28 §7).
@@ -123,12 +123,12 @@ export function OutlineSidebar({ file, dragging, selectedId, onFile, onDragNote,
                   {open && folder.notes.length > 0 ? (
                     <ul className="research-outline-notes" style={{ paddingLeft: 22 + folder.depth * 14 }}>
                       {folder.notes.map((note) => {
-                        const used = noteOnTrack(file, note);
+                        const used = noteUsed(file, note);
                         return (
                           <li key={note.id}>
                             <button
                               type="button"
-                              className={`research-outline-note${used ? ' used' : ''}${selectedId === note.id ? ' selected' : ''}`}
+                              className={`research-outline-note${used ? ' used' : ' waiting'}${selectedId === note.id ? ' selected' : ''}`}
                               draggable
                               onDragStart={(event) => {
                                 event.dataTransfer.effectAllowed = 'move';
@@ -138,7 +138,7 @@ export function OutlineSidebar({ file, dragging, selectedId, onFile, onDragNote,
                               onDragEnd={() => onDragNote(null)}
                               onClick={() => onSelect(note)}
                               onDoubleClick={() => onRewrite(note)}
-                              title={used ? 'On the track. Double-click to rewrite.' : 'Not used yet. Double-click to rewrite.'}
+                              title={used ? 'Used in the book. Double-click to rewrite.' : 'Yellow: sorted here, not in the manuscript yet. Double-click to rewrite and place it.'}
                             >
                               <span className="research-outline-note-title">{note.title}</span>
                               {used ? (

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type DragEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { RoomSave } from './RoomSave';
 import { RoomFormat } from './RoomFormat';
 import {
@@ -66,7 +66,8 @@ import {
   type SaveKind,
   isWordProcessor,
   fileNoteUnder,
-  noteOnTrack,
+  noteUsed,
+  importFiles,
   type NotePlace,
 } from '@vcwriter/domain';
 import { PopOutButton } from './PopOutButton';
@@ -83,7 +84,7 @@ import { ResearchFolderView } from './ResearchFolderView';
 import { useMovedDialog } from '../use-moved-dialog';
 import { ChapterPageDialog } from './ChapterPageDialog';
 import { GraveyardPanel } from './GraveyardPanel';
-import { ImportNotesPanel } from './ImportNotesPanel';
+import { ImportNotesPanel, readOne } from './ImportNotesPanel';
 import { LinksTimeline } from './LinksTimeline';
 import { LocationsPanel } from './LocationsPanel';
 import { ThemesPanel } from './ThemesPanel';
@@ -178,6 +179,10 @@ type Selection =
 const viewsFor = (format: ProjectFormat): ReadonlyArray<{ view: ResearchView; label: string }> => [
   { view: 'all', label: 'All research' },
   { view: 'unused', label: 'Not yet used' },
+  // Notes sorted into the outline leave their folders and wait here until
+  // used (addendum 28 §10, from Ken: *it needs to disappear into an archive
+  // folder*).
+  { view: 'sorted', label: 'Sorted into the outline' },
   { view: 'used', label: `Used in the ${nounsFor(format).manuscript.toLowerCase()}` },
   { view: 'archived', label: 'Put away' },
 ];
@@ -479,6 +484,29 @@ export function ResearchBody({
     if (selection.kind === 'view') setSelection({ kind: 'folder', id: categoryId });
   };
 
+  const importPicker = useRef<HTMLInputElement>(null);
+  /** What the last import brought in, said beside the button. */
+  const [imported, setImported] = useState<string | null>(null);
+  const importNotes = async (chosen: FileList | null) => {
+    if (!chosen || chosen.length === 0) return;
+    const find = (key: string) => file.researchCategories.find((one) => one.systemKey === key)?.id ?? null;
+    const inbox = find('inbox');
+    const notes = find('notes') ?? inbox ?? folders[0]?.category.id ?? null;
+    if (!notes) return;
+    const read = (await Promise.all(Array.from(chosen).map(readOne))).flat();
+    // Worked out before the updater runs, so StrictMode cannot import twice.
+    const done = importFiles(file, read, {
+      notesCategoryId: notes as ResearchCategoryId,
+      ...(inbox ? { inboxCategoryId: inbox as ResearchCategoryId } : {}),
+      toInbox: true,
+    });
+    onUpdate(() => done.file);
+    const count = done.file.researchItems.length - file.researchItems.length;
+    setImported(count > 0 ? `${count} ${count === 1 ? 'note' : 'notes'} imported` : 'Nothing could be read from that');
+    const landed = (inbox ?? notes) as ResearchCategoryId;
+    setSelection({ kind: 'folder', id: landed });
+  };
+
   const addFolder = () => {
     const parentId = selection.kind === 'folder' ? selection.id : null;
     onUpdate((current) => addResearchCategory(current, { name: 'New folder', parentId }).file);
@@ -715,6 +743,32 @@ export function ResearchBody({
         <button type="button" className="ghost" onClick={addFolder}>
           + Folder
         </button>
+        {/* **Import notes** (from Ken: *there needs to be an import button so
+            you can import a group of notes or a single note, and it'll go
+            into the imported folder until you sort it*). One file or many —
+            text, Markdown, Word — each a note, a Word document split at its
+            own headings, all into Imported and all not yet used. */}
+        <button
+          type="button"
+          className="ghost"
+          title="Bring in one note or a group of them — text, Markdown or Word files. They go into Imported until you sort them."
+          onClick={() => importPicker.current?.click()}
+        >
+          Import notes…
+        </button>
+        <input
+          ref={importPicker}
+          type="file"
+          multiple
+          hidden
+          accept=".txt,.md,.markdown,.rtf,.docx,text/plain,text/markdown"
+          aria-label="Choose notes to import"
+          onChange={(event) => {
+            void importNotes(event.target.files);
+            event.target.value = '';
+          }}
+        />
+        {imported ? <span className="muted small research-imported">{imported}</span> : null}
         {onPopOut ? <PopOutButton what="research" onPopOut={onPopOut} /> : null}
         {onSaveAs ? <RoomSave file={file} onSaveAs={onSaveAs} /> : null}
         <button type="button" className="ghost" aria-label="Close research" onClick={onClose}>
@@ -1589,7 +1643,7 @@ function FolderGrid({
       <ul className="research-folder-grid" aria-label="Research folders by category">
         {folders.map((folder) => {
           const notes = researchItemsIn(file, { categoryId: folder.category.id });
-          const used = notes.filter((one) => noteOnTrack(file, one)).length;
+          const used = notes.filter((one) => noteUsed(file, one)).length;
           return (
             <li key={folder.category.id} className="research-folder-tile" style={{ borderTopColor: folder.category.color ?? undefined }}>
               <button
@@ -2078,7 +2132,7 @@ function Detail({
 }) {
   const where = file.beats.filter((beat) => item.usedInBeatIds.includes(beat.id));
   // Used means on the track (addendum 28 §7), read off the beats.
-  const used = noteOnTrack(file, item);
+  const used = noteUsed(file, item);
 
   return (
     <>
@@ -2315,7 +2369,7 @@ function NoteCard({
           </span>
           {/* Used means on the track (addendum 28 §7, from Ken: *when used a
               red X will be placed in the corner*). */}
-          {noteOnTrack(file, item) ? (
+          {noteUsed(file, item) ? (
             <span className="used-x research-card-used" title="Used in the book" aria-label="Used in the book">
               ✕
             </span>

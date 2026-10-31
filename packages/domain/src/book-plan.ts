@@ -1,3 +1,5 @@
+import { structureNumbers } from './numbering.js';
+import { headingLine, printsBookHeadings, sectionHeading as bookSectionHeading, subsectionHeading as bookSubsectionHeading } from './book-headings.js';
 import {
   MAX_BLANK_PAGES,
   PART_KINDS,
@@ -4350,6 +4352,9 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
   let opensChapter = false;
   /** On a collection a story's sections are its chapters (addendum 22 §6). */
   const chapters = isCollection(file.project.format);
+  /** A book's section and subsection headings, printed (see `book-headings.ts`). */
+  const headed = printsBookHeadings(file);
+  const headNumbers = structureNumbers(file);
   /**
    * **Whether a sheet stands between one whole work and the next** (addendum
    * 22 §9, from Ken: *between stories, there needs to be a full blank
@@ -4603,7 +4608,13 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
     // to be: a section with a heading and one without both need a page the
     // rail can find, and the heading is not guaranteed.
     let atUnitHead = true;
+    // A book's own section and subsection headings (from Ken: *it just needs
+    // to look like the manuscript… section numbers to the left and bold.
+    // Title case*), each printed unless switched off. The section's goes
+    // before its first subsection's.
+    let sectionHeadDue = headed;
     for (const beat of beatsInScript(file, unit.id)) {
+      let beatHeadDue = headed;
       for (const element of beat.manuscript.elements) {
         // Already drawn, before the chapter opened (§9p).
         if (beforeOpening.has(element.id as string)) continue;
@@ -4646,6 +4657,34 @@ export const bookBlocks = (file: ProjectFile): BookBlock[] => {
             pending = null;
           }
           out.push(...run);
+        }
+        if (beatHeadDue) {
+          beatHeadDue = false;
+          const heads = [
+            ...(sectionHeadDue ? [bookSectionHeading(file, unit, headNumbers)] : []),
+            bookSubsectionHeading(file, beat, headNumbers),
+          ].filter((one) => one.shown);
+          sectionHeadDue = false;
+          for (const head of heads) {
+            const line = headingLine(head);
+            const heading = block({
+              id: `${head.level === 'section' ? (unit.id as string) : (beat.id as string)}:book-head`,
+              kind: 'heading',
+              numbering: 'arabic',
+              text: line,
+              spans: parseInline(line),
+              chapterTitle,
+              keepWithNext: true,
+              unbreakable: true,
+              size: head.level === 'section' ? 15 : 13,
+              align: 'left',
+            });
+            if (atUnitHead) {
+              atUnitHead = false;
+              heading.unitId = unit.id as string;
+            }
+            out.push(heading);
+          }
         }
         if (atUnitHead) {
           atUnitHead = false;

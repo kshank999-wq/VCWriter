@@ -1,3 +1,4 @@
+import { BookHeadingLine } from './BookHeadingLine';
 import { useMemo, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import {
   countWords,
@@ -7,6 +8,12 @@ import {
   findUnit,
   newId,
   pageBreaks,
+  isProseFormat,
+  printsBookHeadings,
+  sectionHeading,
+  subsectionHeading,
+  beatsForUnit,
+  updateUnit,
   reformatUntyped,
   startRevision,
   switchRevision,
@@ -80,7 +87,12 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
 
   // Where the printed pages break, from the one paginator the exports use.
   // Only this beat's elements are in it; the rest of the map costs nothing.
-  const breaks = useMemo(() => pageBreaks(file), [file]);
+  // Not on a book: its writing screen is the manuscript, and page rules read
+  // as numbered paragraphs (from Ken). Pages are Preview's and Layout's.
+  const breaks = useMemo(() => (isProseFormat(file.project.format) ? null : pageBreaks(file)), [file]);
+  /** A book's headings over the writing, as the book prints them. */
+  const headed = printsBookHeadings(file);
+  const firstInUnit = beatsForUnit(file, beat.unitId)[0]?.id === beat.id;
 
   // The tool offers itself only when it would actually change something, so
   // a beat that is already a script leaves it greyed out.
@@ -286,6 +298,20 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
         {/* The page itself, at the size it prints, scaled by the zoom. */}
         <div className="writer-sheet" style={{ '--page-zoom': zoom } as React.CSSProperties}>
           {comparing !== null ? <p className="writer-column-name muted">{beat.revisionName} — writing</p> : null}
+          {headed && unit && firstInUnit ? (
+            <BookHeadingLine
+              heading={sectionHeading(file, unit)}
+              untitled="Untitled section"
+              onToggle={(shown) => onUpdate((current) => updateUnit(current, unit.id, { headingShown: shown }))}
+            />
+          ) : null}
+          {headed ? (
+            <BookHeadingLine
+              heading={subsectionHeading(file, beat)}
+              untitled="Untitled subsection"
+              onToggle={(shown) => onUpdate((current) => updateBeat(current, beat.id, { headingShown: shown }))}
+            />
+          ) : null}
           <BeatBody
             file={file}
             beat={beat}

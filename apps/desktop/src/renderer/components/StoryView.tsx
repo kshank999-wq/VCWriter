@@ -18,7 +18,11 @@ import {
   type StoryLayout,
   type StructuralUnit,
   type StructuralUnitId,
+  printsBookHeadings,
+  sectionHeading,
+  subsectionHeading,
 } from '@vcwriter/domain';
+import { BookHeadingLine } from './BookHeadingLine';
 import { BeatBody } from './BeatBody';
 import { carryingWork, workCarried } from '../carry-work';
 import { DEFAULT_PAGE_STYLE, IMPORTED_FACE, PAPER_FACES, ScriptOptions, type PageStyle } from './ScriptOptions';
@@ -145,6 +149,8 @@ export function StoryView({
    */
   const numbered = numbersDivisions(file);
   const numbers = useMemo(() => structureNumbers(file), [file]);
+  /** A book shows its section and subsection headings in the manuscript, as it prints them. */
+  const headed = printsBookHeadings(file);
   const [ownDisplay, setOwnDisplay] = useState<ScriptDisplay>(DEFAULT_SCRIPT_DISPLAY);
   const [ownLayout, setOwnLayout] = useState<ScriptLayout>('flow');
   const [ownZoom, setOwnZoom] = useState(1);
@@ -442,7 +448,11 @@ export function StoryView({
       <BeatBody
         file={file}
         beat={beat}
-        breaks={paged ? null : breaks}
+        // A book's editing view is the manuscript, not the printed page: its
+        // page rules read as numbered paragraphs (from Ken: *I'm not sure why
+        // each paragraph is numbered and there is a line between it*), so
+        // pages are drawn only in the page view, Preview and Layout.
+        breaks={paged || prose ? null : breaks}
         only={only}
         emptyLabel={null}
         onUpdate={onUpdate}
@@ -630,9 +640,24 @@ export function StoryView({
 
                 {display.sceneNames ? sceneHeader(unit) : null}
 
+                {headed ? (
+                  <BookHeadingLine
+                    heading={sectionHeading(file, unit, numbers)}
+                    untitled={`Untitled ${nouns.unit.toLowerCase()}`}
+                    onToggle={(shown) => onUpdate((current) => updateUnit(current, unit.id, { headingShown: shown }))}
+                  />
+                ) : null}
+
                 {beats.map((beat) => (
                   <div key={beat.id}>
                     {display.beatNames ? beatHeader(beat) : null}
+                    {headed ? (
+                      <BookHeadingLine
+                        heading={subsectionHeading(file, beat, numbers)}
+                        untitled={`Untitled ${nouns.sub.toLowerCase()}`}
+                        onToggle={(shown) => onUpdate((current) => updateBeat(current, beat.id, { headingShown: shown }))}
+                      />
+                    ) : null}
                     {beatBody(beat, null, true)}
                   </div>
                 ))}

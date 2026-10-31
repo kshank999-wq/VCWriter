@@ -877,3 +877,51 @@ Tests: `note-rewrite.test.ts` covers sorting, adding and archiving. The flow
 was driven in the preview: drop a note on *Multiplication*, then double-click
 it under *In 1.1 Multiplication*, rewrite it, press **Add as subsection**,
 and fold the new row.
+
+## 10. Sorted, worked in, used — and importing notes
+
+From Ken:
+
+> When you drag a note, say the one in the General folder, under section 1.4,
+> it needs to disappear into an archive folder. And be a different colour in
+> the outliner because it hasn't been officially converted into manuscript
+> text yet… maybe it'll be yellow… once the research note has been moved into
+> the outline, that will be considered used. And if the node is still yellow,
+> then you know the text isn't in the manuscript yet.
+
+> From the research screen there needs to be an import button so you can
+> import a group of notes or a single note, and it'll go into the Imported
+> folder until you sort it… it will still log it as not yet used… so you can
+> compare how many notes you had and how many are used in the book.
+
+**Three readings in `selectors.ts`, nothing stored.**
+
+- `noteSorted`: the note is filed under a chapter, section or outline row
+  that still exists. A sorted note **leaves its folder**: folder lists and
+  folder counts drop it. It waits in a new view, **Sorted into the outline**,
+  until it is used.
+- `noteWorkedIn`: the note was rewritten and added to the outline.
+  `addNoteToOutline` now marks it used as well as archiving it.
+- `noteUsed`: worked in, or on the track. This is what **Used in the book**
+  and **Not yet used** count, so the two figures compare against the whole.
+  A worked-in note is under *Used in the book*, not *Put away*.
+
+**Yellow means "not in the manuscript yet."**
+
+- **In Research's outline column**, a note sorted into a row is yellow. Once
+  it is used it carries the red ✕.
+- **In the Outliner**, a row with words of its own that are not in the
+  manuscript has a yellow dot. That is either a row still in the outline only
+  (a note worked in), or a subsection in the track whose own subsection text
+  is empty. The full set of dots: red is not in the track, yellow is in it
+  with its words not written yet, green is in the book.
+- **On a book, a subsection put on the track takes its words with it.** The
+  row's words become its text, a paragraph each, so a note worked in and then
+  added to the track reaches the manuscript and turns green.
+
+**Import notes…** in the Research header picks one file or many (text,
+Markdown, Word). Each file becomes a note, and a Word document is split at its
+own headings. They are brought in through the existing importer
+(`importFiles`, which keeps a record of each import) into **Imported**, as
+not yet used, and the room opens on that folder. From there they sort exactly
+as phone notes do.

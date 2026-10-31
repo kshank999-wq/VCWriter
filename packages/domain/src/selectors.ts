@@ -103,7 +103,9 @@ export const researchTree = (file: ProjectFile, includeArchived = false): Resear
   // The counts down the side menu. They were a filter of their own, so a
   // deleted note went on being counted in its folder (addendum 24 §5k) —
   // which is the first thing a writer sees after pressing the ×.
+  // A note sorted into the outline has left its folder (addendum 28 §10).
   for (const item of workingNotes(file)) {
+    if (noteSorted(file, item)) continue;
     direct.set(item.categoryId, (direct.get(item.categoryId) ?? 0) + 1);
   }
 
@@ -159,7 +161,7 @@ export const researchSubtree = (file: ProjectFile, categoryId: ResearchCategoryI
 };
 
 /** The smart folders: views over everything rather than places to file in. */
-export type ResearchView = 'all' | 'used' | 'unused' | 'archived';
+export type ResearchView = 'all' | 'used' | 'unused' | 'archived' | 'sorted';
 
 const matches = (item: ResearchItem, query: string): boolean => {
   const needle = query.trim().toLowerCase();
@@ -241,6 +243,34 @@ export const noteBeatIds = (file: ProjectFile, item: ResearchItem): BeatId[] => 
 export const noteOnTrack = (file: ProjectFile, item: ResearchItem): boolean => noteBeatIds(file, item).length > 0;
 
 /**
+ * **Sorted into the book** (addendum 28 §10, from Ken: *when you drag a note…
+ * under section 1.4, it needs to disappear into an archive folder*): filed
+ * under a chapter, a section or a row of the outline that still exists. A
+ * sorted note leaves its folder and is listed under *Sorted into the outline*
+ * until it is used.
+ */
+export const noteSorted = (file: ProjectFile, item: ResearchItem): boolean => {
+  const place = item.place;
+  if (!place) return false;
+  if (place.type === 'story_marker') return file.markers.some((marker) => (marker.id as string) === place.id);
+  if (place.type === 'unit') return file.units.some((unit) => (unit.id as string) === place.id);
+  if (place.type === 'outline_item') {
+    return (file.outlines ?? []).some((outline) => outline.items.some((row) => (row.id as string) === place.id));
+  }
+  return false;
+};
+
+/**
+ * **Worked into the outline**: rewritten and added as a row (from Ken: *once
+ * the research note has been moved into the outline, that will be considered
+ * used*). `addNoteToOutline` archives it and marks it used.
+ */
+export const noteWorkedIn = (item: ResearchItem): boolean => item.archived && item.usage === 'used';
+
+/** Used: on the track, or worked into the outline. What *Used in the book* counts. */
+export const noteUsed = (file: ProjectFile, item: ResearchItem): boolean => noteWorkedIn(item) || noteOnTrack(file, item);
+
+/**
  * What the contents pane shows: a folder and everything under it, or one of
  * the smart folders, narrowed by the search box.
  */
@@ -258,13 +288,15 @@ export const researchItemsIn = (
   const live = shelvedItems(file);
   if ('view' in where) {
     const items = live.filter((item) => {
-      if (where.view === 'archived') return item.archived;
+      // Worked into the outline is used, not put away (addendum 28 §10).
+      if (where.view === 'used') return noteUsed(file, item);
+      if (where.view === 'archived') return item.archived && !noteWorkedIn(item);
       if (item.archived) return false;
+      if (where.view === 'sorted') return noteSorted(file, item) && !noteUsed(file, item);
       // Used means on the track (addendum 28 §7), read off the beats rather
       // than the flag, so a note moves into *Used in the book* the moment it
       // is placed and back out if its beat is cut.
-      if (where.view === 'used') return noteOnTrack(file, item);
-      if (where.view === 'unused') return !noteOnTrack(file, item);
+      if (where.view === 'unused') return !noteUsed(file, item);
       return true;
     });
     return sortByOrderKey(items.filter((item) => matches(item, query)));
@@ -274,8 +306,9 @@ export const researchItemsIn = (
   // filed here comes before what is filed in the folders under it.
   const folders = options.includeDescendants === false ? [where.categoryId] : researchSubtree(file, where.categoryId);
   const place = new Map(folders.map((id, index) => [id as string, index]));
+  // A note sorted into the outline has left its folder (addendum 28 §10).
   const items = live.filter(
-    (item) => !item.archived && place.has(item.categoryId) && matches(item, query),
+    (item) => !item.archived && place.has(item.categoryId) && !noteSorted(file, item) && matches(item, query),
   );
   return sortByOrderKey(items).sort(
     (a, b) => (place.get(a.categoryId) as number) - (place.get(b.categoryId) as number),

@@ -230,6 +230,7 @@ const unitToRow = (unit: StructuralUnit): Row => ({
   order_key: unit.orderKey,
   collapsed: unit.collapsed,
   in_script: unit.inScript,
+  heading_shown: unit.headingShown,
   // The writer's structural reading, as one JSON column: five short strings
   // read and written whole with the scene, and nothing queries inside it.
   grid: unit.grid,
@@ -251,6 +252,7 @@ const beatToRow = (beat: Beat): Row => ({
   status: beat.status,
   order_key: beat.orderKey,
   in_script: beat.inScript,
+  heading_shown: beat.headingShown,
   manuscript: beat.manuscript,
   revision_name: beat.revisionName,
   revisions: beat.revisions,
@@ -1099,6 +1101,7 @@ const unitFromRow = (row: Row): StructuralUnit =>
     orderKey: row['order_key'],
     collapsed: flag(row['collapsed']),
     inScript: row['in_script'] === undefined || row['in_script'] === null ? true : flag(row['in_script']),
+    headingShown: flag(row['heading_shown'], true),
     // Absent in a row written before the grid existed; the schema fills it.
     grid: row['grid'] ?? undefined,
     aiRead: row['ai_read'] ?? null,
@@ -1117,6 +1120,7 @@ const beatFromRow = (row: Row): Beat =>
     status: row['status'],
     orderKey: row['order_key'],
     inScript: flag(row['in_script'], true),
+    headingShown: flag(row['heading_shown'], true),
     manuscript: row['manuscript'] ?? { elements: [] },
     revisionName: text(row['revision_name'], 'Draft 1'),
     revisions: row['revisions'] ?? [],

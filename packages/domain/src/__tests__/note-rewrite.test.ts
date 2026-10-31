@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   addItem,
   addNoteToOutline,
+  promoteAll,
   notesToProcess,
   unsortedNotes,
   addResearchItem,
@@ -227,5 +228,36 @@ describe('sorting notes in the Outliner (addendum 28 §9)', () => {
     // Done: no longer waiting under the row, nor in the folders beside the notes.
     expect(notesToProcess(added.file, { kind: 'plan', itemId: made.rows['division']! })).toEqual([]);
     expect(outlineFolders(added.file).find((one) => one.title === 'Division')!.notes).toEqual([]);
+  });
+});
+
+describe('sorted, worked in, and in the manuscript (addendum 28 §10)', () => {
+  it('a note sorted into the outline leaves its folder and waits under Sorted', () => {
+    const made = planned();
+    const n = note(made.file, 'Jay-Z', 'rough');
+    const folder = made.file.researchCategories[0]!.id;
+    expect(researchItemsIn(n.file, { categoryId: folder }).map((one) => one.id)).toContain(n.id);
+    const file = fileNoteUnder(n.file, n.id, { kind: 'plan', itemId: made.rows['division']! });
+    expect(researchItemsIn(file, { categoryId: folder }).map((one) => one.id)).not.toContain(n.id);
+    expect(researchItemsIn(file, { view: 'sorted' }).map((one) => one.id)).toEqual([n.id]);
+    expect(researchItemsIn(file, { view: 'unused' }).map((one) => one.id)).toContain(n.id);
+  });
+
+  it('worked into the outline it counts as used, and its words reach the manuscript on the track', () => {
+    const made = planned();
+    const n = note(made.file, 'Check it', 'rough');
+    let file = fileNoteUnder(n.file, n.id, { kind: 'plan', itemId: made.rows['division']! });
+    file = setNoteRewrite(file, n.id, 'Multiply it back.\n\nIt should match.');
+    const added = addNoteToOutline(file, n.id, made.outlineId, made.rows['division']!, 'beat');
+    file = added.file;
+    expect(researchItemsIn(file, { view: 'used' }).map((one) => one.id)).toContain(n.id);
+    expect(researchItemsIn(file, { view: 'unused' }).map((one) => one.id)).not.toContain(n.id);
+    expect(researchItemsIn(file, { view: 'sorted' }).map((one) => one.id)).not.toContain(n.id);
+    expect(researchItemsIn(file, { view: 'archived' }).map((one) => one.id)).not.toContain(n.id);
+    // On the track, the row's words become the subsection's text.
+    file = promoteAll(file, made.outlineId).file;
+    const row = findOutline(file, made.outlineId)!.items.find((one) => one.id === added.rowId)!;
+    const beat = file.beats.find((one) => one.id === row.boundBeatId)!;
+    expect(beat.manuscript.elements.map((element) => element.text)).toEqual(['Multiply it back.', 'It should match.']);
   });
 });
