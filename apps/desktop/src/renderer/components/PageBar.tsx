@@ -14,9 +14,16 @@ export const VIEWS: ReadonlyArray<{ id: View; label: string }> = [
   { id: 'preview', label: 'Preview' },
   { id: 'editor', label: 'Editors' },
   { id: 'readback', label: 'Read back' },
-  { id: 'account', label: 'Account' },
-  { id: 'recovery', label: 'Recovery' },
 ];
+
+/** A room offered on the bar: Research, Notes, Sculptor, Outliner, Focus. */
+export interface BarRoom {
+  id: string;
+  label: string;
+  title: string;
+  onOpen(): void;
+  active?: boolean;
+}
 
 interface PageBarProps {
   view: View;
@@ -38,6 +45,15 @@ interface PageBarProps {
    * would say *not yet* about something that is never coming.
    */
   hidden?: readonly View[];
+  /**
+   * The rooms, on the bar in every view (from Ken: *the only way to get to
+   * research is to go into the writing section. We should take the buttons of
+   * Research, Notes, Sculptor, Outliner and Focus… all buttons across the
+   * bottom*). Account and Recovery left the bar for the File menu.
+   */
+  rooms?: readonly BarRoom[];
+  /** Pages shown as open without being the page in front — Read back's box. */
+  lit?: readonly View[];
 }
 
 /**
@@ -45,7 +61,7 @@ interface PageBarProps {
  * piece of chrome shared by every page, where an editing application keeps
  * it, so the title bar can be nothing but the project and its state.
  */
-export function PageBar({ view, onSelect, counts, out = [], hidden = [] }: PageBarProps) {
+export function PageBar({ view, onSelect, counts, out = [], hidden = [], rooms = [], lit = [] }: PageBarProps) {
   return (
     <nav className="page-bar" aria-label="Pages">
       {VIEWS.filter((option) => !hidden.includes(option.id)).map((option) => {
@@ -55,7 +71,7 @@ export function PageBar({ view, onSelect, counts, out = [], hidden = [] }: PageB
           <button
             key={option.id}
             type="button"
-            className={[view === option.id ? 'page selected' : 'page', away ? 'away' : ''].filter(Boolean).join(' ')}
+            className={[view === option.id || lit.includes(option.id) ? 'page selected' : 'page', away ? 'away' : ''].filter(Boolean).join(' ')}
             aria-current={view === option.id && !away ? 'page' : undefined}
             title={away ? `${option.label} is in a window of its own — this brings it forward` : undefined}
             onClick={() => onSelect(option.id)}
@@ -66,6 +82,22 @@ export function PageBar({ view, onSelect, counts, out = [], hidden = [] }: PageB
           </button>
         );
       })}
+      {rooms.length > 0 ? (
+        <span className="page-rooms" role="group" aria-label="Rooms">
+          {rooms.map((room) => (
+            <button
+              key={room.id}
+              type="button"
+              className={room.active ? 'page room active' : 'page room'}
+              aria-pressed={room.active ?? undefined}
+              title={room.title}
+              onClick={room.onOpen}
+            >
+              {room.label}
+            </button>
+          ))}
+        </span>
+      ) : null}
     </nav>
   );
 }

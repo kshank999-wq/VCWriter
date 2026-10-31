@@ -7,6 +7,13 @@ import {
   clampZoom,
   fitZoom,
   fitsAt,
+  sliderAt,
+  valueAt,
+  LANE_DEFAULT,
+  LANE_SLIDER_FLOOR,
+  SLIDER_STEPS,
+  TRACK_ZOOM_DEFAULT,
+  ZOOM_SLIDER_FLOOR,
   type StorySpan,
 } from '@vcwriter/domain';
 
@@ -51,9 +58,11 @@ export interface TimelineZoomProps {
    */
   lane?: number;
   onLane?(height: number): void;
+  /** The default zoom, which stands at the slider's centre (from Ken). */
+  centre?: number;
 }
 
-export function TimelineZoom({ zoom, spans, across, perSecond = false, onZoom, lane, onLane }: TimelineZoomProps) {
+export function TimelineZoom({ zoom, spans, across, perSecond = false, onZoom, lane, onLane, centre = TRACK_ZOOM_DEFAULT }: TimelineZoomProps) {
   const room = Math.max(120, across);
   const fits = fitsAt(zoom, spans, room);
 
@@ -62,12 +71,18 @@ export function TimelineZoom({ zoom, spans, across, perSecond = false, onZoom, l
       <span className="muted">Zoom</span>
       <input
         type="range"
-        min={ZOOM_FLOOR}
-        max={ZOOM_CEILING}
+        // **The default view at the centre** (from Ken): the left half runs
+        // from a readable floor to the default, the right half on to the
+        // ceiling. Fit may go smaller; the thumb then rests at the left end.
+        min={0}
+        max={SLIDER_STEPS}
         step={1}
-        value={clampZoom(zoom)}
+        value={sliderAt(clampZoom(zoom), ZOOM_SLIDER_FLOOR, centre, ZOOM_CEILING)}
         aria-label={perSecond ? 'Timeline zoom, pixels per second' : 'Timeline zoom, pixels per page'}
-        onChange={(event) => onZoom(clampZoom(Number(event.target.value)))}
+        aria-valuetext={`${clampZoom(zoom)} ${perSecond ? 'pixels a second' : 'pixels a page'}`}
+        title="Drag to stretch or compress the board; the middle is the usual view. Double-click to go back to it."
+        onDoubleClick={() => onZoom(centre)}
+        onChange={(event) => onZoom(clampZoom(valueAt(Number(event.target.value), ZOOM_SLIDER_FLOOR, centre, ZOOM_CEILING)))}
       />
       {/* A statement while it holds, a press once it does not — raised rather
           than flat, because pressing it does something here (addendum 20 §9). */}
@@ -87,12 +102,15 @@ export function TimelineZoom({ zoom, spans, across, perSecond = false, onZoom, l
           <span className="muted zoom-down">Down</span>
           <input
             type="range"
-            min={LANE_FLOOR}
-            max={LANE_CEILING}
+            min={0}
+            max={SLIDER_STEPS}
             step={1}
-            value={clampLane(lane)}
+            value={sliderAt(clampLane(lane), LANE_SLIDER_FLOOR, LANE_DEFAULT, LANE_CEILING)}
             aria-label="Lane zoom, how tall a beat is drawn"
-            onChange={(event) => onLane(clampLane(Number(event.target.value)))}
+            aria-valuetext={`${clampLane(lane)} pixels`}
+            title="How tall a beat is drawn; the middle is the usual view. Double-click to go back to it."
+            onDoubleClick={() => onLane(LANE_DEFAULT)}
+            onChange={(event) => onLane(clampLane(valueAt(Number(event.target.value), LANE_SLIDER_FLOOR, LANE_DEFAULT, LANE_CEILING)))}
           />
         </>
       ) : null}

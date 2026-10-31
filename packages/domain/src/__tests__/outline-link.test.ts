@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   addItem,
+  addBeat,
+  addUnit,
   beatsForUnit,
   createOutline,
   createProjectFile,
@@ -107,5 +109,32 @@ describe('the outline follows the track', () => {
       '    Independents',
       '    Selling',
     ]);
+  });
+});
+
+describe('what is made in the track joins the outline', () => {
+  it('a beat added in the track gets a row in its section, bound and in order', () => {
+    const made = book();
+    const money = unitsInStoryOrder(made.file).find((unit) => unit.title === 'Money')!;
+    const added = addBeat(made.file, { unitId: money.id, title: 'New beat', index: 0 });
+    const file = keepLinked(made.file, added.file);
+    const order = outlineOrder(file, made.id);
+    expect(order.slice(order.indexOf('  Money'), order.indexOf('  Money') + 3)).toEqual(['  Money', '    New beat', '    Selling']);
+    // The section the project began with is in the track too, so it joins,
+    // before the chapter — where it stands in the track.
+    expect(order.indexOf('Chapter One')).toBeLessThan(order.indexOf('One'));
+    const row = findOutline(file, made.id)!.items.find((one) => one.title === 'New beat')!;
+    expect(row.boundBeatId).toBe(added.beat.id);
+  });
+
+  it('a scene added in the track gets a row with its beats', () => {
+    const made = book();
+    const track = made.file.tracks[0]!.id;
+    const unit = addUnit(made.file, { trackId: track, title: 'Agents' });
+    const beat = addBeat(unit.file, { unitId: unit.unit.id, title: 'Literary agents' });
+    const file = keepLinked(made.file, beat.file);
+    const order = outlineOrder(file, made.id);
+    expect(order).toContain('  Agents');
+    expect(order[order.indexOf('  Agents') + 1]).toBe('    Literary agents');
   });
 });

@@ -460,8 +460,8 @@ export function NoteSorterWindow({
         {onPopOut ? <PopOutButton onPopOut={onPopOut} what="the Note Sorter" /> : null}
         {onSaveAs ? <RoomSave file={file} onSaveAs={onSaveAs} /> : null}
         {standalone ? null : (
-          <button type="button" className="ghost" onClick={onClose} aria-label="Close the Note Sorter">
-            ✕
+          <button type="button" className="room-exit" onClick={onClose} aria-label="Close the Note Sorter" title="Leave the Note Sorter">
+            Exit
           </button>
         )}
       </header>

@@ -2116,8 +2116,8 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
         </button>
         {onPopOut ? <PopOutButton what="the Layout room" onPopOut={onPopOut} /> : null}
         {onSaveAs ? <RoomSave file={file} onSaveAs={onSaveAs} /> : null}
-        <button type="button" className="ghost" onClick={onClose} aria-label="Close the Layout room">
-          ×
+        <button type="button" className="room-exit" onClick={onClose} aria-label="Close the Layout room" title="Leave Layout">
+          Exit
         </button>
       </header>
 

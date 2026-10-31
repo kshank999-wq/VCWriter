@@ -18,6 +18,7 @@ import {
   type TimelineArc,
   nounsFor,
   isProseFormat,
+  VIEWER_ZOOM_DEFAULT,
 } from '@vcwriter/domain';
 
 interface TimelineViewerProps {
@@ -174,7 +175,7 @@ export function TimelineViewer({
             {runtime}
           </span>
         )}
-        <TimelineZoom zoom={zoom} spans={spans} across={across} onZoom={onZoom} />
+        <TimelineZoom zoom={zoom} spans={spans} across={across} onZoom={onZoom} centre={VIEWER_ZOOM_DEFAULT} />
       </header>
 
       <div className="viewer-scroll" ref={scroller}>

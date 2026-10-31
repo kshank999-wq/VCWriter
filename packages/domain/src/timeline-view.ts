@@ -70,7 +70,7 @@ export const ZOOM_FLOOR = 4;
  * this, which is what *check all the modules* asks for and the reason there is
  * one constant rather than a slider per board (§4d's own argument).
  */
-export const ZOOM_CEILING = 600;
+export const ZOOM_CEILING = 1200;
 
 export const clampZoom = (zoom: number): number =>
   Math.min(ZOOM_CEILING, Math.max(ZOOM_FLOOR, Math.round(zoom)));
@@ -227,8 +227,8 @@ export const spanAt = (span: StorySpan, zoom: number): number => spanWidth(span,
  * on its side.
  */
 export const LANE_FLOOR = 6;
-export const LANE_CEILING = 44;
-export const LANE_DEFAULT = 22;
+export const LANE_CEILING = 64;
+export const LANE_DEFAULT = 36;
 
 export const clampLane = (height: number): number =>
   Math.min(LANE_CEILING, Math.max(LANE_FLOOR, Math.round(height)));
@@ -313,3 +313,43 @@ export const BLOCK_BEAT_PADDING = 10;
  */
 export const laneHeight = (beats: number, height: number, floor = 0): number =>
   Math.max(floor, beats * clampLane(height));
+
+// ---------------------------------------------------------------------------
+// The sliders, centred on the default view
+// ---------------------------------------------------------------------------
+
+/**
+ * **The default view sits in the middle of every zoom slider** (from Ken:
+ * *this should be the default view. The zooms should be centred at this view,
+ * not to one end or the other… it can stretch one way or the other, collapse
+ * it, and it doesn't need to collapse all the way to where it's so skinny you
+ * can't see it*).
+ *
+ * A slider is drawn over `SLIDER_STEPS`; its left half runs from a readable
+ * floor up to the default, its right half from the default up to the
+ * ceiling. So the default is always the centre whatever the two ranges are,
+ * and the slider's far left is still something you can read. *Fit* may go
+ * smaller than the slider's floor; the thumb then rests at the left end.
+ */
+export const SLIDER_STEPS = 1000;
+
+/** The plot tracks' default zoom, pixels a page, and its readable floor on the slider. */
+export const TRACK_ZOOM_DEFAULT = 400;
+export const VIEWER_ZOOM_DEFAULT = 360;
+export const ZOOM_SLIDER_FLOOR = 40;
+/** The lane slider's readable floor: below it a beat is a sliver. */
+export const LANE_SLIDER_FLOOR = 12;
+
+/** Where a value stands on a slider centred on `centre`. */
+export const sliderAt = (value: number, low: number, centre: number, high: number): number => {
+  const half = SLIDER_STEPS / 2;
+  if (value <= centre) return Math.max(0, Math.round((half * (value - low)) / Math.max(1, centre - low)));
+  return Math.min(SLIDER_STEPS, Math.round(half + (half * (value - centre)) / Math.max(1, high - centre)));
+};
+
+/** The value a slider position stands for. */
+export const valueAt = (position: number, low: number, centre: number, high: number): number => {
+  const half = SLIDER_STEPS / 2;
+  const at = Math.max(0, Math.min(SLIDER_STEPS, position));
+  return at <= half ? low + ((centre - low) * at) / half : centre + ((high - centre) * (at - half)) / half;
+};

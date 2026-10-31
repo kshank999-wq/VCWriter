@@ -23,6 +23,8 @@ interface TitleBarProps {
   writing: boolean;
   focusMode: boolean;
   onFocus(): void;
+  /** The rooms are on the bottom bar instead (from Ken), so the title bar leaves them out. */
+  roomsBelow?: boolean;
   /** Research is here rather than in the Script, so it survives the Script leaving. */
   onOpenResearch(): void;
   /** The Story Sculptor's canvas (addendum 03). */
@@ -70,6 +72,7 @@ export function TitleBar({
   writing,
   focusMode,
   onFocus,
+  roomsBelow = false,
   onOpenResearch,
   onOpenSculptor,
   onOpenNarrative,
@@ -139,7 +142,7 @@ export function TitleBar({
         ))}
 
         {/* A document's Research is on its right-hand menu (addendum 42 §16). */}
-        {writing && story ? (
+        {writing && !roomsBelow && story ? (
           <button
             type="button"
             className="raised"
@@ -149,7 +152,7 @@ export function TitleBar({
             Research
           </button>
         ) : null}
-        {writing && onOpenLayout ? (
+        {writing && !roomsBelow && onOpenLayout ? (
           <button
             type="button"
             className="raised"
@@ -161,7 +164,7 @@ export function TitleBar({
         ) : null}
         {/* Every format's, unlike Layout: a page of notes wants sorting
             whatever is being written from it (addendum 26 §4). */}
-        {writing && onOpenSorter && story ? (
+        {writing && !roomsBelow && onOpenSorter && story ? (
           <button
             type="button"
             className="raised"
@@ -171,7 +174,7 @@ export function TitleBar({
             Notes
           </button>
         ) : null}
-        {writing && story ? (
+        {writing && !roomsBelow && story ? (
           <button
             type="button"
             className="raised"
@@ -181,7 +184,7 @@ export function TitleBar({
             Sculptor
           </button>
         ) : null}
-        {writing && onOpenNarrative ? (
+        {writing && !roomsBelow && onOpenNarrative ? (
           <button
             type="button"
             className="raised"
@@ -191,7 +194,7 @@ export function TitleBar({
             Narrative
           </button>
         ) : null}
-        {writing && story ? (
+        {writing && !roomsBelow && story ? (
           <button
             type="button"
             className="raised"
@@ -201,7 +204,7 @@ export function TitleBar({
             Outliner
           </button>
         ) : null}
-        {writing && story ? (
+        {writing && !roomsBelow && story ? (
           <button
             type="button"
             className={focusMode ? 'raised active' : 'raised'}

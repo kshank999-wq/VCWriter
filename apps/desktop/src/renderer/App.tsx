@@ -17,6 +17,8 @@ import {
   mainDocument,
   withMainDocument,
   LANE_DEFAULT,
+  TRACK_ZOOM_DEFAULT,
+  VIEWER_ZOOM_DEFAULT,
   BEAT_CHIP_MAX,
   isInteractive,
   setParagraphStyle,
@@ -81,7 +83,7 @@ import { OutlinerWindow } from './components/OutlinerWindow';
 import { BeatDialog } from './components/BeatDialog';
 import { ChapterPageDialog } from './components/ChapterPageDialog';
 import { MarkerDialog } from './components/MarkerDialog';
-import { PageBar, type View } from './components/PageBar';
+import { PageBar, type BarRoom, type View } from './components/PageBar';
 import { PagePreview } from './components/PagePreview';
 import { SheetPreview } from './components/SheetPreview';
 import { DEFAULT_PAGE_STYLE, type PageStyle } from './components/ScriptOptions';
@@ -106,6 +108,7 @@ import { AccountPanel } from './components/AccountPanel';
 import { ActivationDialog } from './components/ActivationDialog';
 import { EditorPanel } from './components/EditorPanel';
 import { ReadBackPanel } from './components/ReadBackPanel';
+import { ReadBackDialog } from './components/ReadBackDialog';
 import { RecoveryPanel } from './components/RecoveryPanel';
 import { Preferences } from './components/Preferences';
 import { applyScheme, DEFAULT_SCHEME, type SchemeId } from './themes';
@@ -199,7 +202,7 @@ export default function App() {
   const [preferencesOpen, setPreferencesOpen] = useState(false);
   useEffect(() => applyScheme(scheme), [scheme]);
   const [timelineOpen, setTimelineOpen] = usePreference('timeline', true);
-  const [pixelsPerPage, setPixelsPerPage] = usePreference('zoom', 160);
+  const [pixelsPerPage, setPixelsPerPage] = usePreference('zoom', TRACK_ZOOM_DEFAULT);
   // How many beats stack in a scene before the next column starts (§4).
   /**
    * **The vertical zoom** (addendum 02 §4e). It replaces `beatsPerColumn`,
@@ -211,7 +214,9 @@ export default function App() {
   // How wide the beats are drawn in a scene (addendum 02 §4f), kept like the lane.
   const [beatWidth, setBeatWidth] = usePreference('beatWidth', BEAT_CHIP_MAX);
   // The Timeline & Viewer screen: its own zoom, and whose thread is isolated.
-  const [viewerZoom, setViewerZoom] = usePreference('viewerZoom', 180);
+  const [viewerZoom, setViewerZoom] = usePreference('viewerZoom', VIEWER_ZOOM_DEFAULT);
+  /** Read back, floating over the main screen (from Ken). */
+  const [readBackOpen, setReadBackOpen] = useState(false);
   const [isolatedCharacter, setIsolatedCharacter] = useState('');
   // What the Script shows besides the manuscript (addendum 02 §6).
   const [scriptDisplay, setScriptDisplay] = usePreference<ScriptDisplay>('scriptDisplay', DEFAULT_SCRIPT_DISPLAY);
@@ -865,6 +870,10 @@ export default function App() {
           return void exportPdf('board');
         case 'file.preferences':
           return setPreferencesOpen(true);
+        case 'file.account':
+          return setView('account');
+        case 'file.recovery':
+          return setView('recovery');
         case 'file.close':
           return project.closeProject();
 
@@ -1287,6 +1296,12 @@ export default function App() {
     <ResearchWindow
       file={file}
       open={researchOpen && !away.has('research')}
+      // The Note Sorter is reached from Research now (from Ken).
+      onOpenSorter={() => {
+        setResearchOpen(false);
+        if (away.has('sorter')) openPane('sorter');
+        else setSorterOpen(true);
+      }}
       currentBeatId={selectedBeat?.id ?? null}
       {...(researchView ? { openOn: researchView } : {})}
       {...(researchAt ? { openAt: researchAt } : {})}
@@ -1307,6 +1322,40 @@ export default function App() {
       }}
     />
   );
+
+  /**
+   * **The rooms, on the bottom bar in every view** (from Ken: *the only way to
+   * get to research is to go into the writing section… Research, Notes,
+   * Sculptor, Outliner and Focus… all buttons across the bottom*). A book adds
+   * Layout and a game its narrative map; Focus takes the writer to the page.
+   * The Note Sorter is not a room of its own any more but a screen of
+   * Research's (from Ken: *the note sorter is redundant… incorporate it into
+   * the research section*).
+   */
+  const story = !isWordProcessor(file.project.format);
+  const barRooms: BarRoom[] = story
+    ? [
+        { id: 'research', label: 'Research', title: 'Research: everything the work is made from', onOpen: () => (away.has('research') ? openPane('research') : setResearchOpen(true)) },
+        { id: 'sculptor', label: 'Sculptor', title: 'Story Sculptor: log the major ideas, and keep refining them', onOpen: () => (away.has('sculptor') ? openPane('sculptor') : setSculptorOpen(true)) },
+        { id: 'outliner', label: 'Outliner', title: 'Outliner: arrange what you have, and send it to the track', onOpen: () => (away.has('outliner') ? openPane('outliner') : isBook ? setView('outline') : setOutlinerOpen(true)) },
+        ...(isProseFormat(file.project.format)
+          ? [{ id: 'layout', label: 'Layout', title: 'Layout: set the manuscript as a book', onOpen: () => (away.has('layout') ? openPane('layout') : setLayoutOpen(true)) }]
+          : []),
+        ...(isInteractive(file.project.format)
+          ? [{ id: 'narrative', label: 'Narrative', title: 'Narrative map: the branching graph', onOpen: () => (away.has('narrative') ? openPane('narrative') : setNarrativeOpen(true)) }]
+          : []),
+        {
+          id: 'focus',
+          label: 'Focus',
+          title: 'Focus mode (Ctrl/Cmd+Shift+F)',
+          active: focusMode,
+          onOpen: () => {
+            if (view !== 'write') setView('write');
+            setFocusMode(!focusMode);
+          },
+        },
+      ]
+    : [];
 
   return (
     <div
@@ -1348,6 +1397,7 @@ export default function App() {
         wordCount={stats?.wordCount ?? 0}
         writing={writing}
         focusMode={focusMode}
+        roomsBelow={barRooms.length > 0}
         onFocus={() => setFocusMode(!focusMode)}
         onOpenResearch={() => (away.has('research') ? openPane('research') : setResearchOpen(true))}
         onOpenSculptor={() => (away.has('sculptor') ? openPane('sculptor') : setSculptorOpen(true))}
@@ -1934,6 +1984,14 @@ export default function App() {
         onUpdate={project.update}
       />
 
+      <ReadBackDialog
+        open={readBackOpen}
+        file={file}
+        currentUnitId={selectedBeat?.unitId ?? null}
+        onUpdate={project.update}
+        onClose={() => setReadBackOpen(false)}
+      />
+
       {focused ? null : (
         <PageBar
           view={view}
@@ -1941,13 +1999,18 @@ export default function App() {
           // raises that window rather than drawing a second copy of it here,
           // which is the same rule the Research button follows.
           onSelect={(next) =>
-            next === 'editor' && away.has('editors')
-              ? openPane('editors')
-              : next === 'outline' && away.has('outliner')
-                ? openPane('outliner')
-                : setView(next)
+            // Read back floats over the page rather than replacing it (from Ken).
+            next === 'readback'
+              ? setReadBackOpen((was) => !was)
+              : next === 'editor' && away.has('editors')
+                ? openPane('editors')
+                : next === 'outline' && away.has('outliner')
+                  ? openPane('outliner')
+                  : setView(next)
           }
           counts={{ recovery: conflicts.length }}
+          lit={readBackOpen ? ['readback'] : []}
+          rooms={barRooms}
           out={[
             ...(away.has('editors') ? (['editor'] as const) : []),
             ...(isBook && away.has('outliner') ? (['outline'] as const) : []),

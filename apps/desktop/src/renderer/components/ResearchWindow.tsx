@@ -120,6 +120,8 @@ interface ResearchWindowProps {
    * shortcut nobody can see. Absent where a host hands nothing down.
    */
   onSaveAs?(kind: SaveKind): void;
+  /** Open the Note Sorter, which Research now holds the way in to. */
+  onOpenSorter?(): void;
   /**
    * Go and look at a passage. Given by the workspace, where there is a script
    * beside this to go to; absent in the popped-out window, which has none.
@@ -217,6 +219,7 @@ export function ResearchWindow({
   onPopOut,
   onSaveAs,
   onGoToBeat,
+  onOpenSorter,
 }: ResearchWindowProps) {
   const dialog = useModal(open);
   return (
@@ -232,6 +235,7 @@ export function ResearchWindow({
           {...(onPopOut ? { onPopOut } : {})}
           {...(onSaveAs ? { onSaveAs } : {})}
           {...(onGoToBeat ? { onGoToBeat } : {})}
+          {...(onOpenSorter ? { onOpenSorter } : {})}
         />
       ) : null}
     </dialog>
@@ -252,9 +256,11 @@ export function ResearchBody({
   onPopOut,
   onSaveAs,
   onGoToBeat,
+  onOpenSorter,
 }: {
   file: ProjectFile;
   currentBeatId: BeatId | null;
+  onOpenSorter?(): void;
   /** Which view to land on. The report's "research not used" arrives here. */
   openOn?: ResearchView;
   /** Which of this room's own screens to land on — File ▸ Import arrives here. */
@@ -771,8 +777,8 @@ export function ResearchBody({
         {imported ? <span className="muted small research-imported">{imported}</span> : null}
         {onPopOut ? <PopOutButton what="research" onPopOut={onPopOut} /> : null}
         {onSaveAs ? <RoomSave file={file} onSaveAs={onSaveAs} /> : null}
-        <button type="button" className="ghost" aria-label="Close research" onClick={onClose}>
-          ×
+        <button type="button" className="room-exit" aria-label="Close research" title="Leave Research" onClick={onClose}>
+          Exit
         </button>
       </header>
 
@@ -992,6 +998,24 @@ export function ResearchBody({
                 <span className="folder-name">Import</span>
               </button>
             </li>
+            {/* **The Note Sorter, inside Research** (from Ken: *the note
+                sorter is redundant, but some of the features look nice… we
+                can incorporate it into the research section instead of being a
+                separate section*). Reading a page and highlighting the pieces
+                out of it is a way of sorting research, so it is reached from
+                here rather than from a button of its own. */}
+            {onOpenSorter ? (
+              <li>
+                <button
+                  type="button"
+                  className="folder-row"
+                  title="Read a page of notes, highlight, and drop the pieces into categories"
+                  onClick={onOpenSorter}
+                >
+                  <span className="folder-name">Note Sorter</span>
+                </button>
+              </li>
+            ) : null}
             {/* The graphics library is every book's (addendum 20 §9): a
                 novel's plates and chapter art live here too, so the Layout
                 room's *from the library* has somewhere a writer can find. */}

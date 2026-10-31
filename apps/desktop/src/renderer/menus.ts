@@ -19,6 +19,8 @@ import { paneNamesFor } from './panes';
 export type CommandId =
   // File
   | 'file.new'
+  | 'file.account'
+  | 'file.recovery'
   | 'file.new.episode'
   | 'file.open'
   | 'file.import'
@@ -173,6 +175,10 @@ export const menusFor = (format: ProjectFormat | null): readonly Menu[] => {
         : []),
       null,
       { command: 'file.preferences', label: 'Preferences…', accelerator: 'CmdOrCtrl+,' },
+      // Off the bottom bar and here (from Ken: *recovery and account, that
+      // should be in the File menu*).
+      { command: 'file.account', label: 'Account…' },
+      { command: 'file.recovery', label: 'Recovery…' },
       { command: 'file.close', label: 'Close project' },
     ],
   },
@@ -315,6 +321,10 @@ const DOCUMENT_MENUS: readonly Menu[] = [
       { command: 'file.exportDocx', label: 'Export Word document…' },
       null,
       { command: 'file.preferences', label: 'Preferences…', accelerator: 'CmdOrCtrl+,' },
+      // Off the bottom bar and here (from Ken: *recovery and account, that
+      // should be in the File menu*).
+      { command: 'file.account', label: 'Account…' },
+      { command: 'file.recovery', label: 'Recovery…' },
       { command: 'file.close', label: 'Close project' },
     ],
   },

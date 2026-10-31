@@ -263,8 +263,8 @@ export function NarrativeMapWindow({
         </label>
         {onPopOut ? <PopOutButton onPopOut={onPopOut} what="the narrative map" /> : null}
         {standalone ? null : (
-          <button type="button" className="ghost" onClick={onClose} aria-label="Close the narrative map">
-            ✕
+          <button type="button" className="room-exit" onClick={onClose} aria-label="Close the narrative map" title="Leave the narrative map">
+            Exit
           </button>
         )}
       </header>

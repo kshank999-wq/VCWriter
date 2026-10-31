@@ -24,7 +24,7 @@ import { useWritingAccess } from './use-writing-access';
 import { StaleBuildNotice } from './components/StaleBuildNotice';
 import { WritingNotice } from './components/WritingNotice';
 import { usePreference } from './use-split';
-import { BEAT_CHIP_MAX, LANE_DEFAULT } from '@vcwriter/domain';
+import { BEAT_CHIP_MAX, LANE_DEFAULT, TRACK_ZOOM_DEFAULT, VIEWER_ZOOM_DEFAULT } from '@vcwriter/domain';
 import { addBeatAfter, addSceneAfter } from './structure';
 import { beatIdOf, paneTitle, type PaneKey } from './panes';
 import { applyScheme, DEFAULT_SCHEME, type SchemeId } from './themes';
@@ -191,7 +191,7 @@ function Section({
   const [scriptZoom, setScriptZoom] = usePreference('scriptZoom', 0);
   // Paper, ink and face: the writer's, per machine, never project data (§6.3).
   const [pageStyle, setPageStyle] = usePreference<PageStyle>('pageStyle', DEFAULT_PAGE_STYLE);
-  const [pixelsPerPage, setPixelsPerPage] = usePreference('zoom', 160);
+  const [pixelsPerPage, setPixelsPerPage] = usePreference('zoom', TRACK_ZOOM_DEFAULT);
   /**
    * Printing, from the same module the workspace uses, and with **no flush**:
    * this window has no file to flush, and does not need one — what goes to the
@@ -206,7 +206,7 @@ function Section({
   // The vertical zoom is the machine's, like the horizontal one (§4e).
   const [lane, setLane] = usePreference('laneHeight', LANE_DEFAULT);
   const [beatWidth, setBeatWidth] = usePreference('beatWidth', BEAT_CHIP_MAX);
-  const [viewerZoom, setViewerZoom] = usePreference('viewerZoom', 180);
+  const [viewerZoom, setViewerZoom] = usePreference('viewerZoom', VIEWER_ZOOM_DEFAULT);
   const [isolatedCharacter, setIsolatedCharacter] = useState('');
 
   const selectedBeat = beats.find((beat) => beat.id === selectedBeatId) ?? beats[0] ?? null;

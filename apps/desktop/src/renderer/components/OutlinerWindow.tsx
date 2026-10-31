@@ -952,12 +952,12 @@ export function OutlinerWindow({
         {onSaveAs ? <RoomSave file={file} onSaveAs={onSaveAs} /> : null}
         <button
           type="button"
-          className="ghost"
+          className="room-exit"
           onClick={onClose}
           aria-label="Close the Outliner"
-          title={page ? `To the ${nouns.manuscript}` : undefined}
+          title={page ? `To the ${nouns.manuscript}` : 'Leave the Outliner'}
         >
-          ×
+          Exit
         </button>
       </header>
 

@@ -1,7 +1,7 @@
 import { initialOrderKeys } from './ordering.js';
 import { beatsForUnit, unitsInStoryOrder } from './selectors.js';
 import { divisionSpan } from './outline-binding.js';
-import { outlineChildren, sectionRowOf } from './outline.js';
+import { madeItem, outlineChildren, sectionRowOf } from './outline.js';
 import type { Outline, OutlineItem } from './entities/outline.js';
 import type { ProjectFile } from './project-file.js';
 import type { OutlineItemId, StructuralUnitId } from './ids.js';
@@ -155,6 +155,7 @@ export const alignOutlineToScript = (file: ProjectFile): ProjectFile => {
     });
   }
 
+  const markerUnit = new Map(file.markers.map((marker) => [marker.id as string, marker.unitId as string]));
   const outlines = (file.outlines ?? []).map((original) => {
     let outline = original;
     const at = (id: OutlineItemId) => outline.items.find((one) => one.id === id);
@@ -194,11 +195,18 @@ export const alignOutlineToScript = (file: ProjectFile): ProjectFile => {
     const parents = new Set<string | null>(outline.items.map((row) => (row.parentId as string | null) ?? null));
     for (const parentId of parents) {
       const siblings = outlineChildren(outline, parentId as OutlineItemId | null);
-      const units = siblings.filter((row) => row.boundUnitId && unitAt.has(row.boundUnitId as string));
+      // Sections by their place in the track, and chapters by where they
+      // start, a chapter standing just before the section it opens on.
+      const placeOf = (row: OutlineItem): number | null => {
+        if (row.boundUnitId && unitAt.has(row.boundUnitId as string)) return unitAt.get(row.boundUnitId as string)! * 2 + 1;
+        const marker = row.boundMarkerId ? markerUnit.get(row.boundMarkerId as string) : undefined;
+        return marker !== undefined && unitAt.has(marker) ? unitAt.get(marker)! * 2 : null;
+      };
+      const units = siblings.filter((row) => placeOf(row) !== null);
       const beats = siblings.filter((row) => row.boundBeatId && beatAt.has(row.boundBeatId as string));
       let next = siblings;
       if (units.length > 1) {
-        const sorted = [...units].sort((a, b) => unitAt.get(a.boundUnitId as string)! - unitAt.get(b.boundUnitId as string)!);
+        const sorted = [...units].sort((a, b) => placeOf(a)! - placeOf(b)!);
         next = refill(next, (row) => units.includes(row), sorted);
       }
       if (beats.length > 1) {
@@ -211,6 +219,60 @@ export const alignOutlineToScript = (file: ProjectFile): ProjectFile => {
     return outline;
   });
   return { ...file, outlines };
+};
+
+// ---------------------------------------------------------- track into outline
+
+/**
+ * **What is in the track is in the outline** (from Ken: *when new beats show
+ * up in the track view, they need to also be included in the outliner, and
+ * they'll just be marked as green because they're already in the track*).
+ *
+ * A section (unit) or subsection (beat) that no outline row is bound to gets
+ * one, bound to it: a section's row under the chapter row whose stretch of
+ * the track it falls in (or at the top), a subsection's under its section's
+ * row. They arrive keyed last and `alignOutlineToScript` puts them in the
+ * track's order. Only where the project has an outline at all.
+ */
+export const adoptScriptIntoOutline = (file: ProjectFile): ProjectFile => {
+  const outline = (file.outlines ?? [])[0];
+  if (!outline) return file;
+  const boundUnits = new Set<string>();
+  const boundBeats = new Set<string>();
+  for (const one of file.outlines ?? []) {
+    for (const row of one.items) {
+      if (row.boundUnitId) boundUnits.add(row.boundUnitId as string);
+      if (row.boundBeatId) boundBeats.add(row.boundBeatId as string);
+    }
+  }
+  const story = unitsInStoryOrder(file);
+  const missingUnits = story.filter((unit) => !boundUnits.has(unit.id as string));
+  const missingBeats = file.beats.filter((beat) => !boundBeats.has(beat.id as string));
+  if (missingUnits.length === 0 && missingBeats.length === 0) return file;
+
+  const items = [...outline.items];
+  const chapterOfUnit = new Map<string, OutlineItemId>();
+  for (const chapter of items.filter((row) => row.kind === 'chapter' && row.boundMarkerId)) {
+    for (const unit of divisionSpan(file, chapter.boundMarkerId!)) chapterOfUnit.set(unit.id as string, chapter.id);
+  }
+  const sectionOfUnit = new Map<string, OutlineItemId>();
+  for (const one of file.outlines ?? []) {
+    for (const row of one.items) if (row.kind === 'scene' && row.boundUnitId) sectionOfUnit.set(row.boundUnitId as string, row.id);
+  }
+  for (const unit of missingUnits) {
+    const row = {
+      ...madeItem({ outlineId: outline.id, parentId: chapterOfUnit.get(unit.id as string) ?? null, orderKey: 'zz', kind: 'scene', title: unit.title }),
+      boundUnitId: unit.id,
+    };
+    items.push(row);
+    sectionOfUnit.set(unit.id as string, row.id);
+  }
+  for (const beat of missingBeats) {
+    const parentId = sectionOfUnit.get(beat.unitId as string);
+    if (!parentId) continue;
+    items.push({ ...madeItem({ outlineId: outline.id, parentId, orderKey: 'zz', kind: 'beat', title: beat.title }), boundBeatId: beat.id });
+  }
+  return { ...file, outlines: (file.outlines ?? []).map((one) => (one.id === outline.id ? { ...one, items } : one)) };
 };
 
 // ---------------------------------------------------------- one entry point
@@ -235,7 +297,15 @@ const scriptShape = (file: ProjectFile): string =>
  * the outline untouched) puts the outline in the track's.
  */
 export const keepLinked = (before: ProjectFile, after: ProjectFile): ProjectFile => {
-  if (before === after || !(after.outlines ?? []).some((outline) => outline.items.some((row) => row.boundUnitId || row.boundBeatId))) {
+  if (before === after || (after.outlines ?? []).length === 0) return after;
+  // A section or subsection made in the track (or one never in the outline)
+  // joins the outline, bound and green, then everything is put in order.
+  const madeInTrack = before.units.length !== after.units.length || before.beats.length !== after.beats.length;
+  if (madeInTrack) {
+    const adopted = adoptScriptIntoOutline(after);
+    if (adopted !== after) return alignOutlineToScript(adopted);
+  }
+  if (!(after.outlines ?? []).some((outline) => outline.items.some((row) => row.boundUnitId || row.boundBeatId))) {
     return after;
   }
   const outlineMoved = before.outlines !== after.outlines && outlineShape(before) !== outlineShape(after);

@@ -2899,3 +2899,40 @@ reading so you can follow along and find your errors.*
 - **What is being read is lit.** The current line is highlighted and scrolled
   into view. Inside it, the word being spoken is marked from the speech
   engine's word events (`onboundary`). Clicking any line reads from there.
+
+### The bottom bar, Exit, Read back over the page, centred zooms, the track in the outline
+
+From Ken, on the screenplay and every module:
+
+- **Exit, plainly.** Every room (Outliner, Research, Sculptor, Layout, the
+  Note Sorter, the narrative map) has a labelled **Exit** button pinned to
+  the top-right corner of its bar, in place of the little × that wrapped into
+  the middle of the bar.
+- **The rooms are on the bottom bar in every view.** Research, Sculptor,
+  Outliner and Focus are there, plus Layout on a book and Narrative on a
+  game, to the right of the pages. Before, they were reachable only from the
+  Write page's title bar, which now leaves them out. Focus takes the writer
+  to the page. **Account and Recovery** left the bar for the File menu
+  (`file.account`, `file.recovery`).
+- **The Note Sorter is part of Research.** From Ken: *the note sorter is
+  redundant… incorporate it into the research section*. It is no longer a
+  room button of its own; Research's side menu reaches it, under Import.
+  Bringing its page-and-highlight features into Research's own screen is the
+  remaining step.
+- **Read back floats over the main screen** (`ReadBackDialog`). The bar's
+  *Read back* opens and closes a box that can be moved by its bar. It is not
+  modal, so the script behind it can still be read and edited. Closing it
+  stops the reading.
+- **The zooms are centred on the default view** (`sliderAt`, `valueAt`). Each
+  slider's left half runs from a readable floor to the default, and its right
+  half from the default to the ceiling, so the default is always the middle.
+  A double-click on a slider returns to the default. The defaults are now the
+  view Ken pointed at: 400 pixels a page on the tracks
+  (`TRACK_ZOOM_DEFAULT`), 360 on the viewer, and 36 on Down
+  (`LANE_DEFAULT`). The ceiling rose to 1200 so the right half stretches.
+  *Fit* may still go below the slider's floor.
+- **What is in the track is in the outline** (`adoptScriptIntoOutline`). When
+  a scene or beat is added in the track and the project has an outline, every
+  section and subsection that no row is bound to gets a row, bound and green:
+  a beat under its scene's row, a scene under the chapter it falls in. Then
+  the outline is put in the track's order, chapter rows included.

@@ -568,8 +568,8 @@ export function SculptorWindow({ file, open, onClose, onUpdate, onPopOut, onSave
 
         {onPopOut ? <PopOutButton what="the Story Sculptor" onPopOut={onPopOut} /> : null}
         {onSaveAs ? <RoomSave file={file} onSaveAs={onSaveAs} /> : null}
-        <button type="button" className="ghost" onClick={onClose} aria-label="Close the Story Sculptor">
-          ×
+        <button type="button" className="room-exit" onClick={onClose} aria-label="Close the Story Sculptor" title="Leave the Sculptor">
+          Exit
         </button>
       </header>
 
