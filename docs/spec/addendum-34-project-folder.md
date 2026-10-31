@@ -171,3 +171,30 @@ missing is that **the home screen only knew what this computer had opened**.
 - Not here: two computers saving one file at the same moment. The cloud drive
   keeps one and, usually, a conflicted copy beside it; the sentence asks for one
   computer at a time.
+
+## Saving beside the project
+
+From Ken: *each project, when it saves, I want it to be associated with that
+location, because I hate having to search. So you always go to the last saved
+location, but I want to be able to save to the location that's associated
+with the project, so you don't accidentally save it in another file that you
+open.*
+
+Plain **Save** has always written back to the project's own file. Save As,
+Save a copy and every export opened at one folder for the whole program, so a
+writer with books in several places had to go looking each time.
+
+Now the main process remembers **which project file each window has open**:
+it is set on create, open and save, and on Save As (not on a copy, which
+leaves the writer in the original). These dialogs open in that file's folder:
+
+- Save As and Save a copy;
+- the Word export (`project:saveFile`);
+- the PDF export;
+- the folder picked for an eBook export.
+
+A window with no project of its own (a section popped out) uses the last
+project any window had. A project never saved anywhere opens in the projects
+folder, as before. File ▸ Open still starts in the projects folder.
+
+Tests: `save-beside.test.ts`, with two windows holding projects in two folders.

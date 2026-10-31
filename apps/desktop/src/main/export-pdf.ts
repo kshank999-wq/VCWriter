@@ -107,6 +107,8 @@ export type PrintKind = 'script' | 'sheet' | 'board' | 'grid' | 'outline' | 'one
 
 export interface ExportPdfInput {
   file: unknown;
+  /** The folder the save dialog opens in: the project's own (from Ken). */
+  folder?: string;
   options?: PrintOptions;
   kind?: PrintKind;
   /** Which outline, when there is more than one. Left out, it is the first. */
@@ -263,11 +265,11 @@ export const exportProjectPdf = async (
   if (!targetPath) {
     const choice = parent
       ? await dialog.showSaveDialog(parent, {
-          defaultPath: name,
+          defaultPath: input.folder ? join(input.folder, name) : name,
           filters: [{ name: 'PDF', extensions: ['pdf'] }],
         })
       : await dialog.showSaveDialog({
-          defaultPath: name,
+          defaultPath: input.folder ? join(input.folder, name) : name,
           filters: [{ name: 'PDF', extensions: ['pdf'] }],
         });
     if (choice.canceled || !choice.filePath) return null;

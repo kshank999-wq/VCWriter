@@ -137,6 +137,29 @@ const rememberHome = async (folder: string, chosen = false): Promise<void> => {
   await writeFile(homePath(), JSON.stringify({ folder, chosen }), 'utf8').catch(() => undefined);
 };
 
+/**
+ * **The project each window has open, so its save dialogs open beside it**
+ * (from Ken: *each project, when it saves, I want it to be associated with
+ * that location, because I hate having to search… so you don't accidentally
+ * save it in another file that you open*).
+ *
+ * Set whenever a window creates, opens, saves or saves-as a project (a copy
+ * leaves the writer in the original, so it does not move it); read by Save
+ * As, Save a copy and every export, which open in that project's folder
+ * rather than wherever anything was last saved. A window with no project of
+ * its own — a section popped out — uses the last one any window had.
+ */
+const projectOf = new Map<number, string>();
+let lastProject: string | null = null;
+const holdProject = (senderId: number, path: string): void => {
+  projectOf.set(senderId, path);
+  lastProject = path;
+};
+const projectFolder = async (senderId: number): Promise<string> => {
+  const path = projectOf.get(senderId) ?? lastProject;
+  return path ? dirname(path) : readHome();
+};
+
 /** One project found in the projects folder (addendum 34 §9). */
 interface FolderProject {
   path: string;
@@ -404,7 +427,7 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
   ipcMain.handle(
     'project:create',
     async (
-      _event,
+      event,
       input: { title: string; format: ProjectFormat; author?: string; logline?: string; file?: ProjectFile },
     ): Promise<DesktopApiResult<OpenResult>> => {
       try {
@@ -430,6 +453,7 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
         const saved = await saveProject(join(folder, name), file);
         await rememberHome(folder);
         await rememberRecent(saved.path, file.project.title);
+        holdProject(event.sender.id, saved.path);
         return ok({ path: saved.path, file, contentHash: saved.contentHash });
       } catch (cause) {
         return fail(cause);
@@ -437,7 +461,7 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
     },
   );
 
-  ipcMain.handle('project:open', async (): Promise<DesktopApiResult<OpenResult>> => {
+  ipcMain.handle('project:open', async (event): Promise<DesktopApiResult<OpenResult>> => {
     try {
       const window = getWindow();
       // *So when you open VC Writer, it'll be able to find that location.*
@@ -450,16 +474,18 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
 
       const loaded = await loadProject(path);
       await rememberRecent(loaded.path, loaded.file.project.title);
+      holdProject(event.sender.id, loaded.path);
       return ok(toOpenResult(loaded));
     } catch (cause) {
       return fail(cause);
     }
   });
 
-  ipcMain.handle('project:openPath', async (_event, path: string): Promise<DesktopApiResult<OpenResult>> => {
+  ipcMain.handle('project:openPath', async (event, path: string): Promise<DesktopApiResult<OpenResult>> => {
     try {
       const loaded = await loadProject(path);
       await rememberRecent(loaded.path, loaded.file.project.title);
+      holdProject(event.sender.id, loaded.path);
       return ok(toOpenResult(loaded));
     } catch (cause) {
       return fail(cause);
@@ -469,7 +495,7 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
   ipcMain.handle(
     'project:save',
     async (
-      _event,
+      event,
       input: { path: string; file: unknown; previousHash?: string; snapshot?: boolean },
     ): Promise<DesktopApiResult<{ contentHash: string; written: boolean }>> => {
       try {
@@ -480,6 +506,7 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
           ...(input.previousHash ? { previousHash: input.previousHash } : {}),
           snapshot: input.snapshot ?? false,
         });
+        holdProject(event.sender.id, input.path);
         return ok({ contentHash: result.contentHash, written: result.written });
       } catch (cause) {
         return fail(cause);
@@ -504,7 +531,7 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
   ipcMain.handle(
     'project:saveAs',
     async (
-      _event,
+      event,
       input: { kind: SaveKind; file: unknown; suggestedName?: string },
     ): Promise<DesktopApiResult<{ path: string; file: ProjectFile; contentHash: string }>> => {
       try {
@@ -518,9 +545,9 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
             : incoming;
 
         const name = input.suggestedName || suggestedFileName(file.project.title, input.kind);
-        // It opens where this writer keeps their work rather than at a folder
-        // the program picked once (addendum 34).
-        const suggested = join(await readHome(), `${name}.${PROJECT_EXTENSION}`);
+        // It opens **beside this project** (from Ken), or where this writer
+        // keeps their work for one never saved anywhere (addendum 34).
+        const suggested = join(await projectFolder(event.sender.id), `${name}.${PROJECT_EXTENSION}`);
         const window = getWindow();
         const options = { defaultPath: suggested, filters: FILE_FILTERS };
         const choice = window
@@ -532,6 +559,8 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
         // Putting a project somewhere says where this writer keeps them.
         await rememberHome(dirname(saved.path));
         await rememberRecent(saved.path, file.project.title);
+        // Save As moves the writer to the new file; a copy leaves them in this one.
+        if (input.kind !== 'copy') holdProject(event.sender.id, saved.path);
         return ok({ path: saved.path, file, contentHash: saved.contentHash });
       } catch (cause) {
         return fail(cause);
@@ -667,12 +696,17 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
   ipcMain.handle(
     'project:saveExport',
     async (
-      _event,
+      event,
       input: { folderName: string; files: { name: string; bytes: Uint8Array; mediaType: string }[] },
     ): Promise<DesktopApiResult<{ folder: string; paths: string[] } | null>> => {
       try {
         const window = getWindow();
-        const options = { title: 'Where to put the export', properties: ['openDirectory', 'createDirectory'] as ('openDirectory' | 'createDirectory')[] };
+        const options = {
+          title: 'Where to put the export',
+          // Beside the project (from Ken).
+          defaultPath: await projectFolder(event.sender.id),
+          properties: ['openDirectory', 'createDirectory'] as ('openDirectory' | 'createDirectory')[],
+        };
         const choice = window ? await dialog.showOpenDialog(window, options) : await dialog.showOpenDialog(options);
         const parent = choice.filePaths[0];
         if (choice.canceled || !parent) return ok(null);
@@ -696,14 +730,15 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
   ipcMain.handle(
     'project:saveFile',
     async (
-      _event,
+      event,
       input: { name: string; bytes: Uint8Array; mediaType: string; kind: { name: string; extension: string } },
     ): Promise<DesktopApiResult<{ path: string } | null>> => {
       try {
         const window = getWindow();
         const options = {
           title: `Export ${input.kind.name}`,
-          defaultPath: input.name.replace(/[<>:"/\\|?*\u0000-\u001f]/g, '-'),
+          // Beside the project (from Ken).
+          defaultPath: join(await projectFolder(event.sender.id), input.name.replace(/[<>:"/\\|?*\u0000-\u001f]/g, '-')),
           filters: [{ name: input.kind.name, extensions: [input.kind.extension] }],
         };
         const choice = window ? await dialog.showSaveDialog(window, options) : await dialog.showSaveDialog(options);
@@ -719,7 +754,7 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
   ipcMain.handle(
     'project:exportPdf',
     async (
-      _event,
+      event,
       input: {
         file: unknown;
         options?: PrintOptions;
@@ -730,7 +765,8 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
       },
     ): Promise<DesktopApiResult<{ path: string; pageCount: number } | null>> => {
       try {
-        return ok(await exportProjectPdf(input, getWindow()));
+        // Offered beside the project (from Ken).
+        return ok(await exportProjectPdf({ ...input, folder: await projectFolder(event.sender.id) }, getWindow()));
       } catch (cause) {
         return fail(cause);
       }
