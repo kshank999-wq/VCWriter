@@ -267,6 +267,43 @@ export const clampBeatWidth = (width: number): number =>
   Math.min(BEAT_WIDTH_CEILING, Math.max(BEAT_WIDTH_FLOOR, Math.round(width)));
 
 /**
+ * The zoom at which a beat chip is drawn at the full width the writer set.
+ * It is the board's own starting zoom, so nothing changes at the default.
+ */
+export const CHIP_FULL_ZOOM = 160;
+
+/**
+ * **How wide a beat chip is drawn at a zoom: the same in every scene**
+ * (from Ken: *the zoom is still wonky and zooms sections and beats
+ * unevenly*).
+ *
+ * A chip was the writer's width, cut down to whatever room its scene had, and
+ * a scene was as wide as its pages. So zooming out squeezed an unwritten
+ * section's chips to *1…* while a written one beside it kept *1.1.1 You want
+ * to…*: two sizes of one thing on one board. Now a chip scales with the zoom
+ * like everything else — the writer's width at the board's starting zoom and
+ * above, proportionally smaller below — and is the same width wherever it is.
+ */
+export const chipWidthAt = (zoom: number, beatWidth: number): number =>
+  Math.round(clampBeatWidth(beatWidth) * Math.min(1, clampZoom(zoom) / CHIP_FULL_ZOOM));
+
+/**
+ * How wide a scene is drawn: its pages, and never narrower than one column of
+ * its beat chips while chips are being drawn — so every scene's beats read
+ * the same. Once the chips are too small to read they become ticks, and the
+ * scene takes its page width alone, which is what lets *Fit* draw the whole
+ * book.
+ */
+export const blockWidthAt = (span: StorySpan, zoom: number, beatWidth: number, beatCount: number): number => {
+  const pages = spanWidth(span, zoom);
+  const chip = chipWidthAt(zoom, beatWidth);
+  return beatCount > 0 && chip >= BEAT_CHIP_MIN ? Math.max(pages, chip + BLOCK_BEAT_PADDING) : pages;
+};
+
+/** The block's own padding either side of its beat column, in pixels. */
+export const BLOCK_BEAT_PADDING = 10;
+
+/**
  * How tall a scene's block stands, given its beats.
  *
  * **The lane is as tall as what is in it**, so a chapter of twenty beats is a

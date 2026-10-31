@@ -27,6 +27,9 @@ import {
   LANE_DEFAULT,
   BEAT_CHIP_MAX,
   clampBeatWidth,
+  chipWidthAt,
+  blockWidthAt,
+  BEAT_CHIP_MIN,
   laneCarriesWords,
   storyLayout,
   threadLayout,
@@ -255,7 +258,17 @@ export function MasterTimeline({
    * not be drawn narrower than 408 pixels at any zoom, a number that did not
    * scale with the slider at all.
    */
-  const chipsFor = (span: StorySpan): boolean => shortForm || beatsAreChips(spanWidth(span, pixelsPerPage));
+  /**
+   * **One chip width for the whole board** (from Ken: *the zoom zooms
+   * sections and beats unevenly*). Chips scale with the zoom and are the same
+   * in every scene; they are words while that width can be read and ticks
+   * below it, everywhere at once rather than scene by scene.
+   */
+  const chip = chipWidthAt(pixelsPerPage, beatWidth);
+  const chipsFor = (span: StorySpan): boolean => {
+    void span;
+    return shortForm || chip >= BEAT_CHIP_MIN;
+  };
   // A scene is as wide as its pages, or as wide as its beats need — whichever
   // is more. Past `rows` beats a second column starts and the block stretches
   // rather than growing a scrollbar; every track shares these columns, so the
@@ -286,10 +299,9 @@ export function MasterTimeline({
       const perSecond = pixelsPerPage / 6;
       return Math.round(Math.max(pixelsPerPage * 0.5, secondsOf(span.unit.id) * perSecond));
     }
-    // No second column, so no second answer about how wide a scene is: its
-    // pages decide, at every zoom.
-    void beats;
-    return spanWidth(span, pixelsPerPage);
+    // Its pages, and never narrower than its column of chips while chips are
+    // drawn, so a scene with nothing written yet reads its beats like the rest.
+    return blockWidthAt(span, pixelsPerPage, beatWidth, beats.length);
   });
   const columns = `${HEAD_WIDTH}px ${widths.map((width) => `${width}px`).join(' ')} minmax(96px, 1fr)`;
 
@@ -586,6 +598,7 @@ export function MasterTimeline({
               laneAt={laneAt}
               chipsFor={chipsFor}
               beatWidth={beatWidth}
+              chipWidth={chip}
               {...(onBeatWidth ? { onBeatWidth } : {})}
               onSelectUnit={onSelectUnit}
               onSelectTrack={onSelectTrack}
@@ -828,6 +841,8 @@ interface TrackRowProps {
   laneAt: number;
   /** How wide the beats are drawn, and the drag that sets it (§4f). */
   beatWidth: number;
+  /** The chip width at this zoom: `beatWidth` scaled, the same in every scene. */
+  chipWidth: number;
   onBeatWidth?(width: number): void;
   /**
    * Whether a beat is drawn as a chip or as a tick (addendum 02 §4d). It is
@@ -868,6 +883,7 @@ function TrackRow({
   laneAt,
   chipsFor,
   beatWidth,
+  chipWidth,
   onBeatWidth,
   onSelectUnit,
   onSelectTrack,
@@ -928,7 +944,10 @@ function TrackRow({
     const x0 = event.clientX;
     const grip = event.currentTarget;
     grip.setPointerCapture?.(event.pointerId);
-    const move = (moved: PointerEvent) => onBeatWidth(clampBeatWidth(from + moved.clientX - x0));
+    // The setting is the width at the board's starting zoom, so a drag made
+    // zoomed out is scaled back up to it and the chip follows the pointer.
+    const scale = chipWidth > 0 ? chipWidth / clampBeatWidth(beatWidth) : 1;
+    const move = (moved: PointerEvent) => onBeatWidth(clampBeatWidth((from + moved.clientX - x0) / (scale || 1)));
     const done = () => {
       grip.removeEventListener('pointermove', move);
       grip.removeEventListener('pointerup', done);
@@ -1376,7 +1395,7 @@ function TrackRow({
                     // as the writer has dragged it and never wider than the
                     // scene (§4f).
                     '--beat-h': `${laneAt}px`,
-                    '--beat-w': `${clampBeatWidth(beatWidth)}px`,
+                    '--beat-w': `${chipWidth}px`,
                   } as React.CSSProperties
                 }
                 onDragOver={(event) => {

@@ -1,5 +1,6 @@
 import { BrowserWindow, shell } from 'electron';
 import { join } from 'node:path';
+import { attachEditMenu } from './edit-menu';
 
 /**
  * Windows beyond the workspace (addendum 02 §8).
@@ -103,6 +104,7 @@ export const createWindowRegistry = (options: {
     });
 
     windows.set(pane, window);
+    attachEditMenu(window);
     window.on('ready-to-show', () => window.show());
     window.on('closed', () => {
       windows.delete(pane);

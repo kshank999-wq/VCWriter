@@ -1,6 +1,7 @@
 import { app, BrowserWindow, shell } from 'electron';
 import { join } from 'node:path';
 import { registerIpcHandlers } from './ipc';
+import { attachEditMenu, registerSpellingHandlers } from './edit-menu';
 import { restoreSession } from './cloud';
 import { installCrashHandlers } from './reporting';
 import { createWindowRegistry } from './windows';
@@ -60,6 +61,8 @@ const createWindow = (): void => {
     },
   });
 
+  // Spelling suggestions and Cut, Copy, Paste on a right-click in writing.
+  attachEditMenu(mainWindow);
   mainWindow.on('ready-to-show', () => mainWindow?.show());
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -89,6 +92,7 @@ installCrashHandlers();
 
 app.whenReady().then(() => {
   registerIpcHandlers(() => mainWindow, panes);
+  registerSpellingHandlers();
   createWindow();
 
   // A stored session is restored in the background: signing in should last

@@ -1,3 +1,4 @@
+import { replaceRange, wordAt } from '../writing-edit';
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { WritingToolbar } from './WritingToolbar';
@@ -316,6 +317,12 @@ export function BeatBody({
     text: string;
     /** Where the cursor was, or the end of what was picked: where a citation goes. */
     at?: number;
+    /** The line as it was, and what was selected in it, for the editing items. */
+    value?: string;
+    from?: number;
+    to?: number;
+    /** The box itself, to give the caret back to. */
+    box?: HTMLTextAreaElement;
   } | null>(null);
   const [filing, setFiling] = useState<{ elementId: ManuscriptElementId; text: string } | null>(null);
   /**
@@ -1052,7 +1059,17 @@ export function BeatBody({
                 // An empty line still opens the menu: the splits are about
                 // where the line stands, not what is on it.
                 event.preventDefault();
-                setCaught({ x: event.clientX, y: event.clientY, elementId: element.id, text, at: input.selectionEnd });
+                setCaught({
+                  x: event.clientX,
+                  y: event.clientY,
+                  elementId: element.id,
+                  text,
+                  at: input.selectionEnd,
+                  value: input.value,
+                  from: input.selectionStart,
+                  to: input.selectionEnd,
+                  box: input,
+                });
               }}
             />
           </div>
@@ -1085,6 +1102,92 @@ export function BeatBody({
    * screenplay's; *Split the passage here* cuts the beat. Both are greyed
    * with the reason on a line that already opens its scene or its beat.
    */
+  /**
+   * **Spelling and editing, first in the menu**, as in any word processor
+   * (from Ken: *the spell check catches mistakes but there should be a
+   * right-click menu like standard in writing software with a suggestion and
+   * other standard menu options*). This menu replaces the browser's, so it
+   * carries the browser's items itself: the suggestions for a misspelled word
+   * and Add to Dictionary (asked of the desktop's spellchecker, absent in the
+   * browser preview), then Cut, Copy, Paste and Select All.
+   */
+  const editingEntries = (at: NonNullable<typeof caught>): MenuEntry[] => {
+    if (readOnly || at.value === undefined || at.from === undefined || at.to === undefined) return [];
+    const value = at.value;
+    const from = at.from;
+    const to = at.to;
+    const put = (text: string, caret: number) => {
+      updateElement(at.elementId, { text });
+      setFocusId(at.elementId);
+      requestAnimationFrame(() => at.box?.setSelectionRange(caret, caret));
+    };
+    const entries: MenuEntry[] = [];
+    const spelling = window.vcwriter?.spelling;
+    const word = wordAt(value, from, to);
+    if (spelling && word) {
+      const checked = spelling.check(word.word);
+      if (checked.misspelled) {
+        if (checked.suggestions.length === 0) {
+          entries.push({ label: 'No spelling suggestions', disabled: 'The dictionary has nothing close', onPick: () => undefined });
+        }
+        for (const suggestion of checked.suggestions) {
+          entries.push({
+            label: suggestion,
+            onPick: () => put(replaceRange(value, word.from, word.to, suggestion), word.from + suggestion.length),
+          });
+        }
+        entries.push({
+          label: 'Add to Dictionary',
+          note: `“${word.word}” is not marked again.`,
+          onPick: () => {
+            void spelling.addWord(word.word);
+            // The underline goes once the line is checked again.
+            put(value, to);
+          },
+        });
+        entries.push('rule');
+      }
+    }
+    const picked = value.slice(from, to);
+    const nothing = picked.length === 0 ? 'Select some words first' : null;
+    entries.push(
+      {
+        label: 'Cut',
+        disabled: nothing,
+        onPick: () => {
+          void navigator.clipboard?.writeText(picked);
+          put(replaceRange(value, from, to, ''), from);
+        },
+      },
+      {
+        label: 'Copy',
+        disabled: nothing,
+        onPick: () => {
+          void navigator.clipboard?.writeText(picked);
+          setFocusId(at.elementId);
+        },
+      },
+      {
+        label: 'Paste',
+        onPick: () => {
+          void navigator.clipboard
+            ?.readText()
+            .then((pasted) => put(replaceRange(value, from, to, pasted), from + pasted.length))
+            .catch(() => setFocusId(at.elementId));
+        },
+      },
+      {
+        label: 'Select All',
+        onPick: () => {
+          setFocusId(at.elementId);
+          requestAnimationFrame(() => at.box?.select());
+        },
+      },
+      'rule',
+    );
+    return entries;
+  };
+
   const writingMenu = (at: { elementId: ManuscriptElementId; text: string; at?: number }): MenuEntry[] => {
     const nouns = nounsFor(format);
     const place = locateElement(file, at.elementId as string);
@@ -1283,7 +1386,7 @@ export function BeatBody({
           x={caught.x}
           y={caught.y}
           label="What to do with this writing"
-          entries={writingMenu(caught)}
+          entries={[...editingEntries(caught), ...writingMenu(caught)]}
           onClose={() => setCaught(null)}
         />
       ) : null}

@@ -2828,3 +2828,55 @@ long-titled beats, the page zoom at its top.
 - At lane 8: ticks.
 - Dragging the grip took the first scenes' beats from 180 to 295 pixels, and a
   drag far past the edge stopped at the 297-pixel scene.
+
+---
+
+## An even zoom, and a right-click menu over writing
+
+### The zoom scales sections and beats together
+
+From Ken: *the zoom is still wonky and zooms sections and beats unevenly.*
+
+**What was wrong.** A scene was as wide as its pages, and a beat chip was
+the writer's width cut down to whatever room its scene had. A section with
+writing in it was wide and its chips read *1.1.1 You want to…*. An unwritten
+section beside it was half a page wide, and its chips were squeezed to
+*1…*. The board drew two sizes of the same thing.
+
+**Now** (`chipWidthAt`, `blockWidthAt` in `timeline-view.ts`):
+
+- **Chips scale with the zoom and are the same width in every scene.** At
+  the board's starting zoom (`CHIP_FULL_ZOOM`, 160) and above, a chip is
+  the width the writer set. Below that it shrinks in proportion.
+- **A scene is never narrower than one column of its chips** while chips are
+  drawn. A longer scene is still wider, because pages are the axis.
+- **Once a chip is too narrow to read** (`BEAT_CHIP_MIN`), every scene's
+  beats become ticks at once. Each scene then takes its page width alone,
+  which is what still lets *Fit* draw the whole book.
+- **Dragging the chip width.** The drag stores the width at the starting
+  zoom, so a chip dragged while zoomed out follows the pointer.
+
+### Right-clicking writing
+
+From Ken: *in beat or subsection when writing, the spell check catches
+mistakes, but there should be a right-click menu like standard in writing
+software, with a suggestion and other standard menu options.*
+
+**What was wrong.** Electron shows no right-click menu of its own, so a
+right-click in a note, a title or the word processor did nothing.
+
+**Every text field** in every window now has a standard menu
+(`main/edit-menu.ts`). For a misspelled word it lists the spelling
+suggestions and Add to Dictionary. After that come Undo, Redo, Cut, Copy,
+Paste and Select All.
+
+**The beat editor** draws its own menu, with the splits and *Make this a
+character moment*. That menu now starts with the same items:
+
+- **Spelling.** The suggestions for the word under the pointer, and Add to
+  Dictionary. These are asked through `window.vcwriter.spelling`, which uses
+  the page's spellchecker and the session's dictionary.
+- **Editing.** Cut, Copy, Paste and Select All, made through `wordAt` and
+  `replaceRange` in `writing-edit.ts`.
+- **In the browser preview** there is no spellchecker to ask, so the
+  spelling items are absent there. The editing items still work.

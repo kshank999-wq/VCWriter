@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, webFrame } from 'electron';
 import type {
   Assignment,
   CaptureItem,
@@ -448,6 +448,16 @@ export interface VcWriterApi {
   setReporting(enabled: boolean): Promise<DesktopApiResult<{ enabled: boolean }>>;
   reportError(input: { name: string; message: string; stack: string }): Promise<DesktopApiResult<boolean>>;
 
+  /**
+   * Spelling, for a right-click menu the page draws itself (the beat editor's):
+   * whether a word is misspelled and what it might be, and adding it to the
+   * dictionary. Absent in the browser preview, which has no spellchecker to ask.
+   */
+  spelling?: {
+    check(word: string): { misspelled: boolean; suggestions: string[] };
+    addWord(word: string): Promise<boolean>;
+  };
+
   /** Sections in windows of their own, and the link between them (§8). */
   panes: PaneApi;
   link: LinkApi;
@@ -597,6 +607,14 @@ const api: VcWriterApi = {
     // Only a Mac keeps its menus outside the window; everywhere else the bar
     // in the window is the one the writer uses.
     native: () => process.platform === 'darwin',
+  },
+
+  spelling: {
+    check: (word) => {
+      const misspelled = word.trim().length > 0 && webFrame.isWordMisspelled(word);
+      return { misspelled, suggestions: misspelled ? webFrame.getWordSuggestions(word).slice(0, 6) : [] };
+    },
+    addWord: (word) => ipcRenderer.invoke('spelling:add', word),
   },
 
   link: {
