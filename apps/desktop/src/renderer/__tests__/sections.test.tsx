@@ -264,9 +264,9 @@ describe('the Outliner toolbar', () => {
     fireEvent.pointerDown(rowOf('Lenses'), { metaKey: true });
     fireEvent.click(toolbar(/^Add to track$/));
 
-    // Both sections real, and Light's two subsections with it — and the
-    // badge reads the noun table, so a book's rows are in the book.
-    expect(screen.getAllByLabelText('In the track')).toHaveLength(4);
+    // Both sections real, and Light's subsections with it — the subsection
+    // inside Reflection too, a subsection at any depth being one of Light's.
+    expect(screen.getAllByLabelText('In the track')).toHaveLength(5);
   });
 });
 

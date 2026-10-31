@@ -4,8 +4,9 @@ import { orderKeyBetween } from './ordering.js';
 import { holdsWholeWorks, isCollection, nounsFor } from './formats.js';
 import { defaultMarkerKind } from './markers.js';
 import { nowIso } from './entities/common.js';
-import { findOutline, findOutlineItem, outlineChildren, outlineParent, outlinesOf } from './outline.js';
+import { findOutline, findOutlineItem, outlineChildren, outlineParent, outlinesOf, sectionRowOf } from './outline.js';
 import { claimedInScript, retitleScript } from './planning.js';
+import { alignScriptToOutline } from './outline-link.js';
 import type { Outline, OutlineItem } from './entities/outline.js';
 import type { Beat, StoryMarker, StructuralUnit } from './entities/structure.js';
 import type { ProjectFile } from './project-file.js';
@@ -98,9 +99,11 @@ export const canPromote = (file: ProjectFile, outline: Outline, item: OutlineIte
       : null;
   }
   // A beat lives inside a scene and never floats in a track (spec §19), so
-  // there is nowhere to put one whose scene has not been written yet.
-  const parent = outlineParent(outline, item);
-  return parent?.boundUnitId ? null : 'its scene is still a plan';
+  // there is nowhere to put one whose scene has not been written yet. The
+  // scene is the **section it stands in**, however deep: a subsection inside
+  // a subsection is a subsection of the same section (from Ken: *add all to
+  // track didn't add them all*).
+  return sectionRowOf(outline, item)?.boundUnitId ? null : 'its scene is still a plan';
 };
 
 const writeRow = (
@@ -180,6 +183,20 @@ const beatPlaces = (order: readonly Beat[]): PlaceOf => (other) => {
   return position === -1 ? null : { first: position, last: position };
 };
 
+/** The subsection rows a section holds, at any depth, in reading order. */
+const beatRowsIn = (outline: Outline, sectionId: OutlineItemId): OutlineItem[] => {
+  const out: OutlineItem[] = [];
+  const walk = (parentId: OutlineItemId): void => {
+    for (const child of outlineChildren(outline, parentId)) {
+      if (child.kind === 'scene') continue;
+      if (child.kind === 'beat') out.push(child);
+      walk(child.id);
+    }
+  };
+  walk(sectionId);
+  return out;
+};
+
 /** One row into the script, without its children. */
 const promoteOne = (
   file: ProjectFile,
@@ -210,9 +227,14 @@ const promoteOne = (
     };
   }
 
-  const unitId = outlineParent(outline, item)?.boundUnitId as StructuralUnitId;
+  // The section it stands in, at any depth, and its place among that
+  // section's subsections in reading order.
+  const section = sectionRowOf(outline, item) as OutlineItem;
+  const unitId = section.boundUnitId as StructuralUnitId;
   const order = beatsForUnit(file, unitId);
-  const made = addBeat(file, { unitId, title, index: indexAmong(item, siblings, beatPlaces(order), order.length) });
+  const inSection = beatRowsIn(outline, section.id);
+  void siblings;
+  const made = addBeat(file, { unitId, title, index: indexAmong(item, inSection, beatPlaces(order), order.length) });
   return {
     file: writeRow(made.file, outlineId, itemId, { boundBeatId: made.beat.id }),
     unitId,
@@ -255,8 +277,9 @@ export const promoteRow = (
   let current = first.file;
   const beats: BeatId[] = [];
   const grown = findOutline(current, outlineId) as Outline;
-  for (const child of outlineChildren(grown, itemId)) {
-    if (child.kind !== 'beat' || isPromoted(child)) continue;
+  // Every subsection in it, at any depth, in reading order.
+  for (const child of beatRowsIn(grown, itemId)) {
+    if (isPromoted(child)) continue;
     const made = promoteOne(current, outlineId, child.id);
     current = made.file;
     if (made.beatId) beats.push(made.beatId);
@@ -348,13 +371,7 @@ export const promoteAll = (file: ProjectFile, outlineId: OutlineId): { file: Pro
   }
   // And what is in the track already but has been moved in the outline goes
   // where the outline now has it — *where it's supposed to be*.
-  for (let round = 0; round < 3; round += 1) {
-    const outline = findOutline(current, outlineId);
-    if (!outline) break;
-    const stepped = outlineRowsInOrder(outline).filter((row) => rowOutOfStep(current, outline, row.id) !== null);
-    if (stepped.length === 0) break;
-    for (const row of stepped) current = followOutline(current, outlineId, row.id);
-  }
+  current = alignScriptToOutline(current);
   const final = findOutline(current, outlineId);
   const left = final ? final.items.filter((one) => promoteKindOf(one) !== null && !isPromoted(one)).length : 0;
   return { file: current, added, left };

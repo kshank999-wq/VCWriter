@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ProjectFile } from '@vcwriter/domain';
+import { keepLinked, type ProjectFile } from '@vcwriter/domain';
 import { createClient, createTransport, everyFew, linkId, type DocumentClient } from './link';
 
 /**
@@ -87,10 +87,12 @@ export const useLinkedProject = (writable = true): LinkedProject => {
     if (!current) return;
     if (!writable) return;
     // Applied here first: typing must never wait for another window.
-    const next = mutate(current);
+    // The outline and the track in one order, here as in the workspace.
+    const linked = (file: ProjectFile) => keepLinked(file, mutate(file));
+    const next = linked(current);
     fileRef.current = next;
     setFile(next);
-    client.current?.propose(next, mutate);
+    client.current?.propose(next, linked);
   }, [writable]);
 
   const askToSave = useCallback((kind: 'saveAs' | 'saveCopy') => {

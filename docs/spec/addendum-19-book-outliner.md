@@ -762,3 +762,41 @@ time.*
 Tests: `outline-drop.test.ts` covers colliding keys, taking a row's place,
 crossing arrows, and Add all to track. The moves, the arrows and Add all to
 track were driven in the preview on an outline whose section keys collide.
+
+## The outline and the track, linked both ways
+
+From Ken, after *Add all to track* left rows red: *it didn't add them all.
+Also… when it's rearranged in the track, the beats need to be rearranged in
+the outliner and vice versa. So they're definitely linked.*
+
+**Why rows stayed red.** A subsection inside a subsection (1.2.4.1.1 under
+1.2.4.1) has a subsection for a parent, not a section. `canPromote` asked the
+row's *parent* for its unit, so these rows were refused as "its scene is still
+a plan". Now a subsection belongs to **the section it stands in, however
+deep** (`sectionRowOf`). Promoting a section takes every subsection under it,
+at any depth (`beatRowsIn`), and each one lands in that section in reading
+order.
+
+**Linked both ways** (`outline-link.ts`). Every change in the main window and
+in popped-out windows runs through `keepLinked(before, after)`.
+
+- **The outline's shape changed** (a row moved, added or bound):
+  `alignScriptToOutline` applies. Sections go in the order their rows read.
+  Subsections go in reading order in their section, and one whose row now
+  stands in another section moves into it. Each chapter's marker moves to
+  the first of its sections.
+- **Only the track changed**: `alignOutlineToScript` applies. A section's row
+  moves under the chapter whose stretch of the track it now falls in.
+  A subsection's row moves under the section its beat is now in. Rows are put
+  in the track's order among their siblings.
+- **Unlinked things stay put.** Only the slots held by linked rows, sections
+  and subsections are refilled, so a section the outline does not have, or a
+  note row, keeps its place.
+- **Undo.** The step undoes both sides together.
+
+Tests: `outline-link.test.ts` covers nested subsections, track follows
+outline (including the chapter's start and moving a subsection between
+sections) and outline follows track. Driven in the preview: *Add all to
+track* on an outline with nested subsections turned every dot green, and
+dragging *THE MONEY* above *Publishers* in the Outliner reordered the track,
+with the chapter now starting on it.

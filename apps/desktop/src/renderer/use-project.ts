@@ -8,6 +8,7 @@ import {
   type ProjectFormat,
   type SaveKind,
   type SavedTo,
+  keepLinked,
 } from '@vcwriter/domain';
 
 /**
@@ -300,7 +301,9 @@ export const useProject = (writable = true): UseProjectResult => {
     // have just made (addendum 07 §6). Everywhere else there is no such method
     // and this line does nothing, which is the right answer for a script with
     // one author.
-    const edited = mutate(current);
+    // The outline and the track are kept in one order whichever moved
+    // (from Ken: *they're definitely linked*).
+    const edited = keepLinked(current, mutate(current));
     const next = window.vcwriter.signWork?.(edited) ?? edited;
     // What the writer did is what they can take back (§6c). The clock's
     // once-a-minute tick is not one of those, and must not drop a step into

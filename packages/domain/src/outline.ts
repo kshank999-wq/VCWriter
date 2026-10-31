@@ -92,6 +92,17 @@ export const outlineChildren = (outline: Outline, parentId: OutlineItemId | null
     // Ties break on the id, so two rows that share a key still have one order.
     .sort((a, b) => byOrder(a, b) || ((a.id as string) < (b.id as string) ? -1 : (a.id as string) > (b.id as string) ? 1 : 0));
 
+/** The section row a row stands in: the nearest `scene` above it. */
+export const sectionRowOf = (outline: Outline, item: OutlineItem): OutlineItem | null => {
+  let at = item.parentId ? outline.items.find((one) => one.id === item.parentId) : undefined;
+  for (let step = 0; at && step <= outline.items.length; step += 1) {
+    if (at.kind === 'scene') return at;
+    const parentId: OutlineItemId | null = at.parentId;
+    at = parentId ? outline.items.find((one) => one.id === parentId) : undefined;
+  }
+  return null;
+};
+
 const KEY_CHARS = /^[0-9A-Za-z]+$/;
 
 /**
