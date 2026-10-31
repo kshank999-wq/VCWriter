@@ -22922,3 +22922,36 @@ dialog.readback-dialog[open] {
   line-height: 1.5;
   color: var(--muted);
 }
+
+/* Links & threads: the story's wiring in one place (from Ken). */
+.research-embedded.wiring {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.wiring-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 2px 0 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.wiring-hint {
+  margin: 0 0 6px;
+  max-width: 70ch;
+}
+
+.wiring-arc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-width: 520px;
+}
+
+.wiring-arc-list .folder-row {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}

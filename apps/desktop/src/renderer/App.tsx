@@ -263,7 +263,7 @@ export default function App() {
   /** Set when something sent the writer to research to look at one thing. */
   const [researchView, setResearchView] = useState<ResearchView | undefined>(undefined);
   /** Which of Research's own screens to land on, where something sent us there. */
-  const [researchAt, setResearchAt] = useState<'importer' | 'graphics' | undefined>(undefined);
+  const [researchAt, setResearchAt] = useState<'importer' | 'graphics' | 'wiring' | undefined>(undefined);
   // Where the four sections sit, and which of them are in windows of their
   // own right now (addendum 02 §8).
   /**
@@ -1347,6 +1347,16 @@ export default function App() {
   const barRooms: BarRoom[] = story
     ? [
         { id: 'research', label: 'Research', title: 'Research: everything the work is made from', onOpen: toWrite(() => (away.has('research') ? openPane('research') : setResearchOpen(true))) },
+        {
+          id: 'links',
+          label: 'Links',
+          title: 'Links & threads: the threads through the story, setups and payoffs, plots, themes and arcs',
+          onOpen: toWrite(() => {
+            setResearchAt('wiring');
+            if (away.has('research')) openPane('research');
+            else setResearchOpen(true);
+          }),
+        },
         { id: 'sculptor', label: 'Sculptor', title: 'Story Sculptor: log the major ideas, and keep refining them', onOpen: toWrite(() => (away.has('sculptor') ? openPane('sculptor') : setSculptorOpen(true))) },
         { id: 'outliner', label: 'Outliner', title: 'Outliner: arrange what you have, and send it to the track', onOpen: () => (away.has('outliner') ? openPane('outliner') : isBook ? setView('outline') : toWrite(() => setOutlinerOpen(true))()) },
         ...(isProseFormat(file.project.format)

@@ -151,3 +151,27 @@ through. A moment whose writing was cut is kept and struck through.
 - **Dragging a node.** §13 forbids it, and there is nothing to drag: the
   position is the scene's.
 - **Act view as a separate zoom.** §5.
+
+---
+
+## Links & threads, one button away
+
+From Ken: *I don't see a way to create a link or a thread. So we need a screen
+or a button that takes us to where we can have our links and our threads,
+which is often set up in payoffs and arcs, really.*
+
+Everything was built but buried. The Links timeline (with its box for a new
+link), Setups & payoffs, Plots, and Themes & motifs were each separate entries
+under Research ▸ Also, and arcs were inside each person in the Character
+Creator.
+
+- **Links** is on the bottom bar in every view. It opens Research on a new
+  screen, **Links & threads**, which also stands at the top of Research's
+  side menu with the number of links.
+- **The screen has a tab each**: Links & threads (the timeline: name a link
+  and press Add, then mark its moments by right-clicking a line in the
+  writing, *Add to Research ▸ Links*), Setups & payoffs, Plots, Themes &
+  motifs, and Arcs. Arcs lists the cast, each opening straight onto that
+  person's arc in the Character Creator.
+- **Nothing new is stored.** Each tab is the existing panel, so the separate
+  entries under Also still work and show the same things.

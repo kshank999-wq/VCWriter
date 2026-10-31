@@ -107,7 +107,7 @@ interface ResearchWindowProps {
    * routes notes and pictures here rather than building a second importer on
    * a menu: this room already has the one that works.
    */
-  openAt?: 'importer' | 'graphics';
+  openAt?: 'importer' | 'graphics' | 'wiring';
   /** The beat being written, so material can be marked used where it landed. */
   currentBeatId: BeatId | null;
   onClose(): void;
@@ -134,6 +134,13 @@ type Selection =
   | { kind: 'view'; view: ResearchView }
   | { kind: 'folder'; id: ResearchCategoryId }
   | { kind: 'plots' }
+  /**
+   * **Links & threads** (from Ken: *I don't see a way to create a link or a
+   * thread… we need a screen or a button that takes us to where we can have
+   * our links and our threads, which is often set up in payoffs and arcs*):
+   * the story's wiring in one place, a tab each.
+   */
+  | { kind: 'wiring' }
   | { kind: 'setups' }
   /** Themes and motifs (addendum 12), one screen with two tabs inside it. */
   | { kind: 'thematics' }
@@ -264,7 +271,7 @@ export function ResearchBody({
   /** Which view to land on. The report's "research not used" arrives here. */
   openOn?: ResearchView;
   /** Which of this room's own screens to land on — File ▸ Import arrives here. */
-  openAt?: 'importer' | 'graphics';
+  openAt?: 'importer' | 'graphics' | 'wiring';
   onGoToBeat?(beatId: BeatId): void;
   onClose(): void;
   onUpdate: ResearchWindowProps['onUpdate'];
@@ -291,6 +298,8 @@ export function ResearchBody({
     if (openAt) setSelection({ kind: openAt });
   }, [openAt]);
   const [selectedItemId, setSelectedItemId] = useState<ResearchItemId | null>(null);
+  /** Which tab of Links & threads is open. */
+  const [wiringTab, setWiringTab] = useState<'links' | 'setups' | 'plots' | 'themes' | 'arcs'>('links');
   /**
    * The note open in the middle (addendum 28 §6), and where its cursor starts.
    * About this minute, so it is remembered nowhere — a note that reopened by
@@ -714,6 +723,8 @@ export function ResearchBody({
         ? 'Character map'
         : selection.kind === 'review'
         ? 'Character review'
+        : selection.kind === 'wiring'
+        ? 'Links & threads'
         : selection.kind === 'plots'
         ? 'Plots'
         : selection.kind === 'graphics'
@@ -789,6 +800,7 @@ export function ResearchBody({
           creator ||
           // The wiring diagram wants the whole width: it is a timeline.
           selection.kind === 'links' ||
+          selection.kind === 'wiring' ||
           selection.kind === 'graphics' ||
           selection.kind === 'importer' ||
           selection.kind === 'charmap' ||
@@ -833,6 +845,20 @@ export function ResearchBody({
               </li>
             </ul>
           ) : null}
+
+          <ul className="research-views">
+            <li>
+              <button
+                type="button"
+                className={selection.kind === 'wiring' ? 'folder-row selected' : 'folder-row'}
+                title="Links, threads, setups and payoffs, plots, themes and arcs — the story's wiring, in one place"
+                onClick={() => setSelection({ kind: 'wiring' })}
+              >
+                <span className="folder-name">Links &amp; threads</span>
+                <span className="count muted">{threadsInOrder(file).length}</span>
+              </button>
+            </li>
+          </ul>
 
           <h4>Everything</h4>
           <ul className="research-views">
@@ -1252,6 +1278,7 @@ export function ResearchBody({
               </button>
             ) : null}
             {selection.kind === 'plots' ||
+            selection.kind === 'wiring' ||
             selection.kind === 'setups' ||
             selection.kind === 'thematics' ||
             selection.kind === 'locations' ||
@@ -1398,6 +1425,74 @@ export function ResearchBody({
               // they came from — openCreator remembers it.
               onOpenCreator={openCreator}
             />
+          ) : selection.kind === 'wiring' ? (
+            <div className="research-embedded wiring">
+              <div className="wiring-tabs" role="tablist" aria-label="Links and threads">
+                {(
+                  [
+                    ['links', 'Links & threads'],
+                    ['setups', 'Setups & payoffs'],
+                    ['plots', 'Plots'],
+                    ['themes', 'Themes & motifs'],
+                    ['arcs', 'Arcs'],
+                  ] as const
+                ).map(([tab, label]) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    role="tab"
+                    aria-selected={wiringTab === tab}
+                    className={wiringTab === tab ? 'chip on' : 'chip'}
+                    onClick={() => setWiringTab(tab)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {wiringTab === 'links' ? (
+                <>
+                  <p className="muted small wiring-hint">
+                    A link is a thread through the story — a clue, an object, a promise, a relationship. Name one in the
+                    box below and press <strong>Add</strong>. Then mark where it turns up: right-click a line in the
+                    writing and choose <em>Add to Research ▸ Links</em>. Each moment appears on its thread here.
+                  </p>
+                  <LinksTimeline file={file} onUpdate={onUpdate} {...(onGoToBeat ? { onGoToBeat } : {})} />
+                </>
+              ) : wiringTab === 'setups' ? (
+                <SetupsPanel file={file} currentBeatId={currentBeatId} onUpdate={onUpdate} {...(onGoToBeat ? { onGoTo: onGoToBeat } : {})} />
+              ) : wiringTab === 'plots' ? (
+                <Plots file={file} onUpdate={onUpdate} />
+              ) : wiringTab === 'themes' ? (
+                <ThemesPanel file={file} onUpdate={onUpdate} {...(onGoToBeat ? { onGoTo: onGoToBeat } : {})} />
+              ) : (
+                <div className="wiring-arcs">
+                  <p className="muted small wiring-hint">
+                    Each person's arc is built in the Character Creator: where they start, the turns, where they end.
+                  </p>
+                  {cast.length === 0 ? (
+                    <p className="muted">No characters yet. Add them in Research ▸ Character Creator.</p>
+                  ) : (
+                    <ul className="wiring-arc-list">
+                      {cast.map((person) => (
+                        <li key={person.id}>
+                          <button
+                            type="button"
+                            className="folder-row"
+                            onClick={() => {
+                              setTabFor((current) => ({ ...current, [person.id as string]: 'arc' }));
+                              openCreator(person.id);
+                            }}
+                          >
+                            <span className="folder-name">{person.name}</span>
+                            <span className="muted small">Open their arc →</span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </div>
           ) : selection.kind === 'plots' ? (
             <Plots file={file} onUpdate={onUpdate} />
           ) : selection.kind === 'references' ? (
