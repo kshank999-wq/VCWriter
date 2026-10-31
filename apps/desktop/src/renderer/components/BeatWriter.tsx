@@ -1,4 +1,5 @@
 import { BookHeadingLine } from './BookHeadingLine';
+import { BeatPlanPanel } from './BeatPlanPanel';
 import { useMemo, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import {
   countWords,
@@ -8,6 +9,7 @@ import {
   findUnit,
   newId,
   pageBreaks,
+  beatPlan,
   isProseFormat,
   printsBookHeadings,
   sectionHeading,
@@ -77,6 +79,9 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
   const unit = findUnit(file, beat.unitId);
   const track = unit ? findTrack(file, unit.trackId) : undefined;
   const [naming, setNaming] = useState(false);
+  /** The beat's plan beside its writing, open or not, remembered on this computer (from Ken). */
+  const [planOpen, setPlanOpen] = usePreference('beatPlanOpen', false);
+  const planCount = useMemo(() => beatPlan(file, beat.id).lines.length, [file, beat.id]);
   /** Which draft is being read beside the one being written; null for none. */
   const [comparing, setComparing] = useState<string | null>(null);
   /** Where the writing screen's own tools go — see the slot below. */
@@ -176,6 +181,18 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
           onChange={(event) => onUpdate((current) => updateBeat(current, beat.id, { title: event.target.value }))}
         />
         <div className="writer-tools">
+          {/* **The beat's plan beside it** (from Ken): the notes, characters
+              and ideas the Outliner holds under this beat, in a side panel
+              that collapses. */}
+          <button
+            type="button"
+            className={planOpen ? 'ghost small active' : 'ghost small'}
+            aria-pressed={planOpen}
+            title={planOpen ? 'Hide the notes for this beat' : 'Show the notes, characters and ideas planned for this beat'}
+            onClick={() => setPlanOpen(!planOpen)}
+          >
+            Notes{planCount > 0 ? ` (${planCount})` : ''}
+          </button>
           <label className="revision-picker">
             <span className="muted">Draft</span>
             <select aria-label="Draft" value={WORKING} onChange={(event) => chooseVersion(event.target.value)}>
@@ -294,7 +311,7 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
           strip collapses to nothing. */}
       <div className="writer-tools" ref={setTools} />
 
-      <div className={comparing !== null ? 'writer-body comparing' : 'writer-body'}>
+      <div className={[comparing !== null ? 'writer-body comparing' : 'writer-body', planOpen ? 'with-plan' : ''].filter(Boolean).join(' ')}>
         {/* The page itself, at the size it prints, scaled by the zoom. */}
         <div className="writer-sheet" style={{ '--page-zoom': zoom } as React.CSSProperties}>
           {comparing !== null ? <p className="writer-column-name muted">{beat.revisionName} — writing</p> : null}
@@ -343,6 +360,7 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
             />
           </div>
         ) : null}
+        {planOpen ? <BeatPlanPanel file={file} beatId={beat.id} onClose={() => setPlanOpen(false)} /> : null}
       </div>
 
       <footer className="writer-status muted">

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   addItem,
+  beatPlan,
   addBeat,
   addUnit,
   beatsForUnit,
@@ -136,5 +137,23 @@ describe('what is made in the track joins the outline', () => {
     const order = outlineOrder(file, made.id);
     expect(order).toContain('  Agents');
     expect(order[order.indexOf('  Agents') + 1]).toBe('    Literary agents');
+  });
+});
+
+describe('what was planned for a beat, beside its writing', () => {
+  it('lists the rows under the beat’s own row, with their words', () => {
+    const made = book();
+    const id = made.id;
+    let file = made.file;
+    const big = findOutline(file, id)!.items.find((row) => row.title === 'Big boys')!;
+    const n = addItem(file, id, { kind: 'note', title: 'Penguin, Harper', parentId: big.id });
+    file = n.file;
+    const plan = beatPlan(file, big.boundBeatId!);
+    expect(plan.row?.id).toBe(big.id);
+    expect(plan.lines.map((line) => [line.depth, line.kind, line.title])).toEqual([
+      [0, 'beat', 'Major houses'],
+      [0, 'beat', 'Major studios'],
+      [0, 'note', 'Penguin, Harper'],
+    ]);
   });
 });

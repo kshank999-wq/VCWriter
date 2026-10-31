@@ -1333,16 +1333,27 @@ export default function App() {
    * the research section*).
    */
   const story = !isWordProcessor(file.project.format);
+  /**
+   * **A room opens over the Write page, from any page** (from Ken: *when you
+   * go into Editors and try to switch to Research or Sculptor, it just
+   * doesn't do anything*). The rooms are drawn in the Write page, so pressed
+   * from Editors, Preview or Home they opened unseen and piled up until the
+   * writer went back; now the press goes to the Write page first.
+   */
+  const toWrite = (open: () => void) => () => {
+    if (view !== 'write' && view !== 'outline') setView('write');
+    open();
+  };
   const barRooms: BarRoom[] = story
     ? [
-        { id: 'research', label: 'Research', title: 'Research: everything the work is made from', onOpen: () => (away.has('research') ? openPane('research') : setResearchOpen(true)) },
-        { id: 'sculptor', label: 'Sculptor', title: 'Story Sculptor: log the major ideas, and keep refining them', onOpen: () => (away.has('sculptor') ? openPane('sculptor') : setSculptorOpen(true)) },
-        { id: 'outliner', label: 'Outliner', title: 'Outliner: arrange what you have, and send it to the track', onOpen: () => (away.has('outliner') ? openPane('outliner') : isBook ? setView('outline') : setOutlinerOpen(true)) },
+        { id: 'research', label: 'Research', title: 'Research: everything the work is made from', onOpen: toWrite(() => (away.has('research') ? openPane('research') : setResearchOpen(true))) },
+        { id: 'sculptor', label: 'Sculptor', title: 'Story Sculptor: log the major ideas, and keep refining them', onOpen: toWrite(() => (away.has('sculptor') ? openPane('sculptor') : setSculptorOpen(true))) },
+        { id: 'outliner', label: 'Outliner', title: 'Outliner: arrange what you have, and send it to the track', onOpen: () => (away.has('outliner') ? openPane('outliner') : isBook ? setView('outline') : toWrite(() => setOutlinerOpen(true))()) },
         ...(isProseFormat(file.project.format)
-          ? [{ id: 'layout', label: 'Layout', title: 'Layout: set the manuscript as a book', onOpen: () => (away.has('layout') ? openPane('layout') : setLayoutOpen(true)) }]
+          ? [{ id: 'layout', label: 'Layout', title: 'Layout: set the manuscript as a book', onOpen: toWrite(() => (away.has('layout') ? openPane('layout') : setLayoutOpen(true))) }]
           : []),
         ...(isInteractive(file.project.format)
-          ? [{ id: 'narrative', label: 'Narrative', title: 'Narrative map: the branching graph', onOpen: () => (away.has('narrative') ? openPane('narrative') : setNarrativeOpen(true)) }]
+          ? [{ id: 'narrative', label: 'Narrative', title: 'Narrative map: the branching graph', onOpen: toWrite(() => (away.has('narrative') ? openPane('narrative') : setNarrativeOpen(true))) }]
           : []),
         {
           id: 'focus',

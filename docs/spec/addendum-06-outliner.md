@@ -608,3 +608,37 @@ filter, a tally and three ways out, with labels wrapping to three lines in a
 42-pixel bar. Nothing in it wraps now, and where a window is too narrow for all
 of it the bar scrolls sideways — the one behaviour that does not change the
 height of everything below it.
+
+---
+
+## The beat's plan beside its writing
+
+From Ken: *when you click onto a beat and there's notes and character and that
+type of thing, there needs to be a button where you can open that in a side
+menu where you have a split screen, so you have all your notes and everything
+available while you're writing that beat… a side menu that fills part of the
+screen. And then you can collapse that also. This will also be the same for
+series and episodics.*
+
+The beat's writing screen (`BeatWriter`, which the beat dialog from the track
+also uses) has a **Notes** button in its bar showing how many rows are
+planned. It opens a side panel, `BeatPlanPanel`, about a third of the width,
+and the panel collapses with ⇥ or the button again. Whether it is open is
+remembered on this computer.
+
+The panel reads `beatPlan`: the Outliner row bound to the beat, that row's own
+words, then every row under it in reading order. Each row shows its mark
+(note, character, setting, prop, idea), its title and its words, or the words
+of the research note it was dragged in from. Nothing is copied, so editing the
+outline changes the panel. A beat with no row says to plan it in the Outliner.
+
+**Series and episodic** projects share the screenplay's writing rules,
+Outliner kinds and track; nothing in the program is limited to a screenplay.
+They get this panel and everything else the screenplay has, and also divide
+into episodes.
+
+**Rooms from any page.** From Ken: *when you go into Editors and try to switch
+to Research or Sculptor, it just doesn't do anything*. The rooms are drawn on
+the Write page, so pressed from Editors, Preview or Home they opened unseen
+and piled up. A room pressed on the bottom bar from any other page now goes to
+the Write page first and opens there.
