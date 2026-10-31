@@ -833,3 +833,47 @@ window**.
   `panes.ts` and `main/windows.ts`.
 - Tests: `note-rewrite.test.ts` (domain) and `outline-sidebar.test.tsx`
   (desktop).
+
+## 9. Sorting notes in the Outliner, and working them in
+
+From Ken, looking at the Outliner's research shelf:
+
+> You need to be able to collapse each individual chapter, section,
+> subsection and note. Also, the left research screen is not really useful,
+> because you have all these general notes that you can't really read, and
+> they're going to be dropped into the categories in the outline… when they're
+> dropped into something it needs to go from there into an archive… when you
+> select the outline section… it's going to show up in that left menu. When you
+> click on one of the sections or subsections that has those notes in it, you
+> double-click it. It'll open up in that split screen… you can see the original
+> note, and when you clean it up and rewrite it, then you add it, and it'll add
+> as a subsection or a note in the outliner.
+
+**The shelf lists what is not sorted yet** (`unsortedNotes`): notes on the
+shelf that are not archived and not filed anywhere that still exists. Each note
+is readable, with its title and the first lines of its words, and the shelf is
+wider in the Outliner. A folder with nothing unsorted in it is not drawn.
+
+**Dropping a note on a row sorts it there.** `fileNoteUnder` files the note
+under that row, and no row is made. The note leaves the unsorted list, and the
+row it was dropped on becomes the chosen row.
+
+**The chosen row lists its notes** (`notesToProcess`) in a box at the top of
+the shelf, *In 1.2 The Truth*. Double-clicking one opens the rewrite screen
+from §7, with the original on the left and the rewrite on the right. The
+screen offers **Add as subsection** (the level below the row: a section under
+a chapter, a subsection under a section) and **Add as note**.
+`addNoteToOutline` adds the row under the row the note was sorted into,
+titled with the note's title and carrying the rewrite as its words. It then
+**archives** the note. An archived note is out of the shelf, out of the
+row's list and out of Research's outline folders, and it stays under *Put
+away*. **Place on the track** is still offered beside these buttons.
+
+**Every row folds.** A row now shows its own words under it, up to four lines.
+The fold arrow, now larger and coloured, is on every row that has rows under
+it or words of its own. Folding a row hides both.
+
+Tests: `note-rewrite.test.ts` covers sorting, adding and archiving. The flow
+was driven in the preview: drop a note on *Multiplication*, then double-click
+it under *In 1.1 Multiplication*, rewrite it, press **Add as subsection**,
+and fold the new row.

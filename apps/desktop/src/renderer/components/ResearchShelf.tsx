@@ -24,6 +24,10 @@ import {
   captureKeyName,
   captureTitle,
   noteOnTrack,
+  notesToProcess,
+  unsortedNotes,
+  type NotePlace,
+  type ResearchItem,
 } from '@vcwriter/domain';
 
 /**
@@ -79,9 +83,27 @@ interface ResearchShelfProps {
   notesError?: string | null;
   /** Called with what is being carried, and with null when it is let go. */
   onCarry(carrying: ShelfCarry | null): void;
+  /**
+   * The outline row chosen, in the Outliner (addendum 28 §9): the shelf then
+   * lists the notes sorted into it, still to be worked in.
+   */
+  chosenRow?: { place: NotePlace; label: string } | null;
+  /** Open a note in the rewrite screen (a double-click). */
+  onOpenNote?(item: ResearchItem): void;
 }
 
-export function ResearchShelf({ file, from, reveal, notes = [], notesError = null, onCarry }: ResearchShelfProps) {
+export function ResearchShelf({ file, from, reveal, notes = [], notesError = null, onCarry, chosenRow = null, onOpenNote }: ResearchShelfProps) {
+  /**
+   * **Sorting, in the Outliner** (addendum 28 §9, from Ken: *you have all these
+   * general notes that you can't really read, and they're going to be dropped
+   * into the categories in the outline*). The shelf lists only what is not
+   * sorted yet, each note readable rather than a cut-off line; a note dropped
+   * on a row leaves it, and turns up here again under that row when the row is
+   * chosen, to be opened and worked in.
+   */
+  const sorting = from === 'outline';
+  const unsorted = useMemo(() => (sorting ? new Set(unsortedNotes(file).map((one) => one.id as string)) : null), [file, sorting]);
+  const toProcess = useMemo(() => (sorting && chosenRow ? notesToProcess(file, chosenRow.place) : []), [file, sorting, chosenRow]);
   const [query, setQuery] = useState('');
   const [shut, setShut] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState(true);
@@ -168,8 +190,19 @@ export function ResearchShelf({ file, from, reveal, notes = [], notesError = nul
         onCarry({ kind: 'research', id: item.id });
       }}
       onDragEnd={() => onCarry(null)}
+      onDoubleClick={() => {
+        const full = file.researchItems.find((one) => one.id === item.id);
+        if (full && onOpenNote) onOpenNote(full);
+      }}
     >
-      {item.title}
+      {sorting ? (
+        <>
+          <span className="shelf-card-title">{item.title}</span>
+          {item.body.trim() && item.body.trim() !== item.title.trim() ? <span className="shelf-card-body">{item.body}</span> : null}
+        </>
+      ) : (
+        item.title
+      )}
       {who ? <ContributorMark who={who} /> : null}
     </div>
     );
@@ -224,6 +257,22 @@ export function ResearchShelf({ file, from, reveal, notes = [], notesError = nul
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
+      ) : null}
+
+      {sorting && showing === 'research' && chosenRow ? (
+        <section className="shelf-process" aria-label={`Notes in ${chosenRow.label}`}>
+          <h4>
+            In {chosenRow.label} <span className="muted">{toProcess.length}</span>
+          </h4>
+          {toProcess.length === 0 ? (
+            <p className="muted small shelf-note">Nothing sorted into it yet. Drag a note from below onto the row.</p>
+          ) : (
+            <>
+              <p className="muted small shelf-note">Double-click a note to rewrite it and add it to the outline.</p>
+              {toProcess.map((item) => draggable(item))}
+            </>
+          )}
+        </section>
       ) : null}
 
       {showing === 'phone' ? (
@@ -284,7 +333,7 @@ export function ResearchShelf({ file, from, reveal, notes = [], notesError = nul
           found.length === 0 ? (
             <p className="muted small">Nothing filed under that.</p>
           ) : (
-            found.map((item) => draggable(item))
+            found.filter((item) => !unsorted || unsorted.has(item.id as string)).map((item) => draggable(item))
           )
         ) : (
           folders.map((folder) => {
@@ -292,7 +341,8 @@ export function ResearchShelf({ file, from, reveal, notes = [], notesError = nul
               file,
               { categoryId: folder.category.id },
               { includeDescendants: false },
-            );
+            ).filter((item) => !unsorted || unsorted.has(item.id as string));
+            if (sorting && items.length === 0) return null;
             return (
               <div
                 key={folder.category.id as string}
@@ -307,7 +357,7 @@ export function ResearchShelf({ file, from, reveal, notes = [], notesError = nul
                 >
                   <span className="shelf-fold">{isShut(folder.category.id) ? '▸' : '▾'}</span>
                   {folder.category.name}
-                  <span className="muted"> {folder.total}</span>
+                  <span className="muted"> {sorting ? items.length : folder.total}</span>
                 </button>
                 {isShut(folder.category.id) ? null : items.map((item) => draggable(item))}
               </div>
@@ -315,6 +365,9 @@ export function ResearchShelf({ file, from, reveal, notes = [], notesError = nul
           })
         )}
 
+        {sorting && unsorted && unsorted.size === 0 && folders.length > 0 ? (
+          <p className="muted small shelf-note">Every note is sorted into the outline. Choose a row to see the notes in it.</p>
+        ) : null}
         {folders.length === 0 ? (
           <p className="muted small">
             Nothing on the shelf yet. Research is where the material is gathered; this is where it is arranged.

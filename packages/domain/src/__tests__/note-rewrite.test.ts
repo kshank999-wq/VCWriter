@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   addItem,
+  addNoteToOutline,
+  notesToProcess,
+  unsortedNotes,
   addResearchItem,
   beatsForUnit,
   contentsShelf,
@@ -195,5 +198,34 @@ describe('placing a note on the track', () => {
     expect(noteOnTrack(cut, cut.researchItems.find((one) => one.id === n.id)!)).toBe(false);
     // The table of contents still lists the section the note went into.
     expect(contentsShelf(cut).some((one) => one.title === 'Division')).toBe(true);
+  });
+});
+
+describe('sorting notes in the Outliner (addendum 28 §9)', () => {
+  it('a note sorted into a row leaves the unsorted list and waits under that row', () => {
+    const made = planned();
+    const n = note(made.file, 'Raw thought', 'rough words');
+    expect(unsortedNotes(n.file).map((one) => one.id)).toContain(n.id);
+    const file = fileNoteUnder(n.file, n.id, { kind: 'plan', itemId: made.rows['division']! });
+    expect(unsortedNotes(file).map((one) => one.id)).not.toContain(n.id);
+    expect(notesToProcess(file, { kind: 'plan', itemId: made.rows['division']! }).map((one) => one.id)).toEqual([n.id]);
+    expect(notesToProcess(file, { kind: 'plan', itemId: made.rows['long']! })).toEqual([]);
+  });
+
+  it('adding it makes a row with the rewrite under that row, and archives the note', () => {
+    const made = planned();
+    const n = note(made.file, 'Raw thought', 'rough words');
+    let file = fileNoteUnder(n.file, n.id, { kind: 'plan', itemId: made.rows['division']! });
+    file = setNoteRewrite(file, n.id, 'A clean paragraph.');
+    const added = addNoteToOutline(file, n.id, made.outlineId, made.rows['division']!, 'beat');
+    expect(added.rowId).not.toBeNull();
+    const row = findOutline(added.file, made.outlineId)!.items.find((one) => one.id === added.rowId)!;
+    expect([row.kind, row.title, row.body, row.parentId]).toEqual(['beat', 'Raw thought', 'A clean paragraph.', made.rows['division']]);
+    const after = added.file.researchItems.find((one) => one.id === n.id)!;
+    expect(after.archived).toBe(true);
+    expect(after.body).toBe('rough words');
+    // Done: no longer waiting under the row, nor in the folders beside the notes.
+    expect(notesToProcess(added.file, { kind: 'plan', itemId: made.rows['division']! })).toEqual([]);
+    expect(outlineFolders(added.file).find((one) => one.title === 'Division')!.notes).toEqual([]);
   });
 });

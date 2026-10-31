@@ -34,6 +34,7 @@ export function NoteRewrite({
   onClose,
   onUpdate,
   onGoToBeat,
+  addTo,
 }: {
   file: ProjectFile;
   item: ResearchItem | null;
@@ -41,6 +42,11 @@ export function NoteRewrite({
   onClose(): void;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
   onGoToBeat?(beatId: BeatId): void;
+  /**
+   * Adding the rewrite to the outline, from the Outliner (addendum 28 §9): the
+   * row it goes under and the kinds it can be added as. The note is archived.
+   */
+  addTo?: { under: string; choices: ReadonlyArray<{ kind: string; label: string }>; onAdd(kind: string): void } | null;
 }) {
   const dialog = useModal(item !== null);
   const original = useRef<HTMLDivElement>(null);
@@ -106,7 +112,7 @@ export function NoteRewrite({
     <dialog ref={dialog} className="note-rewrite" aria-label={`Rewrite ${item.title}`} onClose={onClose} onCancel={onClose}>
       <header className="note-rewrite-head">
         <strong className="note-rewrite-title">{item.title}</strong>
-        <span className="muted small">{where ? `Filed under ${where}` : 'Not in a chapter yet'}</span>
+        <span className="muted small">{addTo ? `Sorted into ${addTo.under}` : where ? `Filed under ${where}` : 'Not in a chapter yet'}</span>
         <span className={`note-rewrite-state${used ? ' used' : ''}`}>
           {used ? (
             <>
@@ -173,7 +179,23 @@ export function NoteRewrite({
               Go to it on the track
             </button>
           ) : null}
-          <button type="button" onClick={place} disabled={!textToPlace(item)}>
+          {addTo
+            ? addTo.choices.map((choice) => (
+                <button
+                  key={choice.kind}
+                  type="button"
+                  disabled={!textToPlace(item)}
+                  title={`Add it under ${addTo.under} as ${choice.label.toLowerCase()}. The note goes to the archive.`}
+                  onClick={() => {
+                    addTo.onAdd(choice.kind);
+                    onClose();
+                  }}
+                >
+                  Add as {choice.label.toLowerCase()}
+                </button>
+              ))
+            : null}
+          <button type="button" className={addTo ? 'ghost' : undefined} onClick={place} disabled={!textToPlace(item)}>
             {used ? 'Place on the track again' : 'Place on the track'}
           </button>
         </span>

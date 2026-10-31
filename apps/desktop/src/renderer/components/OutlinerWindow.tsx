@@ -1,15 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { RoomSave } from './RoomSave';
 import { RoomFormat } from './RoomFormat';
 import { scrollNudge, zoneFor, type OutlineZone } from '../drag';
 import { ResearchShelf, type ShelfCarry } from './ResearchShelf';
+import { NoteRewrite } from './NoteRewrite';
 import { usePhoneNotes } from '../phone-notes';
 import { PopOutButton } from './PopOutButton';
 import {
   isInstructional,
   isWordProcessor,
   addItem,
-  addResearchRow,
   approveCapture,
   bindRow,
   boardsOf,
@@ -76,6 +76,9 @@ import {
   nounsFor,
   type ProjectFormat,
   type SaveKind,
+  addNoteToOutline,
+  fileNoteUnder,
+  placeOf,
 } from '@vcwriter/domain';
 
 /**
@@ -211,6 +214,18 @@ const kindsFor = (format: ProjectFormat): Record<string, { name: string; mark: s
   };
 };
 
+/**
+ * What a note can be added to the outline as, under a row of this kind: the
+ * level below it (a section under a chapter, a subsection under a section),
+ * and a Note.
+ */
+const addChoices = (parentKind: string, levels: readonly string[], format: ProjectFormat) => {
+  const at = levels.indexOf(parentKind);
+  const below = at === -1 ? levels[levels.length - 1] : levels[Math.min(at + 1, levels.length - 1)];
+  const kinds = [...new Set([...(below ? [below] : []), 'note'])];
+  return kinds.map((kind) => ({ kind, label: nameOf(kind, format) }));
+};
+
 const nameOf = (kind: string, format: ProjectFormat): string =>
   kindsFor(format)[kind]?.name ?? kind.replace(/_/g, ' ');
 
@@ -257,6 +272,8 @@ export function OutlinerWindow({
   const [chosenOutlineId, setOutlineId] = useState<string | null>(null);
   const outlineId = pinned ?? chosenOutlineId;
   const [selected, setSelected] = useState<OutlineItemId | null>(null);
+  /** The note open in the rewrite screen, from the shelf (addendum 28 §9). */
+  const [rewriting, setRewriting] = useState<ResearchItemId | null>(null);
   /**
    * The rest of a selection of more than one (§8).
    *
@@ -363,6 +380,17 @@ export function OutlinerWindow({
   };
 
   const chosen = outline && selected ? findOutlineItem(outline, selected) : null;
+  /** The note in the rewrite screen, and the row it is added under: the one it was sorted into, else the chosen row. */
+  const rewriteItem = rewriting ? (file.researchItems.find((one) => one.id === rewriting) ?? null) : null;
+  const rewriteParent = (() => {
+    if (!rewriteItem || !outline) return null;
+    const sorted = placeOf(rewriteItem.place);
+    if (sorted?.kind === 'plan') {
+      const row = findOutlineItem(outline, sorted.itemId);
+      if (row) return row;
+    }
+    return chosen;
+  })();
   /** Everything a bulk action applies to: the chosen row, and the rest. */
   const picked = useMemo((): OutlineItemId[] => {
     const ids = new Set(alsoPicked);
@@ -487,7 +515,15 @@ export function OutlinerWindow({
         ...(zone === 'before' ? { beforeId: target.id } : {}),
         ...(zone === 'after' ? { afterId: target.id } : {}),
       };
-      if (held.kind === 'research') return addResearchRow(current, id, held.id, where).file;
+      // A note off the shelf is **sorted into** the row it is dropped on
+      // (addendum 28 §9, from Ken: *they're going to be dropped into the
+      // categories in the outline… it won't include those notes yet because
+      // you still have to process them*). No row is made: the note waits under
+      // the row, on the shelf, until it is rewritten and added.
+      if (held.kind === 'research') {
+        queueMicrotask(() => setSelected(target.id));
+        return fileNoteUnder(current, held.id, { kind: 'plan', itemId: target.id });
+      }
       /**
        * A note off the phone (addendum 09 §15).
        *
@@ -942,6 +978,15 @@ export function OutlinerWindow({
           file={file}
           from="outline"
           reveal={reveal}
+          chosenRow={
+            chosen
+              ? {
+                  place: { kind: 'plan', itemId: chosen.id },
+                  label: `${numbers.get(chosen.id as string) ?? ''} ${rowTitle(file, chosen) || nameOf(chosen.kind, file.project.format)}`.trim(),
+                }
+              : null
+          }
+          onOpenNote={(item) => setRewriting(item.id)}
           notes={phone.notes}
           notesError={phone.error}
           onCarry={(held) => {
@@ -952,6 +997,26 @@ export function OutlinerWindow({
               setOver(null);
             }
           }}
+        />
+
+        {/* A note off the shelf, rewritten beside the original and added under
+            the row it was sorted into (addendum 28 §9). */}
+        <NoteRewrite
+          file={file}
+          item={rewriteItem}
+          currentBeatId={null}
+          onClose={() => setRewriting(null)}
+          onUpdate={onUpdate}
+          addTo={
+            rewriteItem && rewriteParent
+              ? {
+                  under: `${numbers.get(rewriteParent.id as string) ?? ''} ${rowTitle(file, rewriteParent) || nameOf(rewriteParent.kind, file.project.format)}`.trim(),
+                  choices: addChoices(rewriteParent.kind, levels, file.project.format),
+                  onAdd: (kind) =>
+                    write((current, id) => addNoteToOutline(current, rewriteItem.id, id, rewriteParent.id, kind).file),
+                }
+              : null
+          }
         />
 
         {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
@@ -972,6 +1037,7 @@ export function OutlinerWindow({
           ) : null}
 
           {rows.map((row) => (
+            <Fragment key={row.item.id as string}>
             <Row
               format={file.project.format}
               key={row.item.id as string}
@@ -1046,6 +1112,20 @@ export function OutlinerWindow({
                 setOver(null);
               }}
             />
+            {/* The row's own words, under it, folded with it (from Ken: *you
+                need to be able to collapse each individual chapter, section,
+                subsection, and note*). A note worked in from the shelf
+                carries its rewrite here. */}
+            {row.item.body.trim() && !row.item.collapsed ? (
+              <div
+                className="outline-row-body"
+                style={{ paddingLeft: `${8 + row.depth * STEP + 56}px` }}
+                onPointerDown={() => choose(row.item.id, {})}
+              >
+                {row.item.body}
+              </div>
+            ) : null}
+            </Fragment>
           ))}
         </div>
 
@@ -1642,6 +1722,8 @@ function Row({
   onDrop(zone: OutlineZone): void;
 }) {
   const { item, depth, childCount } = row;
+  /** A row folds where it has rows under it, or words of its own. */
+  const foldable = childCount > 0 || item.body.trim().length > 0;
   const input = useRef<HTMLTextAreaElement | null>(null);
   /** Whether the name is being typed in; until it is, dragging it drags the row. */
   const [typing, setTyping] = useState(false);
@@ -1673,7 +1755,7 @@ function Row({
       role="treeitem"
       aria-level={depth + 1}
       aria-selected={selected}
-      aria-expanded={childCount === 0 ? undefined : !item.collapsed}
+      aria-expanded={foldable ? !item.collapsed : undefined}
       onPointerDown={(event) => onSelect({ add: event.metaKey || event.ctrlKey, through: event.shiftKey })}
       onDoubleClick={onOpen}
       // The whole row is the handle. A grip would be one more thing to aim at,
@@ -1706,12 +1788,18 @@ function Row({
         <span key={level} className="outline-guide" style={{ left: `${8 + level * STEP + 7}px` }} aria-hidden="true" />
       ))}
 
-      {childCount > 0 ? (
+      {foldable ? (
         <button
           type="button"
           className="ghost small outline-fold"
           aria-label={item.collapsed ? `Expand ${item.title || 'this row'}` : `Collapse ${item.title || 'this row'}`}
-          title={item.collapsed ? `${childCount} folded away` : 'Fold what is under it'}
+          title={
+            item.collapsed
+              ? childCount > 0
+                ? `${childCount} folded away`
+                : 'Its words are folded away'
+              : 'Fold what is under it'
+          }
           onClick={onFold}
         >
           {item.collapsed ? '▸' : '▾'}

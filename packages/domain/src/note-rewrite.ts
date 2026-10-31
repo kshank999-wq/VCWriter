@@ -1,8 +1,8 @@
-import { addBeat, markResearchUsed, updateBeat } from './mutations.js';
-import { beatsForUnit, noteOnTrack } from './selectors.js';
+import { addBeat, markResearchUsed, setResearchArchived, updateBeat } from './mutations.js';
+import { beatsForUnit, noteOnTrack, shelvedItems } from './selectors.js';
 import { onlyLiving } from './graveyard.js';
 import { outlineNumbers } from './numbering.js';
-import { outlineRows, rowTitle } from './outline.js';
+import { addItem, findOutline, findOutlineItem, outlineRows, rowTitle, updateItem } from './outline.js';
 import { canPromote, divisionSpan, promoteRow } from './outline-binding.js';
 import { defaultElementType } from './editing.js';
 import { contentsShelf, placeKey, placeNow, placeOf, placeStillThere, type NotePlace } from './chapter-notes.js';
@@ -13,7 +13,7 @@ import { newId } from './ids.js';
 import type { Outline, OutlineItem } from './entities/outline.js';
 import type { ResearchItem } from './entities/research.js';
 import type { ProjectFile } from './project-file.js';
-import type { BeatId, ManuscriptElementId, ResearchItemId, StructuralUnitId } from './ids.js';
+import type { BeatId, ManuscriptElementId, OutlineId, OutlineItemId, ResearchItemId, StructuralUnitId } from './ids.js';
 
 /**
  * The outline beside the notes, and the rewrite screen (addendum 28 §7).
@@ -75,6 +75,8 @@ export interface OutlineFolder {
 export const outlineFolders = (file: ProjectFile): OutlineFolder[] => {
   const filed = new Map<string, ResearchItem[]>();
   for (const item of onlyLiving(file.researchItems)) {
+    // A note already worked into the outline is archived (§9): processed.
+    if (item.archived) continue;
     const place = placeNow(file, placeOf(item.place));
     if (!place || !placeStillThere(file, place)) continue;
     const key = placeKey(place);
@@ -274,4 +276,58 @@ export const placeNoteOnTrack = (
   current = updateBeat(added.file, added.beat.id, { manuscript: { elements: linesOf(current, text) } });
   current = markResearchUsed(current, { itemId: item.id, beatId: added.beat.id });
   return { ok: true, file: current, beatId: added.beat.id, unitId: target.unitId };
+};
+
+// ------------------------------------------------- sorting in the Outliner
+
+/**
+ * The notes filed under one part of the outline and still to be worked in
+ * (addendum 28 §9, from Ken: *when you click on one of the sections or
+ * subsections that has those notes in it… it'll open up in that split screen…
+ * and when you clean it up and rewrite it, then you add it, and it'll add as a
+ * subsection or a note in the outliner*). Archived notes are done.
+ */
+export const notesToProcess = (file: ProjectFile, place: NotePlace): ResearchItem[] => {
+  const here = placeNow(file, place);
+  if (!here) return [];
+  const key = placeKey(here);
+  return onlyLiving(file.researchItems).filter((item) => {
+    if (item.archived) return false;
+    const at = placeNow(file, placeOf(item.place));
+    return at !== null && placeKey(at) === key;
+  });
+};
+
+/**
+ * The notes nobody has sorted yet: on the shelf, not archived, and filed
+ * nowhere that still exists. What the Outliner's shelf lists to drag from;
+ * a note dropped into the outline leaves this list.
+ */
+export const unsortedNotes = (file: ProjectFile): ResearchItem[] =>
+  shelvedItems(file).filter((item) => {
+    if (item.archived) return false;
+    const at = placeNow(file, placeOf(item.place));
+    return !(at && placeStillThere(file, at));
+  });
+
+/**
+ * **Add to the outline**: the rewrite (or the note) becomes a row under the
+ * part of the outline it was sorted into — a subsection, a note, whatever kind
+ * was asked for — titled with the note's title and carrying the words as its
+ * own. The note is then archived: worked in, kept, out of the way.
+ */
+export const addNoteToOutline = (
+  file: ProjectFile,
+  itemId: ResearchItemId,
+  outlineId: OutlineId,
+  parentId: OutlineItemId,
+  kind: string,
+): { file: ProjectFile; rowId: OutlineItemId | null } => {
+  const item = onlyLiving(file.researchItems).find((one) => (one.id as string) === (itemId as string));
+  const outline = findOutline(file, outlineId);
+  if (!item || !outline || !findOutlineItem(outline, parentId)) return { file, rowId: null };
+  const made = addItem(file, outlineId, { parentId, kind, title: item.title });
+  if (!made.itemId) return { file, rowId: null };
+  const written = updateItem(made.file, outlineId, made.itemId, { body: textToPlace(item) });
+  return { file: setResearchArchived(written, item.id, true), rowId: made.itemId };
 };
