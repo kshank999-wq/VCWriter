@@ -811,19 +811,12 @@ export function ResearchBody({
               chapters to file against. */}
           {instructional || wordProcessor ? (
             <ul className="research-views">
-              {instructional ? (
-              <li>
-                <button
-                  type="button"
-                  className={selection.kind === 'contents' ? 'folder-row selected' : 'folder-row'}
-                  title="The chapters and sections of the book, and what is filed under each"
-                  onClick={() => setSelection({ kind: 'contents' })}
-                >
-                  <span className="folder-name">Table of contents</span>
-                  <span className="count muted">{contentsShelf(file).length}</span>
-                </button>
-              </li>
-              ) : null}
+              {/* **No Table of contents here any more** (from Ken: *there
+                  should be nothing but the table of contents there. I don't
+                  even know if that's necessary because you have it in the
+                  outliner. So maybe we can just remove that*). The chapters
+                  are the Outliner's, and the outline beside the notes is
+                  where notes are sorted into them. */}
               {/* The Reference Library (addendum 43, spec §2: *References >
                   Manage Library*), beside the contents on a book, and on a
                   Document project, whose documents cite it too (§11). */}

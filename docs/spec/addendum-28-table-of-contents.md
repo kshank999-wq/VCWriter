@@ -925,3 +925,17 @@ own headings. They are brought in through the existing importer
 (`importFiles`, which keeps a record of each import) into **Imported**, as
 not yet used, and the room opens on that folder. From there they sort exactly
 as phone notes do.
+
+## 11. The table of contents leaves Research
+
+From Ken: *in the research section there is a table of contents, and that
+should show the chapters, but it's showing a bunch of notes that need to be
+used or not used… I don't even know if that's necessary because you have it
+in the Outliner. So maybe we can just remove that.*
+
+The **Table of contents** entry is gone from Research's side menu. The
+chapters and sections are the Outliner's. Sorting notes into them is done in
+the outline column beside the notes (§7) and on the Outliner's own shelf
+(§9). `ContentsPanel` and `contentsShelf` stay in the code: the shelf still
+answers *where in the book a note belongs*, and the chapter page is still
+reached from **File ▸ Chapter page…**.
