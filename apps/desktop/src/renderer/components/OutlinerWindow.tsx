@@ -237,7 +237,7 @@ const wordsNotInBook = (file: ProjectFile, item: OutlineItem): boolean => {
     const beat = file.beats.find((one) => one.id === item.boundBeatId);
     return !beat || beat.manuscript.elements.every((element) => element.text.trim().length === 0);
   }
-  return !isPromoted(item);
+  return promotedOf(file, item) === null;
 };
 
 const nameOf = (kind: string, format: ProjectFormat): string =>
@@ -412,9 +412,9 @@ export function OutlinerWindow({
     return [...ids] as OutlineItemId[];
   }, [alsoPicked, selected]);
   /** How many chapters, sections and subsections are not in the track yet: the red dots. */
-  const missing = outline ? outline.items.filter((one) => promoteKindOf(one) !== null && !isPromoted(one)).length : 0;
+  const missing = outline ? outline.items.filter((one) => promoteKindOf(one) !== null && promotedOf(file, one) === null).length : 0;
   /** And how many in the track stand somewhere other than where the outline now has them. */
-  const outOfStep = outline ? outline.items.filter((one) => isPromoted(one) && rowOutOfStep(file, outline, one.id) !== null).length : 0;
+  const outOfStep = outline ? outline.items.filter((one) => promotedOf(file, one) !== null && rowOutOfStep(file, outline, one.id) !== null).length : 0;
   /** Whether Add to track has anything to do: one chosen row the rules would take. */
   const sendable =
     outline !== null &&
@@ -1081,7 +1081,7 @@ export function OutlinerWindow({
               number={numbers.get(row.item.id as string) ?? ''}
               title={rowTitle(file, row.item)}
               linked={row.item.source?.type === 'research_item'}
-              promoted={isPromoted(row.item)}
+              promoted={promotedOf(file, row.item) !== null}
               wordsOut={wordsNotInBook(file, row.item)}
               selected={selected === row.item.id}
               picked={alsoPicked.has(row.item.id as string)}

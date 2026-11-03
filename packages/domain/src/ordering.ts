@@ -90,5 +90,44 @@ export const orderKeyForIndex = (siblings: readonly Ordered[], targetIndex: numb
   const index = Math.max(0, Math.min(targetIndex, siblings.length));
   const before = index > 0 ? (siblings[index - 1]?.orderKey ?? null) : null;
   const after = index < siblings.length ? (siblings[index]?.orderKey ?? null) : null;
-  return orderKeyBetween(before, after);
+  return safeKeyBetween(before, after);
 };
+
+/**
+ * **A key between two neighbours that never refuses** (from Ken: *the Add all
+ * to track function doesn't work… it's not transferring anything*).
+ *
+ * `orderKeyBetween` throws where the neighbours share a key, are out of order
+ * or carry one it cannot read — and a project built up over months of imports,
+ * sends and syncs can hold such a pair. One throw inside a promotion abandoned
+ * the whole press, so nothing reached the track and nothing said why. This
+ * falls back to the nearest key it *can* make: after the one before, before
+ * the one after, or a fresh one — the record still lands, beside where it was
+ * asked for, and callers that care about exact places re-key first.
+ */
+export const safeKeyBetween = (before: string | null, after: string | null): string => {
+  for (const [low, high] of [
+    [before, after],
+    [before, null],
+    [null, after],
+    [null, null],
+  ] as const) {
+    try {
+      return orderKeyBetween(low, high);
+    } catch {
+      // Try the next, looser pair.
+    }
+  }
+  return orderKeyBetween(null, null);
+};
+
+/**
+ * Whether a list's keys are all readable and strictly in order: what a key
+ * between two of them needs. Where not, the caller re-keys the list as it is
+ * drawn before placing anything in it.
+ */
+export const keysInOrder = (items: readonly Ordered[]): boolean =>
+  items.every((item, index) => {
+    if (!/^[0-9A-Za-z]+$/.test(item.orderKey) || item.orderKey.endsWith('0')) return false;
+    return index === 0 || (items[index - 1] as Ordered).orderKey < item.orderKey;
+  });

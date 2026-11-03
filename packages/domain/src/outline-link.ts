@@ -246,8 +246,18 @@ export const adoptScriptIntoOutline = (file: ProjectFile): ProjectFile => {
     }
   }
   const story = unitsInStoryOrder(file);
-  const missingUnits = story.filter((unit) => !boundUnits.has(unit.id as string));
-  const missingBeats = file.beats.filter((beat) => !boundBeats.has(beat.id as string));
+  // **Not the section the project was born with**, while it is untouched: a
+  // new project is seeded with one section and one beat so the track is not
+  // empty, and adopting that seed put a stray *Chapter One · Opening beat* at
+  // the top of a book's outline. Write in it, or rename it, and it joins.
+  const seeded = (unit: { id: unknown; createdAt: string; title: string }) =>
+    unit.createdAt === file.project.createdAt &&
+    beatsForUnit(file, unit.id as StructuralUnitId).every(
+      (beat) => beat.createdAt === file.project.createdAt && beat.manuscript.elements.every((element) => element.text.trim().length === 0),
+    );
+  const seed = new Set(story.filter((unit) => !boundUnits.has(unit.id as string) && seeded(unit)).map((unit) => unit.id as string));
+  const missingUnits = story.filter((unit) => !boundUnits.has(unit.id as string) && !seed.has(unit.id as string));
+  const missingBeats = file.beats.filter((beat) => !boundBeats.has(beat.id as string) && !seed.has(beat.unitId as string));
   if (missingUnits.length === 0 && missingBeats.length === 0) return file;
 
   const items = [...outline.items];
@@ -298,9 +308,29 @@ const scriptShape = (file: ProjectFile): string =>
  */
 export const keepLinked = (before: ProjectFile, after: ProjectFile): ProjectFile => {
   if (before === after || (after.outlines ?? []).length === 0) return after;
-  // A section or subsection made in the track (or one never in the outline)
-  // joins the outline, bound and green, then everything is put in order.
   const madeInTrack = before.units.length !== after.units.length || before.beats.length !== after.beats.length;
+  const outlineMoved = before.outlines !== after.outlines && outlineShape(before) !== outlineShape(after);
+
+  // **The side that moved leads, always** (from Ken: *it pops it down to the
+  // bottom and it's also in the wrong section*). A change made in the Outliner
+  // — a row moved, added, or sent to the track by Add to track — puts the track
+  // in the outline's order first. Only then does anything in the track the
+  // outline lacks join it, placed where the track has it. Before, a promotion
+  // that also left something unbound (the project's starting section, say)
+  // took the other road and put the whole outline in the track's old order.
+  if (outlineMoved) {
+    let next = (after.outlines ?? []).some((outline) => outline.items.some((row) => row.boundUnitId || row.boundBeatId))
+      ? alignScriptToOutline(after)
+      : after;
+    if (madeInTrack) {
+      const adopted = adoptScriptIntoOutline(next);
+      if (adopted !== next) next = alignOutlineToScript(adopted);
+    }
+    return next;
+  }
+
+  // A section or subsection made in the track (or one never in the outline)
+  // joins the outline, bound and green, then the outline takes the track's order.
   if (madeInTrack) {
     const adopted = adoptScriptIntoOutline(after);
     if (adopted !== after) return alignOutlineToScript(adopted);
@@ -308,8 +338,6 @@ export const keepLinked = (before: ProjectFile, after: ProjectFile): ProjectFile
   if (!(after.outlines ?? []).some((outline) => outline.items.some((row) => row.boundUnitId || row.boundBeatId))) {
     return after;
   }
-  const outlineMoved = before.outlines !== after.outlines && outlineShape(before) !== outlineShape(after);
-  if (outlineMoved) return alignScriptToOutline(after);
   const scriptMoved =
     (before.units !== after.units || before.beats !== after.beats || before.markers !== after.markers) &&
     scriptShape(before) !== scriptShape(after);

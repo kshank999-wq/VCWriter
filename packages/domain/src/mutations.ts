@@ -1,6 +1,6 @@
 import { newId } from './ids.js';
 import { sendToGraveyard } from './graveyard.js';
-import { orderKeyForIndex } from './ordering.js';
+import { initialOrderKeys, keysInOrder, orderKeyForIndex } from './ordering.js';
 // Where the plan and the script meet: a scene bound to a node on a board, or
 // to a row in an outline, is the same object as it.
 import { retitlePlans, unbindRemovedFromPlans } from './planning.js';
@@ -125,6 +125,29 @@ export const addTrack = (
   return { file: touchProject({ ...file, tracks: [...file.tracks, track] }), track };
 };
 
+
+/**
+ * The sections in story order, or the beats of one section, re-keyed evenly in
+ * the order they are drawn where their keys would not let anything be placed
+ * between them (see `safeKeyBetween`). Nothing on the screen moves; what is
+ * placed next lands exactly where it was asked for.
+ */
+const withSpacedUnits = (file: ProjectFile): ProjectFile => {
+  const order = unitsInStoryOrder(file);
+  if (keysInOrder(order)) return file;
+  const keys = initialOrderKeys(order.length);
+  const keyOf = new Map(order.map((unit, index) => [unit.id as string, keys[index] as string]));
+  return { ...file, units: file.units.map((unit) => ({ ...unit, orderKey: keyOf.get(unit.id as string) ?? unit.orderKey })) };
+};
+
+const withSpacedBeats = (file: ProjectFile, unitId: StructuralUnitId): ProjectFile => {
+  const order = beatsForUnit(file, unitId);
+  if (keysInOrder(order)) return file;
+  const keys = initialOrderKeys(order.length);
+  const keyOf = new Map(order.map((beat, index) => [beat.id as string, keys[index] as string]));
+  return { ...file, beats: file.beats.map((beat) => (keyOf.has(beat.id as string) ? { ...beat, orderKey: keyOf.get(beat.id as string)! } : beat)) };
+};
+
 /**
  * Add a scene/chapter to a track at a position in the story.
  *
@@ -140,6 +163,7 @@ export const addUnit = (
   if (!file.tracks.some((track) => track.id === input.trackId)) {
     throw new DomainError(`Track ${input.trackId} does not exist in this project`);
   }
+  file = withSpacedUnits(file);
   const timestamp = nowIso();
   const siblings = unitsInStoryOrder(file);
   const unit = structuralUnitSchema.parse({
@@ -167,6 +191,7 @@ export const addBeat = (
   if (!file.units.some((unit) => unit.id === input.unitId)) {
     throw new DomainError(`Scene/chapter ${input.unitId} does not exist; a beat cannot float in a track`);
   }
+  file = withSpacedBeats(file, input.unitId);
   const timestamp = nowIso();
   const siblings = beatsForUnit(file, input.unitId);
   const beat = beatSchema.parse({
@@ -196,6 +221,7 @@ export const moveBeat = (
   if (!file.units.some((unit) => unit.id === input.toUnitId)) {
     throw new DomainError(`Scene/chapter ${input.toUnitId} does not exist`);
   }
+  file = withSpacedBeats(file, input.toUnitId);
   const siblings = beatsForUnit(file, input.toUnitId).filter((candidate) => candidate.id !== beat.id);
   const moved = touch({ ...beat, unitId: input.toUnitId, orderKey: orderKeyForIndex(siblings, input.index) });
   return touchProject({
@@ -228,6 +254,7 @@ export const moveUnit = (
       units: file.units.map((candidate) => (candidate.id === unit.id ? retrackd : candidate)),
     });
   }
+  file = withSpacedUnits(file);
   const siblings = unitsInStoryOrder(file).filter((candidate) => candidate.id !== unit.id);
   const moved = touch({ ...unit, trackId: input.toTrackId, orderKey: orderKeyForIndex(siblings, input.index) });
   return touchProject({

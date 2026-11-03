@@ -800,3 +800,39 @@ sections) and outline follows track. Driven in the preview: *Add all to
 track* on an outline with nested subsections turned every dot green, and
 dragging *THE MONEY* above *Publishers* in the Outliner reordered the track,
 with the chapter now starting on it.
+
+## Return landing at the bottom, and Add all to track doing nothing
+
+From Ken: *sometimes when you hit enter to create a section below, it pops it
+down to the bottom and it's also in the wrong section category… The add all
+tracks function doesn't work… I'm clicking it and it's not transferring
+anything.* The preview did all of it right on a fresh book. His projects,
+built up over time, held four things the fresh book did not.
+
+- **The link ran the wrong way.** `keepLinked` first adopted any unlinked
+  track item into the outline, then laid the outline out in the *track's*
+  order. On Add to track the track was still in its old order, so the new or
+  moved row was reshuffled: to the bottom, under the wrong parent. Now the
+  side that moved leads. When the outline's shape changed, the track follows
+  it first, and adoption comes after. The outline follows the track only when
+  the track alone changed.
+- **The starter scene was adopted.** The empty seed section every new project
+  starts with was adopted as a stray top-level row, and rows were put around
+  it. A seed is a unit made with the project, whose beats were made with it
+  and are empty. It is no longer adopted. Once written in, it is.
+- **Order keys that collide.** Imports and syncs can leave sections or beats
+  sharing an order key. `orderKeyBetween` throws on equal neighbours, and one
+  throw abandoned the whole Add all. Now `safeKeyBetween` never throws. `addUnit`, `addBeat`,
+  `moveUnit` and `moveBeat` re-key a track or a section whose keys are not in
+  strict order (`withSpacedUnits`, `withSpacedBeats`) before placing anything.
+- **Rows that point at nothing.** A row whose section or beat was deleted in
+  the track still read as "in the track". It showed green, was not counted,
+  and Add all skipped it, so the button could be disabled with nothing
+  transferred. `promoteAll` now releases such rows and places them again. The
+  Outliner's dot, its count and the button read the resolved binding
+  (`promotedOf`), not the stored id.
+
+The same code serves every format with a track and an outline. Tests in
+`outline-link.test.ts` cover the seed and promotion led by the outline.
+`outline-drop.test.ts` covers Add all with shared keys, a row whose section
+was deleted, and a screenplay transferred in order through the link.

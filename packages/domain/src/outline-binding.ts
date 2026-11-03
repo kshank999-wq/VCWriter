@@ -368,7 +368,10 @@ const promoteChapter = (
  * the press can say what it did and what it could not.
  */
 export const promoteAll = (file: ProjectFile, outlineId: OutlineId): { file: ProjectFile; added: number; left: number } => {
-  let current = file;
+  // A row bound to a section, beat or chapter that has since been deleted
+  // from the track reads as in it and would be passed over; it is a plan
+  // again, so it goes back in (from Ken: *it's not transferring anything*).
+  let current = releaseDangling(file, outlineId);
   let added = 0;
   // Rounds, because a subsection can go only once its section has.
   for (let round = 0; round < 4; round += 1) {
@@ -396,6 +399,14 @@ export const promoteAll = (file: ProjectFile, outlineId: OutlineId): { file: Pro
   const final = findOutline(current, outlineId);
   const left = final ? final.items.filter((one) => promoteKindOf(one) !== null && !isPromoted(one)).length : 0;
   return { file: current, added, left };
+};
+
+/** Rows whose binding names something no longer in the project, made plans again. */
+const releaseDangling = (file: ProjectFile, outlineId: OutlineId): ProjectFile => {
+  const outline = findOutline(file, outlineId);
+  if (!outline) return file;
+  const dangling = outline.items.filter((item) => isPromoted(item) && promotedOf(file, item) === null);
+  return dangling.reduce((current, item) => unpromoteRow(current, outlineId, item.id), file);
 };
 
 /** Every row, top to bottom as the outline reads, folds ignored. */

@@ -8,6 +8,9 @@ import {
   outdentItem,
   nudgeItem,
   promoteAll,
+  keepLinked,
+  beatsForUnit,
+  promoteRow,
   isPromoted,
   unitsInStoryOrder,
   findOutline,
@@ -226,5 +229,56 @@ describe('Add all to track puts what was moved back in line', () => {
     file = promoteAll(file, made.id).file;
     const units = unitsInStoryOrder(file).map((one) => one.title);
     expect(units.indexOf('Times')).toBeLessThan(units.indexOf('Division'));
+  });
+});
+
+describe('Add all to track in a project built up over time (from Ken: *it is not transferring anything*)', () => {
+  it('still transfers everything where sections and beats in the track share keys', () => {
+    const made = book();
+    let file = promoteRow(made.file, made.id, made.rows['c1']!).file;
+    // Every section in the track given the same key, as imports and syncs can leave them.
+    const key = file.units[0]!.orderKey;
+    file = { ...file, units: file.units.map((unit) => ({ ...unit, orderKey: key })), beats: file.beats.map((beat) => ({ ...beat, orderKey: key })) };
+    const done = promoteAll(file, made.id);
+    expect(done.left).toBe(0);
+    expect(findOutline(done.file, made.id)!.items.every((row) => isPromoted(row))).toBe(true);
+  });
+
+  it('puts back a row whose section was deleted from the track', () => {
+    const made = book();
+    let file = promoteAll(made.file, made.id).file;
+    const times = findOutline(file, made.id)!.items.find((row) => row.id === made.rows['s2'])!;
+    // The section deleted in the track; the row still says it is in.
+    file = { ...file, units: file.units.filter((unit) => unit.id !== times.boundUnitId) };
+    const again = promoteAll(file, made.id).file;
+    const row = findOutline(again, made.id)!.items.find((one) => one.id === made.rows['s2'])!;
+    expect(again.units.some((unit) => unit.id === row.boundUnitId)).toBe(true);
+  });
+
+  it('transfers a screenplay outline in order, scenes and beats, through the link', () => {
+    let file: ProjectFile = createProjectFile({ title: 'Blackout', format: 'screenplay' });
+    const made = createOutline(file, { name: 'Outline' });
+    file = made.file;
+    const id = made.outline.id;
+    const add = (kind: string, title: string, parentId?: OutlineItemId) => {
+      const r = addItem(file, id, { kind, title, ...(parentId ? { parentId } : {}) });
+      file = r.file;
+      return r.itemId as OutlineItemId;
+    };
+    const one = add('scene', 'Warehouse');
+    add('beat', 'Mara enters', one);
+    add('beat', 'She finds the case', one);
+    const two = add('scene', 'Rooftop');
+    add('beat', 'The chase', two);
+    const before = file;
+    const after = keepLinked(before, promoteAll(before, id).file);
+    expect(findOutline(after, id)!.items.every((row) => isPromoted(row))).toBe(true);
+    const bound = new Set(findOutline(after, id)!.items.map((row) => row.boundUnitId));
+    // The untouched starter scene stays where it was and is not counted.
+    const scenes = unitsInStoryOrder(after).filter((unit) => bound.has(unit.id));
+    expect(scenes.map((unit) => unit.title)).toEqual(['Warehouse', 'Rooftop']);
+    expect(beatsForUnit(after, scenes[0]!.id).map((beat) => beat.title)).toEqual(['Mara enters', 'She finds the case']);
+    // The outline keeps the order it was written in.
+    expect(shape(after, id)).toEqual(['Warehouse', '  Mara enters', '  She finds the case', 'Rooftop', '  The chase']);
   });
 });

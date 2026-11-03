@@ -15,6 +15,7 @@ import {
   moveUnit,
   outlineRows,
   promoteAll,
+  promoteRow,
   unitsInStoryOrder,
   type OutlineItemId,
   type ProjectFile,
@@ -121,9 +122,9 @@ describe('what is made in the track joins the outline', () => {
     const file = keepLinked(made.file, added.file);
     const order = outlineOrder(file, made.id);
     expect(order.slice(order.indexOf('  Money'), order.indexOf('  Money') + 3)).toEqual(['  Money', '    New beat', '    Selling']);
-    // The section the project began with is in the track too, so it joins,
-    // before the chapter — where it stands in the track.
-    expect(order.indexOf('Chapter One')).toBeLessThan(order.indexOf('One'));
+    // The section the project was born with, untouched, does not join: it
+    // put a stray row at the top of a book's outline (from Ken).
+    expect(order).not.toContain('Chapter One');
     const row = findOutline(file, made.id)!.items.find((one) => one.title === 'New beat')!;
     expect(row.boundBeatId).toBe(added.beat.id);
   });
@@ -155,5 +156,26 @@ describe('what was planned for a beat, beside its writing', () => {
       [0, 'beat', 'Major studios'],
       [0, 'note', 'Penguin, Harper'],
     ]);
+  });
+});
+
+describe('a change made in the Outliner keeps the outline as arranged (from Ken: *it pops it down to the bottom*)', () => {
+  it('adding and promoting a section leaves the outline where the writer put it, and the track follows', () => {
+    const made = book();
+    // The track has drifted from the outline: Money stands before Publishers.
+    const money = unitsInStoryOrder(made.file).find((unit) => unit.title === 'Money')!;
+    let file = moveUnit(made.file, { unitId: money.id, toTrackId: money.trackId, index: 0 });
+    const before = outlineOrder(file, made.id);
+    // A new section right after Publishers, then Add to track — as the Outliner does it.
+    const row = addItem(file, made.id, { kind: 'scene', title: 'Agents', parentId: made.rows['c1']!, afterId: made.rows['s1']! });
+    const promoted = promoteRow(row.file, made.id, row.itemId!).file;
+    file = keepLinked(file, promoted);
+    const after = outlineOrder(file, made.id);
+    // The outline is as arranged, with Agents where it was put.
+    expect(after).toEqual([...before.slice(0, before.indexOf('  Money')), '  Agents', ...before.slice(before.indexOf('  Money'))]);
+    expect(after).not.toContain('Chapter One');
+    // The track follows the outline.
+    const units = unitsInStoryOrder(file).map((unit) => unit.title).filter((title) => title !== 'Chapter One');
+    expect(units).toEqual(['Publishers', 'Agents', 'Money']);
   });
 });
