@@ -1175,3 +1175,15 @@ last line, so the next words — dictated or typed — start a new one; dictatio
 in progress carries straight on after it. A new line is not added to an empty
 note, and on the title Enter moves to the note, as Return does in a form. The
 words that follow a new line or a space are joined without an extra space.
+
+## 33. New project at the top
+
+From Ken: *if you're already in a project and then you try to start a new
+project, the project fill-in portion and the button are at the bottom. So the
+pop-up keyboard blocks you from hitting the button. It needs to always be at
+the top of the page with the existing ones underneath it.*
+
+On the project list, **New project** and **Which projects** sit directly under
+the heading, and the form they open (title, kind, *Start it*, *Cancel*) opens
+there too, above every existing project. The list follows. A tap on *Start it*
+with the keyboard up lands the first time instead of only closing the keyboard.
