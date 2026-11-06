@@ -83,6 +83,10 @@ export const adminClient = (): SupabaseClient => {
   if (!cachedAdmin) {
     cachedAdmin = createClient(env.supabaseUrl, env.supabaseServiceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
+      // Never through Next's data cache: a service-role read is the catalogue,
+      // licences and orders as they are now. Cached, an activated build or new
+      // release notes went on being served stale (found activating 1.0.13).
+      global: { fetch: (input, init) => fetch(input, { ...init, cache: 'no-store' }) },
     });
   }
   return cachedAdmin;
