@@ -1,95 +1,129 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { RoomSave } from './RoomSave';
 import { RoomFormat } from './RoomFormat';
 import { ResearchShelf, type ShelfCarry } from './ResearchShelf';
 import { usePhoneNotes } from '../phone-notes';
 import { PopOutButton } from './PopOutButton';
-import { usePreference } from '../use-split';
 import {
-  COLUMN_WIDTH,
-  addBlock,
-  addChild,
-  addColumn,
+  CARD_HEIGHT,
+  CARD_WIDTH,
+  SCULPT_LEVEL_PRESETS,
+  SCULPT_LINK_TYPES,
+  SCULPT_TYPES,
+  SCULPT_TYPE_INFO,
   addCharacter,
+  addNode,
   addToTrack,
-  sayTrackOffer,
-  trackOffer,
-  addColumnField,
-  addResearchRow,
-  canCarryToBoard,
+  ancestorsOf,
+  applyView,
   approveCapture,
-  carryRowToBoard,
-  castByCategory,
-  castOnNode,
+  autoLayout,
   bindKindOf,
   bindNode,
   bindableBeats,
   bindableUnits,
-  blocksOf,
-  boardLayout,
-  isFiltered,
-  readBoard,
   boardsOf,
   boundOf,
-  columnOf,
-  columnsOf,
+  breadcrumbsOf,
+  canChangeType,
+  canReparent,
+  carryRowToBoard,
+  castForLibrary,
+  childrenOf,
+  collapseAll,
+  collapseBranch,
+  collapseToLevel,
+  copyBranch,
+  cornerDots,
   createBoard,
-  fieldsOf,
+  drawnLinks,
+  duplicatePlacement,
+  enterNode,
+  entitiesOf,
+  entityTitle,
+  explodeAll,
+  explodeBranch,
   findBoard,
+  findEntity,
   findNode,
   flipLink,
   followCanvas,
   isBound,
   linkNodes,
-  linksOf,
-  outlinesOf,
   linksTouching,
+  makeReusable,
+  mapPicture,
   miniMap,
+  moveChangesContext,
   moveNode,
+  moveNodeTo,
+  needsAMap,
+  nestedSummaries,
+  nounsFor,
   outOfStep,
-  removeColumn,
-  removeColumnField,
+  outlinesOf,
+  pasteBranch,
+  pinNode,
+  placeEntity,
+  placeSource,
+  placementsOfEntity,
   relabelLink,
-  knowsCharacter,
   removalComfort,
   removalQuestion,
+  removeEntity,
   removeNode,
-  renameColumn,
-  renameColumnField,
-  setNodeCast,
+  removeView,
+  revealNode,
+  saveView,
+  sayNested,
+  sayTrackOffer,
+  sceneOf,
+  actorOf,
+  sculptLinkTypeName,
+  sculptTypeInfo,
+  sculptTypeName,
+  searchBoard,
+  setFavorite,
+  setHiddenLinkTypes,
+  setLinkType,
   setNodeField,
-  standingFor,
+  setNodeType,
+  titleOf,
+  toggleBranch,
+  trackOffer,
   unbindNode,
   unlinkNodes,
+  updateEntity,
   updateNode,
+  upgradeBoards,
+  viewStateOf,
   whatGoesWith,
   windowFromMap,
   type BeatId,
   type Board,
   type BoardWindow,
-  type LaidNode,
+  type PlacedCard,
   type ProjectFile,
-  type SculptorColumn,
-  type SculptorNode,
-  type BoardView,
-  type SculptorNodeId,
-  type StructuralUnitId,
-  nounsFor,
   type SaveKind,
+  type SculptClip,
+  type SculptorEntityId,
+  type SculptorLevel,
+  type SculptorLinkId,
+  type SculptorNode,
+  type SculptorNodeId,
+  type SculptorSourceKind,
+  type SculptorViewId,
+  type StructuralUnitId,
 } from '@vcwriter/domain';
 
 /**
- * The Story Sculptor's canvas (addendum 03), stages 1–7.
+ * Story Sculptor 2.0 (addendum 03 v2): the one Sculptor.
  *
- * **Story time runs down; detail runs right.** A new board is two nodes,
- * Beginning and End, and everything else is put in by the writer — there is
- * no template, and a board with one block between the ends is a valid board
- * (§11).
- *
- * Nothing here decides where anything goes: `boardLayout` measures the whole
- * diagram from §4's one rule, and this draws what it is given at the current
- * zoom. **Canvas units in the model, pixels in the view** (§4, §14.2), which
- * is the one piece of the first draft that survived it.
+ * A nested, expandable story mind map. New cards come from the palette on
+ * the left, existing characters, places and reusable items from the library
+ * on the right, and the selected card's details from the inspector under it.
+ * The toolbar explodes the whole hierarchy onto the canvas, folds it back to
+ * its frames or to a level, and walks in and out of a card's own mini map.
  */
 
 interface SculptorWindowProps {
@@ -97,213 +131,98 @@ interface SculptorWindowProps {
   open: boolean;
   onClose(): void;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
-  /**
-   * Take the board to a window of its own (addendum 02 §8). Absent in the
-   * window that already is one — there is nowhere further to send it.
-   *
-   * The board needs no other change to live there: it covers the workspace
-   * whole, so a window of its own is the same component with nothing under it.
-   */
   onPopOut?(): void;
-  /**
-   * Save the project somewhere else, from in here (addendum 29 §2). A room
-   * covers the menu bar, so without this the two acts are reachable only by a
-   * shortcut nobody can see. Absent where a host hands nothing down.
-   */
   onSaveAs?(kind: SaveKind): void;
-
+  onUndo?(): void;
+  onRedo?(): void;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  /** Leave for the script at this beat (*Open scene*, *Open beat*). */
+  onGoToBeat?(beatId: BeatId): void;
+  /** Open the research room, where the cast and the places are (*Open character*). */
+  onOpenResearch?(): void;
 }
 
-/** Pixels to a canvas unit at 100%. A row is this tall; a column four across. */
-const UNIT = 46;
-const MIN_ZOOM = 0.4;
+const MIN_ZOOM = 0.15;
 const MAX_ZOOM = 2;
+/** Below this the cards are drawn simplified so the titles stay legible (v2 §11). */
+const FAR = 0.55;
+const MAP_BOX = { width: 180, height: 120 };
+const DRAG_TYPE = 'application/x-vc-sculpt';
 
-/**
- * The largest the mini-map may be (§10). The board is fitted inside it with
- * its proportions kept, so this is a bound rather than a size: a tall board
- * makes a tall map and a wide one makes a wide map, and neither is squashed.
- */
-const MAP_BOX = { width: 176, height: 124 };
+/** What can be dragged onto the canvas from the palette or the library. */
+type Payload =
+  | { kind: 'type'; type: string }
+  | { kind: 'source'; source: { kind: SculptorSourceKind; id: string } }
+  | { kind: 'entity'; id: string }
+  | { kind: 'unit'; id: string };
 
-/**
- * The curve for one of the writer's own connections, and where its label goes.
- *
- * Two shapes, and which one is drawn says something:
- *
- * - **Forwards**, into a later column, is the flow of detail: it leaves the
- *   right edge and arrives at the left, like every other line on the canvas.
- * - **Backwards, or within one column**, leaves the right edge and comes back
- *   to the right edge, bowing out into the air to the right of both. Squeezing
- *   it through the gap between two columns — which is merely where the ends
- *   happen to be — draws a kink in the one place the canvas is busiest.
- *
- * The label sits at the curve's midpoint, which for a cubic is
- * `(P0 + 3·P1 + 3·P2 + P3) / 8` — a point actually on the line, rather than
- * halfway between the ends, which on a bend is nowhere near it.
- */
-const linkCurve = (
-  from: LaidNode,
-  to: LaidNode,
-  zoom: number,
-): { d: string; midX: number; midY: number } => {
-  const px = (units: number) => units * UNIT * zoom;
-  const midOf = (laid: LaidNode) => px(laid.y + laid.headHeight / 2);
+type Camera = { zoom: number; pan: { x: number; y: number } };
 
-  const forwards = to.column > from.column;
-  const y0 = midOf(from);
-  const y1 = midOf(to);
-  const x0 = px(from.x + COLUMN_WIDTH);
-  const x1 = forwards ? px(to.x) : px(to.x + COLUMN_WIDTH);
+const isTyping = (target: EventTarget | null): boolean =>
+  target instanceof HTMLElement && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
 
-  // Forwards, the curve is shaped by the gap it crosses, exactly as the
-  // structural wires are — a control point thrown further out than the span is
-  // wide draws a hook rather than a curve. Backwards, there is no span to
-  // shape it, so the bow is its own: wide enough to read, and wider the
-  // further apart the ends are, so a line down the length of the board does
-  // not flatten against it.
-  const flow = Math.max((x1 - x0) / 2, px(0.5));
-  const bow = px(COLUMN_WIDTH * 0.55) + Math.abs(y1 - y0) * 0.22;
-  const cx0 = forwards ? x0 + flow : x0 + bow;
-  const cx1 = forwards ? x1 - flow : x1 + bow;
-
-  return {
-    d: `M ${x0} ${y0} C ${cx0} ${y0}, ${cx1} ${y1}, ${x1} ${y1}`,
-    midX: (x0 + 3 * cx0 + 3 * cx1 + x1) / 8,
-    midY: (y0 + 3 * y0 + 3 * y1 + y1) / 8,
-  };
-};
-
-/** As much of an observation as will sit on a line without crossing the board. */
-const shortened = (label: string): string => (label.length > 30 ? `${label.slice(0, 29)}\u2026` : label);
-
-/**
- * Push a label clear of one already drawn near it.
- *
- * Two links between nearby cards put their midpoints in nearly the same place,
- * and two sentences on top of each other are worse than one of them. Each is
- * moved down past whatever it collides with, in the order the lines were
- * drawn, so the picture stays readable without moving the lines themselves.
- */
-const LABEL_ROW = 14;
-const spreadLabels = (points: { x: number; y: number }[]): number[] => {
-  const placed: { x: number; y: number }[] = [];
-  return points.map((point) => {
-    let y = point.y;
-    for (let pass = 0; pass < placed.length; pass += 1) {
-      const clash = placed.find(
-        (other) => Math.abs(other.x - point.x) < 120 && Math.abs(other.y - y) < LABEL_ROW,
-      );
-      if (!clash) break;
-      y = clash.y + LABEL_ROW;
-    }
-    placed.push({ x: point.x, y });
-    return y;
-  });
-};
-
-export function SculptorWindow({ file, open, onClose, onUpdate, onPopOut, onSaveAs }: SculptorWindowProps) {
+export function SculptorWindow({
+  file,
+  open,
+  onClose,
+  onUpdate,
+  onPopOut,
+  onSaveAs,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
+  onGoToBeat,
+  onOpenResearch,
+}: SculptorWindowProps) {
   const boards = boardsOf(file);
-  // §14: the board talks about scenes and beats in half a dozen tooltips.
-  const nouns = nounsFor(file.project.format);
   const [boardId, setBoardId] = useState<string | null>(null);
-  const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState({ x: 40, y: 24 });
-  const [selected, setSelected] = useState<SculptorNodeId | null>(null);
-  /** The card whose own dialog is open, where one is (§5). */
-  const [openCard, setOpenCard] = useState<SculptorNodeId | null>(null);
-  /**
-   * The card the writer has asked to delete, while the board asks them back.
-   *
-   * One dialog for the board rather than one on every card: the question is
-   * about what goes with it, and only the board knows that.
-   */
-  const [removing, setRemoving] = useState<SculptorNodeId | null>(null);
-  /**
-   * The card the writer right-clicked, and where, while its menu is up (§6a).
-   *
-   * One menu for the board rather than one on every card, for the removal
-   * dialog's reason: what it offers is read off the board and the script.
-   */
-  const [menu, setMenu] = useState<{ nodeId: SculptorNodeId; x: number; y: number } | null>(null);
-  /** The shelf, folded out over the canvas rather than beside it (§5). */
-  const [shelfOpen, setShelfOpen] = useState(false);
-
-  /**
-   * What the writer has asked to see (§10). Per machine rather than in the
-   * document: a filter is how somebody is reading the board this afternoon,
-   * not something about the story, and a collaborator opening it should not
-   * inherit somebody else's search.
-   */
-  const [depth, setDepth] = usePreference<number | null>('sculptor.depth', null);
-  const [unboundOnly, setUnboundOnly] = usePreference('sculptor.unbound', false);
-  const [focusId, setFocusId] = useState<SculptorNodeId | null>(null);
-  const [search, setSearch] = useState('');
-  const [searchOpen, setSearchOpen] = useState(false);
-
-  const boardView: BoardView = useMemo(
-    () => ({ depth, unboundOnly, focusId, search }),
-    [depth, unboundOnly, focusId, search],
-  );
-  /** The node a connection is being drawn from, while one is (§7). */
-  const [linking, setLinking] = useState<SculptorNodeId | null>(null);
-  /**
-   * What is being carried off the shelf, in a ref as well as in state.
-   *
-   * `dataTransfer.getData` is empty during `dragover` by design, so the
-   * handler that has to say whether a card is a legal place to put something
-   * reads it from here.
-   */
-  const carrying = useRef<ShelfCarry | null>(null);
-  const [carryingAny, setCarryingAny] = useState(false);
-  /** What the phone has sent, so a note can be dragged onto the board (§15). */
-  const phone = usePhoneNotes(file.project.id as string);
-  const [overNode, setOverNode] = useState<SculptorNodeId | null>(null);
-  const dragging = useRef<{ x: number; y: number } | null>(null);
-
-  // Escape gets out of drawing a connection, which is what Escape is for —
-  // and closes the card's menu, which is the other thing it is for.
-  useEffect(() => {
-    if (linking === null && menu === null) return undefined;
-    const escape = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      setLinking(null);
-      setMenu(null);
-    };
-    window.addEventListener('keydown', escape);
-    return () => window.removeEventListener('keydown', escape);
-  }, [linking, menu]);
-
   const board: Board | null = useMemo(() => {
-    if (boards.length === 0) return null;
-    const chosen = boardId ? boards.find((candidate) => (candidate.id as string) === boardId) : undefined;
+    const chosen = boardId ? boards.find((one) => (one.id as string) === boardId) : undefined;
     return chosen ?? boards[0] ?? null;
   }, [boards, boardId]);
 
-  // A project with no board gets one the first time the Sculptor is opened:
-  // the work starts at Beginning and End, so they have to be there to type in.
+  // One Sculptor: a project with no map gets one, and a version-1 board is
+  // upgraded the first time it is opened here (v2 §13).
   useEffect(() => {
-    if (open && boards.length === 0) onUpdate((current) => createBoard(current).file);
-  }, [open, boards.length, onUpdate]);
+    if (!open) return;
+    if (boards.length === 0) onUpdate((current) => createBoard(current).file);
+    else if (boards.some((one) => (one.schemaVersion ?? 1) < 2)) onUpdate((current) => upgradeBoards(current).file);
+  }, [open, boards, onUpdate]);
 
-  const layout = useMemo(() => (board ? boardLayout(board, boardView) : null), [board, boardView]);
-  const reading = useMemo(() => (board ? readBoard(board, boardView) : null), [board, boardView]);
-
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 40, y: 40 });
+  const cameras = useRef(new Map<string, Camera>());
+  const [selected, setSelected] = useState<SculptorNodeId | null>(null);
+  const [selectedLink, setSelectedLink] = useState<SculptorLinkId | null>(null);
+  const [menu, setMenu] = useState<{ nodeId: SculptorNodeId; x: number; y: number } | null>(null);
+  const [removing, setRemoving] = useState<SculptorNodeId | null>(null);
+  const [removingEntity, setRemovingEntity] = useState<SculptorEntityId | null>(null);
+  const [confirmMove, setConfirmMove] = useState<{ nodeId: SculptorNodeId; parentId: SculptorNodeId | null; message: string } | null>(null);
+  const [castPrompt, setCastPrompt] = useState<{ parentId: SculptorNodeId | null } | null>(null);
+  const [connecting, setConnecting] = useState<SculptorNodeId | null>(null);
+  const [portDrag, setPortDrag] = useState<{ from: SculptorNodeId; x: number; y: number } | null>(null);
+  const [cardDrag, setCardDrag] = useState<{ id: SculptorNodeId; dx: number; dy: number; moved: boolean } | null>(null);
+  const [dropOn, setDropOn] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState<SculptorNodeId | null>(null);
+  const [query, setQuery] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [clip, setClip] = useState<SculptClip | null>(null);
+  const [shelfOpen, setShelfOpen] = useState(false);
+  const [viewName, setViewName] = useState('');
+  const [status, setStatus] = useState<string | null>(null);
+  const searchBox = useRef<HTMLInputElement | null>(null);
   const canvas = useRef<HTMLDivElement | null>(null);
+  const panning = useRef<{ x: number; y: number } | null>(null);
+  const spaceDown = useRef(false);
+  const carrying = useRef<ShelfCarry | null>(null);
+  const phone = usePhoneNotes(file.project.id as string);
+  const nouns = nounsFor(file.project.format);
 
-  /**
-   * How big the window onto the board is, in pixels.
-   *
-   * Measured rather than assumed, and re-measured when the shelf folds out or
-   * the writer resizes: the mini-map's whole question is whether the board is
-   * bigger than *this*, and a stale answer would leave a map over a board that
-   * fits, or none over one that does not.
-   */
   const [frame, setFrame] = useState({ width: 0, height: 0 });
   useEffect(() => {
     const element = canvas.current;
-    // Guarded the way the Script's own measurement is: a renderer without a
-    // `ResizeObserver` still draws the board, it just does not re-measure it.
     if (!open || !element || typeof ResizeObserver !== 'function') return undefined;
     const measure = () => setFrame({ width: element.clientWidth, height: element.clientHeight });
     measure();
@@ -312,260 +231,406 @@ export function SculptorWindow({ file, open, onClose, onUpdate, onPopOut, onSave
     return () => watcher.disconnect();
   }, [open, shelfOpen]);
 
-  /** The pan, said the way the domain talks: canvas units, from the top left. */
-  const boardWindow: BoardWindow = useMemo(() => {
-    const px = UNIT * zoom;
-    return {
-      left: -pan.x / px,
-      top: -pan.y / px,
-      width: frame.width / px,
-      height: frame.height / px,
-    };
-  }, [pan, zoom, frame]);
+  const picture = useMemo(() => (board ? mapPicture(board) : null), [board]);
+  const summaries = useMemo(() => (board ? nestedSummaries(board) : new Map()), [board]);
+  const links = useMemo(() => (board && picture ? drawnLinks(board, picture.visible) : { lines: [], inside: new Map<string, number>(), outside: new Map<string, number>() }), [board, picture]);
+  const cardAt = useMemo(() => new Map((picture?.cards ?? []).map((card) => [card.node.id as string, card])), [picture]);
+  const state = board ? viewStateOf(board) : null;
+  const crumbs = board ? breadcrumbsOf(board) : [];
+  const chosen = board && selected ? findNode(board, selected) : null;
+  const hits = useMemo(() => (board && query.trim() ? searchBoard(file, board, query).slice(0, 30) : []), [file, board, query]);
 
-  const map = useMemo(
-    () =>
-      layout && reading && frame.width > 0 && frame.height > 0
-        ? miniMap(layout, reading, boardWindow, MAP_BOX)
-        : null,
-    [layout, reading, boardWindow, frame],
+  const write = useCallback(
+    (mutate: (current: ProjectFile, id: Board['id']) => ProjectFile) => {
+      if (!board) return;
+      onUpdate((current) => mutate(current, board.id));
+    },
+    [board, onUpdate],
   );
 
-  /** Pressing or dragging on the map moves the board under the window. */
-  const mapping = useRef(false);
-  const moveToMap = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (!map || !layout) return;
-    const box = event.currentTarget.getBoundingClientRect();
-    const moved = windowFromMap(map, layout, boardWindow, {
-      x: event.clientX - box.left,
-      y: event.clientY - box.top,
-    });
-    const px = UNIT * zoom;
-    setPan({ x: -moved.left * px, y: -moved.top * px });
+  /** Where something dropped on empty canvas goes: under the card being shown, or the top. */
+  const canvasParent = (): SculptorNodeId | null => (state?.rootId ? (state.rootId as SculptorNodeId) : null);
+
+  // ------------------------------------------------------------ camera
+
+  const centreOn = useCallback(
+    (nodeId: string, at: number = zoom) => {
+      const card = cardAt.get(nodeId);
+      const element = canvas.current;
+      if (!card || !element) return;
+      setPan({
+        x: element.clientWidth / 2 - (card.x + CARD_WIDTH / 2) * at,
+        y: element.clientHeight / 2 - (card.y + CARD_HEIGHT / 2) * at,
+      });
+    },
+    [cardAt, zoom],
+  );
+
+  const fitAll = useCallback(() => {
+    const element = canvas.current;
+    if (!picture || !element || picture.cards.length === 0) return;
+    const scale = Math.max(MIN_ZOOM, Math.min(1.2, (element.clientWidth - 60) / picture.width, (element.clientHeight - 60) / picture.height));
+    setZoom(scale);
+    setPan({ x: (element.clientWidth - picture.width * scale) / 2, y: (element.clientHeight - picture.height * scale) / 2 });
+  }, [picture]);
+
+  /** Into a card's own map, or back out, remembering where the camera was on each (v2 §5). */
+  const goTo = useCallback(
+    (nodeId: SculptorNodeId | null) => {
+      if (!board) return;
+      const from = viewStateOf(board).rootId ?? '';
+      cameras.current.set(from, { zoom, pan });
+      write((current, id) => enterNode(current, id, nodeId));
+      const back = cameras.current.get((nodeId as string | null) ?? '');
+      if (back) {
+        setZoom(back.zoom);
+        setPan(back.pan);
+      } else {
+        setZoom(1);
+        setPan({ x: 40, y: Math.max(40, frame.height / 2 - CARD_HEIGHT) });
+      }
+      if (nodeId) setSelected(nodeId);
+    },
+    [board, write, zoom, pan, frame.height],
+  );
+
+  const reveal = (nodeId: SculptorNodeId) => {
+    write((current, id) => revealNode(current, id, nodeId));
+    setSelected(nodeId);
+    setSearchOpen(false);
+    // Centred once the canvas has laid the revealed card out.
+    window.setTimeout(() => centreOn(nodeId as string), 0);
   };
 
-  /**
-   * Put a node in the middle of the window (§10's *jump-to*).
-   *
-   * The pan is the sheet's offset inside the canvas, so centring is the node's
-   * own position negated and pushed back by half the window. A hit lit
-   * somewhere off the edge has not been found until the canvas has gone to it.
-   */
-  const goTo = (nodeId: SculptorNodeId) => {
-    const found = layout?.nodes.find((laid) => laid.node.id === nodeId);
-    const frame = canvas.current;
-    if (!found || !frame) return;
-    setPan({
-      x: frame.clientWidth / 2 - (found.x + COLUMN_WIDTH / 2) * UNIT * zoom,
-      y: frame.clientHeight / 2 - (found.y + found.headHeight / 2) * UNIT * zoom,
+  // ------------------------------------------------------------ acts
+
+  const addUnder = (parentId: SculptorNodeId | null, type: string) => {
+    if (type === 'character') {
+      setCastPrompt({ parentId });
+      return;
+    }
+    let made: SculptorNodeId | null = null;
+    write((current, id) => {
+      const result = addNode(current, id, { parentId, kind: type });
+      made = result.nodeId;
+      return result.file;
+    });
+    window.setTimeout(() => {
+      if (made) {
+        setSelected(made);
+        setRenaming(made);
+      }
+    }, 0);
+  };
+
+  const place = (payload: Payload, parentId: SculptorNodeId | null) => {
+    if (payload.kind === 'type') return addUnder(parentId, payload.type);
+    if (payload.kind === 'source') return write((current, id) => placeSource(current, id, payload.source, parentId).file);
+    if (payload.kind === 'entity') return write((current, id) => placeEntity(current, id, payload.id as SculptorEntityId, parentId).file);
+    // A scene already in the script: a scene card bound to it.
+    write((current, id) => {
+      const made = addNode(current, id, { parentId, kind: 'scene' });
+      return made.nodeId ? bindNode(made.file, id, made.nodeId, { unitId: payload.id as unknown as StructuralUnitId }) : made.file;
     });
   };
 
-  const onPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    // Only the canvas itself pans; a node keeps its own clicks.
-    if ((event.target as HTMLElement).closest('.sculpt-node')) return;
-    dragging.current = { x: event.clientX - 0, y: event.clientY - 0 };
-    event.currentTarget.setPointerCapture(event.pointerId);
-  }, []);
+  const askMove = (nodeId: SculptorNodeId, parentId: SculptorNodeId | null) => {
+    if (!board || !canReparent(board, nodeId, parentId)) {
+      setStatus('A card cannot go inside itself or anything under it.');
+      return;
+    }
+    const message = moveChangesContext(board, nodeId, parentId);
+    if (message) setConfirmMove({ nodeId, parentId, message });
+    else write((current, id) => moveNodeTo(current, id, nodeId, { parentId }));
+  };
 
-  const onPointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    const from = dragging.current;
-    if (!from) return;
-    setPan((current) => ({ x: current.x + (event.clientX - from.x), y: current.y + (event.clientY - from.y) }));
-    dragging.current = { x: event.clientX, y: event.clientY };
-  }, []);
+  const putOnTrack = (nodeId: SculptorNodeId) => write((current, id) => addToTrack(current, id, nodeId).file);
 
-  const onPointerUp = useCallback(() => {
-    dragging.current = null;
-  }, []);
+  const dropShelf = (held: ShelfCarry, parentId: SculptorNodeId | null) => {
+    if (held.kind === 'research') return write((current, id) => placeSource(current, id, { kind: 'research', id: held.id as string }, parentId).file);
+    if (held.kind === 'note') {
+      const note = phone.notes.find((one) => one.id === held.id);
+      if (!note) return;
+      write((current, id) => {
+        try {
+          const done = approveCapture(current, note, { kind: 'board', boardId: id, parentId });
+          void phone.resolve(done.capture).then((why) => phone.setError(why));
+          return done.file;
+        } catch (cause) {
+          phone.setError(cause instanceof Error ? cause.message : 'That note could not be placed');
+          return current;
+        }
+      });
+      return;
+    }
+    if (held.kind === 'row' && parentId) {
+      const outline = outlinesOf(file)[0];
+      if (outline) write((current, id) => carryRowToBoard(current, outline.id, held.id, id, parentId).file);
+    }
+  };
+
+  const onDrop = (event: DragEvent, parentId: SculptorNodeId | null) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setDropOn(null);
+    const raw = event.dataTransfer.getData(DRAG_TYPE);
+    if (raw) {
+      try {
+        place(JSON.parse(raw) as Payload, parentId);
+      } catch {
+        // not ours
+      }
+      return;
+    }
+    const held = carrying.current;
+    carrying.current = null;
+    if (held) dropShelf(held, parentId);
+  };
+
+  // ------------------------------------------------------------ keys (v2 §11)
+
+  useEffect(() => {
+    if (!open || !board) return undefined;
+    const keys = (event: KeyboardEvent) => {
+      if (event.key === ' ' && !isTyping(event.target)) spaceDown.current = event.type === 'keydown';
+      if (event.type !== 'keydown') return;
+      const mod = event.metaKey || event.ctrlKey;
+      if (mod && event.key.toLowerCase() === 'f') {
+        event.preventDefault();
+        setSearchOpen(true);
+        window.setTimeout(() => searchBox.current?.focus(), 0);
+        return;
+      }
+      if (isTyping(event.target)) return;
+      if (event.key === 'Escape') {
+        if (menu || connecting || portDrag || castPrompt || removing || confirmMove) {
+          setMenu(null);
+          setConnecting(null);
+          setPortDrag(null);
+          return;
+        }
+        if (selected || selectedLink) {
+          setSelected(null);
+          setSelectedLink(null);
+          return;
+        }
+        if (crumbs.length > 0) goTo((crumbs[crumbs.length - 2]?.id as SculptorNodeId | undefined) ?? null);
+        return;
+      }
+      if (!chosen) return;
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        goTo(chosen.id);
+      } else if (event.key === 'Delete' || event.key === 'Backspace') {
+        event.preventDefault();
+        setRemoving(chosen.id);
+      } else if (event.key === 'F2') {
+        event.preventDefault();
+        setRenaming(chosen.id);
+      } else if (event.key === 'Tab') {
+        event.preventDefault();
+        addUnder(chosen.id, SCULPT_TYPE_INFO[chosenChildType(chosen)].type);
+      } else if (mod && event.key.toLowerCase() === 'c') {
+        setClip(copyBranch(board, chosen.id));
+        setStatus('Copied. Select a card and press Ctrl+V to paste under it.');
+      } else if (mod && event.key.toLowerCase() === 'v' && clip) {
+        event.preventDefault();
+        write((current, id) => pasteBranch(current, id, clip, chosen.id, { asNew: event.shiftKey }).file);
+      } else if (event.key.startsWith('Arrow')) {
+        event.preventDefault();
+        const next = neighbour(board, picture?.visible ?? new Set(), chosen, event.key);
+        if (next) {
+          setSelected(next.id);
+          centreOn(next.id as string);
+        }
+      }
+    };
+    window.addEventListener('keydown', keys);
+    window.addEventListener('keyup', keys);
+    return () => {
+      window.removeEventListener('keydown', keys);
+      window.removeEventListener('keyup', keys);
+    };
+  });
 
   if (!open) return null;
 
-  const write = (mutate: (current: ProjectFile, id: Board['id']) => ProjectFile) => {
-    if (!board) return;
-    onUpdate((current) => mutate(current, board.id));
+  // ------------------------------------------------------------ canvas pointer
+
+  const toCanvas = (clientX: number, clientY: number) => {
+    const box = canvas.current?.getBoundingClientRect();
+    return { x: (clientX - (box?.left ?? 0) - pan.x) / zoom, y: (clientY - (box?.top ?? 0) - pan.y) / zoom };
   };
 
-  const chosen = board && selected ? board.nodes.find((node) => node.id === selected) ?? null : null;
-  const column = board && chosen ? columnOf(board, chosen) : null;
-  /** What *Add to track* would do to the selected card, or why nothing (§6a). */
-  const chosenOffer = board && chosen ? trackOffer(file, board, chosen.id) : null;
+  const cardUnder = (clientX: number, clientY: number, except?: Set<string>): PlacedCard | null => {
+    const at = toCanvas(clientX, clientY);
+    const found = (picture?.cards ?? []).filter(
+      (card) => !except?.has(card.node.id as string) && at.x >= card.x && at.x <= card.x + CARD_WIDTH && at.y >= card.y && at.y <= card.y + CARD_HEIGHT,
+    );
+    return found[found.length - 1] ?? null;
+  };
 
-  const menuNode = board && menu ? board.nodes.find((node) => node.id === menu.nodeId) ?? null : null;
-  const menuOffer = board && menuNode ? trackOffer(file, board, menuNode.id) : null;
-
-  /** The one act, from the toolbar, the menu or the panel: all three call this. */
-  const putOnTrack = (nodeId: SculptorNodeId) => {
-    write((current, id) => addToTrack(current, id, nodeId).file);
-    setSelected(nodeId);
+  const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if ((event.target as HTMLElement).closest('.sc-card, .sc-link-label, .sc-minimap')) return;
     setMenu(null);
+    if (!spaceDown.current && event.button === 0) {
+      setSelected(null);
+      setSelectedLink(null);
+    }
+    panning.current = { x: event.clientX, y: event.clientY };
+    capture(event.currentTarget, event.pointerId);
   };
 
-  const opened = board && openCard ? board.nodes.find((node) => node.id === openCard) ?? null : null;
-  const openedColumn = board && opened ? columnOf(board, opened) : null;
+  const onPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (portDrag) {
+      const at = toCanvas(event.clientX, event.clientY);
+      setPortDrag({ ...portDrag, x: at.x, y: at.y });
+      return;
+    }
+    if (cardDrag) {
+      const moved = cardDrag.moved || Math.abs(event.movementX) + Math.abs(event.movementY) > 0;
+      setCardDrag({ ...cardDrag, dx: cardDrag.dx + event.movementX / zoom, dy: cardDrag.dy + event.movementY / zoom, moved });
+      const over = cardUnder(event.clientX, event.clientY, new Set(board ? subtreeIds(board, cardDrag.id) : []));
+      setDropOn((over?.node.id as string | undefined) ?? null);
+      return;
+    }
+    const from = panning.current;
+    if (!from) return;
+    setPan((current) => ({ x: current.x + (event.clientX - from.x), y: current.y + (event.clientY - from.y) }));
+    panning.current = { x: event.clientX, y: event.clientY };
+  };
 
-  // What deleting would actually take, asked of the board before the writer
-  // is asked anything (§5). A card near the top carries everything under it,
-  // and the question has to say so.
-  const doomed = board && removing ? board.nodes.find((node) => node.id === removing) ?? null : null;
-  const going = board && removing ? whatGoesWith(file, board.id, removing) : null;
+  const onPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
+    panning.current = null;
+    if (portDrag) {
+      const target = cardUnder(event.clientX, event.clientY);
+      if (target && target.node.id !== portDrag.from) {
+        let made: SculptorLinkId | null = null;
+        write((current, id) => {
+          const result = linkNodes(current, id, portDrag.from, target.node.id);
+          made = result.linkId;
+          return result.file;
+        });
+        window.setTimeout(() => made && setSelectedLink(made), 0);
+      }
+      setPortDrag(null);
+      return;
+    }
+    if (cardDrag) {
+      const drag = cardDrag;
+      setCardDrag(null);
+      setDropOn(null);
+      if (!drag.moved || !board) return;
+      const over = cardUnder(event.clientX, event.clientY, new Set(subtreeIds(board, drag.id)));
+      if (over) askMove(drag.id, over.node.id);
+      else {
+        const card = cardAt.get(drag.id as string);
+        if (card) write((current, id) => pinNode(current, id, drag.id, { x: card.x + drag.dx, y: card.y + drag.dy }));
+      }
+    }
+  };
 
-  // Each of the writer's own connections, measured once: a link whose ends
-  // are both inside one fold has nothing to say while it is folded, because
-  // the card standing in for them would be pointing at itself.
-  const drawnLinks =
-    board && layout
-      ? linksOf(board).flatMap((link) => {
-          const from = standingFor(board, layout, link.fromId);
-          const to = standingFor(board, layout, link.toId);
-          if (!from || !to || from.node.id === to.node.id) return [];
-          return [
-            {
-              link,
-              fromTitle: from.node.title.trim() || 'Untitled',
-              toTitle: to.node.title.trim() || 'Untitled',
-              ...linkCurve(from, to, zoom),
-            },
-          ];
-        })
-      : [];
-  const labelRows = spreadLabels(drawnLinks.map((drawn) => ({ x: drawn.midX, y: drawn.midY })));
+  const onWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    if (!(event.ctrlKey || event.metaKey)) {
+      setPan((current) => ({ x: current.x - event.deltaX, y: current.y - event.deltaY }));
+      return;
+    }
+    const box = canvas.current?.getBoundingClientRect();
+    const mouse = { x: event.clientX - (box?.left ?? 0), y: event.clientY - (box?.top ?? 0) };
+    const next = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom * (event.deltaY > 0 ? 0.9 : 1.1)));
+    setPan((current) => ({ x: mouse.x - ((mouse.x - current.x) / zoom) * next, y: mouse.y - ((mouse.y - current.y) / zoom) * next }));
+    setZoom(next);
+  };
+
+  // ------------------------------------------------------------ drawing
+
+  const boardWindow: BoardWindow = { left: -pan.x / zoom, top: -pan.y / zoom, width: frame.width / zoom, height: frame.height / zoom };
+  const margin = 400;
+  const many = (picture?.cards.length ?? 0) > 300;
+  const onScreen = (card: PlacedCard) =>
+    !many ||
+    (card.x + CARD_WIDTH >= boardWindow.left - margin &&
+      card.x <= boardWindow.left + boardWindow.width + margin &&
+      card.y + CARD_HEIGHT >= boardWindow.top - margin &&
+      card.y <= boardWindow.top + boardWindow.height + margin);
+
+  const positionOf = (card: PlacedCard) =>
+    cardDrag && board && subtreeIds(board, cardDrag.id).includes(card.node.id as string)
+      ? { x: card.x + cardDrag.dx, y: card.y + cardDrag.dy }
+      : { x: card.x, y: card.y };
+
+  const map = picture && frame.width > 0 && needsAMap(picture, boardWindow) ? miniMap(picture, boardWindow, MAP_BOX) : null;
+  const level = state?.level ?? { kind: 'all' };
+  const levelValue = level.kind === 'all' ? 'all' : level.kind === 'depth' ? `depth:${level.depth}` : `type:${level.type}`;
+  const maxDepth = picture ? Math.max(0, ...picture.cards.map((card) => card.depth)) : 0;
+  const hiddenTypes = new Set(state?.hiddenLinkTypes ?? []);
+
+  const menuNode = board && menu ? findNode(board, menu.nodeId) : null;
 
   return (
-    <div className="sculptor" role="dialog" aria-label="Story Sculptor">
-      <header className="sculptor-bar">
+    <div className="sculptor sc2" role="dialog" aria-label="Story Sculptor">
+      <header className="sculptor-bar sc-bar">
         <h2>Story Sculptor</h2>
         <RoomFormat format={file.project.format} />
-        {board ? <span className="muted small">{board.name}</span> : null}
-
-        {/* The shelf is a place, not a strip: it opens from the left and moves
-            the board across, so what is on it can actually be read (§5). */}
-        <button
-          type="button"
-          className={shelfOpen ? 'tool on' : 'tool'}
-          aria-pressed={shelfOpen}
-          title={shelfOpen ? 'Close the research shelf' : 'Open the research shelf beside the board'}
-          onClick={() => setShelfOpen(!shelfOpen)}
-        >
-          {shelfOpen ? '◧ Research' : '▤ Research'}
-        </button>
-
-        <span className="toolbar-spacer" />
-
-        {board ? (
-          <>
-            <button
-              type="button"
-              className="tool"
-              title="A block between the ends: the inciting incident, a plot point, whatever you call it"
-              onClick={() =>
-                write((current, id) => {
-                  const live = findBoard(current, id);
-                  const after = live
-                    ? blocksOf(live).filter((node) => node.end === null).at(-1)?.id ?? null
-                    : null;
-                  return addBlock(current, id, { afterNodeId: after }).file;
-                })
-              }
-            >
-              + Block
-            </button>
-            <button
-              type="button"
-              className="tool"
-              disabled={!chosen}
-              title={
-                chosen
-                  ? 'Hang a node off the selected one, in the column to its right'
-                  : 'Choose a node to hang this off'
-              }
-              onClick={() => {
-                if (!chosen) return;
-                write((current, id) => addChild(current, id, chosen.id).file);
-              }}
-            >
-              + Under it
-            </button>
-            {/* Ken's ask (§6a): select a scene, one press, and it is on the
-                track with every beat under it. The label is the offer's own
-                sentence, so it says what would come; disabled with the reason
-                where nothing can. */}
-            <button
-              type="button"
-              className="tool"
-              disabled={!chosen || !chosenOffer || chosenOffer.refusal !== null}
-              title={
-                chosen && chosenOffer
-                  ? chosenOffer.refusal !== null
-                    ? `Cannot go on the track: ${chosenOffer.refusal}`
-                    : `Put ${chosen.title.trim() || 'this'} in the ${nouns.manuscript.toLowerCase()}, on the first track${
-                        chosenOffer.beats > 0 ? `, with the ${nouns.subPlural.toLowerCase()} under it` : ''
-                      }`
-                  : `Choose a ${nouns.unit.toLowerCase()} to put on the track`
-              }
-              onClick={() => {
-                if (chosen) putOnTrack(chosen.id);
-              }}
-            >
-              {chosen && chosenOffer && chosenOffer.refusal === null
-                ? sayTrackOffer(chosenOffer, chosen, nouns)
-                : 'Add to track'}
-            </button>
-            <button
-              type="button"
-              className="tool"
-              title="A column to the right: character arcs, reveals, questions to answer — whatever the next level of detail is"
-              onClick={() => write((current, id) => addColumn(current, id).file)}
-            >
-              + Column
-            </button>
-            {/* The writer's own connection (§7): say where it starts, then
-                click where it goes. Armed rather than dragged, because the
-                canvas's own drag is the pan. */}
-            <button
-              type="button"
-              className={linking ? 'tool active' : 'tool'}
-              disabled={!chosen && !linking}
-              aria-pressed={linking !== null}
-              title={
-                linking
-                  ? 'Now click the node it connects to, or press this again to stop'
-                  : chosen
-                    ? 'Connect this node to another: this setup pays off here, this scene is why she does that'
-                    : 'Choose the node the connection starts at'
-              }
-              onClick={() => setLinking(linking ? null : chosen?.id ?? null)}
-            >
-              {linking ? 'Connecting…' : 'Connect'}
-            </button>
-            <label className="zoom">
-              <span className="muted">Zoom</span>
-              <input
-                type="range"
-                min={MIN_ZOOM * 100}
-                max={MAX_ZOOM * 100}
-                step={5}
-                value={Math.round(zoom * 100)}
-                aria-label="Canvas zoom"
-                onChange={(event) => setZoom(Number(event.target.value) / 100)}
-              />
-            </label>
-            {boards.length > 1 ? (
-              <select
-                aria-label="Which board"
-                value={board.id as string}
-                onChange={(event) => setBoardId(event.target.value)}
+        <nav className="sc-crumbs" aria-label="Where you are in the story">
+          <button type="button" className={crumbs.length === 0 ? 'sc-crumb here' : 'sc-crumb'} onClick={() => goTo(null)}>
+            Whole story
+          </button>
+          {crumbs.map((node, index) => (
+            <span key={node.id as string}>
+              <span className="sc-crumb-sep" aria-hidden>
+                ›
+              </span>
+              <button
+                type="button"
+                className={index === crumbs.length - 1 ? 'sc-crumb here' : 'sc-crumb'}
+                onClick={() => goTo(node.id)}
               >
-                {boards.map((candidate) => (
-                  <option key={candidate.id as string} value={candidate.id as string}>
-                    {candidate.name}
-                  </option>
-                ))}
-              </select>
-            ) : null}
-          </>
-        ) : null}
-
+                {(board && titleOf(file, board, node)) || sculptTypeName(node.kind, node.subtype)}
+              </button>
+            </span>
+          ))}
+        </nav>
+        <span className="toolbar-spacer" />
+        <div className="sc-search">
+          <input
+            ref={searchBox}
+            type="search"
+            placeholder="Search the map (Ctrl+F)"
+            aria-label="Search the map"
+            value={query}
+            onFocus={() => setSearchOpen(true)}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setSearchOpen(true);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && hits[0]) reveal(hits[0].node.id);
+              if (event.key === 'Escape') setSearchOpen(false);
+            }}
+          />
+          {searchOpen && query.trim() ? (
+            <ul className="sc-hits" role="listbox" aria-label="Search results">
+              {hits.length === 0 ? <li className="muted small">Nothing matches.</li> : null}
+              {hits.map((hit) => (
+                <li key={hit.node.id as string}>
+                  <button type="button" onClick={() => reveal(hit.node.id)}>
+                    <span className="sc-badge" style={{ background: sculptTypeInfo(hit.node.kind).colour }}>
+                      {sculptTypeInfo(hit.node.kind).badge}
+                    </span>
+                    <span>
+                      <strong>{hit.title || 'Untitled'}</strong>
+                      <span className="muted small sc-hit-path">{hit.path.join(' › ') || 'Top of the story'}</span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+        <span className="sc-save muted small" title="Saved with the project">
+          ● Saved
+        </span>
         {onPopOut ? <PopOutButton what="the Story Sculptor" onPopOut={onPopOut} /> : null}
         {onSaveAs ? <RoomSave file={file} onSaveAs={onSaveAs} /> : null}
         <button type="button" className="room-exit" onClick={onClose} aria-label="Close the Story Sculptor" title="Leave the Sculptor">
@@ -573,142 +638,187 @@ export function SculptorWindow({ file, open, onClose, onUpdate, onPopOut, onSave
         </button>
       </header>
 
-      {/* The views (§10), on a row of their own rather than crowded into the
-          toolbar above: these say how the board is being *read*, and the
-          toolbar says what is being *made*. */}
-      {board && layout ? (
-        <div className="sculpt-views">
-          <label className="sculpt-view">
-            <span className="muted small">Show</span>
-            <select
-              aria-label="How many columns to show"
-              value={depth === null ? 'all' : String(depth)}
-              onChange={(event) =>
-                setDepth(event.target.value === 'all' ? null : Number(event.target.value))
-              }
-            >
-              <option value="all">Everything</option>
-              {columnsOf(board).map((column, index) => (
-                <option key={column.id as string} value={index + 1}>
-                  {index === 0
-                    ? `${column.name || 'Structure'} alone`
-                    : `Down to ${column.name || `column ${index + 1}`}`}
+      <div className="sc-toolbar" role="toolbar" aria-label="Map controls">
+        <button type="button" className="tool" title="Show every card at once" onClick={() => write((current, id) => explodeAll(current, id))}>
+          ✷ Explode all
+        </button>
+        <button type="button" className="tool" title="Fold back to the frames" onClick={() => write((current, id) => collapseAll(current, id))}>
+          ▣ Collapse all
+        </button>
+        <label className="sc-level">
+          <span className="muted small">Collapse to</span>
+          <select
+            aria-label="Collapse to level"
+            value={levelValue}
+            onChange={(event) => {
+              const value = event.target.value;
+              const next: SculptorLevel =
+                value === 'all'
+                  ? { kind: 'all' }
+                  : value.startsWith('depth:')
+                    ? { kind: 'depth', depth: Number(value.slice(6)) }
+                    : { kind: 'type', type: value.slice(5) };
+              write((current, id) => collapseToLevel(current, id, next));
+            }}
+          >
+            {SCULPT_LEVEL_PRESETS.map((preset) => (
+              <option key={preset.type} value={`type:${preset.type}`}>
+                {preset.name}
+              </option>
+            ))}
+            <option value="all">Full detail</option>
+            <optgroup label="By depth">
+              {Array.from({ length: Math.max(maxDepth + 2, 4) }, (_, depth) => (
+                <option key={depth} value={`depth:${depth}`}>
+                  Level {depth}
                 </option>
               ))}
-            </select>
-          </label>
-
-          <button
-            type="button"
-            className={unboundOnly ? 'tool on' : 'tool'}
-            aria-pressed={unboundOnly}
-            title={`Light what is still an idea, and dim what is already a ${nouns.unit.toLowerCase()} in the ${nouns.manuscript.toLowerCase()}`}
-            onClick={() => setUnboundOnly(!unboundOnly)}
-          >
-            Ideas only
-          </button>
-
-          {/* §10 calls this **Focus**, and the control cannot be: the
-              workspace's title bar already owns that word for its writing
-              mode, and two buttons reading *Focus* on one screen meaning
-              different things is worse than a plainer name. It is the
-              selected node's, because choosing one is how a writer says which
-              part of the story they mean. */}
-          <button
-            type="button"
-            className={focusId ? 'tool on' : 'tool'}
-            aria-pressed={focusId !== null}
-            disabled={!chosen && focusId === null}
-            title={
-              focusId
-                ? 'Light the whole board again'
-                : chosen
-                  ? `Light ${chosen.title || 'this node'} and everything under it, and dim the rest`
-                  : 'Choose a node to focus on'
-            }
-            onClick={() => setFocusId(focusId ? null : chosen?.id ?? null)}
-          >
-            {focusId ? 'Just this ✓' : 'Just this'}
-          </button>
-
-          <div className="sculpt-view sculpt-search">
-            <label className="muted small" htmlFor="sculpt-find">
-              Find
-            </label>
-            <input
-              id="sculpt-find"
-              value={search}
-              aria-label="Find a node by its title, note or kind"
-              placeholder="title, note or kind"
-              onChange={(event) => {
-                setSearch(event.target.value);
-                setSearchOpen(true);
-              }}
-              onFocus={() => setSearchOpen(true)}
-            />
-
-            {/* Jump-to (§10): the hits as a list under the box they came from,
-                because a lit card somewhere off the canvas is not found until
-                the canvas has gone to it. */}
-            {searchOpen && reading && reading.hits.length > 0 ? (
-              <ul className="sculpt-found">
-                {reading.hits.slice(0, 12).map((node) => (
-                  <li key={node.id as string}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelected(node.id);
-                        goTo(node.id);
-                        setSearchOpen(false);
-                      }}
-                    >
-                      <span className="sculpt-found-title">{node.title.trim() || 'Untitled'}</span>
-                      <span className="muted small">{node.kind}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
+            </optgroup>
+          </select>
+        </label>
+        <span className="sc-sep" />
+        <button
+          type="button"
+          className="tool"
+          disabled={!chosen}
+          title="Open everything under the selected card"
+          onClick={() => chosen && write((current, id) => explodeBranch(current, id, chosen.id))}
+        >
+          Explode branch
+        </button>
+        <button
+          type="button"
+          className="tool"
+          disabled={!chosen}
+          title="Fold the selected card"
+          onClick={() => chosen && write((current, id) => collapseBranch(current, id, chosen.id))}
+        >
+          Collapse branch
+        </button>
+        <button
+          type="button"
+          className="tool"
+          disabled={!chosen || crumbs.length > 0}
+          title="Open every card above the selected one"
+          onClick={() => chosen && reveal(chosen.id)}
+        >
+          Show ancestors
+        </button>
+        <span className="sc-sep" />
+        <button type="button" className="tool" title="Fit everything showing in the window" onClick={fitAll}>
+          Fit view
+        </button>
+        <button type="button" className="tool" disabled={!chosen} title="Centre the selected card" onClick={() => chosen && centreOn(chosen.id as string)}>
+          Focus selection
+        </button>
+        <button
+          type="button"
+          className="tool"
+          title="Put every card back where the layout puts it. The story is not changed."
+          onClick={() => write((current, id) => autoLayout(current, id))}
+        >
+          Auto layout
+        </button>
+        <span className="sc-sep" />
+        <button
+          type="button"
+          className={connecting ? 'tool active' : 'tool'}
+          disabled={!chosen && !connecting}
+          aria-pressed={connecting !== null}
+          title={connecting ? 'Now click the card it connects to' : 'Connect the selected card to another (or drag from a card’s ● port)'}
+          onClick={() => setConnecting(connecting ? null : chosen?.id ?? null)}
+        >
+          {connecting ? 'Connecting…' : '⇄ Connect'}
+        </button>
+        <button type="button" className="tool" disabled={!onUndo || canUndo === false} onClick={onUndo} title="Undo (Ctrl+Z)" aria-label="Undo">
+          ↶
+        </button>
+        <button type="button" className="tool" disabled={!onRedo || canRedo === false} onClick={onRedo} title="Redo (Shift+Ctrl+Z)" aria-label="Redo">
+          ↷
+        </button>
+        <label className="zoom">
+          <span className="muted small">Zoom</span>
+          <input
+            type="range"
+            min={MIN_ZOOM * 100}
+            max={MAX_ZOOM * 100}
+            step={5}
+            value={Math.round(zoom * 100)}
+            aria-label="Canvas zoom"
+            onChange={(event) => setZoom(Number(event.target.value) / 100)}
+          />
+        </label>
+        <details className="sc-views">
+          <summary className="tool">Views</summary>
+          <div className="sc-views-pop">
+            {(board?.views ?? []).length === 0 ? <p className="muted small">No saved views yet.</p> : null}
+            {(board?.views ?? []).map((view) => (
+              <div key={view.id as string} className="sc-view-row">
+                <button type="button" className="ghost small" onClick={() => write((current, id) => applyView(current, id, view.id as SculptorViewId))}>
+                  {view.name}
+                </button>
+                <button
+                  type="button"
+                  className="ghost small"
+                  aria-label={`Remove the view ${view.name}`}
+                  onClick={() => write((current, id) => removeView(current, id, view.id as SculptorViewId))}
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+            <div className="sc-view-row">
+              <input aria-label="New view name" placeholder="Name this view" value={viewName} onChange={(event) => setViewName(event.target.value)} />
+              <button
+                type="button"
+                className="ghost small"
+                onClick={() => {
+                  write((current, id) => saveView(current, id, viewName).file);
+                  setViewName('');
+                }}
+              >
+                Keep this view
+              </button>
+            </div>
+            <p className="muted small">Links shown</p>
+            {SCULPT_LINK_TYPES.map((type) => (
+              <label key={type.type} className="sc-check">
+                <input
+                  type="checkbox"
+                  checked={!hiddenTypes.has(type.type)}
+                  onChange={(event) => {
+                    const next = new Set(hiddenTypes);
+                    if (event.target.checked) next.delete(type.type);
+                    else next.add(type.type);
+                    write((current, id) => setHiddenLinkTypes(current, id, [...next]));
+                  }}
+                />
+                {type.name}
+              </label>
+            ))}
           </div>
+        </details>
+        <button
+          type="button"
+          className={shelfOpen ? 'tool on' : 'tool'}
+          aria-pressed={shelfOpen}
+          title="Research and phone notes, to drag onto cards"
+          onClick={() => setShelfOpen(!shelfOpen)}
+        >
+          {shelfOpen ? '◧ Notes' : '▤ Notes'}
+        </button>
+        {boards.length > 1 && board ? (
+          <select aria-label="Which map" value={board.id as string} onChange={(event) => setBoardId(event.target.value)}>
+            {boards.map((one) => (
+              <option key={one.id as string} value={one.id as string}>
+                {one.name}
+              </option>
+            ))}
+          </select>
+        ) : null}
+      </div>
 
-          {reading && search.trim().length > 0 ? (
-            <span className="muted small sculpt-hits">
-              {reading.hits.length === 0
-                ? 'nothing'
-                : `${reading.hits.length} ${reading.hits.length === 1 ? 'node' : 'nodes'}`}
-            </span>
-          ) : null}
-
-          {/* One way out of all of it, because four controls left on is how a
-              writer ends up convinced the board has lost their work. */}
-          {isFiltered(boardView) ? (
-            <button
-              type="button"
-              className="ghost small"
-              title="Show the whole board again"
-              onClick={() => {
-                setDepth(null);
-                setUnboundOnly(false);
-                setFocusId(null);
-                setSearch('');
-                setSearchOpen(false);
-              }}
-            >
-              Clear
-            </button>
-          ) : null}
-
-        </div>
-      ) : null}
-
-      <div className={shelfOpen ? 'sculptor-body with-shelf' : 'sculptor-body'}>
-        {/* The shelf the Outliner has, for the same reason (addendum 06 §3),
-            and with the outline on it to drag across from (§2).
-
-            **Behind a button, and wide when it is open.** A 210px strip is
-            enough to drag a row out of and not enough to read anything in, so
-            it folds out from the left and moves the board across rather than
-            sitting beside it costing a column of canvas all day. */}
+      <div className="sc-body">
         {shelfOpen ? (
           <ResearchShelf
             file={file}
@@ -718,899 +828,998 @@ export function SculptorWindow({ file, open, onClose, onUpdate, onPopOut, onSave
             notesError={phone.error}
             onCarry={(held) => {
               carrying.current = held;
-              setCarryingAny(held !== null);
-              if (held === null) setOverNode(null);
             }}
           />
-        ) : null}
+        ) : (
+          <Palette onAdd={(type) => addUnder(chosen?.id ?? canvasParent(), type)} hasSelection={chosen !== null} />
+        )}
 
         <div
           ref={canvas}
-          className={carryingAny ? 'sculpt-canvas carrying' : 'sculpt-canvas'}
-          // The grid is a texture, so it zooms with what it is behind.
-          style={{ backgroundSize: `${UNIT * zoom}px ${UNIT * zoom}px` }}
+          className={`sc-canvas${portDrag || connecting ? ' linking' : ''}${dropOn === 'canvas' ? ' over' : ''}`}
+          tabIndex={0}
+          aria-label="Story map canvas"
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
+          onWheel={onWheel}
+          onDoubleClick={(event) => {
+            // A card keeps the pointer while it may be dragged, so its
+            // double-click arrives here: find the card under it and open it.
+            if ((event.target as HTMLElement).closest('input, .sc-dots, .sc-link-label, .sc-minimap')) return;
+            const hit = cardUnder(event.clientX, event.clientY);
+            if (hit) goTo(hit.node.id);
+          }}
+          onDragOver={(event) => {
+            event.preventDefault();
+            if (!(event.target as HTMLElement).closest('.sc-card')) setDropOn('canvas');
+          }}
+          onDragLeave={() => setDropOn(null)}
+          onDrop={(event) => onDrop(event, canvasParent())}
         >
-          {board && layout ? (
-            <div
-              className="sculpt-sheet"
-              style={{
-                transform: `translate(${pan.x}px, ${pan.y}px)`,
-                width: `${layout.width * UNIT * zoom}px`,
-                height: `${layout.height * UNIT * zoom + 40}px`,
-              }}
-            >
-              {/* The columns, named, above what they hold. */}
-              {layout.columns.map((column) => (
-                <div
-                  key={column.column.id as string}
-                  className="sculpt-column"
-                  style={{ left: `${column.x * UNIT * zoom}px`, width: `${column.width * UNIT * zoom}px` }}
-                >
-                  <input
-                    className="sculpt-column-name"
-                    aria-label={`Name of column ${column.index + 1}`}
-                    placeholder="name it"
-                    value={column.column.name}
-                    onChange={(event) =>
-                      write((current, id) => renameColumn(current, id, column.column.id, event.target.value))
-                    }
-                  />
-                  {/* Only the last, and never one of the three every board
-                      has: a column from the middle would orphan the one to
-                      its right (§3). */}
-                  {column.index === layout.columns.length - 1 && column.index > 2 ? (
-                    <button
-                      type="button"
-                      className="ghost small sculpt-column-off"
-                      aria-label={`Remove the ${column.column.name || 'last'} column`}
-                      title="Remove this column, and everything in it"
-                      onClick={() => write((current, id) => removeColumn(current, id, column.column.id))}
-                    >
-                      ×
-                    </button>
-                  ) : null}
-                </div>
-              ))}
+          {board && picture && picture.cards.length === 0 ? (
+            <div className="sc-empty">
+              <p>
+                <strong>Start with a frame.</strong> A frame is a major movement or plot point of the story.
+              </p>
+              <button type="button" onClick={() => addUnder(canvasParent(), 'frame')}>
+                + Add a frame
+              </button>
+              <p className="muted small">Or drag any type from the palette on the left onto the canvas.</p>
+            </div>
+          ) : null}
 
-              {/* The connectors: parent into the stack of its children, and
-                  each structure node to the next (§7). Drawn under the nodes
-                  so a card always wins. */}
-              <svg
-                className="sculpt-wires"
-                width={layout.width * UNIT * zoom}
-                height={layout.height * UNIT * zoom}
-              >
-                {layout.nodes.map((laid) => {
-                  const parent = laid.node.parentId
-                    ? layout.nodes.find((candidate) => candidate.node.id === laid.node.parentId)
-                    : null;
-                  if (!parent) return null;
-                  // One arrow into the stack, not one per child (§3): every
-                  // child draws from the parent's own card.
-                  const fromX = (parent.x + COLUMN_WIDTH) * UNIT * zoom;
-                  const fromY = (parent.y + parent.headHeight / 2) * UNIT * zoom;
-                  const toX = laid.x * UNIT * zoom;
-                  const toY = (laid.y + laid.headHeight / 2) * UNIT * zoom;
-                  const bend = (toX - fromX) / 2;
-                  return (
+          <div className="sc-sheet" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}>
+            <svg className="sc-wires" width={(picture?.width ?? 0) + 2000} height={(picture?.height ?? 0) + 2000}>
+              <defs>
+                <marker id="sc-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor" />
+                </marker>
+              </defs>
+              {(picture?.edges ?? []).map((edge) => {
+                const from = cardAt.get(edge.fromId);
+                const to = cardAt.get(edge.toId);
+                if (!from || !to || (!onScreen(from) && !onScreen(to))) return null;
+                const a = positionOf(from);
+                const b = positionOf(to);
+                const x0 = a.x + CARD_WIDTH;
+                const y0 = a.y + CARD_HEIGHT / 2;
+                const x1 = b.x;
+                const y1 = b.y + CARD_HEIGHT / 2;
+                const mid = (x0 + x1) / 2;
+                return (
+                  <path
+                    key={`${edge.fromId}-${edge.toId}`}
+                    className="sc-wire"
+                    d={`M ${x0} ${y0} C ${mid} ${y0}, ${mid} ${y1}, ${x1} ${y1}`}
+                    stroke={sculptTypeInfo(to.node.kind).colour}
+                  />
+                );
+              })}
+              {links.lines.map((line) => {
+                const from = cardAt.get(line.fromId);
+                const to = cardAt.get(line.toId);
+                if (!from || !to) return null;
+                const a = positionOf(from);
+                const b = positionOf(to);
+                const curve = linkCurve(a, b);
+                const first = line.links[0]!;
+                const chosenLine = line.links.some((one) => one.id === selectedLink);
+                return (
+                  <g key={`${line.fromId}>${line.toId}`} className={`sc-link type-${first.type}${chosenLine ? ' selected' : ''}${line.aggregated ? ' aggregated' : ''}`}>
                     <path
-                      key={laid.node.id as string}
-                      className="sculpt-wire"
-                      d={`M ${fromX} ${fromY} C ${fromX + bend} ${fromY}, ${toX - bend} ${toY}, ${toX} ${toY}`}
+                      d={curve.d}
+                      markerEnd={line.links.some((one) => one.directed) ? 'url(#sc-arrow)' : undefined}
+                      onClick={() => setSelectedLink(first.id)}
                     />
-                  );
-                })}
-                {/* The chain down the structure column. */}
-                {layout.nodes
-                  .filter((laid) => laid.column === 0)
-                  .sort((a, b) => a.y - b.y)
-                  .map((laid, index, chain) => {
-                    const next = chain[index + 1];
-                    if (!next) return null;
-                    const x = (laid.x + COLUMN_WIDTH / 2) * UNIT * zoom;
+                  </g>
+                );
+              })}
+              {portDrag
+                ? (() => {
+                    const from = cardAt.get(portDrag.from as string);
+                    if (!from) return null;
                     return (
                       <line
-                        key={`chain-${laid.node.id as string}`}
-                        className="sculpt-chain"
-                        x1={x}
-                        y1={(laid.y + laid.headHeight) * UNIT * zoom}
-                        x2={x}
-                        y2={next.y * UNIT * zoom}
+                        className="sc-link-draft"
+                        x1={from.x + CARD_WIDTH}
+                        y1={from.y + CARD_HEIGHT / 2}
+                        x2={portDrag.x}
+                        y2={portDrag.y}
                       />
                     );
-                  })}
-              </svg>
+                  })()
+                : null}
+            </svg>
 
-              {layout.nodes.map((laid) => (
-                <Node
-                  nouns={nouns}
-                  key={laid.node.id as string}
-                  laid={laid}
-                  zoom={zoom}
-                  selected={selected === laid.node.id}
-                  // Dimmed is the absence of being lit, and only ever when
-                  // something is actually being asked for (§10).
-                  dimmed={reading !== null && reading.dimming && !reading.lit.has(laid.node.id as string)}
-                  linking={linking !== null}
-                  linkingFrom={linking === laid.node.id}
-                  onSelect={() => {
-                    if (linking !== null && linking !== laid.node.id) {
-                      write((current, id) => linkNodes(current, id, linking, laid.node.id).file);
-                      setLinking(null);
-                      setSelected(linking);
-                      return;
-                    }
-                    setSelected(laid.node.id);
+            {links.lines.map((line) => {
+              const from = cardAt.get(line.fromId);
+              const to = cardAt.get(line.toId);
+              if (!from || !to) return null;
+              const curve = linkCurve(positionOf(from), positionOf(to));
+              const first = line.links[0]!;
+              const text = `${first.label.trim() || sculptLinkTypeName(first.type)}${line.links.length > 1 ? ` ×${line.links.length}` : ''}${line.aggregated ? ' (inside)' : ''}`;
+              return (
+                <button
+                  key={`label-${line.fromId}>${line.toId}`}
+                  type="button"
+                  className={`sc-link-label type-${first.type}${line.links.some((one) => one.id === selectedLink) ? ' selected' : ''}`}
+                  style={{ left: curve.midX, top: curve.midY }}
+                  title={line.links.map((one) => `${sculptLinkTypeName(one.type)}${one.label ? `: ${one.label}` : ''}`).join('\n')}
+                  onClick={() => {
+                    setSelectedLink(first.id);
+                    setSelected(null);
                   }}
-                  onOpen={() => {
-                    setSelected(laid.node.id);
-                    setOpenCard(laid.node.id);
-                  }}
-                  onMenu={(x, y) => {
-                    setSelected(laid.node.id);
-                    setMenu({ nodeId: laid.node.id, x, y });
-                  }}
-                  onTitle={(title) => write((current, id) => updateNode(current, id, laid.node.id, { title }))}
-                  onFold={() =>
-                    write((current, id) =>
-                      updateNode(current, id, laid.node.id, { collapsed: !laid.node.collapsed }),
-                    )
-                  }
-                  onMove={(direction) => write((current, id) => moveNode(current, id, laid.node.id, direction))}
-                  onAskRemove={() => setRemoving(laid.node.id)}
-                  onAddChild={() => write((current, id) => addChild(current, id, laid.node.id).file)}
-                  landing={overNode === laid.node.id}
-                  onCarryOver={() => {
-                    const held = carrying.current;
-                    if (!held || !board) return null;
-                    // A card off the outline needs a column to its right to
-                    // land in; research can go anywhere.
-                    if (held.kind === 'row' && !canCarryToBoard(file, board.id, laid.node.id)) return null;
-                    if (held.kind === 'node') return null;
-                    setOverNode(laid.node.id);
-                    return 'copy';
-                  }}
-                  onCarryLeave={() => setOverNode((current) => (current === laid.node.id ? null : current))}
-                  onCarryDrop={() => {
-                    const held = carrying.current;
-                    setOverNode(null);
-                    setCarryingAny(false);
-                    carrying.current = null;
-                    if (!held) return;
-                    if (held.kind === 'research') {
-                      // The board has nowhere to hold a reference, so research
-                      // arrives as a node with the item's name on it (§2).
-                      const item = file.researchItems.find((candidate) => candidate.id === held.id);
-                      if (item) {
-                        write((current, id) => addChild(current, id, laid.node.id, { title: item.title }).file);
-                      }
-                      return;
-                    }
-                    /**
-                     * A note off the phone (addendum 09 §15).
-                     *
-                     * **Filed and placed in one act**, and the filing is not
-                     * optional: the board holds words rather than a reference,
-                     * so a card is all there would be of the thought if the
-                     * shelf did not also keep it.
-                     */
-                    if (held.kind === 'note') {
-                      const note = phone.notes.find((one) => one.id === held.id);
-                      if (!note) return;
-                      write((current, id) => {
-                        try {
-                          const done = approveCapture(current, note, {
-                            kind: 'board',
-                            boardId: id,
-                            parentId: laid.node.id,
-                          });
-                          void phone.resolve(done.capture).then((why) => phone.setError(why));
-                          return done.file;
-                        } catch (cause) {
-                          phone.setError(
-                            cause instanceof Error ? cause.message : 'That note could not be placed',
-                          );
-                          return current;
-                        }
-                      });
-                      return;
-                    }
-                    if (held.kind === 'row') {
-                      const outline = outlinesOf(file)[0];
-                      if (!outline) return;
-                      write((current, id) => carryRowToBoard(current, outline.id, held.id, id, laid.node.id).file);
-                    }
-                  }}
-                />
-              ))}
+                >
+                  {text}
+                </button>
+              );
+            })}
 
-              {/* The writer's own connections (§7), drawn **over** the cards
-                  rather than under them: a structural wire says where a thing
-                  belongs and can hide behind it, but an observation is the
-                  point of having drawn it, and has to be clickable. */}
-              <svg
-                className="sculpt-links"
-                width={layout.width * UNIT * zoom}
-                height={layout.height * UNIT * zoom}
-              >
-<defs>
-                  {/* Two of them, because a marker cannot inherit the colour of
-                      the line that used it: the lit one is the link an end of
-                      which is the selected card. */}
-                  {(['sculpt-arrow', 'sculpt-arrow-lit'] as const).map((name) => (
-                    <marker
-                      key={name}
-                      id={name}
-                      className={name}
-                      viewBox="0 0 8 8"
-                      refX="7"
-                      refY="4"
-                      markerWidth="5"
-                      markerHeight="5"
-                      orient="auto-start-reverse"
-                    >
-                      <path d="M 0 0 L 8 4 L 0 8 z" />
-                    </marker>
-                  ))}
-                </defs>
-                {drawnLinks.map((drawn, index) => (
-                  <g
-                    key={drawn.link.id as string}
-                    className={
-                      selected === drawn.link.fromId || selected === drawn.link.toId
-                        ? 'sculpt-link lit'
-                        : 'sculpt-link'
-                    }
+            {board &&
+              (picture?.cards ?? []).filter(onScreen).map((card) => {
+                const at = positionOf(card);
+                return (
+                  <Card
+                    key={card.node.id as string}
+                    file={file}
+                    board={board}
+                    card={card}
+                    x={at.x}
+                    y={at.y}
+                    far={zoom < FAR}
+                    selected={selected === card.node.id}
+                    dropping={dropOn === (card.node.id as string)}
+                    renaming={renaming === card.node.id}
+                    linksInside={links.inside.get(card.node.id as string) ?? 0}
+                    linksOutside={links.outside.get(card.node.id as string) ?? 0}
+                    summary={summaries.get(card.node.id as string) ?? { total: 0, byType: [] }}
                     onPointerDown={(event) => {
-                      event.stopPropagation();
-                      setSelected(drawn.link.fromId);
-                    }}
-                  >
-                    <title>
-                      {drawn.link.label || `${drawn.fromTitle} → ${drawn.toTitle}`}
-                    </title>
-                    <path
-                      className="sculpt-link-line"
-                      d={drawn.d}
-                      markerEnd={
-                        selected === drawn.link.fromId || selected === drawn.link.toId
-                          ? 'url(#sculpt-arrow-lit)'
-                          : 'url(#sculpt-arrow)'
+                      if (event.button !== 0) return;
+                      if (connecting) {
+                        if (connecting !== card.node.id) write((current, id) => linkNodes(current, id, connecting, card.node.id).file);
+                        setConnecting(null);
+                        return;
                       }
-                    />
-                    {drawn.link.label ? (
-                      <text className="sculpt-link-label" x={drawn.midX} y={labelRows[index]}>
-                        {shortened(drawn.link.label)}
-                      </text>
-                    ) : null}
-                  </g>
-                ))}
-              </svg>
-            </div>
-          ) : (
-            <p className="muted empty-state">Starting a board…</p>
-          )}
+                      setSelected(card.node.id);
+                      setSelectedLink(null);
+                      setMenu(null);
+                      setCardDrag({ id: card.node.id, dx: 0, dy: 0, moved: false });
+                      capture(canvas.current, event.pointerId);
+                    }}
+                    onPort={(event) => {
+                      event.stopPropagation();
+                      const start = toCanvas(event.clientX, event.clientY);
+                      setPortDrag({ from: card.node.id, x: start.x, y: start.y });
+                      capture(canvas.current, event.pointerId);
+                    }}
+                    onOpen={() => goTo(card.node.id)}
+                    onToggle={() => write((current, id) => toggleBranch(current, id, card.node.id))}
+                    onMenu={(x, y) => {
+                      setSelected(card.node.id);
+                      setMenu({ nodeId: card.node.id, x, y });
+                    }}
+                    onRename={(title) => {
+                      write((current, id) => updateNode(current, id, card.node.id, { title }));
+                      setRenaming(null);
+                    }}
+                    onCancelRename={() => setRenaming(null)}
+                    onDragOver={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setDropOn(card.node.id as string);
+                    }}
+                    onDrop={(event) => onDrop(event, card.node.id)}
+                  />
+                );
+              })}
+          </div>
 
-          {/* The mini-map (§10), which is there only when §10's six words are
-              true: *for a board bigger than the window*. A board that fits
-              gets none, because a map of what is already on the screen is a
-              picture of the screen costing a corner of the canvas all day.
-
-              It carries the lighting the views put on the board, so it is the
-              one place a writer can see that what they searched for is off the
-              top of the window. */}
           {map ? (
             <div
-              className="sculpt-minimap"
-              aria-label="Where the window is on the board"
-              title="Press or drag to move the board"
-              style={{ width: `${map.width}px`, height: `${map.height}px` }}
+              className="sc-minimap"
+              style={{ width: map.width, height: map.height }}
+              aria-label="Minimap: press to move there"
               onPointerDown={(event) => {
-                // The canvas's own drag is the pan; this one is not it.
-                event.stopPropagation();
-                mapping.current = true;
-                event.currentTarget.setPointerCapture(event.pointerId);
-                moveToMap(event);
-              }}
-              onPointerMove={(event) => {
-                if (!mapping.current) return;
-                event.stopPropagation();
-                moveToMap(event);
-              }}
-              onPointerUp={(event) => {
-                mapping.current = false;
-                event.stopPropagation();
-              }}
-              onPointerCancel={() => {
-                mapping.current = false;
+                const box = event.currentTarget.getBoundingClientRect();
+                const moved = windowFromMap(map, boardWindow, { x: event.clientX - box.left, y: event.clientY - box.top });
+                setPan({ x: -moved.left * zoom, y: -moved.top * zoom });
               }}
             >
-              <svg width={map.width} height={map.height} aria-hidden="true">
+              <svg width={map.width} height={map.height}>
                 {map.cards.map((card) => (
-                  <rect
-                    key={card.id as string}
-                    className={card.lit ? 'sculpt-map-card' : 'sculpt-map-card dimmed'}
-                    x={card.box.x}
-                    y={card.box.y}
-                    width={card.box.width}
-                    height={card.box.height}
-                    rx={1}
-                  />
+                  <rect key={card.id} x={card.x} y={card.y} width={card.width} height={card.height} fill={sculptTypeInfo(card.kind).colour} />
                 ))}
-                <rect
-                  className="sculpt-map-window"
-                  x={map.window.x}
-                  y={map.window.y}
-                  width={map.window.width}
-                  height={map.window.height}
-                />
+                <rect className="sc-map-window" x={map.frame.x} y={map.frame.y} width={map.frame.width} height={map.frame.height} />
               </svg>
             </div>
           ) : null}
+          {status ? (
+            <p className="sc-status" role="status" onClick={() => setStatus(null)}>
+              {status}
+            </p>
+          ) : null}
         </div>
 
-        {/* The detail panel (§9): the node's own, beside the canvas, without
-            losing the map. Its note lives here rather than on the card,
-            because a node is a title and a note and nothing is asked up front. */}
-        <aside className="sculpt-detail">
-          {chosen ? (
-            <>
-              <h3>{chosen.end ? (chosen.end === 'beginning' ? 'Beginning' : 'End') : 'Node'}</h3>
-              <label className="field">
-                <span>Title</span>
-                <input
-                  aria-label="The node's title"
-                  value={chosen.title}
-                  onChange={(event) =>
-                    write((current, id) => updateNode(current, id, chosen.id, { title: event.target.value }))
-                  }
-                />
-              </label>
-              <label className="field">
-                <span>Note</span>
-                <textarea
-                  aria-label="The node's note"
-                  rows={8}
-                  value={chosen.note}
-                  onChange={(event) =>
-                    write((current, id) => updateNode(current, id, chosen.id, { note: event.target.value }))
-                  }
-                />
-              </label>
-              {/* Everything beyond a title and a note belongs to the column
-                  rather than to the node (§5), so a writer who wants a
-                  before-and-after on their arcs has it on every one of them
-                  and a writer who does not is never shown the boxes. */}
-              <ColumnFields
-                column={column}
+        {board ? (
+          <aside className="sc-side">
+            {selectedLink ? (
+              <LinkInspector file={file} board={board} linkId={selectedLink} onWrite={write} onClose={() => setSelectedLink(null)} />
+            ) : chosen ? (
+              <Inspector
+                file={file}
+                board={board}
                 node={chosen}
-                onSet={(fieldId, value) =>
-                  write((current, id) => setNodeField(current, id, chosen.id, fieldId, value))
-                }
-                onAdd={() => {
-                  if (column) write((current, id) => addColumnField(current, id, column.id).file);
-                }}
-                onRename={(fieldId, name) => {
-                  if (column) write((current, id) => renameColumnField(current, id, column.id, fieldId, name));
-                }}
-                onRemove={(fieldId) => {
-                  if (column) write((current, id) => removeColumnField(current, id, column.id, fieldId));
-                }}
+                onWrite={write}
+                onOpen={() => goTo(chosen.id)}
+                onAskRemove={() => setRemoving(chosen.id)}
+                onConnect={() => setConnecting(chosen.id)}
+                onTrack={putOnTrack}
+                onSelect={(id) => setSelected(id)}
+                onSelectLink={(id) => setSelectedLink(id)}
+                {...(onGoToBeat ? { onGoToBeat } : {})}
+                {...(onOpenResearch ? { onOpenResearch } : {})}
               />
-
-              {/* §6: a node is an idea until the writer binds it. This is
-                  where they say so, and where the board says which it is. */}
-              {/* What it is connected to (§9), and the words on each line. */}
-              <Connections board={board as Board} node={chosen} onGo={setSelected} onWrite={write} />
-
-              <Binding file={file} board={board as Board} node={chosen} onWrite={write} onTrack={putOnTrack} />
-            </>
-          ) : (
-            <p className="muted small">
-              Choose a node to write its note. Beginning and End are nodes like any other — say what the story
-              begins and ends as, in general terms, and put the big blocks between them.
-            </p>
-          )}
-        </aside>
+            ) : (
+              <p className="muted small sc-inspector-empty">
+                Select a card to see its details. Double-click a card, or press Enter, to open it as its own map.
+              </p>
+            )}
+            <Library
+              file={file}
+              board={board}
+              onPlace={(payload) => place(payload, chosen?.id ?? canvasParent())}
+              onNewCharacter={() => setCastPrompt({ parentId: chosen?.id ?? canvasParent() })}
+              onWrite={write}
+              onAskRemoveEntity={(id) => setRemovingEntity(id)}
+              hasSelection={chosen !== null}
+            />
+          </aside>
+        ) : null}
       </div>
 
-      {/* The card, opened (§5). The same fields the panel beside the canvas
-          has, with room to write in them — and who is in it, which is the one
-          thing a card could not say before. */}
-      {opened && board ? (
-        <div className="sculpt-card-veil" role="presentation" onClick={() => setOpenCard(null)}>
-          <div
-            className="sculpt-card-dialog"
-            role="dialog"
-            aria-label={`Card: ${opened.title.trim() || 'untitled'}`}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <header>
-              <h3>{opened.end ? (opened.end === 'beginning' ? 'Beginning' : 'End') : 'Card'}</h3>
-              <button type="button" className="ghost" onClick={() => setOpenCard(null)} aria-label="Close the card">
-                ×
-              </button>
-            </header>
-
-            <div className="sculpt-card-body">
-              <label className="field">
-                <span>Title</span>
-                <input
-                  aria-label="The card's title"
-                  value={opened.title}
-                  onChange={(event) =>
-                    write((current, id) => updateNode(current, id, opened.id, { title: event.target.value }))
-                  }
-                />
-              </label>
-
-              <label className="field">
-                <span>Notes</span>
-                <textarea
-                  aria-label="The card's notes"
-                  rows={10}
-                  value={opened.note}
-                  onChange={(event) =>
-                    write((current, id) => updateNode(current, id, opened.id, { note: event.target.value }))
-                  }
-                />
-              </label>
-
-              <NodeCast file={file} node={opened} onWrite={write} />
-
-              <ColumnFields
-                column={openedColumn}
-                node={opened}
-                onSet={(fieldId, value) =>
-                  write((current, id) => setNodeField(current, id, opened.id, fieldId, value))
-                }
-                onAdd={() => {
-                  if (openedColumn) write((current, id) => addColumnField(current, id, openedColumn.id).file);
-                }}
-                onRename={(fieldId, name) => {
-                  if (openedColumn) write((current, id) => renameColumnField(current, id, openedColumn.id, fieldId, name));
-                }}
-                onRemove={(fieldId) => {
-                  if (openedColumn) write((current, id) => removeColumnField(current, id, openedColumn.id, fieldId));
-                }}
-              />
-
-              <Connections
-                board={board}
-                node={opened}
-                onGo={(nodeId) => {
-                  setSelected(nodeId);
-                  setOpenCard(nodeId);
-                }}
-                onWrite={write}
-              />
-
-              <Binding file={file} board={board} node={opened} onWrite={write} onTrack={putOnTrack} />
-            </div>
-
-            <footer>
-              <button type="button" className="button" onClick={() => setOpenCard(null)}>
-                Done
-              </button>
-            </footer>
-          </div>
-        </div>
-      ) : null}
-
-      {/* The card's right-click (§6a). Two things, and the first is the one
-          Ken asked for: put it on the track, beats and all. Where it cannot
-          go the item stays, disabled, over the sentence saying why — a menu
-          that simply lacked the item would leave the writer hunting for it. */}
-      {menu && menuNode && menuOffer ? (
-        <div
-          className="sculpt-menu-veil"
-          role="presentation"
-          onPointerDown={() => setMenu(null)}
-          onContextMenu={(event) => {
-            event.preventDefault();
-            setMenu(null);
+      {menu && menuNode && board ? (
+        <CardMenu
+          file={file}
+          board={board}
+          node={menuNode}
+          x={menu.x}
+          y={menu.y}
+          clip={clip}
+          onClose={() => setMenu(null)}
+          onOpen={() => goTo(menuNode.id)}
+          onAdd={(type) => addUnder(menuNode.id, type)}
+          onRename={() => setRenaming(menuNode.id)}
+          onDuplicate={() => write((current, id) => duplicatePlacement(current, id, menuNode.id).file)}
+          onCopy={() => {
+            setClip(copyBranch(board, menuNode.id));
+            setStatus('Copied.');
           }}
-        >
-          <div
-            className="sculpt-menu"
-            role="menu"
-            aria-label={`Card: ${menuNode.title.trim() || 'untitled'}`}
-            style={{
-              left: `${Math.min(menu.x, Math.max(0, window.innerWidth - 280))}px`,
-              top: `${Math.min(menu.y, Math.max(0, window.innerHeight - 140))}px`,
-            }}
-            onPointerDown={(event) => event.stopPropagation()}
-          >
-            <button
-              type="button"
-              role="menuitem"
-              disabled={menuOffer.refusal !== null}
-              onClick={() => putOnTrack(menuNode.id)}
-            >
-              {menuOffer.refusal !== null ? 'Add to track' : sayTrackOffer(menuOffer, menuNode, nouns)}
-            </button>
-            {menuOffer.refusal !== null ? <p className="muted small">{menuOffer.refusal}.</p> : null}
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                setMenu(null);
-                setOpenCard(menuNode.id);
-              }}
-            >
-              Open the card…
-            </button>
-          </div>
-        </div>
+          onPaste={(asNew) => clip && write((current, id) => pasteBranch(current, id, clip, menuNode.id, { asNew }).file)}
+          onReusable={() => write((current, id) => makeReusable(current, id, menuNode.id).file)}
+          onExplode={() => write((current, id) => explodeBranch(current, id, menuNode.id))}
+          onCollapse={() => write((current, id) => collapseBranch(current, id, menuNode.id))}
+          onAncestors={() => reveal(menuNode.id)}
+          onConnect={() => setConnecting(menuNode.id)}
+          onMoveTop={() => askMove(menuNode.id, null)}
+          onNudge={(direction) => write((current, id) => moveNode(current, id, menuNode.id, direction))}
+          onTrack={() => putOnTrack(menuNode.id)}
+          onRemove={() => setRemoving(menuNode.id)}
+        />
       ) : null}
 
-      {/* Asked before anything goes (§5). Ken lost work to a × the size of a
-          full stop twice; the question names what would actually go, and what
-          would not. */}
-      {doomed && going ? (
-        <div className="sculpt-card-veil" role="presentation" onClick={() => setRemoving(null)}>
-          <div
-            className="sculpt-sure-dialog"
-            role="alertdialog"
-            aria-label={removalQuestion(going, doomed.title)}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <h3>{removalQuestion(going, doomed.title)}</h3>
-            {removalComfort(going) ? <p className="muted small">{removalComfort(going)}</p> : null}
-            <div className="sculpt-sure-row">
-              <button type="button" className="button" onClick={() => setRemoving(null)}>
-                Keep it
+      {removing && board ? (
+        <RemoveDialog
+          question={removalQuestion(whatGoesWith(file, board.id, removing), titleOf(file, board, findNode(board, removing) as SculptorNode))}
+          comfort={removalComfort(whatGoesWith(file, board.id, removing))}
+          onCancel={() => setRemoving(null)}
+          onConfirm={() => {
+            const id = removing;
+            write((current, boardKey) => removeNode(current, boardKey, id));
+            setRemoving(null);
+            setSelected(null);
+          }}
+        />
+      ) : null}
+
+      {removingEntity && board ? (
+        <RemoveDialog
+          question={`Delete “${(() => {
+            const entity = findEntity(board, removingEntity);
+            return entity ? entityTitle(file, entity) || 'this item' : 'this item';
+          })()}” from the map everywhere?`}
+          comfort={`Its ${placementsOfEntity(board, removingEntity).length} placement(s) and what is under them go. Anything it stands for in the project, such as a character in the cast, stays.`}
+          onCancel={() => setRemovingEntity(null)}
+          onConfirm={() => {
+            const id = removingEntity;
+            write((current, boardKey) => removeEntity(current, boardKey, id));
+            setRemovingEntity(null);
+          }}
+        />
+      ) : null}
+
+      {confirmMove ? (
+        <div className="sc-modal" role="dialog" aria-label="Move this card?">
+          <div className="sc-modal-box">
+            <p>{confirmMove.message}</p>
+            <div className="sc-modal-actions">
+              <button type="button" className="ghost" onClick={() => setConfirmMove(null)}>
+                Cancel
               </button>
-              {going.bound > 0 && isBound(doomed) ? (
-                <button
-                  type="button"
-                  className="ghost"
-                  title={`Leave the card where it is and let go of the ${nouns.unit.toLowerCase()} it stands for`}
-                  onClick={() => {
-                    write((current, id) => unbindNode(current, id, doomed.id));
-                    setRemoving(null);
-                  }}
-                >
-                  Just unbind it
-                </button>
-              ) : null}
               <button
                 type="button"
-                className="ghost danger"
                 onClick={() => {
-                  if (openCard === doomed.id) setOpenCard(null);
-                  if (selected === doomed.id) setSelected(null);
-                  write((current, id) => removeNode(current, id, doomed.id));
-                  setRemoving(null);
+                  const move = confirmMove;
+                  write((current, id) => moveNodeTo(current, id, move.nodeId, { parentId: move.parentId }));
+                  setConfirmMove(null);
                 }}
               >
-                {going.cards > 1 ? `Delete all ${going.cards}` : 'Delete it'}
+                Move it
               </button>
             </div>
           </div>
         </div>
+      ) : null}
+
+      {castPrompt && board ? (
+        <CastPrompt
+          file={file}
+          onCancel={() => setCastPrompt(null)}
+          onPick={(characterId) => {
+            const parentId = castPrompt.parentId;
+            write((current, id) => placeSource(current, id, { kind: 'character', id: characterId }, parentId).file);
+            setCastPrompt(null);
+          }}
+          onCreate={(name) => {
+            const parentId = castPrompt.parentId;
+            write((current, id) => {
+              const withCast = addCharacter(current, { name });
+              const made = withCast.characters[withCast.characters.length - 1];
+              return made ? placeSource(withCast, id, { kind: 'character', id: made.id as string }, parentId).file : withCast;
+            });
+            setCastPrompt(null);
+          }}
+        />
       ) : null}
     </div>
   );
 }
 
-/**
- * Who is in this card (addendum 03 §5).
- *
- * The project's own cast, ticked — never a list of names typed onto the card.
- * A character renamed once is renamed on every card that names them, and a
- * board can no more invent a person than a scene can.
- *
- * A name that is not in the cast yet is added to the project *and* put on the
- * card, because a board is exactly where a writer meets somebody for the first
- * time and making them go elsewhere to enter them would be the wrong way round.
- */
-function NodeCast({
+// -------------------------------------------------------------- helpers
+
+/** Keep the pointer while dragging; a browser that refuses (or a test DOM without it) just doesn't. */
+const capture = (element: Element | null, pointerId: number) => {
+  try {
+    element?.setPointerCapture?.(pointerId);
+  } catch {
+    // nothing to keep
+  }
+};
+
+const subtreeIds = (board: Board, nodeId: SculptorNodeId): string[] => {
+  const found: string[] = [];
+  const walk = (id: string) => {
+    found.push(id);
+    for (const child of childrenOf(board, id)) walk(child.id as string);
+  };
+  walk(nodeId as string);
+  return found;
+};
+
+const chosenChildType = (node: SculptorNode): keyof typeof SCULPT_TYPE_INFO =>
+  node.kind === 'frame' || node.kind === 'plot_point' ? 'scene' : node.kind === 'scene' ? 'character' : node.kind === 'character' ? 'action' : 'note';
+
+/** Arrow keys walk the visible tree: up and down among siblings, left to the parent, right to the first child. */
+const neighbour = (board: Board, visible: ReadonlySet<string>, node: SculptorNode, key: string): SculptorNode | null => {
+  if (key === 'ArrowLeft') return node.parentId && visible.has(node.parentId as string) ? findNode(board, node.parentId) : null;
+  if (key === 'ArrowRight') return childrenOf(board, node.id).find((child) => visible.has(child.id as string)) ?? null;
+  const siblings = childrenOf(board, node.parentId).filter((one) => visible.has(one.id as string));
+  const at = siblings.findIndex((one) => one.id === node.id);
+  return siblings[at + (key === 'ArrowUp' ? -1 : 1)] ?? null;
+};
+
+const linkCurve = (a: { x: number; y: number }, b: { x: number; y: number }) => {
+  const forwards = b.x > a.x + CARD_WIDTH / 2;
+  const x0 = a.x + (forwards ? CARD_WIDTH : CARD_WIDTH / 2);
+  const y0 = a.y + (forwards ? CARD_HEIGHT / 2 : 0);
+  const x1 = b.x + (forwards ? 0 : CARD_WIDTH / 2);
+  const y1 = b.y + (forwards ? CARD_HEIGHT / 2 : 0);
+  const lift = forwards ? 0 : -60 - Math.abs(y1 - y0) * 0.15;
+  const cx0 = forwards ? (x0 + x1) / 2 : x0;
+  const cx1 = forwards ? (x0 + x1) / 2 : x1;
+  const cy0 = y0 + lift;
+  const cy1 = y1 + lift;
+  return {
+    d: `M ${x0} ${y0} C ${cx0} ${cy0}, ${cx1} ${cy1}, ${x1} ${y1}`,
+    midX: (x0 + 3 * cx0 + 3 * cx1 + x1) / 8,
+    midY: (y0 + 3 * cy0 + 3 * cy1 + y1) / 8,
+  };
+};
+
+const dragPayload = (event: DragEvent, payload: Payload) => {
+  event.dataTransfer.setData(DRAG_TYPE, JSON.stringify(payload));
+  event.dataTransfer.setData('text/plain', JSON.stringify(payload));
+  event.dataTransfer.effectAllowed = 'copy';
+};
+
+// -------------------------------------------------------------- the palette
+
+function Palette({ onAdd, hasSelection }: { onAdd(type: string): void; hasSelection: boolean }) {
+  return (
+    <aside className="sc-palette" aria-label="New cards">
+      <h3>New</h3>
+      <p className="muted small">Drag onto a card to put it inside, or onto the canvas. Click to add {hasSelection ? 'under the selected card' : 'at the top'}.</p>
+      <ul>
+        {SCULPT_TYPES.map((type) => {
+          const info = SCULPT_TYPE_INFO[type];
+          return (
+            <li key={type}>
+              <button
+                type="button"
+                className="sc-palette-item"
+                draggable
+                onDragStart={(event) => dragPayload(event, { kind: 'type', type })}
+                onClick={() => onAdd(type)}
+                aria-label={`Add a ${info.name.toLowerCase()}`}
+              >
+                <span className="sc-badge" style={{ background: info.colour }}>
+                  {info.badge}
+                </span>
+                {info.name}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </aside>
+  );
+}
+
+// -------------------------------------------------------------- a card
+
+function Card({
   file,
-  node,
-  onWrite,
+  board,
+  card,
+  x,
+  y,
+  far,
+  selected,
+  dropping,
+  renaming,
+  linksInside,
+  linksOutside,
+  summary,
+  onPointerDown,
+  onPort,
+  onOpen,
+  onToggle,
+  onMenu,
+  onRename,
+  onCancelRename,
+  onDragOver,
+  onDrop,
 }: {
   file: ProjectFile;
-  node: SculptorNode;
-  onWrite(mutate: (current: ProjectFile, id: Board['id']) => ProjectFile): void;
+  board: Board;
+  card: PlacedCard;
+  x: number;
+  y: number;
+  far: boolean;
+  selected: boolean;
+  dropping: boolean;
+  renaming: boolean;
+  linksInside: number;
+  linksOutside: number;
+  summary: { total: number; byType: { type: string; count: number }[] };
+  onPointerDown(event: ReactPointerEvent<HTMLDivElement>): void;
+  onPort(event: ReactPointerEvent<HTMLSpanElement>): void;
+  onOpen(): void;
+  onToggle(): void;
+  onMenu(x: number, y: number): void;
+  onRename(title: string): void;
+  onCancelRename(): void;
+  onDragOver(event: DragEvent): void;
+  onDrop(event: DragEvent): void;
 }) {
-  const [adding, setAdding] = useState('');
-  const groups = castByCategory(file);
-  const on = new Set(castOnNode(file, node).map((person) => person.id as string));
-
-  const add = () => {
-    const name = adding.trim();
-    if (name.length === 0) return;
-    setAdding('');
-    onWrite((current, id) => {
-      const known = knowsCharacter(current, name);
-      const withThem = known ? current : addCharacter(current, { name });
-      const person = known ?? knowsCharacter(withThem, name);
-      return person ? setNodeCast(withThem, id, node.id, person.id, true) : withThem;
-    });
-  };
-
+  const { node } = card;
+  const info = sculptTypeInfo(node.kind);
+  const title = titleOf(file, board, node);
+  const typeName = sculptTypeName(node.kind, node.subtype);
+  const dots = cornerDots(summary);
+  const entity = findEntity(board, node.entityId);
+  const shared = entity ? placementsOfEntity(board, entity.id).length : 0;
+  const context = node.kind === 'action' ? actorOf(board, node.id) : null;
   return (
-    <section className="sculpt-cast">
-      <h4>Who is in it</h4>
-      {groups.every((group) => group.characters.length === 0) ? (
-        <p className="muted small">
-          Nobody in the cast yet. Type a name and they join the project’s cast as well as this card.
-        </p>
-      ) : (
-        groups
-          .filter((group) => group.characters.length > 0)
-          .map((group) => (
-            <div key={group.category?.id ?? 'unfiled'} className="sculpt-cast-group">
-              <span className="muted small">{group.name}</span>
-              <div className="sculpt-cast-row">
-                {group.characters.map((person) => (
-                  <label key={person.id as string} className="sculpt-cast-tick">
-                    <input
-                      type="checkbox"
-                      checked={on.has(person.id as string)}
-                      onChange={(event) =>
-                        onWrite((current, id) => setNodeCast(current, id, node.id, person.id, event.target.checked))
-                      }
-                    />
-                    <span>{person.name}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          ))
-      )}
-
-      <div className="sculpt-cast-add">
+    <div
+      className={`sc-card type-${info.type}${selected ? ' selected' : ''}${dropping ? ' dropping' : ''}${far ? ' far' : ''}${isBound(node) ? ' bound' : ''}`}
+      data-node-id={node.id as string}
+      style={{ left: x, top: y, width: CARD_WIDTH, height: CARD_HEIGHT, ['--type' as string]: info.colour }}
+      role="treeitem"
+      aria-selected={selected}
+      aria-expanded={summary.total > 0 ? !card.folded : undefined}
+      aria-label={`${typeName}: ${title || 'Untitled'}`}
+      onPointerDown={onPointerDown}
+      onDoubleClick={(event) => {
+        event.stopPropagation();
+        if ((event.target as HTMLElement).closest('input')) return;
+        onOpen();
+      }}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        onMenu(event.clientX, event.clientY);
+      }}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+    >
+      <span className="sc-badge" title={typeName}>
+        {info.badge}
+      </span>
+      {renaming ? (
         <input
-          aria-label="Somebody else in this card"
-          placeholder="Somebody else…"
-          value={adding}
-          onChange={(event) => setAdding(event.target.value)}
+          className="sc-card-rename"
+          autoFocus
+          defaultValue={title}
+          aria-label="Card title"
+          onPointerDown={(event) => event.stopPropagation()}
+          onBlur={(event) => onRename(event.target.value)}
           onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              event.preventDefault();
-              add();
-            }
+            if (event.key === 'Enter') onRename((event.target as HTMLInputElement).value);
+            if (event.key === 'Escape') onCancelRename();
           }}
         />
-        <button type="button" className="ghost" onClick={add} disabled={adding.trim().length === 0}>
-          Add
+      ) : (
+        <span className={title ? 'sc-card-title' : 'sc-card-title untitled'}>{title || `Untitled ${typeName.toLowerCase()}`}</span>
+      )}
+      {!far ? (
+        <span className="sc-card-sub muted">
+          {typeName}
+          {context ? ` · ${titleOf(file, board, context) || 'its character'}` : ''}
+          {shared > 1 ? ` · in ${shared} places` : ''}
+          {isBound(node) ? ' · in the script' : ''}
+        </span>
+      ) : null}
+      {summary.total > 0 ? (
+        <button
+          type="button"
+          className="sc-dots"
+          title={`${card.folded ? 'Folded: ' : ''}${sayNested(summary)}. Click to ${card.folded ? 'open' : 'fold'}; double-click to open as its own map.`}
+          aria-label={`${card.folded ? 'Open' : 'Fold'} ${title || 'this card'}: ${sayNested(summary)}`}
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggle();
+          }}
+          onDoubleClick={(event) => {
+            event.stopPropagation();
+            onOpen();
+          }}
+        >
+          {dots.types.map((type) => (
+            <span key={type} className="sc-dot" style={{ background: sculptTypeInfo(type).colour }} />
+          ))}
+          {dots.more > 0 ? <span className="sc-dot-more">+{dots.more}</span> : null}
+          {card.folded ? <span className="sc-dot-count">{summary.total}</span> : null}
+        </button>
+      ) : null}
+      {linksInside > 0 ? (
+        <span className="sc-inside" title={`${linksInside} connection(s) between cards folded inside this one`}>
+          ⇄{linksInside}
+        </span>
+      ) : null}
+      {linksOutside > 0 ? (
+        <span className="sc-outside" title={`${linksOutside} connection(s) to cards outside this map`}>
+          ↗{linksOutside}
+        </span>
+      ) : null}
+      <span className="sc-port" title="Drag to another card to connect them" onPointerDown={onPort} />
+    </div>
+  );
+}
+
+// -------------------------------------------------------------- the menu
+
+function CardMenu({
+  file,
+  board,
+  node,
+  x,
+  y,
+  clip,
+  onClose,
+  onOpen,
+  onAdd,
+  onRename,
+  onDuplicate,
+  onCopy,
+  onPaste,
+  onReusable,
+  onExplode,
+  onCollapse,
+  onAncestors,
+  onConnect,
+  onMoveTop,
+  onNudge,
+  onTrack,
+  onRemove,
+}: {
+  file: ProjectFile;
+  board: Board;
+  node: SculptorNode;
+  x: number;
+  y: number;
+  clip: SculptClip | null;
+  onClose(): void;
+  onOpen(): void;
+  onAdd(type: string): void;
+  onRename(): void;
+  onDuplicate(): void;
+  onCopy(): void;
+  onPaste(asNew: boolean): void;
+  onReusable(): void;
+  onExplode(): void;
+  onCollapse(): void;
+  onAncestors(): void;
+  onConnect(): void;
+  onMoveTop(): void;
+  onNudge(direction: -1 | 1): void;
+  onTrack(): void;
+  onRemove(): void;
+}) {
+  const offer = trackOffer(file, board, node.id);
+  const nouns = nounsFor(file.project.format);
+  const act = (run: () => void) => () => {
+    run();
+    onClose();
+  };
+  return (
+    <div className="sc-menu" role="menu" style={{ left: x, top: y }} onPointerDown={(event) => event.stopPropagation()}>
+      <button type="button" role="menuitem" onClick={act(onOpen)}>
+        Open as its own map
+      </button>
+      <div className="sc-menu-group">
+        <span className="muted small">Add inside</span>
+        <div className="sc-menu-types">
+          {SCULPT_TYPES.map((type) => (
+            <button key={type} type="button" role="menuitem" title={SCULPT_TYPE_INFO[type].name} onClick={act(() => onAdd(type))}>
+              <span className="sc-badge" style={{ background: SCULPT_TYPE_INFO[type].colour }}>
+                {SCULPT_TYPE_INFO[type].badge}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+      <button type="button" role="menuitem" onClick={act(onRename)}>
+        Rename
+      </button>
+      <button type="button" role="menuitem" onClick={act(onDuplicate)}>
+        Duplicate placement
+      </button>
+      <button type="button" role="menuitem" onClick={act(onCopy)}>
+        Copy branch
+      </button>
+      <button type="button" role="menuitem" disabled={!clip} onClick={act(() => onPaste(false))}>
+        Paste inside
+      </button>
+      <button type="button" role="menuitem" disabled={!clip} onClick={act(() => onPaste(true))}>
+        Paste inside as new items
+      </button>
+      {!node.entityId ? (
+        <button type="button" role="menuitem" onClick={act(onReusable)}>
+          Make reusable (add to the library)
+        </button>
+      ) : null}
+      <hr />
+      <button type="button" role="menuitem" onClick={act(onExplode)}>
+        Explode branch
+      </button>
+      <button type="button" role="menuitem" onClick={act(onCollapse)}>
+        Collapse branch
+      </button>
+      <button type="button" role="menuitem" onClick={act(onAncestors)}>
+        Show ancestors
+      </button>
+      <button type="button" role="menuitem" onClick={act(onConnect)}>
+        Connect to…
+      </button>
+      <button type="button" role="menuitem" onClick={act(() => onNudge(-1))}>
+        Move up
+      </button>
+      <button type="button" role="menuitem" onClick={act(() => onNudge(1))}>
+        Move down
+      </button>
+      {node.parentId ? (
+        <button type="button" role="menuitem" onClick={act(onMoveTop)}>
+          Move to the top level
+        </button>
+      ) : null}
+      {offer.refusal === null ? (
+        <button type="button" role="menuitem" onClick={act(onTrack)}>
+          {sayTrackOffer(offer, node, nouns)}
+        </button>
+      ) : null}
+      <hr />
+      <button type="button" role="menuitem" className="danger" onClick={act(onRemove)}>
+        Delete…
+      </button>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------- the inspector
+
+function Inspector({
+  file,
+  board,
+  node,
+  onWrite,
+  onOpen,
+  onAskRemove,
+  onConnect,
+  onTrack,
+  onSelect,
+  onSelectLink,
+  onGoToBeat,
+  onOpenResearch,
+}: {
+  file: ProjectFile;
+  board: Board;
+  node: SculptorNode;
+  onWrite(mutate: (current: ProjectFile, id: Board['id']) => ProjectFile): void;
+  onOpen(): void;
+  onAskRemove(): void;
+  onConnect(): void;
+  onTrack(nodeId: SculptorNodeId): void;
+  onSelect(id: SculptorNodeId): void;
+  onSelectLink(id: SculptorLinkId): void;
+  onGoToBeat?(beatId: BeatId): void;
+  onOpenResearch?(): void;
+}) {
+  const info = sculptTypeInfo(node.kind);
+  const entity = findEntity(board, node.entityId);
+  const title = titleOf(file, board, node);
+  const placements = entity ? placementsOfEntity(board, entity.id) : [];
+  const scene = sceneOf(board, node.id);
+  const actor = node.kind === 'action' ? actorOf(board, node.id) : null;
+  const fieldNames = [...new Set([...info.fields, ...Object.keys(node.fields ?? {})])];
+  const touching = linksTouching(board, node.id);
+  const path = ancestorsOf(board, node.id);
+  return (
+    <section className="sc-inspector" aria-label="Card details">
+      <header className="sc-inspector-head" style={{ ['--type' as string]: info.colour }}>
+        <span className="sc-badge">{info.badge}</span>
+        <span className="muted small">{path.map((one) => titleOf(file, board, one) || sculptTypeName(one.kind, one.subtype)).join(' › ') || 'Top of the story'}</span>
+      </header>
+      <label className="field">
+        <span>Title</span>
+        <input
+          key={`${node.id as string}-title`}
+          defaultValue={title}
+          aria-label="Title"
+          onBlur={(event) => {
+            if (event.target.value !== title) onWrite((current, id) => updateNode(current, id, node.id, { title: event.target.value }));
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') (event.target as HTMLInputElement).blur();
+          }}
+        />
+      </label>
+      {entity ? (
+        <p className="muted small">
+          {entity.sourceKind === 'character'
+            ? 'A character in the cast. Renaming it here renames it everywhere.'
+            : entity.sourceKind
+              ? `Stands for a ${entity.sourceKind} in the project.`
+              : 'A reusable item.'}{' '}
+          {placements.length > 1 ? `Placed in ${placements.length} places.` : ''}
+        </p>
+      ) : null}
+      <div className="sc-row">
+        <label className="field">
+          <span>Type</span>
+          <select
+            aria-label="Type"
+            value={node.kind}
+            onChange={(event) => {
+              const kind = event.target.value;
+              onWrite((current, id) => setNodeType(current, id, node.id, kind));
+            }}
+          >
+            {SCULPT_TYPES.map((type) => (
+              <option key={type} value={type} disabled={!canChangeType(board, node.id, type)}>
+                {SCULPT_TYPE_INFO[type].name}
+              </option>
+            ))}
+          </select>
+        </label>
+        {node.kind === 'custom' || node.kind === 'note' ? (
+          <label className="field">
+            <span>Kind of {node.kind === 'custom' ? 'item' : 'note'}</span>
+            <input
+              key={`${node.id as string}-sub`}
+              defaultValue={node.subtype}
+              placeholder={node.kind === 'custom' ? 'Location, Reveal…' : 'Optional'}
+              onBlur={(event) => onWrite((current, id) => updateNode(current, id, node.id, { subtype: event.target.value }))}
+            />
+          </label>
+        ) : null}
+      </div>
+      {scene && node.kind !== 'scene' ? (
+        <p className="muted small">
+          In the scene <button type="button" className="link-button" onClick={() => onSelect(scene.id)}>{titleOf(file, board, scene) || 'Untitled'}</button>
+          {actor ? (
+            <>
+              {' '}· done by <button type="button" className="link-button" onClick={() => onSelect(actor.id)}>{titleOf(file, board, actor) || 'its character'}</button>
+            </>
+          ) : null}
+        </p>
+      ) : null}
+      <label className="field">
+        <span>{entity && !entity.sourceKind ? 'Description (shared)' : 'Description'}</span>
+        <textarea
+          key={`${node.id as string}-note`}
+          rows={3}
+          defaultValue={entity && !entity.sourceKind ? entity.description : node.note}
+          onBlur={(event) => {
+            const value = event.target.value;
+            if (entity && !entity.sourceKind) onWrite((current, id) => updateEntity(current, id, entity.id, { description: value }));
+            else onWrite((current, id) => updateNode(current, id, node.id, { note: value }));
+          }}
+        />
+      </label>
+      {fieldNames.length > 0 ? (
+        <div className="sc-fields">
+          {fieldNames.map((name) => (
+            <label key={name} className="field">
+              <span>{name}</span>
+              <input
+                key={`${node.id as string}-${name}`}
+                defaultValue={node.fields?.[name] ?? ''}
+                onBlur={(event) => {
+                  if (event.target.value !== (node.fields?.[name] ?? '')) onWrite((current, id) => setNodeField(current, id, node.id, name, event.target.value));
+                }}
+              />
+            </label>
+          ))}
+        </div>
+      ) : null}
+      {bindKindOf(node) ? <Binding file={file} board={board} node={node} onWrite={onWrite} onTrack={onTrack} {...(onGoToBeat ? { onGoToBeat } : {})} /> : null}
+      {entity?.sourceKind === 'character' || entity?.sourceKind === 'research' || entity?.sourceKind === 'location' ? (
+        onOpenResearch ? (
+          <button type="button" className="ghost small" onClick={onOpenResearch}>
+            Open {entity.sourceKind === 'character' ? 'character' : entity.sourceKind} in Research
+          </button>
+        ) : null
+      ) : null}
+      <div className="sc-relations">
+        <h4>Connections</h4>
+        {touching.length === 0 ? <p className="muted small">None. Drag from the ● on the card, or press Connect.</p> : null}
+        <ul>
+          {touching.map((link) => {
+            const otherId = link.fromId === node.id ? link.toId : link.fromId;
+            const other = findNode(board, otherId);
+            const outgoing = link.fromId === node.id;
+            return (
+              <li key={link.id as string}>
+                <button type="button" className="link-button" onClick={() => onSelectLink(link.id)}>
+                  {outgoing || !link.directed ? '' : '← '}
+                  {sculptLinkTypeName(link.type)}
+                  {outgoing && link.directed ? ' →' : ''} {other ? titleOf(file, board, other) || 'Untitled' : '?'}
+                  {link.label ? ` (${link.label})` : ''}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+      <div className="sc-inspector-actions">
+        <button type="button" onClick={onOpen}>
+          Open as map
+        </button>
+        <button type="button" className="ghost" onClick={onConnect}>
+          Connect
+        </button>
+        {!entity ? (
+          <button type="button" className="ghost" onClick={() => onWrite((current, id) => makeReusable(current, id, node.id).file)}>
+            Make reusable
+          </button>
+        ) : null}
+        <button type="button" className="ghost danger" onClick={onAskRemove}>
+          Delete
         </button>
       </div>
     </section>
   );
 }
 
-/**
- * What this node is connected to, and what the writer noticed (§7, §9).
- *
- * **A connector is never what holds two things together**, so everything here
- * is safe: the words can be rewritten, the arrow turned round, and the line
- * removed, and none of it moves a card or touches the script. The only thing
- * losing a line loses is the observation.
- */
-function Connections({
-  board,
-  node,
-  onGo,
-  onWrite,
-}: {
-  board: Board;
-  node: SculptorNode;
-  onGo(nodeId: SculptorNodeId): void;
-  onWrite(mutate: (current: ProjectFile, id: Board['id']) => ProjectFile): void;
-}) {
-  const links = linksTouching(board, node.id);
-  if (links.length === 0) return null;
-
-  return (
-    <section className="sculpt-links-panel">
-      <h4>Connected to</h4>
-      {links.map((link) => {
-        const outward = link.fromId === node.id;
-        const other = findNode(board, outward ? link.toId : link.fromId);
-        return (
-          <div key={link.id as string} className="sculpt-link-row">
-            <div className="sculpt-link-head">
-              {/* Which way the arrow points, said rather than drawn: this one
-                  goes out to that card, or comes in from it. */}
-              <span className="sculpt-link-way" aria-hidden="true">
-                {outward ? '→' : '←'}
-              </span>
-              <button
-                type="button"
-                className="ghost small sculpt-link-other"
-                title="Go to it"
-                onClick={() => other && onGo(other.id)}
-              >
-                {other?.title.trim() || 'Untitled'}
-              </button>
-              <button
-                type="button"
-                className="ghost small"
-                aria-label={`Turn the connection to ${other?.title.trim() || 'it'} round`}
-                title="The other way round, keeping the words"
-                onClick={() => onWrite((current, id) => flipLink(current, id, link.id))}
-              >
-                ⇄
-              </button>
-              <button
-                type="button"
-                className="ghost small"
-                aria-label={`Remove the connection to ${other?.title.trim() || 'it'}`}
-                title="Remove the line. Nothing else changes"
-                onClick={() => onWrite((current, id) => unlinkNodes(current, id, link.id))}
-              >
-                ×
-              </button>
-            </div>
-            <input
-              aria-label={`What you noticed about ${other?.title.trim() || 'it'}`}
-              placeholder="what you noticed"
-              value={link.label}
-              onChange={(event) => onWrite((current, id) => relabelLink(current, id, link.id, event.target.value))}
-            />
-          </div>
-        );
-      })}
-    </section>
-  );
-}
-
-/**
- * An idea, or a scene (§6).
- *
- * **A node is an idea until the writer says otherwise**, so this is a
- * statement of fact and one control, never a form. An idea offers two ways to
- * stop being one — take a scene that already exists, or make a new one — and
- * a scene that is real says which it is and offers to let go.
- *
- * Where the canvas and the script have fallen out of step it says so in a
- * sentence and offers to fix it. It never fixes it on its own: §11 is that the
- * board never reorders the script behind the writer's back.
- */
 function Binding({
   file,
   board,
   node,
   onWrite,
   onTrack,
+  onGoToBeat,
 }: {
   file: ProjectFile;
   board: Board;
   node: SculptorNode;
   onWrite(mutate: (current: ProjectFile, id: Board['id']) => ProjectFile): void;
-  /** Put it on the track, beats and all — the window's one act for it (§6a). */
   onTrack(nodeId: SculptorNodeId): void;
+  onGoToBeat?(beatId: BeatId): void;
 }) {
   const nouns = nounsFor(file.project.format);
   const kind = bindKindOf(node);
   const bound = boundOf(file, node);
   const step = useMemo(() => (isBound(node) ? outOfStep(file, board, node.id) : null), [file, board, node]);
   const offer = trackOffer(file, board, node.id);
-
-  if (kind === null) {
-    return (
-      <p className="muted small sculpt-binding">
-        An idea. A block is the shape of the story rather than a scene in it, so there is nothing in the script for
-        it to be.
-      </p>
-    );
-  }
-
   const what = kind === 'unit' ? nouns.unit.toLowerCase() : nouns.sub.toLowerCase();
 
   if (bound) {
-    // Named the way the rest of the workspace names a scene: its sequence
-    // label where it has one, its title, and "Untitled" rather than a blank.
-    const name =
-      bound.kind === 'unit'
-        ? `${bound.unit.sequenceLabel || ''} ${bound.unit.title || 'Untitled'}`.trim()
-        : bound.beat.title.trim() || 'Untitled';
+    const name = bound.kind === 'unit' ? `${bound.unit.sequenceLabel || ''} ${bound.unit.title || 'Untitled'}`.trim() : bound.beat.title.trim() || 'Untitled';
+    const firstBeat =
+      bound.kind === 'beat' ? bound.beat.id : file.beats.filter((beat) => beat.unitId === bound.unit.id).sort((a, b) => (a.orderKey < b.orderKey ? -1 : 1))[0]?.id;
     return (
-      <section className="sculpt-binding bound">
+      <section className="sc-binding bound">
         <p className="small">
-          <span className="sculpt-real">●</span> This <strong>is</strong> the {what} <em>{name}</em>, in the script.
-          Rename it here or there and it is renamed in both.
+          <span className="sculpt-real">●</span> In the script as the {what} <em>{name}</em>. Renaming one renames both.
         </p>
         {step ? (
-          <p className="small sculpt-step">
-            On the canvas it comes {step.canvasFirst ? 'before' : 'after'} {step.otherTitle}; in the script it comes{' '}
-            {step.canvasFirst ? 'after' : 'before'}.{' '}
-            <button
-              type="button"
-              className="ghost small"
-              onClick={() => onWrite((current, id) => followCanvas(current, id, node.id))}
-            >
+          <p className="small">
+            Here it comes {step.canvasFirst ? 'before' : 'after'} {step.otherTitle}; in the script, {step.canvasFirst ? 'after' : 'before'}.{' '}
+            <button type="button" className="ghost small" onClick={() => onWrite((current, id) => followCanvas(current, id, node.id))}>
               Move the {what} to match
             </button>
           </p>
         ) : null}
-        {/* A scene on the track can still have beats that are not — the
-            writer thought of two more after realising it — so the offer
-            covers the beats alone, and says so. */}
-        {offer.refusal === null ? (
-          <button
-            type="button"
-            className="ghost small"
-            title={`Put the ${nouns.subPlural.toLowerCase()} under this card in the ${nouns.manuscript.toLowerCase()}, inside this ${what}`}
-            onClick={() => onTrack(node.id)}
-          >
-            {sayTrackOffer(offer, node, nouns)}
+        <div className="sc-row">
+          {onGoToBeat && firstBeat ? (
+            <button type="button" className="ghost small" onClick={() => onGoToBeat(firstBeat)}>
+              Open {what}
+            </button>
+          ) : null}
+          {offer.refusal === null ? (
+            <button type="button" className="ghost small" onClick={() => onTrack(node.id)}>
+              {sayTrackOffer(offer, node, nouns)}
+            </button>
+          ) : null}
+          <button type="button" className="ghost small" onClick={() => onWrite((current, id) => unbindNode(current, id, node.id))}>
+            Unbind
           </button>
-        ) : null}
-        <button
-          type="button"
-          className="ghost small"
-          onClick={() => onWrite((current, id) => unbindNode(current, id, node.id))}
-        >
-          Unbind
-        </button>
+        </div>
       </section>
     );
   }
 
-  const canMake = offer.refusal === null;
-  const candidates: Array<{ id: string; label: string }> =
+  const candidates =
     kind === 'unit'
-      ? bindableUnits(file, node.id).map((unit) => ({
-          id: unit.id as string,
-          label: `${unit.sequenceLabel || unit.kind} ${unit.title || 'Untitled'}`.trim(),
-        }))
-      : bindableBeats(file, board, node.id).map((beat) => ({
-          id: beat.id as string,
-          label: beat.title || `Untitled ${nouns.sub.toLowerCase()}`,
-        }));
+      ? bindableUnits(file, node.id).map((unit) => ({ id: unit.id as string, label: `${unit.sequenceLabel || unit.kind} ${unit.title || 'Untitled'}`.trim() }))
+      : bindableBeats(file, board, node.id).map((beat) => ({ id: beat.id as string, label: beat.title || `Untitled ${nouns.sub.toLowerCase()}` }));
 
   return (
-    <section className="sculpt-binding">
-      <p className="muted small">An idea. It lives only on the canvas.</p>
-
-      {canMake ? (
-        <button
-          type="button"
-          className="ghost small"
-          title={`Put this in the ${nouns.manuscript.toLowerCase()} as a ${what}${
-            offer.beats > 0 ? `, with the ${nouns.subPlural.toLowerCase()} under it` : ''
-          }, and bind the two`}
-          onClick={() => onTrack(node.id)}
-        >
-          {sayTrackOffer(offer, node, nouns)}
+    <section className="sc-binding">
+      <p className="muted small">Only on the map so far. Nothing in the script changes until you say so.</p>
+      {offer.refusal === null ? (
+        <button type="button" className="ghost small" onClick={() => onTrack(node.id)}>
+          {sayTrackOffer(offer, node, nouns)} (create in VC Writer)
         </button>
       ) : (
-        <p className="muted small">
-          A {nouns.sub.toLowerCase()} lives inside a {nouns.unit.toLowerCase()}, so this one can be real as soon
-          as the {nouns.unit.toLowerCase()} above it is.
-        </p>
+        <p className="muted small">{offer.refusal}.</p>
       )}
-
       {candidates.length > 0 ? (
         <label className="field">
-          <span>or it already exists</span>
+          <span>or link an existing {what}</span>
           <select
-            aria-label={`Bind this node to a ${what}`}
+            aria-label={`Link this card to an existing ${what}`}
             value=""
             onChange={(event) => {
-              const chosen = event.target.value;
-              if (!chosen) return;
+              const picked = event.target.value;
+              if (!picked) return;
               onWrite((current, id) =>
-                bindNode(
-                  current,
-                  id,
-                  node.id,
-                  kind === 'unit'
-                    ? { unitId: chosen as unknown as StructuralUnitId }
-                    : { beatId: chosen as unknown as BeatId },
-                ),
+                bindNode(current, id, node.id, kind === 'unit' ? { unitId: picked as unknown as StructuralUnitId } : { beatId: picked as unknown as BeatId }),
               );
             }}
           >
-            <option value="">Choose the {what} it is…</option>
+            <option value="">Choose…</option>
             {candidates.map((candidate) => (
               <option key={candidate.id} value={candidate.id}>
                 {candidate.label}
@@ -1623,274 +1832,318 @@ function Binding({
   );
 }
 
-/**
- * What a column asks of everything in it (§5), and the node's answers.
- *
- * The questions are the column's and the answers are the node's, so adding
- * one here adds it to every node in that column — which is the point: a
- * writer defines the level of detail once, not once per card.
- */
-function ColumnFields({
-  column,
-  node,
-  onSet,
-  onAdd,
-  onRename,
-  onRemove,
+function LinkInspector({
+  file,
+  board,
+  linkId,
+  onWrite,
+  onClose,
 }: {
-  column: SculptorColumn | null;
-  node: { fields: Record<string, string> };
-  onSet(fieldId: Parameters<typeof setNodeField>[3], value: string): void;
-  onAdd(): void;
-  onRename(fieldId: Parameters<typeof setNodeField>[3], name: string): void;
-  onRemove(fieldId: Parameters<typeof setNodeField>[3]): void;
+  file: ProjectFile;
+  board: Board;
+  linkId: SculptorLinkId;
+  onWrite(mutate: (current: ProjectFile, id: Board['id']) => ProjectFile): void;
+  onClose(): void;
 }) {
-  if (!column) return null;
-  const fields = fieldsOf(column);
-
+  const link = (board.links ?? []).find((one) => one.id === linkId);
+  if (!link) return null;
+  const from = findNode(board, link.fromId);
+  const to = findNode(board, link.toId);
   return (
-    <section className="sculpt-fields">
-      <h4>
-        {column.name || 'This column'} asks
-        <button type="button" className="ghost small" title="A question this column asks of everything in it" onClick={onAdd}>
-          + Question
+    <section className="sc-inspector" aria-label="Connection details">
+      <header className="sc-inspector-head">
+        <strong>Connection</strong>
+      </header>
+      <p className="small">
+        {from ? titleOf(file, board, from) || 'Untitled' : '?'} {link.directed ? '→' : '—'} {to ? titleOf(file, board, to) || 'Untitled' : '?'}
+      </p>
+      <label className="field">
+        <span>Kind</span>
+        <select
+          aria-label="Kind of connection"
+          value={link.type}
+          onChange={(event) => {
+            const type = SCULPT_LINK_TYPES.find((one) => one.type === event.target.value);
+            if (type) onWrite((current, id) => setLinkType(current, id, link.id, { type: type.type, directed: type.directed }));
+          }}
+        >
+          {SCULPT_LINK_TYPES.map((type) => (
+            <option key={type.type} value={type.type}>
+              {type.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="field">
+        <span>Label</span>
+        <input
+          key={`${link.id as string}-label`}
+          defaultValue={link.label}
+          placeholder="Why they are connected"
+          onBlur={(event) => onWrite((current, id) => relabelLink(current, id, link.id, event.target.value))}
+        />
+      </label>
+      <label className="sc-check">
+        <input
+          type="checkbox"
+          checked={link.directed}
+          onChange={(event) => onWrite((current, id) => setLinkType(current, id, link.id, { directed: event.target.checked }))}
+        />
+        Has a direction
+      </label>
+      <div className="sc-inspector-actions">
+        <button type="button" className="ghost" onClick={() => onWrite((current, id) => flipLink(current, id, link.id))}>
+          Reverse
         </button>
-      </h4>
-
-      {fields.length === 0 ? (
-        <p className="muted small">
-          Nothing yet — a node is a title and a note. Ask this column something and every node in it is asked it.
-        </p>
-      ) : null}
-
-      {fields.map((field) => (
-        <div key={field.id as string} className="sculpt-field">
-          <div className="sculpt-field-head">
-            <input
-              className="sculpt-field-name"
-              aria-label={`What this column asks: ${field.name || 'unnamed'}`}
-              placeholder="the question"
-              value={field.name}
-              onChange={(event) => onRename(field.id, event.target.value)}
-            />
-            <button
-              type="button"
-              className="ghost small"
-              aria-label={`Stop asking ${field.name || 'this'}`}
-              title="Stop asking this, on every node in the column"
-              onClick={() => onRemove(field.id)}
-            >
-              ×
-            </button>
-          </div>
-          {field.kind === 'text' ? (
-            <textarea
-              aria-label={`${field.name || 'Answer'} for this node`}
-              rows={3}
-              value={node.fields[field.id as string] ?? ''}
-              onChange={(event) => onSet(field.id, event.target.value)}
-            />
-          ) : (
-            <input
-              aria-label={`${field.name || 'Answer'} for this node`}
-              value={node.fields[field.id as string] ?? ''}
-              onChange={(event) => onSet(field.id, event.target.value)}
-            />
-          )}
-        </div>
-      ))}
+        <button
+          type="button"
+          className="ghost danger"
+          onClick={() => {
+            onWrite((current, id) => unlinkNodes(current, id, link.id));
+            onClose();
+          }}
+        >
+          Delete
+        </button>
+      </div>
     </section>
   );
 }
 
-function Node({
-  nouns,
-  laid,
-  zoom,
-  selected,
-  dimmed,
-  linking,
-  linkingFrom,
-  onSelect,
-  onOpen,
-  onMenu,
-  onTitle,
-  onFold,
-  onMove,
-  onAskRemove,
-  onAddChild,
-  landing,
-  onCarryOver,
-  onCarryLeave,
-  onCarryDrop,
+// -------------------------------------------------------------- the library
+
+type LibraryFilter = 'all' | 'favorites' | 'characters' | 'locations' | 'story' | 'scenes' | 'research';
+
+function Library({
+  file,
+  board,
+  onPlace,
+  onNewCharacter,
+  onWrite,
+  onAskRemoveEntity,
+  hasSelection,
 }: {
-  nouns: ReturnType<typeof nounsFor>;
-  laid: LaidNode;
-  zoom: number;
-  selected: boolean;
-  /** Outside what the writer asked to see: drawn faint, never hidden (§10). */
-  dimmed: boolean;
-  /** A connection is being drawn: every card is a place it could land (§7). */
-  linking: boolean;
-  linkingFrom: boolean;
-  onSelect(): void;
-  /** Open the card's own dialog — its note, who is in it, and the rest (§5). */
-  onOpen(): void;
-  /** The right-click, at these screen coordinates (§6a). */
-  onMenu(x: number, y: number): void;
-  onTitle(title: string): void;
-  onFold(): void;
-  onMove(direction: -1 | 1): void;
-  /** Ask before anything goes. The question is the window's, not the card's. */
-  onAskRemove(): void;
-  onAddChild(): void;
-  /** Something off the shelf is over this card. */
-  landing: boolean;
-  /** Answers how it would land, or null where it cannot (§2). */
-  onCarryOver(): 'copy' | null;
-  onCarryLeave(): void;
-  onCarryDrop(): void;
+  file: ProjectFile;
+  board: Board;
+  onPlace(payload: Payload): void;
+  onNewCharacter(): void;
+  onWrite(mutate: (current: ProjectFile, id: Board['id']) => ProjectFile): void;
+  onAskRemoveEntity(id: SculptorEntityId): void;
+  hasSelection: boolean;
 }) {
-  const { node } = laid;
-  const end = node.end !== null;
-  const bound = isBound(node);
+  const [filter, setFilter] = useState<LibraryFilter>('all');
+  const [find, setFind] = useState('');
+  const entities = entitiesOf(board);
+  const favouriteOf = (kind: SculptorSourceKind, id: string) => entities.find((one) => one.sourceKind === kind && one.sourceId === id)?.favorite ?? false;
+  const countOf = (kind: SculptorSourceKind, id: string) => {
+    const entity = entities.find((one) => one.sourceKind === kind && one.sourceId === id);
+    return entity ? placementsOfEntity(board, entity.id).length : 0;
+  };
+  const claimed = new Set(board.nodes.map((node) => node.boundUnitId as string | null).filter(Boolean));
+
+  type Row = { key: string; group: LibraryFilter; name: string; type: string; payload: Payload; favourite: boolean; count: number; star(next: boolean): void; remove?(): void };
+  const rows: Row[] = [
+    ...castForLibrary(file).map((one) => ({
+      key: `c:${one.id as string}`,
+      group: 'characters' as const,
+      name: one.name || 'Unnamed',
+      type: 'character',
+      payload: { kind: 'source', source: { kind: 'character', id: one.id as string } } as Payload,
+      favourite: favouriteOf('character', one.id as string),
+      count: countOf('character', one.id as string),
+      star: (next: boolean) => onWrite((current, id) => setFavorite(current, id, { kind: 'character', id: one.id as string }, next)),
+    })),
+    ...(file.locations ?? [])
+      .filter((one) => !(one as { deletedAt?: string | null }).deletedAt && !(one as { archived?: boolean }).archived)
+      .map((one) => ({
+        key: `l:${one.id as string}`,
+        group: 'locations' as const,
+        name: one.name || 'Unnamed place',
+        type: 'custom',
+        payload: { kind: 'source', source: { kind: 'location', id: one.id as string } } as Payload,
+        favourite: favouriteOf('location', one.id as string),
+        count: countOf('location', one.id as string),
+        star: (next: boolean) => onWrite((current, id) => setFavorite(current, id, { kind: 'location', id: one.id as string }, next)),
+      })),
+    ...entities
+      .filter((one) => !one.sourceKind)
+      .map((one) => ({
+        key: `e:${one.id as string}`,
+        group: 'story' as const,
+        name: one.title || `Untitled ${sculptTypeName(one.type, one.subtype).toLowerCase()}`,
+        type: one.type,
+        payload: { kind: 'entity', id: one.id as string } as Payload,
+        favourite: one.favorite,
+        count: placementsOfEntity(board, one.id).length,
+        star: (next: boolean) => onWrite((current, id) => setFavorite(current, id, { entityId: one.id }, next)),
+        remove: () => onAskRemoveEntity(one.id),
+      })),
+    ...file.units
+      .filter((unit) => !claimed.has(unit.id as string) && !(unit as { deletedAt?: string | null }).deletedAt)
+      .map((unit) => ({
+        key: `u:${unit.id as string}`,
+        group: 'scenes' as const,
+        name: `${unit.sequenceLabel ? `${unit.sequenceLabel} ` : ''}${unit.title || 'Untitled'}`,
+        type: 'scene',
+        payload: { kind: 'unit', id: unit.id as string } as Payload,
+        favourite: false,
+        count: 0,
+        star: () => undefined,
+      })),
+    ...file.researchItems
+      .filter((item) => !(item as { deletedAt?: string | null }).deletedAt && !(item as { archived?: boolean }).archived)
+      .slice(0, 400)
+      .map((item) => ({
+        key: `r:${item.id as string}`,
+        group: 'research' as const,
+        name: item.title || 'Untitled note',
+        type: 'note',
+        payload: { kind: 'source', source: { kind: 'research', id: item.id as string } } as Payload,
+        favourite: favouriteOf('research', item.id as string),
+        count: countOf('research', item.id as string),
+        star: (next: boolean) => onWrite((current, id) => setFavorite(current, id, { kind: 'research', id: item.id as string }, next)),
+      })),
+  ];
+  const wanted = find.trim().toLowerCase();
+  const shown = rows.filter(
+    (row) =>
+      (filter === 'all' ? row.group !== 'research' || wanted.length > 0 : filter === 'favorites' ? row.favourite : row.group === filter) &&
+      (!wanted || row.name.toLowerCase().includes(wanted)),
+  );
+  const FILTERS: { key: LibraryFilter; name: string }[] = [
+    { key: 'all', name: 'All' },
+    { key: 'favorites', name: '★' },
+    { key: 'characters', name: 'Characters' },
+    { key: 'locations', name: 'Places' },
+    { key: 'story', name: 'Plot & scenes' },
+    { key: 'scenes', name: 'In the script' },
+    { key: 'research', name: 'Research' },
+  ];
   return (
-    <div
-      /* A card bound to a real beat reads its writing on hover (§4c); an
-         idea has none yet and carries nothing. */
-      data-beat={node.boundBeatId ?? undefined}
-      className={[
-        'sculpt-node',
-        end ? 'end' : '',
-        selected ? 'selected' : '',
-        dimmed ? 'dimmed' : '',
-        node.collapsed ? 'folded' : '',
-        bound ? 'bound' : 'idea',
-        linking && !linkingFrom ? 'landable' : '',
-        linkingFrom ? 'linking-from' : '',
-        landing ? 'landing' : '',
-      ]
-        .filter(Boolean)
-        .join(' ')}
-      style={{
-        left: `${laid.x * UNIT * zoom}px`,
-        top: `${laid.y * UNIT * zoom}px`,
-        width: `${laid.width * UNIT * zoom}px`,
-        height: `${laid.headHeight * UNIT * zoom}px`,
-      }}
-      onPointerDown={onSelect}
-      onContextMenu={(event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        onMenu(event.clientX, event.clientY);
-      }}
-      // Clicking a card opens it. Double rather than single, because a single
-      // click is how a card is picked up and moved, and because the title is
-      // typed straight on the card — so a double-click inside the title is
-      // still a double-click inside the title.
-      onDoubleClick={(event) => {
-        if ((event.target as HTMLElement).tagName === 'INPUT') return;
-        event.stopPropagation();
-        onOpen();
-      }}
-      onDragOver={(event) => {
-        const effect = onCarryOver();
-        if (!effect) return;
-        event.preventDefault();
-        event.stopPropagation();
-        event.dataTransfer.dropEffect = effect;
-      }}
-      onDragLeave={onCarryLeave}
-      onDrop={(event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        onCarryDrop();
-      }}
-    >
-      {/* The badge §6 asks for, on every node: a glance says how much of the
-          canvas is real. A filled mark is in the script; an idea has none. */}
-      {bound ? (
-        <span
-          className="sculpt-real"
-          title={`This is a ${nouns.unit.toLowerCase()} in the ${nouns.manuscript.toLowerCase()}`}
-          aria-label={`In the ${nouns.manuscript.toLowerCase()}`}
-        >
-          ●
-        </span>
-      ) : null}
-
-      <input
-        className="sculpt-title"
-        aria-label={end ? `What the story ${node.end === 'beginning' ? 'begins' : 'ends'} as` : 'What this is'}
-        placeholder={end ? (node.end === 'beginning' ? 'It begins…' : 'It ends…') : 'name it'}
-        value={node.title}
-        onChange={(event) => onTitle(event.target.value)}
-      />
-
-      {/* The card's controls. Bigger than they were, because a ↑ and a × the
-          size of a full stop are a mis-click waiting to happen — and the ×
-          sits apart from the rest for the same reason. */}
-      <div className="sculpt-tools">
-        <button
-          type="button"
-          className="ghost card-tool"
-          aria-label={`Open ${node.title || 'this card'}`}
-          title="Open this card — its note, who is in it, and the rest"
-          onClick={onOpen}
-        >
-          ⋯
+    <section className="sc-library" aria-label="Library">
+      <header>
+        <h3>Library</h3>
+        <button type="button" className="ghost small" onClick={onNewCharacter}>
+          + Character
         </button>
-        {laid.childCount > 0 ? (
-          <button
-            type="button"
-            className="ghost card-tool"
-            aria-label={node.collapsed ? `Unfold ${node.title || 'this node'}` : `Fold ${node.title || 'this node'}`}
-            title={node.collapsed ? `${laid.childCount} folded away` : 'Fold what hangs off it'}
-            onClick={onFold}
-          >
-            {node.collapsed ? `▸ ${laid.childCount}` : '▾'}
+      </header>
+      <input type="search" placeholder="Find in the library" aria-label="Find in the library" value={find} onChange={(event) => setFind(event.target.value)} />
+      <div className="sc-filters" role="tablist" aria-label="Library filters">
+        {FILTERS.map((one) => (
+          <button key={one.key} type="button" role="tab" aria-selected={filter === one.key} className={filter === one.key ? 'on' : ''} onClick={() => setFilter(one.key)}>
+            {one.name}
           </button>
-        ) : null}
-        <button
-          type="button"
-          className="ghost card-tool"
-          aria-label={`Add under ${node.title || 'this node'}`}
-          title="Add a card under this one"
-          onClick={onAddChild}
-        >
-          +
-        </button>
-        {end ? null : (
-          <>
+        ))}
+      </div>
+      <p className="muted small">Drag onto a card, or click to place {hasSelection ? 'under the selected card' : 'at the top'}. The same item placed twice stays one item.</p>
+      <ul className="sc-library-list">
+        {shown.length === 0 ? <li className="muted small">Nothing here yet.</li> : null}
+        {shown.map((row) => (
+          <li key={row.key}>
             <button
               type="button"
-              className="ghost card-tool"
-              aria-label={`Move ${node.title || 'this node'} up`}
-              title="Move it earlier"
-              onClick={() => onMove(-1)}
+              className="sc-library-item"
+              draggable
+              onDragStart={(event) => dragPayload(event, row.payload)}
+              onClick={() => onPlace(row.payload)}
+              title={`Place ${row.name}`}
             >
-              ↑
+              <span className="sc-badge" style={{ background: sculptTypeInfo(row.type).colour }}>
+                {sculptTypeInfo(row.type).badge}
+              </span>
+              <span className="sc-library-name">{row.name}</span>
+              {row.count > 0 ? <span className="muted small">×{row.count}</span> : null}
             </button>
-            <button
-              type="button"
-              className="ghost card-tool"
-              aria-label={`Move ${node.title || 'this node'} down`}
-              title="Move it later"
-              onClick={() => onMove(1)}
-            >
-              ↓
+            {row.group !== 'scenes' ? (
+              <button
+                type="button"
+                className={row.favourite ? 'sc-star on' : 'sc-star'}
+                aria-label={row.favourite ? `Unstar ${row.name}` : `Star ${row.name}`}
+                aria-pressed={row.favourite}
+                onClick={() => row.star(!row.favourite)}
+              >
+                ★
+              </button>
+            ) : null}
+            {row.remove ? (
+              <button type="button" className="sc-star" aria-label={`Delete ${row.name} everywhere`} onClick={row.remove}>
+                ✕
+              </button>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+// -------------------------------------------------------------- dialogs
+
+function RemoveDialog({ question, comfort, onCancel, onConfirm }: { question: string; comfort: string; onCancel(): void; onConfirm(): void }) {
+  return (
+    <div className="sc-modal" role="alertdialog" aria-label={question}>
+      <div className="sc-modal-box">
+        <p>
+          <strong>{question}</strong>
+        </p>
+        {comfort ? <p className="muted small">{comfort}</p> : null}
+        <div className="sc-modal-actions">
+          <button type="button" className="ghost" onClick={onCancel} autoFocus>
+            Cancel
+          </button>
+          <button type="button" className="danger" onClick={onConfirm}>
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CastPrompt({ file, onCancel, onPick, onCreate }: { file: ProjectFile; onCancel(): void; onPick(id: string): void; onCreate(name: string): void }) {
+  const [name, setName] = useState('');
+  const cast = castForLibrary(file);
+  const wanted = name.trim().toLowerCase();
+  const matches = cast.filter((one) => !wanted || one.name.toLowerCase().includes(wanted));
+  const exact = cast.some((one) => one.name.trim().toLowerCase() === wanted);
+  return (
+    <div className="sc-modal" role="dialog" aria-label="Which character?">
+      <div className="sc-modal-box">
+        <h3>Which character?</h3>
+        <input
+          autoFocus
+          placeholder="Type a name"
+          aria-label="Character name"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && wanted) {
+              const match = cast.find((one) => one.name.trim().toLowerCase() === wanted);
+              if (match) onPick(match.id as string);
+              else onCreate(name.trim());
+            }
+            if (event.key === 'Escape') onCancel();
+          }}
+        />
+        <ul className="sc-cast-list">
+          {matches.slice(0, 40).map((one) => (
+            <li key={one.id as string}>
+              <button type="button" className="ghost" onClick={() => onPick(one.id as string)}>
+                {one.name || 'Unnamed'}
+              </button>
+            </li>
+          ))}
+        </ul>
+        <div className="sc-modal-actions">
+          <button type="button" className="ghost" onClick={onCancel}>
+            Cancel
+          </button>
+          {wanted && !exact ? (
+            <button type="button" onClick={() => onCreate(name.trim())}>
+              Add “{name.trim()}” to the cast
             </button>
-            <button
-              type="button"
-              className="ghost card-tool remove"
-              aria-label={`Delete ${node.title || 'this node'}`}
-              title="Delete this card"
-              onClick={onAskRemove}
-            >
-              ×
-            </button>
-          </>
-        )}
+          ) : null}
+        </div>
       </div>
     </div>
   );

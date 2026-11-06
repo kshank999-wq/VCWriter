@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   approveCapture,
+  addBlock,
   blocksOf,
   boardsOf,
   captureItemSchema,
@@ -106,9 +107,10 @@ describe('a note onto the board', () => {
 
   it('hangs it off a card when one was dropped on', () => {
     const made = createBoard(project());
-    const spine = blocksOf(boardsOf(made.file)[0]!)[0]!;
+    const framed = addBlock(made.file, made.board.id, { title: 'Act one' }).file;
+    const spine = blocksOf(boardsOf(framed)[0]!)[0]!;
 
-    const done = approveCapture(made.file, note(), {
+    const done = approveCapture(framed, note(), {
       kind: 'board',
       boardId: made.board.id,
       parentId: spine.id,

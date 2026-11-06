@@ -69,6 +69,9 @@ export type SculptorColumnId = Id<'SculptorColumn'>;
 export type SculptorNodeId = Id<'SculptorNode'>;
 export type SculptorFieldId = Id<'SculptorField'>;
 export type SculptorLinkId = Id<'SculptorLink'>;
+/** Story Sculptor 2.0: a reusable definition, and a saved view (addendum 03 v2). */
+export type SculptorEntityId = Id<'SculptorEntity'>;
+export type SculptorViewId = Id<'SculptorView'>;
 export type OutlineId = Id<'Outline'>;
 export type OutlineItemId = Id<'OutlineItem'>;
 /**

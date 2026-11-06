@@ -4,8 +4,10 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import {
   addBlock,
+  addCharacter,
   addChild,
   beatsForUnit,
+  boardSchema,
   createBoard,
   createProjectFile,
   findBoard,
@@ -17,9 +19,9 @@ import {
 import { SculptorWindow } from '../components/SculptorWindow';
 
 /**
- * The Sculptor's *Add to track* (addendum 03 §6a): select a scene, one press,
- * and it is in the script with every beat under it. Three ways in — the
- * toolbar, the card's right-click, the panel — and all three read one offer.
+ * Story Sculptor 2.0 in the app (addendum 03 v2 §14): one Sculptor, the
+ * palette, the library, the inspector, the corner dots, explode and collapse,
+ * mini maps with breadcrumbs, and Add to track carried over from version 1.
  */
 
 afterEach(cleanup);
@@ -29,116 +31,164 @@ let latest: ProjectFile | null = null;
 function Harness({ initial }: { initial: ProjectFile }) {
   const [file, setFile] = useState(initial);
   latest = file;
-  return (
-    <SculptorWindow
-      file={file}
-      open
-      onClose={() => undefined}
-      onUpdate={(mutate) => setFile((current) => mutate(current))}
-    />
-  );
+  return <SculptorWindow file={file} open onClose={() => undefined} onUpdate={(mutate) => setFile((current) => mutate(current))} />;
 }
 
-/** A board with one block, a scene under it and two beats under the scene. */
+/** Act one → The interview (scene) → two beats, and Mara in the cast. */
 const shaped = () => {
-  const made = createBoard(createProjectFile({ title: 'Blackout', format: 'screenplay' }));
-  const block = addBlock(made.file, made.board.id, { title: 'She takes the job' });
-  const scene = addChild(block.file, made.board.id, block.nodeId as SculptorNodeId, { title: 'The interview' });
+  const cast = addCharacter(createProjectFile({ title: 'Blackout', format: 'screenplay' }), { name: 'Mara' });
+  const made = createBoard(cast);
+  const block = addBlock(made.file, made.board.id, { title: 'Act one' });
+  const scene = addChild(block.file, made.board.id, block.nodeId as SculptorNodeId, { title: 'The interview', kind: 'scene' });
   let file = scene.file;
   for (const title of ['She lies', 'He believes her']) {
-    file = addChild(file, made.board.id, scene.nodeId as SculptorNodeId, { title }).file;
+    file = addChild(file, made.board.id, scene.nodeId as SculptorNodeId, { title, kind: 'beat' }).file;
   }
   return { file, boardId: made.board.id, blockId: block.nodeId as SculptorNodeId, sceneId: scene.nodeId as SculptorNodeId };
 };
 
-/** The card on the canvas: the panel beside it shows the same title once it is chosen. */
-const cardOf = (title: string): HTMLElement =>
-  within(document.querySelector('.sculpt-sheet') as HTMLElement)
-    .getByDisplayValue(title)
-    .closest('.sculpt-node') as HTMLElement;
+const card = (title: string): HTMLElement =>
+  [...document.querySelectorAll<HTMLElement>('.sc-card')].find((one) => one.querySelector('.sc-card-title')?.textContent === title) as HTMLElement;
+const cardTitles = () => [...document.querySelectorAll('.sc-card .sc-card-title')].map((one) => one.textContent);
+const select = (title: string) => fireEvent.pointerDown(card(title), { button: 0 });
+const board = () => findBoard(latest!, latest!.boards![0]!.id)!;
 
-/** The toolbar's own buttons: the panel beside the canvas carries the same offer. */
-const toolbar = () => within(document.querySelector('.sculptor-bar') as HTMLElement);
-
-describe('Add to track on the Sculptor', () => {
-  it('is on the toolbar, waits for a card, and names the beats that would come', () => {
+describe('one Sculptor, the v2 map', () => {
+  it('opens as the map with a palette, a library and type-labelled cards', () => {
     const { file } = shaped();
     render(<Harness initial={file} />);
-
-    const button = toolbar().getByRole('button', { name: 'Add to track' });
-    expect((button as HTMLButtonElement).disabled).toBe(true);
-
-    fireEvent.pointerDown(cardOf('The interview'));
-    const offered = toolbar().getByRole('button', { name: 'Add to track — and its 2 beats' });
-    expect((offered as HTMLButtonElement).disabled).toBe(false);
-    // The panel beside the canvas offers the same thing in the same words.
-    expect(screen.getAllByRole('button', { name: 'Add to track — and its 2 beats' })).toHaveLength(2);
+    expect(screen.getAllByRole('dialog', { name: 'Story Sculptor' })).toHaveLength(1);
+    expect(screen.getByRole('complementary', { name: 'New cards' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Library' })).toBeTruthy();
+    expect(cardTitles()).toEqual(['Act one', 'The interview', 'She lies', 'He believes her']);
+    expect(within(card('The interview')).getByText('SC')).toBeTruthy();
+    // Corner dots on the cards that hold something.
+    expect(card('Act one').querySelectorAll('.sc-dot')).toHaveLength(2);
+    expect(card('She lies').querySelector('.sc-dots')).toBeNull();
   });
 
-  it('puts the scene in the script with its beats under it, in order, from the toolbar', () => {
-    const { file, boardId, sceneId } = shaped();
-    render(<Harness initial={file} />);
-
-    fireEvent.pointerDown(cardOf('The interview'));
-    fireEvent.click(toolbar().getByRole('button', { name: 'Add to track — and its 2 beats' }));
-
-    const units = unitsInStoryOrder(latest as ProjectFile);
-    const made = units.find((unit) => unit.title === 'The interview');
-    expect(made).toBeDefined();
-    expect(beatsForUnit(latest as ProjectFile, made!.id).map((beat) => beat.title)).toEqual([
-      'She lies',
-      'He believes her',
-    ]);
-    // The node is that scene now, and the card says so.
-    expect(findNode(findBoard(latest as ProjectFile, boardId)!, sceneId)?.boundUnitId).toBe(made!.id);
-    expect((toolbar().getByRole('button', { name: 'Add to track' }) as HTMLButtonElement).disabled).toBe(true);
+  it('upgrades a version-1 board the first time it is opened, and never offers the old board', () => {
+    const base = createProjectFile({ title: 'Old', format: 'screenplay' });
+    const at = '2026-01-01T00:00:00.000Z';
+    const old = boardSchema.parse({
+      id: '00000000-0000-4000-8000-0000000000b1',
+      projectId: base.project.id,
+      name: 'Board',
+      columns: [{ id: '00000000-0000-4000-8000-0000000000c1', name: 'Structure', kind: 'structure', orderKey: 'a1', fields: [] }],
+      nodes: [
+        {
+          id: '00000000-0000-4000-8000-0000000000d1',
+          boardId: '00000000-0000-4000-8000-0000000000b1',
+          columnId: '00000000-0000-4000-8000-0000000000c1',
+          orderKey: 'a1',
+          title: 'Beginning',
+          kind: 'structure',
+          end: 'beginning',
+          createdAt: at,
+          updatedAt: at,
+        },
+      ],
+      createdAt: at,
+      updatedAt: at,
+    });
+    render(<Harness initial={{ ...base, boards: [old] }} />);
+    expect(board().schemaVersion).toBe(2);
+    expect(findNode(board(), '00000000-0000-4000-8000-0000000000d1')!.kind).toBe('frame');
+    expect(screen.queryByRole('button', { name: /\+ Column/ })).toBeNull();
   });
 
-  it('offers the same thing on the card’s right-click', () => {
+  it('adds from the palette under the selected card, and asks which character for a Character', () => {
     const { file } = shaped();
     render(<Harness initial={file} />);
-
-    fireEvent.contextMenu(cardOf('The interview'), { clientX: 120, clientY: 80 });
-    const menu = screen.getByRole('menu', { name: 'Card: The interview' });
-    expect(menu).toBeDefined();
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Add to track — and its 2 beats' }));
-
-    expect(screen.queryByRole('menu')).toBeNull();
-    const made = unitsInStoryOrder(latest as ProjectFile).find((unit) => unit.title === 'The interview');
-    expect(made).toBeDefined();
-    expect(beatsForUnit(latest as ProjectFile, made!.id)).toHaveLength(2);
+    select('The interview');
+    fireEvent.click(screen.getByRole('button', { name: 'Add a character' }));
+    const dialog = screen.getByRole('dialog', { name: 'Which character?' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Mara' }));
+    const mara = board().nodes.find((node) => node.kind === 'character')!;
+    expect(mara.parentId).toBe(board().nodes.find((node) => node.title === 'The interview')!.id);
+    expect(latest!.characters.filter((one) => one.name === 'Mara')).toHaveLength(1);
   });
 
-  it('keeps the item on a block, disabled, over the reason', () => {
+  it('places a character from the library twice as one definition', () => {
     const { file } = shaped();
     render(<Harness initial={file} />);
-
-    fireEvent.contextMenu(cardOf('She takes the job'), { clientX: 120, clientY: 80 });
-    const item = screen.getByRole('menuitem', { name: 'Add to track' }) as HTMLButtonElement;
-    expect(item.disabled).toBe(true);
-    expect(screen.getByText('a block is the shape of the story rather than a scene in it.')).toBeDefined();
+    const library = screen.getByRole('region', { name: 'Library' });
+    select('She lies');
+    fireEvent.click(within(library).getByTitle('Place Mara'));
+    select('He believes her');
+    fireEvent.click(within(library).getByTitle('Place Mara'));
+    const placements = board().nodes.filter((node) => node.kind === 'character');
+    expect(placements).toHaveLength(2);
+    expect(new Set(placements.map((node) => node.entityId)).size).toBe(1);
+    expect(board().entities).toHaveLength(1);
   });
 
-  it('closes the menu on Escape', () => {
+  it('collapses all to the frames, explodes all back, and collapses to Scene', () => {
     const { file } = shaped();
     render(<Harness initial={file} />);
+    fireEvent.click(screen.getByRole('button', { name: /Collapse all/ }));
+    expect(cardTitles()).toEqual(['Act one']);
+    // The folded card counts what it hides.
+    expect(card('Act one').querySelector('.sc-dot-count')?.textContent).toBe('3');
+    fireEvent.click(screen.getByRole('button', { name: /Explode all/ }));
+    expect(cardTitles()).toHaveLength(4);
+    fireEvent.change(screen.getByRole('combobox', { name: 'Collapse to level' }), { target: { value: 'type:scene' } });
+    expect(cardTitles()).toEqual(['Act one', 'The interview']);
+  });
 
-    fireEvent.contextMenu(cardOf('The interview'), { clientX: 120, clientY: 80 });
-    expect(screen.getByRole('menu')).toBeDefined();
+  it('opens a card as its own map and comes back by the breadcrumbs', () => {
+    const { file } = shaped();
+    render(<Harness initial={file} />);
+    fireEvent.doubleClick(card('The interview'));
+    expect(cardTitles()).toEqual(['The interview', 'She lies', 'He believes her']);
+    const crumbs = screen.getByRole('navigation', { name: 'Where you are in the story' });
+    expect(within(crumbs).getByRole('button', { name: 'Act one' })).toBeTruthy();
+    fireEvent.click(within(crumbs).getByRole('button', { name: 'Whole story' }));
+    expect(cardTitles()).toHaveLength(4);
+  });
+
+  it('finds a card inside a fold and reveals it with its path', () => {
+    const { file } = shaped();
+    render(<Harness initial={file} />);
+    fireEvent.click(screen.getByRole('button', { name: /Collapse all/ }));
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search the map' }), { target: { value: 'believes' } });
+    const results = screen.getByRole('listbox', { name: 'Search results' });
+    expect(within(results).getByText('Act one › The interview')).toBeTruthy();
+    fireEvent.click(within(results).getByRole('button'));
+    expect(cardTitles()).toContain('He believes her');
+  });
+
+  it('asks before deleting and says reusable items stay', () => {
+    const { file } = shaped();
+    render(<Harness initial={file} />);
+    select('The interview');
+    fireEvent.keyDown(window, { key: 'Delete' });
+    const ask = screen.getByRole('alertdialog');
+    expect(ask.textContent).toContain('and the 2 cards under it');
+    fireEvent.click(within(ask).getByRole('button', { name: 'Delete' }));
+    expect(board().nodes).toHaveLength(1);
+  });
+});
+
+describe('Add to track, carried over from version 1', () => {
+  it('puts the scene in the script with its beats under it, in order, from the inspector', () => {
+    const { file } = shaped();
+    render(<Harness initial={file} />);
+    select('The interview');
+    const inspector = screen.getByRole('region', { name: 'Card details' });
+    fireEvent.click(within(inspector).getByRole('button', { name: /Add to track — and its 2 beats/ }));
+    const units = unitsInStoryOrder(latest!);
+    const unit = units.find((one) => one.title === 'The interview')!;
+    expect(beatsForUnit(latest!, unit.id).map((beat) => beat.title)).toEqual(['She lies', 'He believes her']);
+  });
+
+  it('offers it on the card’s right-click, and the menu closes on Escape', () => {
+    const { file } = shaped();
+    render(<Harness initial={file} />);
+    fireEvent.contextMenu(card('The interview'), { clientX: 100, clientY: 100 });
+    const menu = screen.getByRole('menu');
+    expect(within(menu).getByRole('menuitem', { name: /Add to track/ })).toBeTruthy();
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(screen.queryByRole('menu')).toBeNull();
-  });
-
-  it('offers the beats alone once the scene is on the track, in the panel', () => {
-    const { file } = shaped();
-    render(<Harness initial={file} />);
-
-    fireEvent.pointerDown(cardOf('The interview'));
-    fireEvent.click(toolbar().getByRole('button', { name: 'Add to track — and its 2 beats' }));
-    // Thought of one more afterwards.
-    fireEvent.click(screen.getByRole('button', { name: '+ Under it' }));
-    fireEvent.pointerDown(cardOf('The interview'));
-
-    expect(screen.getAllByRole('button', { name: 'Add its 1 beat to the track' }).length).toBeGreaterThan(0);
   });
 });

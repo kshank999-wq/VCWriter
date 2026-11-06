@@ -1,10 +1,9 @@
 import {
   addChild,
   childrenOf,
-  columnIndexOf,
-  columnsOf,
   findBoard,
   findNode,
+  titleOf,
   updateNode,
 } from './sculptor.js';
 import { addItem, findOutline, findOutlineItem, outlineChildren, updateItem } from './outline.js';
@@ -54,6 +53,19 @@ import type { BoardId, OutlineId, OutlineItemId, SculptorNodeId } from './ids.js
  */
 const ROW_KIND: Record<string, string> = { scene: 'scene', beat: 'beat' };
 
+/** An outline row's kind as a Sculptor card type (addendum 03 v2 §4). */
+const CARD_KIND: Record<string, string> = {
+  act: 'frame',
+  part: 'frame',
+  chapter: 'frame',
+  sequence: 'frame',
+  scene: 'scene',
+  section: 'scene',
+  beat: 'beat',
+  subsection: 'beat',
+  character: 'character',
+};
+
 /**
  * A node and everything under it, copied into the outline (§2).
  *
@@ -88,7 +100,7 @@ export const carryNodeToOutline = (
       parentId,
       ...where,
       kind: ROW_KIND[from.kind] ?? 'note',
-      title: from.title,
+      title: titleOf(current, findBoard(current, boardId) ?? board, from),
     });
     current = made.file;
     if (!made.itemId) return;
@@ -136,7 +148,7 @@ export const carryRowToBoard = (
   let leftBehind = 0;
 
   const carry = (from: typeof item, parentId: SculptorNodeId): void => {
-    const made = addChild(current, boardId, parentId, { title: from.title });
+    const made = addChild(current, boardId, parentId, { title: from.title, kind: CARD_KIND[from.kind] ?? 'note' });
     if (!made.nodeId) {
       // No column to the right of the parent: everything from here down stays
       // in the outline, and is counted rather than silently dropped.
@@ -167,6 +179,5 @@ export const carryRowToBoard = (
 export const canCarryToBoard = (file: ProjectFile, boardId: BoardId, under: SculptorNodeId): boolean => {
   const board = findBoard(file, boardId);
   const node = board ? findNode(board, under) : null;
-  if (!board || !node) return false;
-  return columnIndexOf(board, node) + 1 < columnsOf(board).length;
+  return Boolean(board && node);
 };

@@ -536,6 +536,14 @@ const boardToRow = (board: BoardRecord): Row => ({
   // The board's shape rather than its content: read and written whole, and
   // nothing queries inside it.
   columns: board.columns,
+  // Story Sculptor 2.0 (addendum 03 v2, migration 0076). The definitions and
+  // the view are read and written whole with the board, like its columns.
+  schema_version: board.schemaVersion,
+  entities: board.entities,
+  view_state: board.viewState,
+  layout: board.layout,
+  views: board.views,
+  legacy: board.legacy ?? null,
   created_at: board.createdAt,
   updated_at: board.updatedAt,
 });
@@ -550,6 +558,8 @@ const sculptorNodeToRow = (node: SculptorNode, projectId: ProjectId): Row => ({
   title: node.title,
   note: node.note,
   kind: node.kind,
+  subtype: node.subtype,
+  entity_id: node.entityId,
   colour: node.colour,
   fields: node.fields,
   // Who is on the card (addendum 03 §5), by id. Flat like the fields beside
@@ -571,6 +581,8 @@ const sculptorLinkToRow = (link: FlatSculptorLink, projectId: ProjectId): Row =>
   from_id: link.fromId,
   to_id: link.toId,
   label: link.label,
+  link_type: link.type,
+  directed: link.directed,
   created_at: link.createdAt,
   updated_at: link.updatedAt,
 });
@@ -1336,12 +1348,14 @@ const sculptorNodeFromRow = (row: Row): SculptorNode =>
   sculptorNodeSchema.parse({
     id: row['id'],
     boardId: row['board_id'],
-    columnId: row['column_id'],
+    columnId: nullableText(row['column_id']),
     parentId: nullableText(row['parent_id']),
     orderKey: row['order_key'],
     title: text(row['title']),
     note: text(row['note']),
     kind: text(row['kind']),
+    subtype: text(row['subtype']),
+    entityId: nullableText(row['entity_id']),
     colour: text(row['colour']),
     fields: row['fields'] ?? {},
     characterIds: row['character_ids'] ?? [],
@@ -1359,6 +1373,8 @@ const sculptorLinkFromRow = (row: Row): FlatSculptorLink => ({
     fromId: row['from_id'],
     toId: row['to_id'],
     label: text(row['label']),
+    type: text(row['link_type']) || 'related',
+    directed: row['directed'] === undefined || row['directed'] === null ? true : flag(row['directed']),
     createdAt: row['created_at'],
     updatedAt: row['updated_at'],
   }),
@@ -1508,6 +1524,12 @@ const plansFromRows = (rows: ProjectRows): Pick<ProjectFile, 'boards' | 'outline
         projectId: row['project_id'],
         name: text(row['name']),
         columns: row['columns'] ?? [],
+        schemaVersion: typeof row['schema_version'] === 'number' ? row['schema_version'] : 1,
+        entities: row['entities'] ?? [],
+        viewState: row['view_state'] ?? {},
+        layout: row['layout'] ?? {},
+        views: row['views'] ?? [],
+        legacy: row['legacy'] ?? null,
         nodes: nodes.filter((node) => (node.boardId as string) === row['id']),
         links: links
           .filter((link) => (link.boardId as string) === row['id'])

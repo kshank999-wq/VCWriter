@@ -1631,6 +1631,18 @@ export default function App() {
             onClose={() => setSculptorOpen(false)}
             onUpdate={project.update}
             onSaveAs={saveSomewhere}
+            onUndo={project.undo}
+            onRedo={project.redo}
+            canUndo={project.canUndo}
+            canRedo={project.canRedo}
+            onGoToBeat={(beatId) => {
+              setSculptorOpen(false);
+              setSelectedBeatId(beatId);
+            }}
+            onOpenResearch={() => {
+              setSculptorOpen(false);
+              setResearchOpen(true);
+            }}
             onPopOut={() => {
               setSculptorOpen(false);
               openPane('sculptor');

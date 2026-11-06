@@ -1,691 +1,252 @@
-# Addendum 03 — Story Sculptor
+# Addendum 03 — Story Sculptor 2.0
 
-Status: stages 1–7 and 9 built, plus §6a's *Add to track* and the stepped
-layout of §4, September 2026. **Rewritten** from Ken's diagram of
-10 September; §14 says what changed and what happens to the code built
-against the first draft. Extends §5 (story structure) and §19 (the hierarchy)
-of the master specification, and adds an area alongside the workspace of
-addendum 02.
+Status: built, November 2026, from Ken's *Story Sculptor Development
+Specification v2.0* (5 November 2026). **This replaces the column board**
+(Sculptor version 1, September 2026). There is one Sculptor; the old one is
+not reachable. Version 1's text is in git history before this change.
 
-Story Sculptor is a **node-based mind map for a story**: a canvas of nodes in
-vertical columns, where the largest shapes go in first and detail is added by
-building out to the right. It is part of the standard program and does not
-depend on Writers Room.
+Story Sculptor 2.0 is a **visual story-architecture workspace**: a nested,
+expandable story mind map. A writer puts in the big frames, drills into
+scenes, nests the characters in each scene and what they do, and keeps going
+as deep as the story needs. At any time the whole hierarchy can be exploded
+onto one canvas, cross-linked, and folded back by level or by branch.
 
-**It has no method in it.** No three acts, no beat sheet, no obligatory
-scenes. The method lives in the Story Grid (addendum 04), which is a tab of
-the editor and is opened on purpose. This is the room where the story is
-still being found, and a tool that asks questions here would be asking them
-too early.
+## 1. Where it is
 
-## 1. Objective
+The **Sculptor** button on the bottom bar (and the Window menu, and its own
+pop-out window) opens it, as before. Same entry point, same room, new
+contents. It covers the workspace, with **Exit** at the top right.
 
-A flat outline asks a writer to know the shape of the story before they have
-found it. The Sculptor is the other way round: **an easy way to log the major
-ideas, and keep refining them.**
+## 2. The screen
 
-It is called sculpting because that is the order of the work. You fix a
-frame — this is where it starts, this is where it ends — and then you add
-the big blocks of clay to it. Then smaller ones. Then the detail. Nothing
-insists you know the next level down before you have finished this one, and
-nothing you put in is a commitment.
-
-## 2. The canvas
-
-A grid canvas that pans and zooms. **Story time runs down; detail runs
-right.**
-
-A new board has exactly two nodes: **Beginning** and **End**, connected. Both
-are real, editable nodes — click either and type what the story begins or
-ends as, in general terms. They are the only two nodes a board cannot be
-without, so neither can be deleted; everything else is put in by the writer.
-
-Between them, in the first column, go the **big blocks**: the inciting
-incident, a plot point, a midpoint, whatever the writer calls the shapes of
-their story. The connector between two consecutive blocks **stretches** as
-material is added beside them, which is what makes the frame spread as the
-clay goes on.
-
-## 3. The columns
-
-Columns are added to the right, without limit. The first three are made with
-every board because nearly every story wants them; **the writer can rename
-them, add more, and decide what each one is for.**
-
-| | Column | Holds |
-| --- | --- | --- |
-| 1 | **Structure** | Beginning, End, and the big blocks between them. A chain: each node connects to the next |
-| 2 | **Scenes** | Scenes the writer thinks would work, hung off a structure node |
-| 3 | **Beats** | The beats inside a scene |
-| 4+ | **The writer's own** | Character arcs, plot arcs, reveals, setups, research, questions to answer — whatever the next level of detail is |
-
-A node in column *n* hangs off a node in column *n−1*: its **parent**. The
-connector is drawn from the parent to the group of its children, as in the
-diagram — one arrow into the stack, not one arrow per child.
-
-**This is not a plot track.** Addendum 02 §2 fixes *track* as a track of the
-master timeline, one row per subplot. These are columns: levels of detail,
-not threads of story. The two words stay apart.
-
-## 4. The layout rule
-
-One rule, applied recursively, produces the whole diagram:
-
-> **A node is as tall as its children, and no shorter than itself.**
-
-A beat is one row. A scene is its head and the beats **under** it — two
-beats, a short card; four beats, a tall one. A block is its head and the
-scenes under it, so **the scenes fall between one structure point and the
-next**: the structure column reads as a spine with the story's scenes stepped
-down between its points, and a scene with beats reads the same way one level
-in. So:
-
-- What hangs off a node starts below its head, one column to the right, never
-  level with it. (The first build laid children level with the parent's head,
-  which read as a scene standing *beside* its block rather than under it, and
-  put nothing between two blocks but the scenes' own height — so the
-  structure points were never separated from what they contained. Ken asked
-  for them expanded out and separated, with the scenes in between, and the
-  beats the same way inside a scene.)
-- Adding a beat grows its scene and pushes the scenes below it down.
-- Adding a scene grows the gap between the two big blocks it sits between,
-  and pushes everything below down the canvas.
-- Nothing ever overlaps, because nothing is positioned — everything is
-  measured.
-- Collapsing a node compresses its children and keeps their order.
-
-Sizes are computed in **canvas units**, and the renderer turns a unit into
-pixels at the current zoom. The shape belongs to the story; the size belongs
-to the screen.
-
-## 5. Nodes
-
-A node is small on purpose: **a title and a note**. That is what "an easy way
-of logging the major ideas" requires — anything more, asked for up front, is
-a form to fill in.
-
-| | |
+| Region | What it does |
 | --- | --- |
-| **Title** | What it is. Typed straight on the node |
-| **Note** | Anything else, in the detail panel |
-| **Kind** | Its column's kind by default, changeable |
-| **Colour** | Optional, the writer's own |
-| **Who is in it** | The project's own cast, ticked. Never names typed onto the card |
-| **Links** | Free connections to any other node (§7) |
-| **Bound to** | A real scene or beat in the script, where the writer has said so (§6) |
+| Top bar | Breadcrumbs (*Whole story › Act one › The warehouse*), search, saved status, pop-out, Save, Exit |
+| Toolbar | Explode all, Collapse all, Collapse to (Frame, Scene, Character, Action, Full detail, or Level 0–n), Explode branch, Collapse branch, Show ancestors, Fit view, Focus selection, Auto layout, Connect, Undo, Redo, Zoom, Views (save and apply arrangements, show or hide link types), Notes (the research shelf and phone notes) |
+| Left: palette | Frame, Plot point, Scene, Character, Action, Beat, Note, Custom. Drag one onto a card to put it inside, onto the canvas to put it at the top, or click to add under the selected card |
+| Centre: canvas | Pan (drag the background, or the wheel; Space+drag), zoom (Ctrl+wheel or the slider), cards, containment lines, cross-links, minimap |
+| Right: inspector | The selected card: title, type, description, typed details, the scene it is in, its script link, its connections, and actions. A selected connection shows its kind, label and direction instead |
+| Right: library | Characters (the cast), places, reusable plot items, scenes already in the script, and research. Search, filters, favourites (★), and how many times each is placed. Drag onto a card, or click to place under the selection |
 
-**Who is in it is read through the cast, never copied onto the card.** A
-character renamed once is renamed on every card that names them, and a board
-can no more invent a person than a scene can — so a name that is not in the
-cast yet joins the project's cast as it joins the card. Typing it on the board
-is right; making the writer go somewhere else to enter them would not be.
+## 3. Typed cards
 
-Everything beyond that — a scene's POV, its conflict, a character arc's
-before-and-after state — is a **field of its column**, defined when the
-column is made, so a writer who wants those columns has them and one who
-does not is not shown them.
+| Type | Colour | Badge | Details the inspector offers |
+| --- | --- | --- | --- |
+| Frame | Indigo | FR | Story order, Purpose, Summary, Polarity, Arc |
+| Plot point | Violet | PP | Stakes, Cause, Effect |
+| Scene | Blue | SC | Slugline, Purpose, Summary, Sequence |
+| Character | Amber | CH | Scene objective, Emotional state |
+| Action | Coral | AC | Verb, Target, Outcome |
+| Beat | Teal | BT | Rhythm, Turn, Polarity |
+| Note | Grey | NT | (subtype optional) |
+| Custom | Slate | CU | (named by the writer: *Location*, *Reveal*) |
 
-## 6. Ideas, and the script
+- The colour is a stripe and the two-letter badge is printed on every card,
+  so colour is never the only signal.
+- **Corner dots.** A card with anything under it shows one dot per type of
+  what is nested (up to four, then *+N*). Hovering says *3 characters,
+  5 actions*. When folded, the dots carry the count. Clicking them folds or
+  opens; double-clicking opens the card as its own map.
+- Any card may hold any other, without a depth limit
+  (`canContain` is the one place to restrict that, and today it allows all).
+- Cards can be renamed (on the card with F2 or the menu, or in the
+  inspector), retyped where valid, duplicated, copied and pasted, moved,
+  reparented and deleted with a question first.
 
-**A node is an idea until the writer says otherwise.** This is the decision
-that shapes everything else, and it is the opposite of what the first draft
-assumed.
+The table lives in `packages/domain/src/sculptor-types.ts`.
 
-A scene node is a scene you *think might work*. It is not in the script, it
-is not in the page count, and deleting it costs nothing. When you decide it
-is real, you **bind** it: the node points at a `StructuralUnit` in the story
-order, and from then on the two are one thing — rename it in either place and
-it is renamed in both.
+## 4. Definitions and placements
 
-| The node is | What it means |
-| --- | --- |
-| **Unbound** | An idea. It lives only on the canvas |
-| **Bound** | The same object as a scene or beat in the script |
+A **definition** (`SculptorEntity`) is the reusable thing; a **placement**
+is a card that shows it. A card with no definition is just itself.
 
-Binding either takes an existing scene or makes one. Unbinding leaves the
-scene in the script and the node on the canvas, no longer joined.
+- A **character** is the cast's own character. Placing Mara in five scenes
+  makes five cards and one definition, and the name is read from the cast,
+  so renaming her anywhere renames every card. Renaming a character card
+  renames the cast record.
+- Places, research notes and themes work the same way (`sourceKind`,
+  `sourceId`): linked, never copied.
+- Any card can be made **reusable** (menu or inspector). It then appears in
+  the library's *Plot & scenes* and can be placed again.
+- **Duplicate placement** makes another card of the same definition.
+  **Paste inside as new items** clones the board's own definitions
+  (characters stay the same characters). Ordinary paste keeps them shared.
+- **Deleting a card** takes the card and its branch. Definitions, the other
+  placements and the cast stay. **Deleting a definition** (✕ in the library)
+  takes every placement of it, and never the project record it stands for.
+- Local context stays on the card: a character's *Scene objective* in one
+  scene is not her objective in another.
 
-The board carries a **badge on every node** saying which it is, so a glance
-says how much of the canvas is real.
+## 5. Nested navigation
 
-This is what §9 of the source specification asked for as "prefer linked
-references to duplicate content", and what it meant by "Sculptor-only,
-Sequencer-linked, or already in the written script" — three states that fall
-out of one flag and the script's own `inScript` switch.
+- **Double-click a card, or press Enter, to open it as its own map.** The
+  canvas then shows that card and what is under it, with breadcrumbs back to
+  every ancestor and to *Whole story*. Esc goes up one level.
+- Each map remembers its camera (zoom and position) while the room is open.
+- Connections to cards outside the open map are counted on the card (↗N).
+- *Show ancestors* opens every card above the selected one.
 
-## 6a. Add to track
+## 6. Explode and collapse
 
-Ken's ask, after the Outliner got its button: *select a scene and right-click,
-or there needs to be a button, that drops it into the track so you can see it
-there and all the beats will be there. Then you can start working.*
+What is open is **view state**, kept apart from the story
+(`board.viewState`):
 
-**One act, and it takes the beats.** *Add to track* makes the scene node real
-and then every beat node under it, in the order they stand on the canvas,
-each one landing after the nearest bound one above it exactly as a press on
-the node alone would. A beat already real is left alone. The scene may
-already be on the track — the writer thought of two more beats after
-realising it — and then the same act covers the beats alone, and its label
-says so: *Add its 2 beats to the track*.
+- `level`: everything (`all`), a depth (`depth`, root = 0), or a type
+  (`type`: a branch folds at a card whose type ranks at or past it). The
+  ranks are Frame 0, Plot point 1, Scene 2, Character 3, Action and Beat 4,
+  Note and Custom 5.
+- `open` and `closed`: branches the writer opened or folded by hand, which
+  win over the level.
+- `rootId`: the card shown as a mini map.
+- `hiddenLinkTypes`: link types switched off in Views.
 
-**Three ways in, one offer.** The toolbar carries the button, acting on the
-selected card; the card's right-click carries it; the detail panel and the
-opened card carry it where *Make it a scene* used to be. All three read one
-`trackOffer` and say its one sentence, so they cannot disagree about what a
-press would do — and the sentence counts what would come, because a press
-that took the scene and left the beats behind is the one confusing outcome.
+**Explode all** clears every fold and shows the whole hierarchy.
+**Collapse all** returns to the frames. **Collapse to** applies a preset or
+a depth. **Explode branch** opens one card and everything under it, leaving
+the rest as it was. **Collapse branch** folds that card only, and what was
+open under it stays open for next time.
 
-**Where it cannot go, it says why**, in a sentence the writer can act on: a
-block (*the shape of the story rather than a scene in it*), a beat whose scene
-is still an idea (spec §19 — a beat never floats in a track), a scene with
-nothing left to add. The right-click keeps the item, disabled, over the reason;
-a menu that simply lacked it would leave the writer hunting.
-
-The Outliner's *Add to track* (addendum 19 §3) is the same act read off a
-tree, which is why the button carries the same words on both: a scene row
-promotes with the beat rows under it, on every format. Nothing is stored
-beyond the bindings §6 already keeps.
+Cross-links survive every fold. A link into a folded branch is drawn to the
+card standing in for its hidden end (dotted, with *(inside)* on the label).
+Several links between the same two shown cards are drawn once with ×N. A link
+whose ends both fold into one card is counted on it (⇄N).
 
 ## 7. Connections
 
-Two kinds, and they are different things:
+**Containment** (parent to child) and **cross-links** are different things.
 
-- **Structural** — parent to children, and each structure node to the next.
-  Drawn automatically, and they say where a thing belongs.
-- **The writer's own** — any node to any node, with an optional label. *This
-  setup pays off here. This scene is why she does that.* Drawn as a curve
-  across the columns, and they say what a writer noticed.
+- Containment never loops: a card cannot go under itself or anything under
+  it (`canReparent`). Each card has one parent.
+- Cross-links join any two cards and may loop. Types: Related to, Causes,
+  Appears in, Sets up / pays off, Conflict, Influences, Custom. Each has a
+  label and may or may not have a direction.
+- Make one by dragging from a card's ● port to another card, with **Connect**
+  in the toolbar, or with *Connect to…* on the right-click. Select a line or
+  its label to edit its kind, label and direction, reverse it, or delete it.
 
-Connectors reroute as nodes move and columns resize. A connector is never
-what holds two things together; the parent relation is. So a connector can be
-deleted without losing anything but the observation.
+## 8. The canvas
 
-## 8. Export as an outline — **withdrawn**
+- `mapPicture` lays out what is open as a tree from left to right, each
+  card's children stacked to its right and centred on it. It is
+  deterministic: the same story always draws the same.
+- **Dragging a card** onto another card moves it, and its branch, inside that
+  card. If that takes a beat or a character out of its scene, the room asks
+  first and says the script is not changed. Dropped on empty canvas, the card
+  stays where it was put (`board.layout`), and its branch moves with it.
+- **Auto layout** forgets hand placements; the story is untouched.
+- Under 55% zoom the cards are drawn simplified, with a large title and
+  badge, so they stay legible.
+- Over 300 cards only those near the window are drawn. The layout,
+  summaries and link aggregation are single-pass and indexed. 5,000 cards
+  with 800 links lay out well inside a second (tested).
+- **Views** saves the current open state and hand layout under a name and
+  reapplies it.
 
-*Written when the Sculptor was the only place a story was planned. Ken's
-decision of 11 September: **the Sculptor does not make outlines.***
+## 9. Keys
 
-The original idea was the canvas walked depth-first as indented text, to read
-beside you and to print, and this section called it the payoff of the whole
-module. It was — right up until there was an Outliner.
+Enter opens; Esc clears, then goes up a level; arrows walk the visible tree;
+Tab adds the usual child (Frame → Scene → Character → Action → Note); F2
+renames; Delete asks; Ctrl+C / Ctrl+V copy and paste a branch (Shift for new
+items); Ctrl+F searches; Ctrl+Z / Shift+Ctrl+Z undo and redo. Every drag has
+a click alternative: palette and library items place on click, Connect is a
+button, and the right-click menu moves cards.
 
-Addendum 06 changed what the board is for. The Outliner is where a story is
-organised, and material reaches it from the board **by carrying a card across**
-(addendum 06 §2, §12 stage 7) — one at a time, with its subtree, because a
-board is a picture of possibilities and most of them are not in the story.
-An export that flattened the whole canvas would produce exactly the outline
-nobody asked for, and then sit beside the Outliner being a second, worse
-answer to the same question.
+## 10. Search
 
-So the payoff moved. It is the Outliner, and the way into it; printing an
-outline is addendum 06 §12 stage 9. What the board might still want one day is
-a way to print **the board** — the diagram, as a diagram — which is a different
-thing and is not specified here.
+Search covers titles, notes, details and type names, including inside folded
+branches. Each result shows its path (*Act one › The warehouse › Mara*).
+Choosing one opens its ancestors, leaves a mini map that does not contain
+it, selects it and centres it.
 
-## 9. The detail panel, and the card
+## 11. The script, and the rest of VC Writer
 
-Clicking a node opens its detail beside the canvas, without losing the map:
-its title, its note, its kind and colour, what it is bound to, what it is
-linked to, and whatever fields its column defines. A bound beat offers a way
-straight into the Beat Editor.
+- **Scenes and beats** bind to the script exactly as in version 1: *Add to
+  track* (create in VC Writer, with the beats under it), or *link an
+  existing* scene or beat. Bound cards rename both ways, and *Open scene* or
+  *Open beat* goes to it. A beat under a character under a scene still
+  belongs to that scene (`sceneOf`).
+- **Nothing in the script changes on its own.** Moving or deleting a card
+  never moves, rewrites or deletes a scene. When a bound card's order
+  disagrees with the script, the inspector says so and offers *Move to
+  match*.
+- The library's *In the script* lists scenes not yet on the map; placing one
+  makes a scene card linked to it.
+- Characters, places and research are linked, not copied, and *Open in
+  Research* goes to them.
+- Phone notes, research and outline rows dropped from the Notes shelf onto a
+  card land inside it, as before. The Outliner's *carry to the board* and the
+  board's *carry to the outline* still work; rows arrive as typed cards.
 
-**And the card opens.** The panel beside the canvas is a strip, and a strip is
-somewhere to glance at a note rather than somewhere to write one. Double-click
-a card — or press the ⋯ on it — and the same things open as a dialog with room
-in it: the title, the notes, who is in it, the questions its column asks, what
-it is bound to, and what it is connected to. The two are one component, so
-they can never come to say different things.
+## 12. Storage
 
-### The × asks first
+The same document and the same three tables carry v2. Migration
+`0076_story_sculptor_v2` adds:
 
-A ↑, a ↓ and a × the size of a full stop are a mis-click waiting to happen, and
-only one of those three costs anything. So the controls are bigger, the × is
-set apart from the arrows by a gap that has to be crossed to reach it, and
-**it asks before anything goes**.
+- **boards**: `schema_version`, `entities`, `view_state`, `layout`, `views`,
+  `legacy` (jsonb, read and written whole with the board, like `columns`).
+- **sculptor_nodes**: `subtype`, `entity_id`; `column_id` now nullable.
+- **sculptor_links**: `link_type`, `directed`.
 
-The question names what is actually at stake, which is the part nobody can see:
-a card near the top of a board carries everything hanging off it, so it asks
-*delete this and the six cards under it?* rather than *are you sure?* — and it
-says what is **not** lost, because a bound card's scene stays in the script
-whatever happens on the board. Where there is a scene behind the card, *Just
-unbind it* is offered beside *Delete*, which is almost always what was meant.
+A card's type is its `kind`. Row-level security, cascades and indexes are
+unchanged; `sculptor_nodes_entity_idx` is new. The advisors raised nothing
+new.
 
-### The research shelf, folded out
+## 13. Version 1, upgraded
 
-The shelf the Outliner has is on the board too, and it was a 210px strip down
-the left — wide enough to drag a row out of, not wide enough to read anything
-in, and costing a column of canvas all day whether or not it was being used.
+When a project is opened, every version-1 board is upgraded once
+(`upgradeBoards`, called from `parseProjectFile` and again when the room
+opens). The written mapping:
 
-It is a **button** now. Pressed, it opens from the left and moves the board
-across rather than sitting on top of it, and it takes a third of the width
-rather than a sliver, so what is on it can be read. Pressed again it folds
-away and the board has the window back.
-
-## 10. Views
-
-| | |
+| Version 1 | Version 2 |
 | --- | --- |
-| **Columns shown** | Any subset. Structure alone is the macro shape |
-| **Fold** | Any node, and everything to the right of it, folded to its head |
-| **Focus** | One node's subtree lit, the rest dimmed |
-| **Unbound only** | What is still an idea |
-| **Mini-map** | For a board bigger than the window. §18 |
-| **Search** | Node title, note and kind, with jump-to |
+| Structure column card | Frame, top level, same order |
+| Beginning / End | Ordinary frames with the same titles |
+| Scene column card | Scene |
+| Beat column card | Beat |
+| Writer's own column card | Custom, named after the column |
+| A kind the writer typed | That type if v2 has it, else Custom named so |
+| Column field answers (by field id) | Details, by the field's name |
+| People on a card (`characterIds`) | Character placements under the card |
+| Folded card | A closed branch in the view state |
+| Binding to a scene or beat | Kept as it is |
+| Writer's links | Kept, as *Related to*, directed as drawn |
 
-## 11. What it must never do
+Nothing is dropped. The upgrade is idempotent (a version-2 board is returned
+as it is) and logs what it did (`UpgradeLog`).
 
-- **Never require a paradigm.** A board with a beginning, an end and one
-  block between them is a valid board.
-- **Never lose the writing.** Deleting a bound node offers to unbind rather
-  than to delete the scene.
-- **Never reorder the script behind the writer's back.** Moving an unbound
-  node moves nothing but the node. Moving a bound one asks whether the script
-  should follow.
-- **Never overlap.** §4 is the whole of the layout.
+**Rollback.** The version-1 board is kept whole in `board.legacy`, and the
+columns and each card's `column_id` stay on migrated boards.
+`downgradeBoard` puts the old board back exactly (tested). The cloud held no
+version-1 boards when this shipped (0 boards, 0 nodes), so the upgrade only
+ever runs on local files.
 
-## 12. Performance
+## 14. Definition of done (spec §14)
 
-Hundreds to thousands of nodes, scrolling and dragging smoothly, virtualising
-what is off screen without the connectors losing their ends. Autosave, and
-undo/redo across moves, creation, deletion, binding and linking. Keyboard
-shortcuts for adding a sibling, a child, and a node above. Multi-select.
-Zoom, scroll, folds and filters remembered per machine.
-
-## 13. Acceptance
-
-- A writer can open a new board, type into Beginning and End, and have said
-  something useful about their story.
-- Blocks can be put between them in any number, named anything, with no
-  template offered.
-- A scene added in column 2 widens the gap between the blocks it sits
-  between; a beat added in column 3 grows its scene and pushes what is below
-  it down. Nothing overlaps at any point.
-- Columns can be added beyond the third and are the writer's to define.
-- A node can be bound to a real scene, and it is then one object with it.
-- Nodes can be connected to each other and the connection labelled.
-- The board exports as an indented outline, readable beside the canvas and
-  printable.
-- The board can be folded to the structure column alone and still read as the
-  story.
-
-## 14. What changed, and what happens to the code
-
-### 14.1 The diagram
-
-The first draft of this addendum read the source specification as *a second
-view of the manuscript*: a scene node **was** a scene in the script, a region
-**was** a span of the story order, and the canvas was a rearrangement of what
-the project already held. Stages 1 and 2 of that were built.
-
-The diagram of 10 September says otherwise, in three ways that between them
-change the model rather than the presentation:
-
-1. **Beginning and End are nodes you write in**, not the ends of a story that
-   happen to exist. That is where the work starts.
-2. **The columns stand beside each other**, each a track of its own, with
-   connectors between them — not scenes nested inside structure bands.
-3. **The columns keep going** — character arcs, then more detail, then more.
-   A fixed ladder of three cannot hold that, and nothing beyond scenes and
-   beats has an existing entity to be a view of.
-
-Together those make it a **graph of its own nodes**, some of which point at
-real scenes. Not a view. The first draft's §13.1 was wrong, and §13.3's
-"a region is a span" goes with it: there are no spans here, only nodes and
-parents.
-
-### 14.2 What survives
-
-- The **domain/renderer split for sizing** — canvas units in the model,
-  pixels in the view. §4 keeps it.
-- The **`note` marker fix**: a marker with no noun no longer takes a number,
-  so a milestone says what the writer typed. Useful on its own merits, and it
-  stays whatever happens here.
-- **Folding**, and remembering what is folded.
-- The judgement in §11 that nothing may be lost by deleting.
-
-### 14.3 What went
-
-Done: `sculptor.ts` and `SculptorWindow.tsx` and their tests came out with the
-Story Grid's first stage, and the names are free again for the model that
-replaced them. What follows is why they went.
-
-
-`packages/domain/src/sculptor.ts` and
-`apps/desktop/src/renderer/components/SculptorWindow.tsx`, and their tests.
-The spine-of-regions model they implement is not a subset of this one, so
-keeping them would mean carrying a second, wrong answer beside the right one.
-The Sculptor button comes off the title bar until there is something behind
-it worth opening.
-
-### 14.4 Build order
-
-1. **Built.** The board, the two nodes, the canvas, pan and zoom.
-2. **Built.** The structure column: blocks between the ends, named,
-   reordered, connected.
-3. **Built.** The layout rule, and the second column — scenes, widening the
-   gaps.
-4. **Built.** The third column — beats, growing their scenes.
-5. **Built.** Columns beyond the third, defined by the writer.
-6. **Built.** Binding a node to a real scene or beat.
-7. **Built.** The writer's own connections, labelled.
-8. ~~Export as an outline~~ — **withdrawn** (§8). The Outliner is where a
-   story becomes an outline, and material reaches it by being carried across.
-9. **Built.** Folding was already in the layout; focus, filters and search are
-   §17, and the mini-map is §18.
-10. Writers Room attribution and alternate boards (addendum 07). A board now
-    syncs — addendum 07 §4, stage 0 — so what is left is Writers Room itself,
-    which is specified and, past that stage, unbuilt.
-
-Stages 1–4 are the diagram. What the board is *for* is no longer stage 8,
-which is withdrawn: it is the Outliner, and carrying cards into it (addendum
-06 §12 stage 7).
-
-## 15. Names
-
-| Name | What it is |
+| Criterion | Where it is met |
 | --- | --- |
-| **Board** | One canvas. A project may have more than one |
-| **Node** | Anything on it |
-| **Column** | A vertical track of the canvas, a level of detail. **Not** a plot track |
-| **Block** | A node in the structure column |
-| **Bound** | A node that is the same object as a scene or beat in the script |
-| **Link** | A connection the writer drew, as opposed to the parent relation |
-| **Shelf** | The Research tree down the side of the canvas, to drag from (addendum 06 §3) |
+| One Sculptor entry, opening v2 | Same button, room and pane; the column board's code is gone |
+| Frame → scene → character → action and deeper | `sculptor-v2.test.ts` |
+| Palette creates; library reuses with canonical identity | `sculptor.test.tsx` (desktop), `sculptor-v2.test.ts` |
+| Colour-coded cards, type labels, corner dots | §3; desktop test checks badges and dots |
+| Mini maps, breadcrumbs, state kept | §5; desktop test |
+| Explode all, Collapse all, presets, per-branch | §6; both test files |
+| Cross-links persist through folds, save/reload and reparenting | `sculptor-v2.test.ts` (file and database round trips) |
+| No containment cycles; deleting a placement keeps the master | `sculptor-v2.test.ts` |
+| Version-1 boards migrated safely; links to VC Writer stay valid | §13; upgrade tests; binding tests unchanged in substance |
+| Tests for migration, graph ops, relationships, indicators, save/reopen, legacy retirement | `sculptor-v2.test.ts`, `sculptor-binding.test.ts`, `crossing.test.ts`, `sync-plans.test.ts`, desktop `sculptor.test.tsx` |
 
-## 16. What is built
+Not built yet (spec §11, *optional*): PNG/PDF snapshot and JSON export of
+the map.
 
-Stages 1–7 — **the diagram, the columns the writer defines, the moment an idea
-becomes a scene, and what the writer noticed between two of them**. The
-Sculptor is a button on the title bar again, beside Research, and it opens the
-canvas over the workspace.
+## 15. Code
 
-**A new board is two nodes.** Beginning and End, real and editable, with
-nothing in them: click either and type what the story begins or ends as. They
-cannot be deleted and nothing gets past them, which is what makes them the
-frame rather than two more cards. A project gets its board the first time the
-Sculptor is opened, because the work starts at those two nodes and they have
-to be there to type in.
-
-**Three columns** — Structure, Scenes, Beats — each renameable, because they
-are the writer's. `+ Block` puts a shape between the ends; a node's own `+`
-hangs a child off it in the column to its right; ↑ and ↓ move it among its
-siblings, and × takes it and its subtree off the board without touching the
-script, because a node is an idea until it is bound and binding is stage 6.
-
-**§4 is the whole of the layout**, and it is the domain's:
-
-> A node is as tall as its children, and no shorter than itself.
-
-Applied recursively that produces the diagram. A beat is one row; a scene is
-its head and the beats under it; a block is its head and the scenes under it,
-so the scenes fall between one structure point and the next and the chain down
-the structure column **stretches as the clay goes on**. (Children began level
-with the parent's head until Ken asked for the structure points separated with
-the scenes between them; now the head is a row of its own and the stack starts
-a gap under it.) Adding a beat grows its scene, which grows its block,
-which pushes everything below it down the canvas — and **nothing ever
-overlaps, because nothing is positioned: everything is measured.** A folded
-node is one row tall and its children are not laid out at all, which
-compresses them and keeps their order.
-
-Sizes are in canvas units and the renderer turns a unit into pixels at the
-current zoom (§14.2). The shape belongs to the story; the size belongs to the
-screen.
-
-A column is six units wide rather than four because a block carries a
-sentence — *a woman who will not ask for help* — and a card that clips it is
-a card a writer cannot read their own story off.
-
-**The detail panel** (§9) sits beside the canvas: the node's title and its
-note, and a line saying which it is — *an idea, it lives only on the canvas*.
-Every node is an idea at this stage; the badge is already there for when
-binding arrives.
-
-Boards travel in the document, in `boards[]`, defaulting to empty — so every
-project that already exists opens with no board rather than a wrong one.
-
-### Stage 5 — the columns the writer defines
-
-`+ Column` puts a fourth level of detail on the right and leaves it unnamed,
-because the name is the writer's: *Character arc*, *Reveals*, *Questions to
-answer*, whatever the story is actually asking for. There is no limit, and a
-node in the new column hangs off one in the column before it exactly as a beat
-hangs off a scene — §4 measures it with everything else, so the chain down the
-structure column stretches to fit what has been added off to the right.
-
-A column can be taken off the board, and **only the last one, and never one of
-the three every board is made with.** A column from the middle would orphan
-the one to its right, which is a diagram that cannot be drawn; the × appears on
-the last column's name and nowhere else.
-
-**§5's rule is the point of the stage.** A node stays a title and a note. What
-a scene's POV is, what a character arc runs *from* and *to* — that is a
-**question the column asks of everything in it**, not a field on the card. So
-the detail panel, under the note, says *Character arc asks* and lists the
-questions with this node's answers in them; `+ Question` adds one, typing over
-its name renames it on every node at once, and × stops asking it and takes the
-answers with it, because an answer to a question nobody is asking is not worth
-keeping. A column that asks nothing shows no form at all — the writer who
-wanted three columns and a sentence on each is never shown a field to fill in.
-
-Answers live on the node, keyed by the question's id (`fields`, defaulting to
-empty), so a node in a column that asks nothing carries nothing.
-
-### Stage 6 — binding a node to a real scene
-
-**A node is an idea until the writer says otherwise**, so the detail panel
-says which it is in a sentence and offers exactly two ways to stop being one:
-*Make it a scene*, which puts one in the script with the node's name on it, or
-a list of the scenes that already exist, headed **or it already exists**. A
-block offers neither: there is no object in the script for *Act II* to be the
-same thing as, and the panel says so rather than showing a control that does
-nothing.
-
-A card that is real carries a small filled mark and a solid border; an idea is
-dashed and carries nothing, so **a glance says how much of the canvas is
-real** — which is the badge §6 asks for.
-
-**One node per scene.** "The two are one thing" only means anything if it is
-one thing, so a scene another node has already claimed is not offered again,
-on this board or any other. The claim is what makes the rest of it safe:
-renaming the node renames the scene and renaming the scene renames the node,
-in one place each, with nothing to reconcile.
-
-Where a scene it binds to already has a name and the node does not, the node
-takes the script's — binding to a scene reads as recognising it, never as
-wiping it.
-
-A **beat** node binds the same way, with one rule from the script: a beat
-lives inside a scene and never floats in a track (spec §19), so a beat can only
-be made once the scene above it is real. Until then the panel says so, in
-those words, rather than failing when the button is pressed. Once the parent
-is bound, only **that scene's** beats are offered — the diagram already says
-which scene this beat is in, and offering another's would let the board say
-something it does not mean.
-
-**What binding costs, and what it never costs.** Unbinding leaves the scene in
-the script and the node on the canvas, no longer joined; it is not a deletion
-and never asks. The × on a bound card does ask, and what it offers is §11's
-rule in three buttons — *Unbind it*, *Remove the card*, *Keep it* — over a
-line saying the scene stays in the script either way. A scene removed from the
-script turns its node back into an idea rather than leaving it pointing at
-nothing.
-
-**The script is never reordered behind the writer's back** (§11). Moving a
-bound node moves the node, full stop. Where that puts it out of step with the
-script the panel says so in a sentence — *on the canvas it comes before The
-interview; in the script it comes after* — with one button, **Move the scene
-to match**, and that is the only route by which the board ever changes the
-story order. Making a new scene reads the canvas the same way: it lands after
-the scene of the nearest bound node above it, or before the nearest below it,
-and at the end when it has neither — so nothing that was already in the script
-moves.
-
-### Stage 7 — the writer's own connections
-
-**Connect**, in the bar, with a node chosen: the button arms, every other card
-says it is somewhere the line could land, and clicking one draws it. Escape
-gets out. It is armed rather than dragged because the canvas's own drag is the
-pan, and a writer reaching for a connection should not have to think about
-which drag they are starting.
-
-A connection is **any node to any node**, in any direction, across any number
-of columns — and it carries a label, which is the whole point of it: *this is
-why they cannot find her*, *she goes back*. The label is typed in the detail
-panel, under **Connected to**, which lists every line touching the selected
-node with an arrow saying which way it runs, a way to go to the other end, ⇄
-to turn it round keeping the words, and × to take it off.
-
-**A pair is connected or it is not.** Drawing the same two cards again does
-nothing, whichever way round it is asked — the same observation twice is not
-two observations — and the direction, which *is* the observation, is changed
-by turning the arrow rather than by drawing the reverse. A node cannot be
-connected to itself: a line from a card back to the same card says nothing a
-writer could read.
-
-The lines are drawn **over** the cards rather than under them. A structural
-wire says where a thing belongs and may hide behind a card; an observation is
-the reason the writer drew it, and has to be clickable — clicking one selects
-the card it starts at, so the picture and the panel are talking about the same
-line. Two shapes, and which one is drawn says something: a connection running
-into a later column leaves the right edge and arrives at the left, like every
-other line on the canvas, while one running **backwards, or within a column**,
-leaves the right edge and comes back to the right edge, bowing out into the
-air. Squeezing that one through the gap between two columns — which is merely
-where its ends happen to be — would draw a kink in the one place the canvas is
-busiest.
-
-Labels sit on the curve rather than between its ends, and a label landing on
-one already drawn is pushed clear of it, because two sentences on top of each
-other are worse than one of them. A long one is shortened on the line and read
-in full in the panel.
-
-**A connector is never what holds two things together; the parent relation
-is** (§7). So the layout is identical before and after a line is drawn — this
-is the one thing on the board that moves nothing — and removing one loses the
-observation and not one thing more. A line whose card is deleted goes with it,
-and so does one drawn into a column that is removed. A line into a **fold** is
-drawn to the folded card standing in for what is hidden, rather than
-disappearing, because folding should not look like losing something.
-
-### Add to track (§6a)
-
-`trackOffer`, `sayTrackOffer` and `addToTrack` in `sculptor-binding.ts`. The
-offer is what a press would do — the node itself, how many beats — or the
-refusal; the sentence is built once from it; the act runs `realiseNode` on
-the scene and then on each idea beat under it, in canvas order. The toolbar
-button is disabled with the reason in its title until a card that can go is
-chosen; the card's right-click (`.sculpt-menu`, over a clear veil, Escape
-closes it) offers the same item and *Open the card…*; the Binding panel's
-*Make it a scene* became this, and a bound scene with idea beats under it
-offers them alone. The layout change (§4) is `boardLayout`'s `place` starting
-a node's children a row and a gap below its head; the connectors needed no
-change, a wire already running from the parent's head to the child's.
-
-## 17. The views (stage 9)
-
-`BoardView`, `readBoard` and `boardLayout`'s second argument in the domain;
-the row under the toolbar in `SculptorWindow.tsx`.
-
-**Folding was already built.** `boardLayout` has honoured `collapsed` since
-stage 4 — a folded node is one row tall and its children are not laid out at
-all — the fold control is on the card, and `standingFor` already draws a line
-into a fold to the folded card rather than letting it vanish (§4). Nothing was
-owed there.
-
-What is new is the other three, and the design is the split between them:
-
-- **Depth** genuinely hides, and is the only one that does. A column is a level
-  of detail, so hiding one hides everything under it; the board is re-measured
-  with fewer nodes and still cannot overlap, because §4 measures rather than
-  positions. *Structure alone* is §10's macro shape and it works.
-- **Focus**, **ideas only** and **search** never hide. They **dim**, which is
-  what §10 asks of focus and what the other two have to do as well: this is a
-  tree, and hiding a parent would orphan its children. A beat drawn with no
-  scene above it is worse than a bound scene drawn grey.
-
-One lit set serves all three, so two views at once give the **intersection** a
-writer would expect rather than two fights over the same card.
-
-§10 says *any subset* of columns. What is built is a **prefix** of one, because
-the columns are depths of a tree rather than independent layers: drawing column
-three without column two would put beats on the canvas with nothing above them,
-which is not a view of anything.
-
-**Search reads title, note and kind**, as §10 names them, and deliberately not
-the fields a writer defines on a column — those hold values like *B* or *3*,
-and a search for "a" that lit half the board would make the control useless.
-Its hits are a list under the box, because a card lit somewhere off the canvas
-is not found until the canvas has gone to it.
-
-The control §10 calls **Focus** is labelled **Just this**. The workspace's own
-title bar already owns the word *Focus* for its writing mode, and two buttons
-reading the same word on one screen meaning different things is worse than a
-plainer name. The concept is unchanged.
-
-Filters are remembered **per machine** (§12) rather than in the document: a
-filter is how somebody is reading the board this afternoon, not a fact about
-the story, and a collaborator opening it should not inherit somebody else's
-search. Folding stays on the node, where it already was — it changes the
-shape, and two people should see the same board.
-
-Driven in the built renderer: focus lit *The diner* and *The bill* and dimmed
-the rest; *Structure alone* drew one column and three blocks; *bill* lit one
-node and offered one place to jump to; **Clear** put all of it back.
-
-## 18. The mini-map (stage 9, finished)
-
-`packages/domain/src/sculptor-map.ts`; the corner of the canvas in
-`SculptorWindow.tsx`.
-
-It is the one of §10's five that is about a board too big for the window
-rather than about reading the one in front of you, and §10 specifies it in six
-words — *for a board bigger than the window*. Those words are the whole of it,
-**including the half everybody drops**: a board that fits gets no map. There is
-no switch and no preference. A mini-map is not a thing a writer should have to
-manage; it turns up when the board has outgrown the window and goes away when
-it has not, and `Structure alone` makes it go away by itself, which is the rule
-working.
-
-*Bigger* is **by a whole card** — a column across, a row down — rather than by
-a pixel. That threshold is the board's own measure rather than a taste, and it
-was found on the screen: an empty board is 21 units wide in a 19-unit window,
-so the literal reading put a sliver of two marks in the corner of a board that
-was entirely legible. Debris, not a picture of anything.
-
-Three decisions carry the rest:
-
-- **It is a reading of the layout, never of the board.** It is handed the same
-  `BoardLayout` the canvas is drawing, so a folded node is one row on the map
-  as well, and a column a depth has hidden is not on it at all. A map showing
-  cards the board is not drawing would be a map of a different board, which is
-  worse than no map.
-- **It carries the lighting.** `readBoard`'s lit set comes in beside the
-  layout, so focus, *ideas only* and search dim the map exactly as they dim the
-  board. This matters more here than anywhere: the map is the only place in the
-  product where a writer can see that what they searched for is off the top of
-  the window.
-- **Nothing about it is stored.** The scale is the board fitted into the box it
-  is given with its proportions kept, the window rectangle is the pan read back
-  in canvas units, and both are worked out every time — §4's *everything is
-  measured, nothing is positioned* pointed at the picture of the thing rather
-  than at the thing.
-
-Pressing anywhere on it puts that point in the **middle** of the window, which
-is what pressing a map means everywhere else, and dragging keeps doing it. The
-result is held on the board: a map may not scroll a writer past the edge of
-their own story, and an axis the board fits has nothing to scroll, so pressing
-the map cannot shunt the board sideways to make a point. The window rectangle
-is drawn as an outline rather than a wash, because knowing what is *just*
-outside the frame is most of why there is a map, and it is clipped to the
-picture — a rectangle half outside it reads as the board having moved, when
-what has happened is the canvas being dragged past its own edge.
-
-Driven in the built renderer: an empty board showed no map; four blocks and
-twelve scenes brought one with eighteen cards; pressing the bottom of it moved
-the sheet from `translate(40px, 24px)` to `translate(-64px, -145px)` and the
-window rectangle down with it, stopping at the end of the board; focusing on
-*Block 2* dimmed fourteen of the eighteen on the map as well as on the canvas;
-and *Structure alone* took the map away, the board then fitting.
-
-**Stage 9 is finished, and with it everything the Sculptor owes before Writers
-Room** (§14 stage 10).
+- `packages/domain/src/entities/sculptor.ts`: the schema (board, card,
+  definition, link, view state, saved view).
+- `packages/domain/src/sculptor.ts`: every operation, the view state,
+  `mapPicture`, `drawnLinks`, `nestedSummaries`, `searchBoard`.
+- `packages/domain/src/sculptor-types.ts`: types, colours, badges, details,
+  ranks, link kinds.
+- `packages/domain/src/sculptor-upgrade.ts`: version 1 to 2, and back.
+- `packages/domain/src/sculptor-binding.ts`: the script link.
+- `packages/domain/src/sculptor-map.ts`: the minimap.
+- `apps/desktop/src/renderer/components/SculptorWindow.tsx`: the room.

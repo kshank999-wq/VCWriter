@@ -144,11 +144,15 @@ describe('the plans as rows', () => {
     }
   });
 
-  it('spells the node’s end in a column SQL will accept', () => {
+  it('carries a v2 card’s type, definition and the board’s view state (migration 0076)', () => {
     const { file } = planned();
-    const ends = toRows(file).sculptorNodes.map((row) => row['node_end']);
-    expect(ends).toContain('beginning');
-    expect(ends).toContain('end');
+    const rows = toRows(file);
+    expect(rows.boards[0]!['schema_version']).toBe(2);
+    expect(rows.boards[0]!['view_state']).toBeTruthy();
+    for (const row of rows.sculptorNodes) {
+      expect(row).toHaveProperty('subtype');
+      expect(row).toHaveProperty('entity_id');
+    }
   });
 
   it('keeps a row’s research reference, and a promoted row’s binding', () => {

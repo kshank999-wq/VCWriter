@@ -65,7 +65,7 @@ const shaped = (): { file: ProjectFile; board: Board; blockId: SculptorNodeId; f
 describe('what a node can be', () => {
   it('binds a scene node to a scene and a beat node to a beat, and a block to neither', () => {
     const { file, board, blockId, first } = shaped();
-    const beat = addChild(file, board.id, first);
+    const beat = addChild(file, board.id, first, { kind: 'beat' });
     expect(bindKindOf(nodeIn(file, board, blockId)!)).toBeNull();
     expect(bindKindOf(nodeIn(file, board, first)!)).toBe('unit');
     expect(bindKindOf(nodeIn(beat.file, board, beat.nodeId!)!)).toBe('beat');
@@ -154,7 +154,7 @@ describe('making the idea real', () => {
 
   it('will not make a beat whose scene is still an idea', () => {
     const { file, board, first } = shaped();
-    const beat = addChild(file, board.id, first, { title: 'She says she is fine' });
+    const beat = addChild(file, board.id, first, { title: 'She says she is fine', kind: 'beat' });
     const tried = realiseNode(beat.file, board.id, beat.nodeId!);
     expect(tried.beatId).toBeNull();
     expect(tried.file.beats).toHaveLength(beat.file.beats.length);
@@ -163,7 +163,7 @@ describe('making the idea real', () => {
   it('makes a beat inside the scene its parent is, once the parent is real', () => {
     const { file, board, first } = shaped();
     const scene = realiseNode(file, board.id, first);
-    const node = addChild(scene.file, board.id, first, { title: 'She says she is fine' });
+    const node = addChild(scene.file, board.id, first, { title: 'She says she is fine', kind: 'beat' });
     const beat = realiseNode(node.file, board.id, node.nodeId!);
 
     expect(beat.beatId).not.toBeNull();
@@ -175,9 +175,9 @@ describe('making the idea real', () => {
     const here = realiseNode(file, board.id, first);
     const there = realiseNode(here.file, board.id, second);
 
-    const mine = addChild(there.file, board.id, first, { title: 'Mine' });
+    const mine = addChild(there.file, board.id, first, { title: 'Mine', kind: 'beat' });
     const made = realiseNode(mine.file, board.id, mine.nodeId!);
-    const theirs = addChild(made.file, board.id, second, { title: 'Theirs' });
+    const theirs = addChild(made.file, board.id, second, { title: 'Theirs', kind: 'beat' });
 
     // A beat node under the second scene is never offered the first scene's.
     expect(bindableBeats(theirs.file, boardIn(theirs.file, board), theirs.nodeId!)).toHaveLength(0);
@@ -194,7 +194,7 @@ describe('onto the track, whole (addendum 03 §6a)', () => {
     let file = base.file;
     const beats: SculptorNodeId[] = [];
     for (const title of ['She lies', 'He believes her', 'The door']) {
-      const made = addChild(file, base.board.id, base.first, { title });
+      const made = addChild(file, base.board.id, base.first, { title, kind: 'beat' });
       file = made.file;
       beats.push(made.nodeId!);
     }
@@ -309,7 +309,7 @@ describe('one name, in both places', () => {
   it('renames a bound beat both ways too', () => {
     const { file, board, first } = shaped();
     const scene = realiseNode(file, board.id, first);
-    const node = addChild(scene.file, board.id, first, { title: 'She says she is fine' });
+    const node = addChild(scene.file, board.id, first, { title: 'She says she is fine', kind: 'beat' });
     const beat = realiseNode(node.file, board.id, node.nodeId!);
 
     const fromScript = updateBeat(beat.file, beat.beatId!, { title: 'She lies' });
@@ -360,7 +360,7 @@ describe('coming apart', () => {
   it('does the same for a beat, and for the beats inside a removed scene', () => {
     const { file, board, first } = shaped();
     const scene = realiseNode(file, board.id, first);
-    const node = addChild(scene.file, board.id, first, { title: 'She says she is fine' });
+    const node = addChild(scene.file, board.id, first, { title: 'She says she is fine', kind: 'beat' });
     const beat = realiseNode(node.file, board.id, node.nodeId!);
 
     const one = removeBeat(beat.file, beat.beatId!);
@@ -421,9 +421,9 @@ describe('when the canvas and the script disagree', () => {
   it('reorders a scene’s beats the same way', () => {
     const { file, board, first } = shaped();
     const scene = realiseNode(file, board.id, first);
-    const a = addChild(scene.file, board.id, first, { title: 'She arrives' });
+    const a = addChild(scene.file, board.id, first, { title: 'She arrives', kind: 'beat' });
     const madeA = realiseNode(a.file, board.id, a.nodeId!);
-    const b = addChild(madeA.file, board.id, first, { title: 'She leaves' });
+    const b = addChild(madeA.file, board.id, first, { title: 'She leaves', kind: 'beat' });
     const madeB = realiseNode(b.file, board.id, b.nodeId!);
 
     const moved = moveNode(madeB.file, board.id, b.nodeId!, -1);

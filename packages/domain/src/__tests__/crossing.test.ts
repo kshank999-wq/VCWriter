@@ -5,9 +5,8 @@ import {
   addItem,
   addResearchItem,
   addResearchRow,
-  addColumn,
   blocksOf,
-  boardLayout,
+  mapPicture,
   canCarryToBoard,
   carryNodeToOutline,
   carryRowToBoard,
@@ -52,7 +51,7 @@ const shaped = () => {
 
   const block = addBlock(withOutline.file, id, { title: 'She takes the job' });
   const scene = addChild(block.file, id, block.nodeId as SculptorNodeId, { title: 'The interview' });
-  const beat = addChild(scene.file, id, scene.nodeId as SculptorNodeId, { title: 'She lies about the address' });
+  const beat = addChild(scene.file, id, scene.nodeId as SculptorNodeId, { title: 'She lies about the address', kind: 'beat' });
   const noted = updateNode(beat.file, id, scene.nodeId as SculptorNodeId, { note: 'Rain on the roof.' });
 
   return {
@@ -101,12 +100,12 @@ describe('a node carried into the outline', () => {
 
   it('leaves the board exactly as it was: this is a copy', () => {
     const made = shaped();
-    const before = boardLayout(board(made.file, made.board));
+    const before = mapPicture(board(made.file, made.board));
     const carried = carryNodeToOutline(made.file, made.board.id, made.block, made.outline.id);
-    const after = boardLayout(board(carried.file, made.board));
+    const after = mapPicture(board(carried.file, made.board));
 
-    expect(after.nodes.map((laid) => [laid.node.id, laid.x, laid.y])).toEqual(
-      before.nodes.map((laid) => [laid.node.id, laid.x, laid.y]),
+    expect(after.cards.map((laid) => [laid.node.id, laid.x, laid.y])).toEqual(
+      before.cards.map((laid) => [laid.node.id, laid.x, laid.y]),
     );
     expect(findNode(board(carried.file, made.board), made.block)?.title).toBe('She takes the job');
   });
@@ -156,23 +155,18 @@ describe('a row carried onto the board', () => {
     expect(childrenOf(live, carried.nodeId!).map((node) => node.title)).toEqual(['She enters']);
   });
 
-  it('brings the subtree as far as the board has columns, and says what stayed', () => {
+  it('brings the whole subtree, however deep, as typed cards (v2: no column limit)', () => {
     const made = written();
-    // Dropped on the block: scene → column 2, beat → column 3, note → nowhere.
     const carried = carryRowToBoard(made.file, made.outline.id, made.scene, made.board.id, made.blockNode);
-    expect(carried.leftBehind).toBe(1);
-
-    // With a fourth column there is room for all three.
-    const wider = addColumn(made.file, made.board.id, { name: 'Detail' });
-    const roomy = carryRowToBoard(wider.file, made.outline.id, made.scene, made.board.id, made.blockNode);
-    expect(roomy.leftBehind).toBe(0);
+    expect(carried.leftBehind).toBe(0);
+    const top = findNode(board(carried.file, made.board), carried.nodeId!)!;
+    expect(top.kind).toBe('scene');
   });
 
-  it('will not be offered a node with no column to its right', () => {
+  it('can be dropped under any card, since a v2 map nests without limit', () => {
     const made = written();
     expect(canCarryToBoard(made.file, made.board.id, made.blockNode)).toBe(true);
-    // The beat node is in the last column of a three-column board.
-    expect(canCarryToBoard(made.file, made.board.id, made.beatNode())).toBe(false);
+    expect(canCarryToBoard(made.file, made.board.id, made.beatNode())).toBe(true);
   });
 
   it('leaves the outline exactly as it was: this is a copy', () => {
@@ -241,10 +235,8 @@ describe('nothing is ever converted wholesale', () => {
     // The other block, and the two ends, stayed where they were.
     expect(outlineRows(outline(carried.file, made.outline))).toHaveLength(3);
     expect(blocksOf(board(carried.file, made.board)).map((node) => node.title)).toEqual([
-      'Beginning',
       'She takes the job',
       'The lamp goes out',
-      'End',
     ]);
   });
 });

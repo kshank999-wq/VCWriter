@@ -1,6 +1,6 @@
 import { addBeat, addUnit, moveUnit, moveBeat } from './mutations.js';
 import { beatsForUnit, tracksInOrder, unitsInStoryOrder } from './selectors.js';
-import { boardsOf, childrenOf, columnOf, findBoard, findNode } from './sculptor.js';
+import { boardsOf, childrenOf, findBoard, findNode, sceneOf, subtreeOf } from './sculptor.js';
 import { claimedInScript, retitleScript } from './planning.js';
 import type { FormatNouns } from './formats.js';
 import type { Board, SculptorNode } from './entities/sculptor.js';
@@ -78,8 +78,8 @@ export const bindableBeats = (file: ProjectFile, board: Board, nodeId: SculptorN
   const node = findNode(board, nodeId);
   if (!node) return [];
   const taken = claimed(file, nodeId).beats;
-  const parent = node.parentId ? findNode(board, node.parentId) : null;
-  const within = parent?.boundUnitId ?? null;
+  // The nearest scene above it, however deep (a beat under a character under a scene).
+  const within = sceneOf(board, nodeId)?.boundUnitId ?? null;
   const pool = within === null ? file.beats : beatsForUnit(file, within);
   return pool.filter((beat) => !taken.has(beat.id as string));
 };
@@ -228,7 +228,7 @@ export const realiseNode = (
 
   if (kind === 'beat') {
     const parent = node.parentId ? findNode(board, node.parentId) : null;
-    const unitId = parent?.boundUnitId ?? null;
+    const unitId = sceneOf(board, nodeId)?.boundUnitId ?? null;
     if (unitId === null) return { file, unitId: null, beatId: null };
 
     const order = beatsForUnit(file, unitId);
@@ -279,9 +279,15 @@ export interface TrackOffer {
   beats: number;
 }
 
-/** The beat nodes directly under a node that are still ideas, in their order. */
+/**
+ * The beat cards under a scene that are still ideas, in reading order: under
+ * it directly or under a character in it, but not inside a scene nested in it.
+ */
 const ideaBeatsUnder = (board: Board, node: SculptorNode): SculptorNode[] =>
-  childrenOf(board, node.id).filter((child) => bindKindOf(child) === 'beat' && !isBound(child));
+  subtreeOf(board, node.id)
+    .slice(1)
+    .map((id) => findNode(board, id) as SculptorNode)
+    .filter((child) => child && bindKindOf(child) === 'beat' && !isBound(child) && sceneOf(board, child.id)?.id === node.id);
 
 export const trackOffer = (file: ProjectFile, board: Board, nodeId: SculptorNodeId): TrackOffer => {
   const node = findNode(board, nodeId);
@@ -303,8 +309,7 @@ export const trackOffer = (file: ProjectFile, board: Board, nodeId: SculptorNode
   }
 
   if (isBound(node)) return none;
-  const parent = node.parentId ? findNode(board, node.parentId) : null;
-  if ((parent?.boundUnitId ?? null) === null) return { refusal: 'its scene is still an idea', self: false, beats: 0 };
+  if ((sceneOf(board, nodeId)?.boundUnitId ?? null) === null) return { refusal: 'its scene is still an idea', self: false, beats: 0 };
   return { refusal: null, self: true, beats: 0 };
 };
 
@@ -401,8 +406,8 @@ export const outOfStep = (file: ProjectFile, board: Board, nodeId: SculptorNodeI
   const order =
     node.boundUnitId !== null
       ? unitsInStoryOrder(file).map((unit) => unit.id as string)
-      : parent?.boundUnitId
-        ? beatsForUnit(file, parent.boundUnitId).map((beat) => beat.id as string)
+      : sceneOf(board, nodeId)?.boundUnitId
+        ? beatsForUnit(file, sceneOf(board, nodeId)?.boundUnitId as StructuralUnitId).map((beat) => beat.id as string)
         : file.beats.map((beat) => beat.id as string);
 
   const positionOf = (candidate: SculptorNode): number => {
@@ -464,7 +469,7 @@ export const followCanvas = (file: ProjectFile, boardId: BoardId, nodeId: Sculpt
     return moveUnit(file, { unitId: node.boundUnitId, toTrackId: unit.trackId, index });
   }
 
-  const unitId = parent?.boundUnitId ?? null;
+  const unitId = sceneOf(board, nodeId)?.boundUnitId ?? null;
   if (unitId === null || node.boundBeatId === null) return file;
   const order = beatsForUnit(file, unitId);
   const positionOf = (id: string) => order.findIndex((beat) => (beat.id as string) === id);
@@ -474,5 +479,3 @@ export const followCanvas = (file: ProjectFile, boardId: BoardId, nodeId: Sculpt
   return moveBeat(file, { beatId: node.boundBeatId, toUnitId: unitId, index });
 };
 
-/** The column a node sits in, re-exported so the panel needs one import. */
-export { columnOf };

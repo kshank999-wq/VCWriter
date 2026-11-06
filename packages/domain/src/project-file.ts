@@ -1,3 +1,4 @@
+import { upgradeBoards } from './sculptor-upgrade.js';
 import { z } from 'zod';
 import { newId } from './ids.js';
 import { initialOrderKeys, orderKeyBetween } from './ordering.js';
@@ -351,7 +352,9 @@ export const parseProjectFile = (raw: unknown): ProjectFile => {
       .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
       .join('; ')}`, result.error);
   }
-  return result.data;
+  // Story Sculptor 2.0 (addendum 03 v2 §13): version-1 boards upgraded once,
+  // the old board kept whole beside the new one.
+  return upgradeBoards(result.data).file;
 };
 
 export const serializeProjectFile = (file: ProjectFile): string =>
