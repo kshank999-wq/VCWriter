@@ -515,3 +515,79 @@ describe('exporting the map as JSON', () => {
     expect(JSON.parse(sculptMapJsonText(file, board)).counts.cards).toBe(board.nodes.length);
   });
 });
+
+describe('importing a map from JSON', () => {
+  it('round-trips into another project as a new map, matching the cast by name and adding who is missing', async () => {
+    const { sculptMapJsonText, parseMapJson, importMapJson, describeMapJson } = await import('../index.js');
+    const s = story();
+    let source = linkNodes(s.file, s.board.id, s.opens, s.roof, { type: 'causes', label: 'why she runs' }).file;
+    source = addCharacter(source, { name: 'Jonah' });
+    const jonahId = source.characters.at(-1)!.id as string;
+    source = placeSource(source, s.board.id, { kind: 'character', id: jonahId }, s.roof).file;
+    const text = sculptMapJsonText(source, boardOf(source, s.board));
+
+    // Another project: Mara is in the cast (different id), Jonah is not.
+    const target = addCharacter(createProjectFile({ title: 'Other', format: 'screenplay' }), { name: 'mara' });
+    const map = parseMapJson(text);
+    expect(describeMapJson(map).cards).toBe(boardOf(source, s.board).nodes.length);
+    const done = importMapJson(target, map, { kind: 'new' });
+    const board = findBoard(done.file, done.report.boardId!)!;
+    expect(board.nodes).toHaveLength(boardOf(source, s.board).nodes.length);
+    expect(done.report.linked).toBe(1);
+    expect(done.report.castAdded).toEqual(['Jonah']);
+    expect(done.file.characters.filter((one) => one.name.toLowerCase() === 'mara')).toHaveLength(1);
+    // Same shape: the same paths in the same order.
+    const titles = (file: ProjectFile, b: Board) => mapPicture(explodeAll(file, b.id).boards!.find((one) => one.id === b.id)!).cards.map((card) => titleOf(file, b, card.node));
+    expect(titles(done.file, board)).toEqual(titles(source, boardOf(source, s.board)).map((t) => (t === 'Mara' ? 'mara' : t)));
+    expect(board.links[0]).toMatchObject({ type: 'causes', label: 'why she runs' });
+    // New ids throughout: nothing collides with the source.
+    const sourceIds = new Set(boardOf(source, s.board).nodes.map((n) => n.id as string));
+    expect(board.nodes.some((n) => sourceIds.has(n.id as string))).toBe(false);
+  });
+
+  it('imports into the open map under a card, after what is there, and keeps the writer’s view', async () => {
+    const { sculptMapJsonText, parseMapJson, importMapJson } = await import('../index.js');
+    const s = story();
+    const text = sculptMapJsonText(s.file, boardOf(s.file, s.board));
+    const folded = collapseAll(s.file, s.board.id);
+    const before = boardOf(folded, s.board);
+    const done = importMapJson(folded, parseMapJson(text), { kind: 'into', boardId: s.board.id, parentId: s.act2 });
+    const board = boardOf(done.file, s.board);
+    expect(board.nodes).toHaveLength(before.nodes.length * 2);
+    expect(board.viewState.level).toEqual(before.viewState.level);
+    const under = board.nodes.filter((n) => n.parentId === s.act2);
+    expect(under.map((n) => n.title)).toEqual(['Act one', 'Act two']);
+    // One Mara definition on the map, not two.
+    expect(board.entities.filter((e) => e.sourceKind === 'character')).toHaveLength(1);
+    // The same scene cannot be bound twice: bindings already on the map are left off.
+    expect(done.report.bindingsDropped).toBe(0);
+  });
+
+  it('leaves off a script link the project already has on a map, and refuses files that are not maps', async () => {
+    const { sculptMapJsonText, parseMapJson, importMapJson, MapImportError } = await import('../index.js');
+    const s = story();
+    const { addToTrack } = await import('../index.js');
+    const tracked = addToTrack(s.file, s.board.id, s.warehouse).file;
+    const done = importMapJson(tracked, parseMapJson(sculptMapJsonText(tracked, boardOf(tracked, s.board))), { kind: 'new' });
+    expect(done.report.bindingsDropped).toBeGreaterThan(0);
+    expect(() => parseMapJson('{"hello":1}')).toThrow(MapImportError);
+    expect(() => parseMapJson('not json')).toThrow('not JSON');
+    expect(() => parseMapJson('{"format":"vc-writer-story-map","version":9}')).toThrow('newer VC Writer');
+  });
+
+  it('survives a damaged file whose parents loop', async () => {
+    const { parseMapJson, importMapJson } = await import('../index.js');
+    const text = JSON.stringify({
+      format: 'vc-writer-story-map',
+      version: 1,
+      cards: [
+        { id: 'a', parentId: 'b', title: 'A', type: 'scene' },
+        { id: 'b', parentId: 'a', title: 'B', type: 'scene' },
+      ],
+    });
+    const done = importMapJson(createProjectFile({ title: 'X', format: 'screenplay' }), parseMapJson(text), { kind: 'new' });
+    const board = findBoard(done.file, done.report.boardId!)!;
+    expect(board.nodes).toHaveLength(2);
+    expect(mapPicture(board).cards.length).toBeGreaterThan(0);
+  });
+});

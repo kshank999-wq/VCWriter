@@ -232,3 +232,32 @@ describe('exporting the map as JSON', () => {
     expect(data.cards.map((card: { title: string }) => card.title)).toEqual(['Act one', 'The interview', 'She lies', 'He believes her']);
   });
 });
+
+describe('importing a map from JSON', () => {
+  it('reads a file, asks where it goes, and opens it as a new map', async () => {
+    const { sculptMapJsonText } = await import('@vcwriter/domain');
+    const { file } = shaped();
+    const text = sculptMapJsonText(file, file.boards![0]!);
+    const target = createProjectFile({ title: 'Other', format: 'screenplay' });
+    render(<Harness initial={target} />);
+    const input = screen.getByLabelText('Story map JSON file') as HTMLInputElement;
+    const chosen = new File([text], 'Blackout story map.json', { type: 'application/json' });
+    fireEvent.change(input, { target: { files: [chosen] } });
+    const dialog = await screen.findByRole('dialog', { name: 'Import a story map' });
+    expect(dialog.textContent).toContain('4 cards');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Import' }));
+    await screen.findByRole('status');
+    expect(latest!.boards).toHaveLength(2);
+    expect(cardTitles()).toEqual(['Act one', 'The interview', 'She lies', 'He believes her']);
+    expect(screen.getByRole('combobox', { name: 'Which map' })).toBeTruthy();
+  });
+
+  it('says plainly when the file is not a story map', async () => {
+    const { file } = shaped();
+    render(<Harness initial={file} />);
+    const input = screen.getByLabelText('Story map JSON file') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [new File(['{"a":1}'], 'x.json', { type: 'application/json' })] } });
+    expect((await screen.findByRole('status')).textContent).toContain('not a VC Writer story map');
+    expect(latest!.boards).toHaveLength(1);
+  });
+});

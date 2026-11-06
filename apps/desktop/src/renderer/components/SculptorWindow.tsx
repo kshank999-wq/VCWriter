@@ -85,6 +85,13 @@ import {
   sculptTypeName,
   searchBoard,
   sculptMapHtml,
+  describeMapJson,
+  importMapJson,
+  nameBoard,
+  parseMapJson,
+  removeBoard,
+  sayMapImport,
+  type ImportedMap,
   sculptMapJsonText,
   sculptMapSvg,
   suggestedMapFileName,
@@ -219,6 +226,10 @@ export function SculptorWindow({
   const [viewName, setViewName] = useState('');
   const [status, setStatus] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState<{ map: ImportedMap; into: boolean } | null>(null);
+  const [removingMap, setRemovingMap] = useState(false);
+  const [renamingMap, setRenamingMap] = useState<string | null>(null);
+  const importInput = useRef<HTMLInputElement | null>(null);
   const searchBox = useRef<HTMLInputElement | null>(null);
   const canvas = useRef<HTMLDivElement | null>(null);
   const panning = useRef<{ x: number; y: number } | null>(null);
@@ -495,6 +506,36 @@ export function SculptorWindow({
     } finally {
       setExporting(false);
     }
+  };
+
+  /** A story map JSON chosen from disk, checked before anything changes (addendum 03 v2 §8b). */
+  const readImport = async (chosen: File | undefined) => {
+    if (!chosen) return;
+    try {
+      const map = parseMapJson(await chosen.text());
+      setImporting({ map, into: false });
+    } catch (cause) {
+      setStatus(cause instanceof Error ? cause.message : 'That file could not be read');
+    }
+  };
+
+  const runImport = () => {
+    if (!importing || !board) return;
+    const { map, into } = importing;
+    const parentId = into ? (chosen?.id ?? canvasParent()) : null;
+    let said = '';
+    let made: string | null = null;
+    onUpdate((current) => {
+      const done = importMapJson(current, map, into ? { kind: 'into', boardId: board.id, parentId } : { kind: 'new' });
+      said = sayMapImport(done.report);
+      made = done.report.boardId as string | null;
+      return done.file;
+    });
+    setImporting(null);
+    window.setTimeout(() => {
+      if (!into && made) setBoardId(made);
+      setStatus(said);
+    }, 0);
   };
 
   if (!open) return null;
@@ -867,6 +908,20 @@ export function SculptorWindow({
             </button>
           </div>
         </details>
+        <button type="button" className="tool" title="Import a story map saved as JSON" onClick={() => importInput.current?.click()}>
+          Import…
+        </button>
+        <input
+          ref={importInput}
+          type="file"
+          accept=".json,application/json"
+          hidden
+          aria-label="Story map JSON file"
+          onChange={(event) => {
+            void readImport(event.target.files?.[0]);
+            event.target.value = '';
+          }}
+        />
         <button
           type="button"
           className={shelfOpen ? 'tool on' : 'tool'}
@@ -877,13 +932,27 @@ export function SculptorWindow({
           {shelfOpen ? '◧ Notes' : '▤ Notes'}
         </button>
         {boards.length > 1 && board ? (
-          <select aria-label="Which map" value={board.id as string} onChange={(event) => setBoardId(event.target.value)}>
-            {boards.map((one) => (
-              <option key={one.id as string} value={one.id as string}>
-                {one.name}
-              </option>
-            ))}
-          </select>
+          <>
+            <select aria-label="Which map" value={board.id as string} onChange={(event) => setBoardId(event.target.value)}>
+              {boards.map((one) => (
+                <option key={one.id as string} value={one.id as string}>
+                  {one.name || 'Untitled map'}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="tool"
+              title="Rename this map"
+              aria-label="Rename this map"
+              onClick={() => setRenamingMap(board.name)}
+            >
+              ✎
+            </button>
+            <button type="button" className="tool" title="Remove this map" aria-label="Remove this map" onClick={() => setRemovingMap(true)}>
+              ✕
+            </button>
+          </>
         ) : null}
       </div>
 
@@ -1247,6 +1316,89 @@ export function SculptorWindow({
               return made ? placeSource(withCast, id, { kind: 'character', id: made.id as string }, parentId).file : withCast;
             });
             setCastPrompt(null);
+          }}
+        />
+      ) : null}
+      {importing ? (
+        <div className="sc-modal" role="dialog" aria-label="Import a story map">
+          <div className="sc-modal-box">
+            <h3>Import “{describeMapJson(importing.map).title}”</h3>
+            <p className="muted small">
+              {describeMapJson(importing.map).cards} cards, {describeMapJson(importing.map).definitions} reusable items,{' '}
+              {describeMapJson(importing.map).connections} connections. Nothing already here is changed.
+            </p>
+            <label className="sc-check">
+              <input type="radio" name="sc-import-where" checked={!importing.into} onChange={() => setImporting({ ...importing, into: false })} />
+              As a new map in this project
+            </label>
+            <label className="sc-check">
+              <input type="radio" name="sc-import-where" checked={importing.into} onChange={() => setImporting({ ...importing, into: true })} />
+              Into this map,{' '}
+              {chosen && board ? `under “${titleOf(file, board, chosen) || 'the selected card'}”` : state?.rootId ? 'under the card shown' : 'at the top'}
+            </label>
+            <p className="muted small">
+              Characters are matched to your cast by name, and anyone missing is added. Places and notes link if they are here. Scene links are
+              kept only where that scene is in this project and not already on a map.
+            </p>
+            <div className="sc-modal-actions">
+              <button type="button" className="ghost" onClick={() => setImporting(null)}>
+                Cancel
+              </button>
+              <button type="button" onClick={runImport}>
+                Import
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {renamingMap !== null && board ? (
+        <div className="sc-modal" role="dialog" aria-label="Rename this map">
+          <div className="sc-modal-box">
+            <h3>Name this map</h3>
+            <input
+              autoFocus
+              aria-label="Map name"
+              value={renamingMap}
+              onChange={(event) => setRenamingMap(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  const name = renamingMap.trim();
+                  if (name) write((current, id) => nameBoard(current, id, name));
+                  setRenamingMap(null);
+                }
+                if (event.key === 'Escape') setRenamingMap(null);
+              }}
+            />
+            <div className="sc-modal-actions">
+              <button type="button" className="ghost" onClick={() => setRenamingMap(null)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const name = renamingMap.trim();
+                  if (name) write((current, id) => nameBoard(current, id, name));
+                  setRenamingMap(null);
+                }}
+              >
+                Rename
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {removingMap && board ? (
+        <RemoveDialog
+          question={`Remove the map “${board.name || 'Untitled map'}”?`}
+          comfort="Its cards and connections go. The script, the cast and the research are not touched. Undo brings it back."
+          onCancel={() => setRemovingMap(false)}
+          onConfirm={() => {
+            const id = board.id;
+            onUpdate((current) => removeBoard(current, id));
+            setBoardId(null);
+            setRemovingMap(false);
           }}
         />
       ) : null}

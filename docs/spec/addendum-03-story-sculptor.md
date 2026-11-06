@@ -176,6 +176,41 @@ everything never changes the view: the board is exploded in memory only
   layout and saved views. Saved beside the project as *Title story map.json*,
   indented so a person can read it too.
 
+## 8b. Import: JSON
+
+**Import…** on the toolbar reads a story map that *Export › JSON data* wrote,
+from this project or another (`parseMapJson`, `importMapJson`).
+
+- The file is checked before anything changes. Not JSON, not a story map, a
+  newer version than this build reads, or a damaged file each get one plain
+  sentence on the status line, and nothing is imported.
+- A dialog shows what is in it (cards, reusable items, connections) and asks
+  where it goes: **as a new map in this project** (the default), or **into
+  this map**, under the selected card (or the card shown as a mini map, or at
+  the top), after what is already there. **Nothing already here changes.**
+- Every card, definition and connection gets a new id, so importing the same
+  file twice gives two copies and never a collision. Order among siblings,
+  types, titles, notes and details come across as they were. A file whose
+  parents loop is cut at the loop rather than refused.
+- **Characters** are matched to the cast by id, then by name (ignoring
+  case); anyone the cast does not have is added to it. **Places, research
+  notes and themes** are matched the same way; one that is not here stays on
+  the map as a map-only item with its name. A character already defined on
+  the open map is reused, never defined twice.
+- **Script links** are kept only where that scene or beat exists in this
+  project and nothing else (a card or an outline row) already stands for it,
+  so importing a map back into its own project never binds one scene twice.
+- A new map brings its view: folds, hand layout and saved views. Imported
+  into the open map, the writer's own view stays as it is, and the card it
+  landed under is opened.
+- The status line says what happened: cards and connections imported, how
+  many items linked to what the project already has, who was added to the
+  cast, what stayed map-only, and how many script links were left off.
+
+With more than one map, the toolbar shows a **Which map** list, **✎** to
+rename the map and **✕** to remove it (with a question first; the script,
+cast and research are not touched, and Undo brings it back).
+
 ## 9. Keys
 
 Enter opens; Esc clears, then goes up a level; arrows walk the visible tree;
@@ -269,7 +304,7 @@ ever runs on local files.
 | Version-1 boards migrated safely; links to VC Writer stay valid | §13; upgrade tests; binding tests unchanged in substance |
 | Tests for migration, graph ops, relationships, indicators, save/reopen, legacy retirement | `sculptor-v2.test.ts`, `sculptor-binding.test.ts`, `crossing.test.ts`, `sync-plans.test.ts`, desktop `sculptor.test.tsx` |
 
-All three optional exports of spec §11 (PNG, PDF, JSON) are built (§8a).
+All three optional exports of spec §11 (PNG, PDF, JSON) are built (§8a), and JSON reads back in (§8b).
 
 ## 15. Code
 
