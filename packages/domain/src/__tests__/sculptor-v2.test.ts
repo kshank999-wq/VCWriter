@@ -470,3 +470,27 @@ describe('links leaving a mini map', () => {
     expect(outside.get(s.opens)).toBe(1);
   });
 });
+
+describe('exporting the map (PNG and PDF)', () => {
+  it('draws what is shown, or everything exploded, as an SVG with every card and link', async () => {
+    const { sculptMapSvg, sculptMapHtml, suggestedMapFileName } = await import('../index.js');
+    const s = story();
+    let file = linkNodes(s.file, s.board.id, s.opens, s.roof, { type: 'causes', label: 'why <she> runs' }).file;
+    file = collapseAll(file, s.board.id);
+    const board = boardOf(file, s.board);
+    const shown = sculptMapSvg(file, board, 'shown');
+    expect(shown.svg).toContain('Act one');
+    expect(shown.svg).not.toContain('Opens the case');
+    const all = sculptMapSvg(file, board, 'everything');
+    expect(all.svg).toContain('Opens the case');
+    expect(all.svg).toContain('why &lt;she&gt; runs');
+    expect(all.svg).toContain('marker-end');
+    expect(all.width).toBeGreaterThan(shown.width);
+    const pdf = sculptMapHtml(file, all);
+    expect(pdf.html).toContain('@page');
+    expect(pdf.paper.width).toBeGreaterThanOrEqual(11);
+    expect(suggestedMapFileName(file, 'png')).toBe('Blackout story map.png');
+    // The story itself is untouched by exporting everything.
+    expect(boardOf(file, s.board).viewState).toEqual(board.viewState);
+  });
+});

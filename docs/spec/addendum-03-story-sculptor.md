@@ -142,6 +142,29 @@ whose ends both fold into one card is counted on it (⇄N).
 - **Views** saves the current open state and hand layout under a name and
   reapplies it.
 
+## 8a. Export: PNG and PDF
+
+**Export** on the toolbar offers four things: a PNG image or a PDF of the map
+*as shown on the canvas* (the folds, the open mini map and the hand
+placement as they are), or of *the whole story, every card open*. Exporting
+everything never changes the view: the board is exploded in memory only
+(`explodedBoard`).
+
+- One picture serves both: `sculptMapSvg` draws the cards (type stripe,
+  badge, two-line title, type, *in N places*, *in the script*, the hidden
+  count on a folded card), the containment lines, and the cross-links with
+  their arrows and labels, from the same layout the canvas uses. Dark ink on
+  white, with the project title and a count of cards and connections at the
+  top.
+- **PNG**: the room draws that SVG on a canvas at twice its size (the
+  longest side held under 16,000 pixels) and saves it where the writer says,
+  beside the project, as *Title story map.png*.
+- **PDF**: `sculptMapHtml` puts it on one page the shape of the map, at
+  least Letter on its long side and up to 48 inches, so a big map is a big
+  page rather than small type. It goes through the same PDF window as every
+  other export (kind `map`); in the browser preview it opens for the
+  browser's own Save as PDF.
+
 ## 9. Keys
 
 Enter opens; Esc clears, then goes up a level; arrows walk the visible tree;
@@ -235,8 +258,7 @@ ever runs on local files.
 | Version-1 boards migrated safely; links to VC Writer stay valid | §13; upgrade tests; binding tests unchanged in substance |
 | Tests for migration, graph ops, relationships, indicators, save/reopen, legacy retirement | `sculptor-v2.test.ts`, `sculptor-binding.test.ts`, `crossing.test.ts`, `sync-plans.test.ts`, desktop `sculptor.test.tsx` |
 
-Not built yet (spec §11, *optional*): PNG/PDF snapshot and JSON export of
-the map.
+Not built yet (spec §11, *optional*): JSON export of the map.
 
 ## 15. Code
 

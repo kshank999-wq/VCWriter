@@ -192,3 +192,23 @@ describe('Add to track, carried over from version 1', () => {
     expect(screen.queryByRole('menu')).toBeNull();
   });
 });
+
+describe('exporting the map', () => {
+  it('sends the map to the PDF window as one drawn page', async () => {
+    const { file } = shaped();
+    const calls: unknown[] = [];
+    (window as unknown as { vcwriter: unknown }).vcwriter = {
+      exportPdf: async (input: unknown) => {
+        calls.push(input);
+        return { ok: true, data: { path: '/tmp/Blackout story map.pdf', pageCount: 1 } };
+      },
+    };
+    render(<Harness initial={file} />);
+    fireEvent.click(screen.getByRole('button', { name: 'PDF, everything' }));
+    await screen.findByRole('status');
+    const sent = calls[0] as { kind: string; html: string; paper: { width: number } };
+    expect(sent.kind).toBe('map');
+    expect(sent.html).toContain('He believes her');
+    expect(sent.paper.width).toBeGreaterThanOrEqual(11);
+  });
+});

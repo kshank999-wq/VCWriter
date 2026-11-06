@@ -103,7 +103,7 @@ const withDocumentWindow = async <T>(
  * tree as one (addendum 06 §12, stage 9). They are renderings of one project
  * rather than separate projects.
  */
-export type PrintKind = 'script' | 'sheet' | 'board' | 'grid' | 'outline' | 'one-sheet' | 'narrative' | 'book' | 'document' | 'bins';
+export type PrintKind = 'script' | 'sheet' | 'board' | 'grid' | 'outline' | 'one-sheet' | 'narrative' | 'book' | 'document' | 'bins' | 'map';
 
 export interface ExportPdfInput {
   file: unknown;
@@ -158,6 +158,18 @@ const documentFor = (
   // the document names, so the page count is the PDF's.
   // The bins of Extract & Organize as a report (addendum 42 §12): drawn by
   // the renderer from the bins as listed, laid out like the document.
+  // The Story Sculptor's map (addendum 03 v2): drawn by the renderer as one
+  // page the shape of the map.
+  if (kind === 'map') {
+    return {
+      html: drawn?.html ?? '',
+      name: suggestedPdfName(`${project.project.title || 'Untitled'} story map`),
+      paged: false,
+      landscape: false,
+      paper: drawn?.paper,
+      pageClass: 'page',
+    };
+  }
   if (kind === 'document' || kind === 'bins') {
     return {
       html: drawn?.html ?? '',

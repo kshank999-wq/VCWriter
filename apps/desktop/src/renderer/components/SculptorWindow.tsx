@@ -4,6 +4,7 @@ import { RoomFormat } from './RoomFormat';
 import { ResearchShelf, type ShelfCarry } from './ResearchShelf';
 import { usePhoneNotes } from '../phone-notes';
 import { PopOutButton } from './PopOutButton';
+import { sayExport } from '../printing';
 import {
   CARD_HEIGHT,
   CARD_WIDTH,
@@ -83,6 +84,10 @@ import {
   sculptTypeInfo,
   sculptTypeName,
   searchBoard,
+  sculptMapHtml,
+  sculptMapSvg,
+  suggestedMapFileName,
+  type MapExportScope,
   setFavorite,
   setHiddenLinkTypes,
   setLinkType,
@@ -212,6 +217,7 @@ export function SculptorWindow({
   const [shelfOpen, setShelfOpen] = useState(false);
   const [viewName, setViewName] = useState('');
   const [status, setStatus] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
   const searchBox = useRef<HTMLInputElement | null>(null);
   const canvas = useRef<HTMLDivElement | null>(null);
   const panning = useRef<{ x: number; y: number } | null>(null);
@@ -452,6 +458,36 @@ export function SculptorWindow({
       window.removeEventListener('keyup', keys);
     };
   });
+
+  /**
+   * PNG and PDF of the map (addendum 03 v2 §11): the same picture either way,
+   * drawn by the domain from the layout the canvas uses. The PNG is drawn
+   * here at twice the size, for a sharp image; the PDF goes to the print
+   * window on a page the shape of the map.
+   */
+  const exportMap = async (format: 'png' | 'pdf', scope: MapExportScope) => {
+    if (!board || exporting) return;
+    const api = window.vcwriter;
+    setExporting(true);
+    try {
+      const map = sculptMapSvg(file, board, scope);
+      if (format === 'pdf') {
+        const { html, paper } = sculptMapHtml(file, map);
+        const result = await api.exportPdf({ file, kind: 'map', html, paper });
+        if (!result.ok) setStatus(result.error ?? 'The map could not be exported');
+        else if (result.data) setStatus(sayExport(result.data));
+        return;
+      }
+      const bytes = await svgToPng(map.svg, map.width, map.height);
+      const result = await api.saveFile({ name: suggestedMapFileName(file, 'png'), bytes, mediaType: 'image/png', kind: { name: 'PNG image', extension: 'png' } });
+      if (!result.ok) setStatus(result.error ?? 'The image could not be saved');
+      else if (result.data) setStatus(`Exported to ${result.data.path}`);
+    } catch (cause) {
+      setStatus(cause instanceof Error ? cause.message : 'The map could not be exported');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   if (!open) return null;
 
@@ -796,6 +832,27 @@ export function SculptorWindow({
                 {type.name}
               </label>
             ))}
+          </div>
+        </details>
+        <details className="sc-views sc-export">
+          <summary className="tool" aria-label="Export the map">
+            {exporting ? 'Exporting…' : 'Export'}
+          </summary>
+          <div className="sc-views-pop" role="group" aria-label="Export formats">
+            <p className="muted small">As shown on the canvas</p>
+            <button type="button" className="ghost small" disabled={exporting} onClick={() => void exportMap('png', 'shown')}>
+              PNG image
+            </button>
+            <button type="button" className="ghost small" disabled={exporting} onClick={() => void exportMap('pdf', 'shown')}>
+              PDF
+            </button>
+            <p className="muted small">The whole story, every card open</p>
+            <button type="button" className="ghost small" disabled={exporting} onClick={() => void exportMap('png', 'everything')}>
+              PNG image, everything
+            </button>
+            <button type="button" className="ghost small" disabled={exporting} onClick={() => void exportMap('pdf', 'everything')}>
+              PDF, everything
+            </button>
           </div>
         </details>
         <button
@@ -1186,6 +1243,34 @@ export function SculptorWindow({
 }
 
 // -------------------------------------------------------------- helpers
+
+/**
+ * An SVG drawn onto a canvas at twice its size and encoded as PNG. The
+ * longest side is held under 16,000 pixels, the browser's canvas ceiling.
+ */
+const svgToPng = async (svg: string, width: number, height: number): Promise<Uint8Array> => {
+  const scale = Math.min(2, 16000 / Math.max(width, height));
+  const image = new Image();
+  const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+  try {
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = () => reject(new Error('The map could not be drawn'));
+      image.src = url;
+    });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(width * scale);
+    canvas.height = Math.round(height * scale);
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('The map could not be drawn');
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+    if (!blob) throw new Error('The image could not be made');
+    return new Uint8Array(await blob.arrayBuffer());
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+};
 
 /** Keep the pointer while dragging; a browser that refuses (or a test DOM without it) just doesn't. */
 const capture = (element: Element | null, pointerId: number) => {
