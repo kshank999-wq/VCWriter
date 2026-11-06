@@ -1340,30 +1340,134 @@ export default function App() {
    * from Editors, Preview or Home they opened unseen and piled up until the
    * writer went back; now the press goes to the Write page first.
    */
+  /**
+   * The rooms, drawn over whichever page is showing (from Ken: *when I'm in
+   * the outliner screen none of the bottom buttons works*). They used to be
+   * drawn only inside the Write page, so on a book's Outline page a room
+   * button set its room open and nothing showed it.
+   */
+  const roomLayer = (
+    <>
+    {researchWindow}
+    {/* The canvas over the workspace: a board is worked on whole, not
+        in a corner of the stage (addendum 03 §2). */}
+    <SculptorWindow
+      file={file}
+      open={sculptorOpen && !away.has('sculptor')}
+      onClose={() => setSculptorOpen(false)}
+      onUpdate={project.update}
+      onSaveAs={saveSomewhere}
+      onUndo={project.undo}
+      onRedo={project.redo}
+      canUndo={project.canUndo}
+      canRedo={project.canRedo}
+      onGoToBeat={(beatId) => {
+        setSculptorOpen(false);
+        setSelectedBeatId(beatId);
+      }}
+      onOpenResearch={() => {
+        setSculptorOpen(false);
+        setResearchOpen(true);
+      }}
+      onPopOut={() => {
+        setSculptorOpen(false);
+        openPane('sculptor');
+      }}
+    />
+    {/* The branching graph, over the workspace for the board's reason
+        (addendum 18 §1): a game is read across its whole width. */}
+    <NarrativeMapWindow
+      file={file}
+      open={narrativeOpen && !away.has('narrative')}
+      onClose={() => setNarrativeOpen(false)}
+      onUpdate={project.update}
+      onPopOut={() => {
+        setNarrativeOpen(false);
+        openPane('narrative');
+      }}
+    />
+    {/* The book, set (addendum 20): the trim, the type, and the pages in
+        front of the story and behind it, over the workspace like the
+        other rooms. */}
+    {isProseFormat(file.project.format) ? (
+      <LayoutWindow
+        file={file}
+        open={layoutOpen && !away.has('layout')}
+        openOnKind={layoutOpenOn}
+        onClose={() => {
+          setLayoutOpen(false);
+          setLayoutOpenOn(null);
+        }}
+        onUpdate={project.update}
+        onSaveAs={saveSomewhere}
+        onOpenChapterPage={openChapterPage}
+        onPopOut={() => {
+          setLayoutOpen(false);
+          openPane('layout');
+        }}
+      />
+    ) : null}
+    {/* The notes, sorted (addendum 26): every format's, because a page of
+        notes wants sorting whatever is being written from it. */}
+    <NoteSorterWindow
+      file={file}
+      open={sorterOpen && !away.has('sorter')}
+      onClose={() => setSorterOpen(false)}
+      onUpdate={project.update}
+      onSaveAs={saveSomewhere}
+      onUndo={project.undo}
+      canUndo={project.canUndo}
+      onPopOut={() => {
+        setSorterOpen(false);
+        openPane('sorter');
+      }}
+    />
+    {/* The outline over the workspace too: the rigid sibling of the
+        board, and worked on whole for the same reason (addendum 06). */}
+    <OutlinerWindow
+      file={file}
+      open={outlinerOpen && !away.has('outliner')}
+      onClose={() => setOutlinerOpen(false)}
+      onUpdate={project.update}
+      onSaveAs={saveSomewhere}
+      onPrint={(outlineId) => void print('outline', outlineId)}
+      onExport={(outlineId) => void exportPdf('outline', outlineId)}
+      onPopOut={() => {
+        setOutlinerOpen(false);
+        openPane('outliner');
+      }}
+    />
+    </>
+  );
+
+  /** Every room shut, so the next one opens alone. */
+  const closeRooms = () => {
+    setResearchOpen(false);
+    setSculptorOpen(false);
+    setOutlinerOpen(false);
+    setLayoutOpen(false);
+    setNarrativeOpen(false);
+    setSorterOpen(false);
+  };
+  /** A room from the bar: the one open goes, and this one opens over the page that is showing. */
   const toWrite = (open: () => void) => () => {
-    if (view !== 'write' && view !== 'outline') setView('write');
+    closeRooms();
     open();
   };
   const barRooms: BarRoom[] = story
     ? [
-        { id: 'research', label: 'Research', title: 'Research: everything the work is made from', onOpen: toWrite(() => (away.has('research') ? openPane('research') : setResearchOpen(true))) },
-        {
-          id: 'links',
-          label: 'Links',
-          title: 'Links & threads: the threads through the story, setups and payoffs, plots, themes and arcs',
-          onOpen: toWrite(() => {
-            setResearchAt('wiring');
-            if (away.has('research')) openPane('research');
-            else setResearchOpen(true);
-          }),
-        },
-        { id: 'sculptor', label: 'Sculptor', title: 'Story Sculptor: log the major ideas, and keep refining them', onOpen: toWrite(() => (away.has('sculptor') ? openPane('sculptor') : setSculptorOpen(true))) },
-        { id: 'outliner', label: 'Outliner', title: 'Outliner: arrange what you have, and send it to the track', onOpen: () => (away.has('outliner') ? openPane('outliner') : isBook ? setView('outline') : toWrite(() => setOutlinerOpen(true))()) },
+        { id: 'research', label: 'Research', title: 'Research: everything the work is made from, and its Links & threads', active: researchOpen, onOpen: toWrite(() => (away.has('research') ? openPane('research') : setResearchOpen(true))) },
+        { id: 'sculptor', label: 'Sculptor', title: 'Story Sculptor: log the major ideas, and keep refining them', active: sculptorOpen, onOpen: toWrite(() => (away.has('sculptor') ? openPane('sculptor') : setSculptorOpen(true))) },
+        // A book's Outliner is its Outline page, already on the bar; a second
+        // button for the same place was one of the duplicates Ken found.
+        ...(isBook
+          ? []
+          : [{ id: 'outliner', label: 'Outliner', title: 'Outliner: arrange what you have, and send it to the track', active: outlinerOpen, onOpen: toWrite(() => (away.has('outliner') ? openPane('outliner') : setOutlinerOpen(true))) }]),
         ...(isProseFormat(file.project.format)
-          ? [{ id: 'layout', label: 'Layout', title: 'Layout: set the manuscript as a book', onOpen: toWrite(() => (away.has('layout') ? openPane('layout') : setLayoutOpen(true))) }]
+          ? [{ id: 'layout', label: 'Layout', title: 'Layout: set the manuscript as a book', active: layoutOpen, onOpen: toWrite(() => (away.has('layout') ? openPane('layout') : setLayoutOpen(true))) }]
           : []),
         ...(isInteractive(file.project.format)
-          ? [{ id: 'narrative', label: 'Narrative', title: 'Narrative map: the branching graph', onOpen: toWrite(() => (away.has('narrative') ? openPane('narrative') : setNarrativeOpen(true))) }]
+          ? [{ id: 'narrative', label: 'Narrative', title: 'Narrative map: the branching graph', active: narrativeOpen, onOpen: toWrite(() => (away.has('narrative') ? openPane('narrative') : setNarrativeOpen(true))) }]
           : []),
         {
           id: 'focus',
@@ -1371,6 +1475,7 @@ export default function App() {
           title: 'Focus mode (Ctrl/Cmd+Shift+F)',
           active: focusMode,
           onOpen: () => {
+            closeRooms();
             if (view !== 'write') setView('write');
             setFocusMode(!focusMode);
           },
@@ -1393,6 +1498,8 @@ export default function App() {
         here('bottom') ? '' : 'without-bottom',
         withRail && !focused ? 'with-episode-tab' : '',
         episodeRailOpen && withRail && !focused ? 'with-episodes' : '',
+        // The bottom bar is on screen: rooms stop above it, so it can always be reached.
+        focused ? '' : 'with-page-bar',
       ]
         .filter(Boolean)
         .join(' ')}
@@ -1622,95 +1729,7 @@ export default function App() {
             step={findStep}
           />
           <MarkerDialog file={file} markerId={openMarkerId} onClose={() => setOpenMarkerId(null)} onUpdate={project.update} />
-          {researchWindow}
-          {/* The canvas over the workspace: a board is worked on whole, not
-              in a corner of the stage (addendum 03 §2). */}
-          <SculptorWindow
-            file={file}
-            open={sculptorOpen && !away.has('sculptor')}
-            onClose={() => setSculptorOpen(false)}
-            onUpdate={project.update}
-            onSaveAs={saveSomewhere}
-            onUndo={project.undo}
-            onRedo={project.redo}
-            canUndo={project.canUndo}
-            canRedo={project.canRedo}
-            onGoToBeat={(beatId) => {
-              setSculptorOpen(false);
-              setSelectedBeatId(beatId);
-            }}
-            onOpenResearch={() => {
-              setSculptorOpen(false);
-              setResearchOpen(true);
-            }}
-            onPopOut={() => {
-              setSculptorOpen(false);
-              openPane('sculptor');
-            }}
-          />
-          {/* The branching graph, over the workspace for the board's reason
-              (addendum 18 §1): a game is read across its whole width. */}
-          <NarrativeMapWindow
-            file={file}
-            open={narrativeOpen && !away.has('narrative')}
-            onClose={() => setNarrativeOpen(false)}
-            onUpdate={project.update}
-            onPopOut={() => {
-              setNarrativeOpen(false);
-              openPane('narrative');
-            }}
-          />
-          {/* The book, set (addendum 20): the trim, the type, and the pages in
-              front of the story and behind it, over the workspace like the
-              other rooms. */}
-          {isProseFormat(file.project.format) ? (
-            <LayoutWindow
-              file={file}
-              open={layoutOpen && !away.has('layout')}
-              openOnKind={layoutOpenOn}
-              onClose={() => {
-                setLayoutOpen(false);
-                setLayoutOpenOn(null);
-              }}
-              onUpdate={project.update}
-              onSaveAs={saveSomewhere}
-              onOpenChapterPage={openChapterPage}
-              onPopOut={() => {
-                setLayoutOpen(false);
-                openPane('layout');
-              }}
-            />
-          ) : null}
-          {/* The notes, sorted (addendum 26): every format's, because a page of
-              notes wants sorting whatever is being written from it. */}
-          <NoteSorterWindow
-            file={file}
-            open={sorterOpen && !away.has('sorter')}
-            onClose={() => setSorterOpen(false)}
-            onUpdate={project.update}
-            onSaveAs={saveSomewhere}
-            onUndo={project.undo}
-            canUndo={project.canUndo}
-            onPopOut={() => {
-              setSorterOpen(false);
-              openPane('sorter');
-            }}
-          />
-          {/* The outline over the workspace too: the rigid sibling of the
-              board, and worked on whole for the same reason (addendum 06). */}
-          <OutlinerWindow
-            file={file}
-            open={outlinerOpen && !away.has('outliner')}
-            onClose={() => setOutlinerOpen(false)}
-            onUpdate={project.update}
-            onSaveAs={saveSomewhere}
-            onPrint={(outlineId) => void print('outline', outlineId)}
-            onExport={(outlineId) => void exportPdf('outline', outlineId)}
-            onPopOut={() => {
-              setOutlinerOpen(false);
-              openPane('outliner');
-            }}
-          />
+          {roomLayer}
         </div>
       ) : (
         <main className="full">
@@ -1845,6 +1864,7 @@ export default function App() {
               }}
             />
           )}
+          {roomLayer}
         </main>
       )}
 
@@ -2033,13 +2053,15 @@ export default function App() {
           // which is the same rule the Research button follows.
           onSelect={(next) =>
             // Read back floats over the page rather than replacing it (from Ken).
+            // Any other page closes the room that is open: the bar is how a
+            // writer gets anywhere, rooms included.
             next === 'readback'
               ? setReadBackOpen((was) => !was)
               : next === 'editor' && away.has('editors')
                 ? openPane('editors')
                 : next === 'outline' && away.has('outliner')
                   ? openPane('outliner')
-                  : setView(next)
+                  : (closeRooms(), setView(next))
           }
           counts={{ recovery: conflicts.length }}
           lit={readBackOpen ? ['readback'] : []}

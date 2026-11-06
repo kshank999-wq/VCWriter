@@ -228,9 +228,12 @@ export function ResearchWindow({
   onGoToBeat,
   onOpenSorter,
 }: ResearchWindowProps) {
-  const dialog = useModal(open);
+  // A room like the others rather than a modal dialog (from Ken: *on the
+  // research page the buttons at the bottom for navigation disappear*): a
+  // modal sits over the whole window and makes the bottom bar unreachable.
+  if (!open) return null;
   return (
-    <dialog ref={dialog} className="research-window" aria-label="Research" onClose={onClose}>
+    <div className="research-window research-room" role="dialog" aria-label="Research">
       {open ? (
         <ResearchBody
           file={file}
@@ -245,7 +248,7 @@ export function ResearchWindow({
           {...(onOpenSorter ? { onOpenSorter } : {})}
         />
       ) : null}
-    </dialog>
+    </div>
   );
 }
 

@@ -23078,3 +23078,29 @@ dialog.readback-dialog[open] {
 .sc-outside { position: absolute; bottom: -9px; left: 14px; font-size: 10px; padding: 1px 6px; border-radius: 8px; background: #120f0a; border: 1px dashed var(--border); color: var(--muted); }
 .sc-export .sc-views-pop { width: 230px; }
 .sc-export .sc-views-pop button { text-align: left; }
+
+/* The bottom bar stays reachable over every room (from Ken: *the buttons at
+   the bottom for navigation… need to be on every page*). Rooms stop at its
+   top edge instead of covering it. */
+.research-room {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  background: var(--ink);
+  color: var(--text);
+  font-size: 12.5px;
+}
+.workspace.with-page-bar :is(.sculptor, .outliner:not(.as-page), .layout-room, .narrmap, .ns-room, .research-room) {
+  bottom: 38px;
+}
+.workspace.with-page-bar .page-bar {
+  position: relative;
+  z-index: 41;
+}
+.page-bar .page.room.active {
+  border-color: var(--gold);
+  color: var(--gold-bright);
+  background: rgba(201, 164, 92, 0.12);
+}

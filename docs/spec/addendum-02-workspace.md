@@ -2936,3 +2936,28 @@ From Ken, on the screenplay and every module:
   section and subsection that no row is bound to gets a row, bound and green:
   a beat under its scene's row, a scene under the chapter it falls in. Then
   the outline is put in the track's order, chapter rows included.
+
+## The bottom bar works from everywhere (November 2026)
+
+From Ken: *when I'm in the outliner screen, none of the bottom buttons works…
+there's multiple buttons for the same thing… on the research page the
+buttons at the bottom for navigation disappear. Those need to be on every
+page.*
+
+- **Rooms are drawn over whichever page is showing.** Research, Sculptor,
+  Outliner, Layout, the narrative map and the Note Sorter used to be drawn
+  only inside the Write page. On a book's Outline page a room button set its
+  room open and nothing showed it, so the buttons seemed dead. Now the same
+  room layer is drawn on every page (`roomLayer` in `App.tsx`).
+- **The bar is always reachable.** Rooms stop at the bar's top edge
+  (`.workspace.with-page-bar` gives them `bottom: 38px`). Research was a
+  native modal dialog, which covers the window and makes everything else
+  unclickable; it is now a room like the others (`.research-room`).
+- **One room at a time.** A room button closes whatever room is open and
+  opens its own over the current page. A page button (Home, Write, Preview,
+  Editors, Outline) closes the open room and shows that page. Focus closes
+  rooms too. The open room's button is lit.
+- **No duplicates.** A book's Outliner *is* its Outline page, so the bar no
+  longer carries a second *Outliner* button for books. *Links* opened the
+  same Research room as *Research*; it is off the bar, and *Links & threads*
+  is the first entry in Research's own list.
