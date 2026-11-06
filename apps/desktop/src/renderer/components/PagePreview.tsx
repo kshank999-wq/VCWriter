@@ -5,6 +5,7 @@ import {
   hasBookIndex,
   hasChapterPages,
   nounsFor,
+  outlinesOf,
   paginateProject,
   paginateUnit,
   type ProjectFile,
@@ -14,6 +15,8 @@ import { scriptWordFor } from '../panes';
 
 interface PagePreviewProps {
   file: ProjectFile;
+  /** Go to the Write page, where the manuscript is written. */
+  onWrite?(): void;
   /** When set, previews just this scene/chapter instead of the whole project. */
   unitId?: StructuralUnitId | null;
   includeBeatTitles: boolean;
@@ -52,6 +55,7 @@ interface PagePreviewProps {
  */
 export function PagePreview({
   file,
+  onWrite,
   unitId,
   includeBeatTitles,
   onToggleBeatTitles,
@@ -67,7 +71,10 @@ export function PagePreview({
   busy,
   message,
 }: PagePreviewProps) {
-  const [scope, setScope] = useState<'project' | 'unit'>(unitId ? 'unit' : 'project');
+  // Always the whole manuscript first (from Ken: *even though there's stuff
+  // written, it doesn't show anything*): opening on the selected section
+  // showed a blank page whenever that one section was still empty.
+  const [scope, setScope] = useState<'project' | 'unit'>('project');
 
   const pages = useMemo(
     () =>
@@ -91,6 +98,24 @@ export function PagePreview({
       includeBookIndex,
     ],
   );
+  const nouns = nounsFor(file.project.format);
+  const scriptWord = scriptWordFor(file.project.format);
+  /** Words in the manuscript, the part that prints, and in plans that do not. */
+  const written = useMemo(() => {
+    const inScript = new Set(file.units.filter((unit) => unit.inScript).map((unit) => unit.id as string));
+    const words = (text: string) => text.split(/\s+/).filter(Boolean).length;
+    const manuscript = file.beats
+      .filter((beat) => beat.inScript && inScript.has(beat.unitId as string))
+      .reduce((sum, beat) => sum + beat.manuscript.elements.reduce((n, element) => n + words(element.text), 0), 0);
+    const selected = unitId
+      ? file.beats.filter((beat) => beat.unitId === unitId).reduce((sum, beat) => sum + beat.manuscript.elements.reduce((n, element) => n + words(element.text), 0), 0)
+      : 0;
+    const plans = outlinesOf(file).reduce(
+      (sum, outline) => sum + outline.items.filter((item) => !item.boundUnitId && !item.boundBeatId).reduce((n, item) => n + words(item.body), 0),
+      0,
+    );
+    return { manuscript, selected, plans };
+  }, [file, unitId]);
   const chapters = hasChapterPages(file.project.format);
   // A book has an index; a script does not, so the control is not there to
   // puzzle over — the same rule the chapter-pages switch beside it follows.
@@ -182,7 +207,40 @@ export function PagePreview({
         </div>
       </div>
 
+      <p className="muted small preview-purpose">
+        The {scriptWord} as it will print: the same pages as Print and Export PDF, made from what is written on the Write page.
+      </p>
+
       {message ? <p className="notice preview-message">{message}</p> : null}
+
+      {scope === 'project' && written.manuscript === 0 ? (
+        <div className="notice preview-empty" role="status">
+          <p>
+            <strong>Nothing to print yet.</strong> The {scriptWord} has no writing in it: the pages here come from the text on the Write page.
+          </p>
+          {written.plans > 0 ? (
+            <p className="muted small">
+              The Outliner has {written.plans} {written.plans === 1 ? 'word' : 'words'} of notes that are not in the {scriptWord} yet. Notes are
+              plans; put a row on the track and write it on the Write page to see it here.
+            </p>
+          ) : null}
+          {onWrite ? (
+            <button type="button" onClick={onWrite}>
+              Go to Write
+            </button>
+          ) : null}
+        </div>
+      ) : scope === 'unit' && written.selected === 0 ? (
+        <div className="notice preview-empty" role="status">
+          <p>
+            This {nouns.unit.toLowerCase()} has nothing written in it yet.
+            {written.manuscript > 0 ? ` The whole ${scriptWord} has ${written.manuscript} words.` : ''}
+          </p>
+          <button type="button" onClick={() => setScope('project')}>
+            Show the whole {scriptWord}
+          </button>
+        </div>
+      ) : null}
 
       <Paper pages={pages} chapterStyle={chapterPageStyleOf(file)} />
     </div>

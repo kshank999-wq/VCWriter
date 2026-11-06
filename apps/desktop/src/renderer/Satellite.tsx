@@ -36,6 +36,7 @@ import { usePrinting } from './printing';
 import { ResearchBody } from './components/ResearchWindow';
 import { ResearchFolderView } from './components/ResearchFolderView';
 import { SculptorWindow } from './components/SculptorWindow';
+import { TextMenu } from './components/TextMenu';
 import { LayoutWindow } from './components/LayoutWindow';
 import { NoteSorterWindow } from './components/NoteSorterWindow';
 import { NarrativeMapWindow } from './components/NarrativeMapWindow';
@@ -152,6 +153,7 @@ export default function Satellite({ pane }: { pane: PaneKey }) {
       {/* A room on the other monitor must not be able to do less than the
           panel it came out of (§8), so the hover is here too. */}
       <BeatPeekLayer file={file} />
+      <TextMenu words={[...file.characters.map((one) => one.name), ...(file.locations ?? []).map((one) => one.name)]} />
       <Section pane={pane} file={file} onUpdate={project.update} onSaveAs={saveFromHere} />
     </div>
   );

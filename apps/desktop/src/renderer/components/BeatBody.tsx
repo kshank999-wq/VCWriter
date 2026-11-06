@@ -1,4 +1,5 @@
-import { replaceRange, wordAt } from '../writing-edit';
+import { offsetAtPoint, replaceRange, wordAt } from '../writing-edit';
+import { wordEntries } from './TextMenu';
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { WritingToolbar } from './WritingToolbar';
@@ -321,6 +322,8 @@ export function BeatBody({
     value?: string;
     from?: number;
     to?: number;
+    /** The character under the pointer, where it could be found. */
+    point?: number | null;
     /** The box itself, to give the caret back to. */
     box?: HTMLTextAreaElement;
   } | null>(null);
@@ -1068,6 +1071,9 @@ export function BeatBody({
                   value: input.value,
                   from: input.selectionStart,
                   to: input.selectionEnd,
+                  // The word under the pointer: a right-click does not move
+                  // the caret on every platform (on Windows it stays put).
+                  point: offsetAtPoint(input, event.clientX, event.clientY),
                   box: input,
                 });
               }}
@@ -1122,31 +1128,16 @@ export function BeatBody({
       requestAnimationFrame(() => at.box?.setSelectionRange(caret, caret));
     };
     const entries: MenuEntry[] = [];
-    const spelling = window.vcwriter?.spelling;
-    const word = wordAt(value, from, to);
-    if (spelling && word) {
-      const checked = spelling.check(word.word);
-      if (checked.misspelled) {
-        if (checked.suggestions.length === 0) {
-          entries.push({ label: 'No spelling suggestions', disabled: 'The dictionary has nothing close', onPick: () => undefined });
-        }
-        for (const suggestion of checked.suggestions) {
-          entries.push({
-            label: suggestion,
-            onPick: () => put(replaceRange(value, word.from, word.to, suggestion), word.from + suggestion.length),
-          });
-        }
-        entries.push({
-          label: 'Add to Dictionary',
-          note: `“${word.word}” is not marked again.`,
-          onPick: () => {
-            void spelling.addWord(word.word);
-            // The underline goes once the line is checked again.
-            put(value, to);
-          },
-        });
-        entries.push('rule');
-      }
+    // Spelling and synonyms from the program's own dictionary, the same as
+    // every other text field's menu (TextMenu): the word under the pointer, or
+    // the selection when the pointer is inside it.
+    const point = at.point ?? null;
+    const inside = point !== null && to > from && point >= from && point <= to;
+    const word = point === null || inside ? wordAt(value, from, to) : wordAt(value, point, point);
+    if (word) {
+      entries.push(
+        ...wordEntries(word.word, (text) => put(replaceRange(value, word.from, word.to, text), word.from + text.length)),
+      );
     }
     const picked = value.slice(from, to);
     const nothing = picked.length === 0 ? 'Select some words first' : null;

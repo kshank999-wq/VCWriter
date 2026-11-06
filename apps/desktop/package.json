@@ -29,12 +29,14 @@
     "@tiptap/react": "3.31.4",
     "@tiptap/starter-kit": "3.31.4",
     "@vcwriter/domain": "workspace:*",
+    "nspell": "2.1.5",
     "pdfjs-dist": "^6.3.289"
   },
   "devDependencies": {
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",
     "@types/node": "^22.9.0",
+    "@types/nspell": "^2.1.6",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.3",

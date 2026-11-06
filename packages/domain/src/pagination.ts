@@ -1,4 +1,5 @@
 import { beatsInScript, relatedEntities, unitsInStoryOrder } from './selectors.js';
+import { headingLine, printsBookHeadings, sectionHeading as bookSection, subsectionHeading as bookSubsection } from './book-headings.js';
 import { chapterLeafContent } from './chapter-style.js';
 import {
   chapterPagesFor,
@@ -1092,7 +1093,8 @@ const layoutText = (
 const toBlock = (element: ManuscriptElement, layout: PageLayoutSpec, speaker: string | null): Block => {
   const width = layout.width[element.type] ?? layout.columns;
   const indent = layout.indent[element.type] ?? 0;
-  const { lines, spans } = layoutText(element.text, width, layout.uppercase.has(element.type));
+  // A book's section and subsection headings keep their Title Case (addendum 19).
+  const { lines, spans } = layoutText(element.text, width, layout.uppercase.has(element.type) && element.attributes['bookHeading'] !== true);
 
   /**
    * A figure is its picture and then its caption (addendum 16 §9).
@@ -2025,11 +2027,24 @@ export const unitElements = (
   sceneNumber?: string,
 ): ManuscriptElement[] => {
   const unit = file.units.find((candidate) => candidate.id === unitId);
+  // A book prints its section and subsection headings, numbered, as the Write
+  // page shows them (from Ken: *it just needs to look like the manuscript*).
+  const headed = printsBookHeadings(file);
+  const numbers = headed ? structureNumbers(file) : null;
+  const headingElement = (id: string, text: string, level: 'section' | 'subsection'): ManuscriptElement => ({
+    id: id as ManuscriptElement['id'],
+    type: 'heading',
+    text,
+    characterId: null,
+    attributes: { bookHeading: true, level },
+  });
   const body = beatsInScript(file, unitId).flatMap((beat) => {
-    const elements =
+    const written =
       options.includeSceneHeadings === false
         ? beat.manuscript.elements.filter((element) => element.type !== 'scene_heading')
         : beat.manuscript.elements;
+    const sub = headed && numbers ? bookSubsection(file, beat, numbers) : null;
+    const elements = sub?.shown ? [headingElement(`${beat.id}-heading`, headingLine(sub), 'subsection'), ...written] : written;
     if (!options.includeBeatTitles || beat.title.length === 0) return elements;
     const note = annotation(`${beat.id}-title`, `[${beat.title}]`);
     // Under the slugline, never above it: a note above the heading reads as
@@ -2052,6 +2067,8 @@ export const unitElements = (
       : body;
 
   const before: ManuscriptElement[] = [];
+  const section = headed && numbers && unit ? bookSection(file, unit, numbers) : null;
+  if (section?.shown) before.push(headingElement(`${unitId}-heading`, headingLine(section), 'section'));
   if (options.includeSceneSummary && unit && unit.summary.trim().length > 0) {
     before.push(annotation(`${unitId}-summary`, `[${unit.summary.trim()}]`));
   }
@@ -2071,10 +2088,7 @@ export const unitElements = (
 };
 
 export const paginateUnit = (file: ProjectFile, unitId: StructuralUnitId): Page[] =>
-  paginateElements(
-    beatsInScript(file, unitId).flatMap((beat) => beat.manuscript.elements),
-    layoutForFile(file),
-  );
+  paginateElements(unitElements(file, unitId, {}), layoutForFile(file));
 
 /** Page count in the sense the industry means it. */
 export const pageCount = (file: ProjectFile): number => paginateProject(file).length;

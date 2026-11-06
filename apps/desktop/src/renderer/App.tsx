@@ -76,6 +76,7 @@ import { SceneDialog } from './components/SceneDialog';
 import { ResearchWindow } from './components/ResearchWindow';
 import { ProjectHomePanel } from './components/ProjectHomePanel';
 import { SculptorWindow } from './components/SculptorWindow';
+import { TextMenu } from './components/TextMenu';
 import { LayoutWindow } from './components/LayoutWindow';
 import { NoteSorterWindow } from './components/NoteSorterWindow';
 import { NarrativeMapWindow } from './components/NarrativeMapWindow';
@@ -1509,6 +1510,8 @@ export default function App() {
           listener over the window, so every surface that carries a beat's id
           gets the same card. */}
       <BeatPeekLayer file={file} />
+      {/* Spelling, synonyms and editing on a right-click over any text (from Ken). */}
+      <TextMenu words={[...file.characters.map((one) => one.name), ...(file.locations ?? []).map((one) => one.name)]} />
       <TitleBar
         menu={
           <MenuBar
@@ -1767,6 +1770,7 @@ export default function App() {
           ) : view === 'preview' ? (
             <PagePreview
               file={file}
+              onWrite={() => setView('write')}
               unitId={selectedBeat?.unitId ?? null}
               includeBeatTitles={setup.includeBeatTitles}
               onToggleBeatTitles={(next) => setPrintSetup({ ...printSetup, includeBeatTitles: next })}

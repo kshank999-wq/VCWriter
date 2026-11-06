@@ -33,8 +33,13 @@ export interface MenuItem {
   danger?: boolean;
 }
 
+/** A label over a group of items: *Synonyms for “walk”*. */
+export interface MenuHeading {
+  heading: string;
+}
+
 /** A rule between groups. */
-export type MenuEntry = MenuItem | 'rule';
+export type MenuEntry = MenuItem | MenuHeading | 'rule';
 
 export interface ContextMenuProps {
   x: number;
@@ -116,7 +121,12 @@ export function ContextMenu({ x, y, label, entries, onClose }: ContextMenuProps)
       className="context-menu"
       role="menu"
       aria-label={label}
-      style={placed(x, y)}
+      // A long menu (spelling, synonyms, editing and the screen's own items)
+      // scrolls inside the window rather than running off the bottom of it.
+      style={(() => {
+        const at = placed(x, y);
+        return { ...at, maxHeight: `calc(100vh - ${at.top + 8}px)`, overflowY: 'auto' as const };
+      })()}
       onPointerDown={(event) => event.stopPropagation()}
       onContextMenu={(event) => event.preventDefault()}
       onKeyDown={(event) => {
@@ -137,6 +147,10 @@ export function ContextMenu({ x, y, label, entries, onClose }: ContextMenuProps)
       {entries.map((entry, index) =>
         entry === 'rule' ? (
           <hr key={`rule-${index}`} className="context-rule" />
+        ) : 'heading' in entry ? (
+          <div key={`heading-${index}`} className="context-heading" role="presentation">
+            {entry.heading}
+          </div>
         ) : (
           <button
             key={`${entry.label}-${index}`}

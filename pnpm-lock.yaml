@@ -56,6 +56,9 @@ importers:
       '@vcwriter/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      nspell:
+        specifier: 2.1.5
+        version: 2.1.5
       pdfjs-dist:
         specifier: ^6.3.289
         version: 6.3.289
@@ -69,6 +72,9 @@ importers:
       '@types/node':
         specifier: ^22.9.0
         version: 22.20.1
+      '@types/nspell':
+        specifier: ^2.1.6
+        version: 2.1.6
       '@types/react':
         specifier: ^18.3.12
         version: 18.3.31
@@ -2090,6 +2096,9 @@ packages:
   '@types/node@22.20.1':
     resolution: {integrity: sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q==}
 
+  '@types/nspell@2.1.6':
+    resolution: {integrity: sha512-PnWYqrBZhkKAreX2kIZDJcBeigZJzXC8VmSuNiXeILUNreczBZHLxGEv/pRT+zL8rsXLxT5bRbiIF9wuh6cGgg==}
+
   '@types/plist@3.0.5':
     resolution: {integrity: sha512-E6OCaRmAe4WDmWNsL/9RMqdkkzDCY1etutkflWk4c+AcjDU07Pcz1fQwTX0TQz+Pxqn9i4L1TU3UFpjnrcDgxA==}
 
@@ -3503,6 +3512,10 @@ packages:
   is-arrayish@0.3.4:
     resolution: {integrity: sha512-m6UrgzFVUYawGBh1dUsWR5M2Clqic9RVXC/9f8ceNlv2IcO9j9J/z8UoCLPqtsPBFNzEpfR3xftohbfqDx8EQA==}
 
+  is-buffer@2.0.5:
+    resolution: {integrity: sha512-i2R6zNFDwgEHJyQUtJEk0XFi1i0dPFn/oqjK3/vPCcDeJvW5NQ83V8QbicfF1SupOaB0h8ntgBC2YiE7dfyctQ==}
+    engines: {node: '>=4'}
+
   is-ci@3.0.1:
     resolution: {integrity: sha512-ZYvCgrefwqoQ6yTyYUbQu64HsITZ3NfKX1lzaEYdkTDcfKzzCI/wthRRYKkdjHKFVgNiXKAKm65Zo1pk2as/QQ==}
     hasBin: true
@@ -4151,6 +4164,9 @@ packages:
     resolution: {integrity: sha512-/vBvz5Jfr9dT/aFWd0FIRf+T/Q2WBsLENygUaFUqstqsycmZAP/t5BvFJTK0viFmSUxiUKTUplWy5vt+rvKIxg==}
     engines: {node: ^12.13.0 || ^14.15.0 || >=16.0.0}
     deprecated: This package is no longer supported.
+
+  nspell@2.1.5:
+    resolution: {integrity: sha512-PSStyugKMiD9mHmqI/CR5xXrSIGejUXPlo88FBRq5Og1kO5QwQ5Ilu8D8O5I/SHpoS+mibpw6uKA8rd3vXd2Sg==}
 
   nullthrows@1.1.1:
     resolution: {integrity: sha512-2vPPEi+Z7WqML2jZYddDIfy5Dqb0r2fze2zTxNNknZaFpVHU3mFB3R+DWeJWGVx0ecvttSGlJTI+WG+8Z4cDWw==}
@@ -7434,6 +7450,10 @@ snapshots:
     dependencies:
       undici-types: 6.21.0
 
+  '@types/nspell@2.1.6':
+    dependencies:
+      '@types/node': 22.20.1
+
   '@types/plist@3.0.5':
     dependencies:
       '@types/node': 22.20.1
@@ -9112,6 +9132,8 @@ snapshots:
 
   is-arrayish@0.3.4: {}
 
+  is-buffer@2.0.5: {}
+
   is-ci@3.0.1:
     dependencies:
       ci-info: 3.9.0
@@ -9948,6 +9970,10 @@ snapshots:
       console-control-strings: 1.1.0
       gauge: 4.0.4
       set-blocking: 2.0.0
+
+  nspell@2.1.5:
+    dependencies:
+      is-buffer: 2.0.5
 
   nullthrows@1.1.1: {}
 

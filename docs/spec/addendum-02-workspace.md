@@ -2961,3 +2961,51 @@ page.*
   longer carries a second *Outliner* button for books. *Links* opened the
   same Research room as *Research*; it is off the bar, and *Links & threads*
   is the first entry in Research's own list.
+
+## Preview shows the pages that will print (November 2026)
+
+From Ken: *I'm not sure what the preview screen is for. When you hit the
+preview screen, even though there's stuff written, it doesn't show anything.*
+
+- Preview is the manuscript as it will print: the same pages as Print and
+  Export PDF, made from what is written on the Write page. A line under the
+  toolbar now says so.
+- It opens on the **whole** book or script. It used to open on the selected
+  section whenever one was selected, and a selected section with nothing in it
+  showed one blank page.
+- When there is nothing to print it says why: the manuscript is empty (and,
+  where the Outliner holds notes, that notes are plans until they are on the
+  track and written), with **Go to Write**. On *This section* with nothing in
+  it, it offers **Show the whole book**.
+- A book's printed pages carry its numbered section and subsection headings in
+  Title Case, as the Write page shows them, honouring each heading's on/off
+  switch (`unitElements` in `pagination.ts`, so Print and Export PDF match).
+
+## Spelling and the thesaurus on every right-click (November 2026)
+
+From Ken: *when you right click, it should give you suggestions, thesaurus,
+and all that, just like the word processor… And this needs to be across every
+module.*
+
+- **Why it failed.** The Write page's menu asked Electron's in-page checker
+  (`webFrame.isWordMisspelled`), which only has a dictionary where Electron
+  uses Hunspell. On macOS and Windows the underline comes from the operating
+  system, so the menu was told every word was fine and offered nothing.
+- **Now** every menu reads the program's own dictionary (`spelling.ts`): the
+  English Hunspell dictionary (dictionary-en, MIT/BSD) through `nspell`, and a
+  thesaurus built from Moby Thesaurus II (public domain), sixteen synonyms a
+  word ranked by closeness (`scripts/build-thesaurus.mjs`). Same on every
+  platform and in the browser preview; the thesaurus loads after start-up.
+- **One menu for every text field in every module** (`TextMenu`): a misspelled
+  word offers suggestions, Add to Dictionary and Ignore; a word spelled right
+  offers *Synonyms for "…"*; then Undo, Redo, Cut, Copy, Paste and Select All.
+  The word is the one under the pointer (a right-click does not move the caret
+  on Windows), or the selection when the pointer is in it. Choosing one types
+  it in place, so the field's own undo has it.
+- Screens with their own menu (the Write page, cards, timeline beats) handle
+  the right-click first; the Write page puts the same spelling and synonyms at
+  the top of its menu.
+- The cast's and places' names count as words; words added go to the writer's
+  list on this machine and to the operating system's dictionary. On Windows and
+  Linux the underline's language is set to the system's English, or US
+  English.
