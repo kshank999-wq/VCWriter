@@ -212,3 +212,23 @@ describe('exporting the map', () => {
     expect(sent.paper.width).toBeGreaterThanOrEqual(11);
   });
 });
+
+describe('exporting the map as JSON', () => {
+  it('saves the whole graph as a .json file', async () => {
+    const { file } = shaped();
+    const saved: { name: string; bytes: Uint8Array; mediaType: string }[] = [];
+    (window as unknown as { vcwriter: unknown }).vcwriter = {
+      saveFile: async (input: { name: string; bytes: Uint8Array; mediaType: string }) => {
+        saved.push(input);
+        return { ok: true, data: { path: '/tmp/Blackout story map.json' } };
+      },
+    };
+    render(<Harness initial={file} />);
+    fireEvent.click(screen.getByRole('button', { name: 'JSON data' }));
+    await screen.findByRole('status');
+    expect(saved[0]!.name).toBe('Blackout story map.json');
+    expect(saved[0]!.mediaType).toBe('application/json');
+    const data = JSON.parse(new TextDecoder().decode(saved[0]!.bytes));
+    expect(data.cards.map((card: { title: string }) => card.title)).toEqual(['Act one', 'The interview', 'She lies', 'He believes her']);
+  });
+});

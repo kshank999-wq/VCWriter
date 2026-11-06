@@ -142,9 +142,9 @@ whose ends both fold into one card is counted on it (⇄N).
 - **Views** saves the current open state and hand layout under a name and
   reapplies it.
 
-## 8a. Export: PNG and PDF
+## 8a. Export: PNG, PDF and JSON
 
-**Export** on the toolbar offers four things: a PNG image or a PDF of the map
+**Export** on the toolbar offers five things: a PNG image or a PDF of the map
 *as shown on the canvas* (the folds, the open mini map and the hand
 placement as they are), or of *the whole story, every card open*. Exporting
 everything never changes the view: the board is exploded in memory only
@@ -164,6 +164,17 @@ everything never changes the view: the board is exploded in memory only
   page rather than small type. It goes through the same PDF window as every
   other export (kind `map`); in the browser preview it opens for the
   browser's own Save as PDF.
+
+- **JSON data** (`sculptMapJson`) is the whole map as structured data,
+  whatever is folded: `format: "vc-writer-story-map"`, `version: 1`, the
+  project and board, counts, the **definitions** (with the live name of the
+  cast member, place or note each stands for, and how many placements it
+  has), the **cards** in reading order (id, parent, order among siblings,
+  depth, the path of titles above it, type, title, note, details, the
+  definition it places, and its script binding with the scene or beat
+  title), the **connections** (type, label, direction), and the view, hand
+  layout and saved views. Saved beside the project as *Title story map.json*,
+  indented so a person can read it too.
 
 ## 9. Keys
 
@@ -258,7 +269,7 @@ ever runs on local files.
 | Version-1 boards migrated safely; links to VC Writer stay valid | §13; upgrade tests; binding tests unchanged in substance |
 | Tests for migration, graph ops, relationships, indicators, save/reopen, legacy retirement | `sculptor-v2.test.ts`, `sculptor-binding.test.ts`, `crossing.test.ts`, `sync-plans.test.ts`, desktop `sculptor.test.tsx` |
 
-Not built yet (spec §11, *optional*): JSON export of the map.
+All three optional exports of spec §11 (PNG, PDF, JSON) are built (§8a).
 
 ## 15. Code
 

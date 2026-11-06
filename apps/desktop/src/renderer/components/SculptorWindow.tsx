@@ -85,6 +85,7 @@ import {
   sculptTypeName,
   searchBoard,
   sculptMapHtml,
+  sculptMapJsonText,
   sculptMapSvg,
   suggestedMapFileName,
   type MapExportScope,
@@ -465,11 +466,18 @@ export function SculptorWindow({
    * here at twice the size, for a sharp image; the PDF goes to the print
    * window on a page the shape of the map.
    */
-  const exportMap = async (format: 'png' | 'pdf', scope: MapExportScope) => {
+  const exportMap = async (format: 'png' | 'pdf' | 'json', scope: MapExportScope) => {
     if (!board || exporting) return;
     const api = window.vcwriter;
     setExporting(true);
     try {
+      if (format === 'json') {
+        const bytes = new TextEncoder().encode(sculptMapJsonText(file, board));
+        const result = await api.saveFile({ name: suggestedMapFileName(file, 'json'), bytes, mediaType: 'application/json', kind: { name: 'JSON data', extension: 'json' } });
+        if (!result.ok) setStatus(result.error ?? 'The map could not be saved');
+        else if (result.data) setStatus(`Exported to ${result.data.path}`);
+        return;
+      }
       const map = sculptMapSvg(file, board, scope);
       if (format === 'pdf') {
         const { html, paper } = sculptMapHtml(file, map);
@@ -852,6 +860,10 @@ export function SculptorWindow({
             </button>
             <button type="button" className="ghost small" disabled={exporting} onClick={() => void exportMap('pdf', 'everything')}>
               PDF, everything
+            </button>
+            <p className="muted small">The map as data, for other tools</p>
+            <button type="button" className="ghost small" disabled={exporting} onClick={() => void exportMap('json', 'everything')}>
+              JSON data
             </button>
           </div>
         </details>

@@ -1,4 +1,4 @@
-import { CARD_HEIGHT, CARD_WIDTH, drawnLinks, findEntity, mapPicture, nestedSummaries, placementsOfEntity, titleOf, viewStateOf } from './sculptor.js';
+import { CARD_HEIGHT, CARD_WIDTH, drawnLinks, entityTitle, findEntity, mapPicture, nestedSummaries, placementsOfEntity, titleOf, viewStateOf } from './sculptor.js';
 import { sculptLinkTypeName, sculptTypeInfo, sculptTypeName } from './sculptor-types.js';
 import type { Board } from './entities/sculptor.js';
 import type { ProjectFile } from './project-file.js';
@@ -208,5 +208,135 @@ export const sculptMapHtml = (file: ProjectFile, map: MapSvg): { html: string; p
 };
 
 /** The file name an export is offered under. */
-export const suggestedMapFileName = (file: ProjectFile, extension: 'png' | 'pdf'): string =>
+export const suggestedMapFileName = (file: ProjectFile, extension: 'png' | 'pdf' | 'json'): string =>
   `${(file.project.title || 'Untitled').replace(/[<>:"/\\|?*\u0000-\u001f]/g, '-')} story map.${extension}`;
+
+/**
+ * The map as structured data (addendum 03 v2 §11, JSON export): the whole
+ * graph, whatever is folded, so another tool (or a later VC Writer) can read
+ * it back. Cards in reading order with their depth and path; definitions
+ * with the names of the project records they stand for, read live; links;
+ * and the view, the hand layout and the saved views beside the story.
+ */
+export interface MapJson {
+  format: 'vc-writer-story-map';
+  version: 1;
+  exportedAt: string;
+  project: { id: string; title: string; format: string };
+  board: { id: string; name: string; schemaVersion: number };
+  counts: { cards: number; definitions: number; connections: number };
+  definitions: {
+    id: string;
+    type: string;
+    subtype: string;
+    title: string;
+    description: string;
+    source: { kind: string; id: string } | null;
+    favorite: boolean;
+    placements: number;
+  }[];
+  cards: {
+    id: string;
+    parentId: string | null;
+    order: number;
+    depth: number;
+    path: string[];
+    type: string;
+    typeName: string;
+    subtype: string;
+    title: string;
+    note: string;
+    details: Record<string, string>;
+    definitionId: string | null;
+    script: { unitId: string | null; beatId: string | null; title: string | null };
+    childCount: number;
+  }[];
+  connections: { id: string; fromId: string; toId: string; type: string; typeName: string; label: string; directed: boolean }[];
+  view: Board['viewState'];
+  layout: Board['layout'];
+  savedViews: Board['views'];
+}
+
+export const sculptMapJson = (file: ProjectFile, board: Board, exportedAt: string = new Date().toISOString()): MapJson => {
+  const kids = new Map<string | null, Board['nodes']>();
+  for (const node of board.nodes) {
+    const key = (node.parentId as string | null) ?? null;
+    const list = kids.get(key);
+    if (list) list.push(node);
+    else kids.set(key, [node]);
+  }
+  for (const list of kids.values()) list.sort((a, b) => (a.orderKey < b.orderKey ? -1 : a.orderKey > b.orderKey ? 1 : 0));
+
+  const cards: MapJson['cards'] = [];
+  const seen = new Set<string>();
+  const walk = (parentId: string | null, depth: number, path: string[]) => {
+    (kids.get(parentId) ?? []).forEach((node, order) => {
+      if (seen.has(node.id as string)) return;
+      seen.add(node.id as string);
+      const title = titleOf(file, board, node);
+      const unit = node.boundUnitId ? file.units.find((one) => one.id === node.boundUnitId) : undefined;
+      const beat = node.boundBeatId ? file.beats.find((one) => one.id === node.boundBeatId) : undefined;
+      cards.push({
+        id: node.id as string,
+        parentId,
+        order,
+        depth,
+        path,
+        type: node.kind,
+        typeName: sculptTypeName(node.kind, node.subtype),
+        subtype: node.subtype,
+        title,
+        note: node.note,
+        details: { ...(node.fields ?? {}) },
+        definitionId: (node.entityId as string | null) ?? null,
+        script: {
+          unitId: (node.boundUnitId as string | null) ?? null,
+          beatId: (node.boundBeatId as string | null) ?? null,
+          title: unit ? unit.title : beat ? beat.title : null,
+        },
+        childCount: (kids.get(node.id as string) ?? []).length,
+      });
+      walk(node.id as string, depth + 1, [...path, title || sculptTypeName(node.kind, node.subtype)]);
+    });
+  };
+  walk(null, 0, []);
+  // A card whose parent is missing (a damaged file) is still exported, at the top.
+  for (const node of board.nodes) if (!seen.has(node.id as string)) walk((node.parentId as string | null) ?? null, 0, []);
+
+  const definitions = (board.entities ?? []).map((entity) => ({
+    id: entity.id as string,
+    type: entity.type,
+    subtype: entity.subtype,
+    title: entityTitle(file, entity),
+    description: entity.description,
+    source: entity.sourceKind && entity.sourceId ? { kind: entity.sourceKind, id: entity.sourceId } : null,
+    favorite: entity.favorite,
+    placements: placementsOfEntity(board, entity.id).length,
+  }));
+  const connections = (board.links ?? []).map((link) => ({
+    id: link.id as string,
+    fromId: link.fromId as string,
+    toId: link.toId as string,
+    type: link.type,
+    typeName: sculptLinkTypeName(link.type),
+    label: link.label,
+    directed: link.directed,
+  }));
+  return {
+    format: 'vc-writer-story-map',
+    version: 1,
+    exportedAt,
+    project: { id: file.project.id as string, title: file.project.title, format: file.project.format },
+    board: { id: board.id as string, name: board.name, schemaVersion: board.schemaVersion },
+    counts: { cards: cards.length, definitions: definitions.length, connections: connections.length },
+    definitions,
+    cards,
+    connections,
+    view: viewStateOf(board),
+    layout: board.layout ?? {},
+    savedViews: board.views ?? [],
+  };
+};
+
+/** The JSON text, indented so a person can read it too. */
+export const sculptMapJsonText = (file: ProjectFile, board: Board): string => `${JSON.stringify(sculptMapJson(file, board), null, 2)}\n`;

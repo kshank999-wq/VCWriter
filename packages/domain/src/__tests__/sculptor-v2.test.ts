@@ -494,3 +494,24 @@ describe('exporting the map (PNG and PDF)', () => {
     expect(boardOf(file, s.board).viewState).toEqual(board.viewState);
   });
 });
+
+describe('exporting the map as JSON', () => {
+  it('carries the whole graph, folded or not, in reading order with paths, definitions and links', async () => {
+    const { sculptMapJson, sculptMapJsonText } = await import('../index.js');
+    const s = story();
+    let file = linkNodes(s.file, s.board.id, s.opens, s.roof, { type: 'causes', label: 'why she runs' }).file;
+    file = collapseAll(file, s.board.id);
+    const board = boardOf(file, s.board);
+    const data = sculptMapJson(file, board, '2026-11-06T00:00:00.000Z');
+    expect(data.format).toBe('vc-writer-story-map');
+    expect(data.counts).toEqual({ cards: board.nodes.length, definitions: 1, connections: 1 });
+    expect(data.cards.map((card) => card.title).slice(0, 4)).toEqual(['Act one', 'Warehouse', 'Mara', 'Opens the case']);
+    const deeper = data.cards.find((card) => card.title === 'The lock is new')!;
+    expect(deeper.depth).toBe(4);
+    expect(deeper.path).toEqual(['Act one', 'Warehouse', 'Mara', 'Opens the case']);
+    expect(data.definitions[0]).toMatchObject({ title: 'Mara', source: { kind: 'character', id: s.mara }, placements: 2 });
+    expect(data.connections[0]).toMatchObject({ type: 'causes', typeName: 'Causes', label: 'why she runs', directed: true });
+    expect(data.view.level).toEqual({ kind: 'depth', depth: 0 });
+    expect(JSON.parse(sculptMapJsonText(file, board)).counts.cards).toBe(board.nodes.length);
+  });
+});
