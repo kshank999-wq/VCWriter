@@ -240,32 +240,16 @@ export function Projects({
   const off = describeShelf(shelf, projects);
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.body}>
+    // `handled`: a tap on Start it lands the first time, with the keyboard up,
+    // rather than only dismissing the keyboard.
+    <ScrollView style={styles.screen} contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
       <Text style={styles.heading}>Projects</Text>
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      {loading ? <Text style={styles.muted}>Looking…</Text> : null}
 
-      {!loading && projects.length === 0 ? (
-        <Text style={styles.muted}>No projects yet. Start one and it will be on your desktop too.</Text>
-      ) : null}
-
-      {showing.map((project) => (
-        <Pressable
-          key={project.id}
-          style={[styles.row, project.id === chosenId ? styles.chosen : null]}
-          onPress={() => {
-            void AsyncStorage.setItem(LAST, project.id).catch(() => undefined);
-            onChoose(project);
-          }}
-        >
-          <Text style={styles.title}>{project.title || 'Untitled'}</Text>
-          <Text style={styles.muted}>
-            {formatSpokenName(project.format as ProjectFormat)}
-            {project.id === chosenId ? ' · last used' : ''}
-          </Text>
-        </Pressable>
-      ))}
-
+      {/* Starting a project comes first, above the list (from Ken: with
+          projects already listed, the form sat at the bottom and the phone's
+          keyboard covered its button). Here the title box, the kinds and
+          Start it all sit under the heading, clear of the keyboard. */}
       {naming ? (
         <View style={[styles.row, { gap: 12 }]}>
           <View style={styles.field}>
@@ -336,6 +320,30 @@ export function Projects({
           ) : null}
         </View>
       )}
+
+      {loading ? <Text style={styles.muted}>Looking…</Text> : null}
+
+      {!loading && projects.length === 0 ? (
+        <Text style={styles.muted}>No projects yet. Start one and it will be on your desktop too.</Text>
+      ) : null}
+
+      {showing.map((project) => (
+        <Pressable
+          key={project.id}
+          style={[styles.row, project.id === chosenId ? styles.chosen : null]}
+          onPress={() => {
+            void AsyncStorage.setItem(LAST, project.id).catch(() => undefined);
+            onChoose(project);
+          }}
+        >
+          <Text style={styles.title}>{project.title || 'Untitled'}</Text>
+          <Text style={styles.muted}>
+            {formatSpokenName(project.format as ProjectFormat)}
+            {project.id === chosenId ? ' · last used' : ''}
+          </Text>
+        </Pressable>
+      ))}
+
 
       {off ? <Text style={styles.muted}>{off}</Text> : null}
 
