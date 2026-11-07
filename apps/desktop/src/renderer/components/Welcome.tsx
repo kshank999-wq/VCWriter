@@ -2,9 +2,8 @@ import { useEffect, useState } from 'react';
 import {
   builtElsewhere,
   describeProjectFolder,
-  nounsFor,
-  isWordProcessor,
-  startsHere,
+  startableFormatCards,
+  formatCardDetail,
   type ProjectFormat,
   type ProjectFolder,
   formatName,
@@ -50,49 +49,9 @@ interface WelcomeProps {
 }
 
 /**
- * What each format is, in a line.
- *
- * The **parts** half is read from `nounsFor` rather than typed here, so this
- * list cannot tell a writer a novel has "chapters and beats" while every screen
- * in the program calls them passages (addendum 16 §1). What stays written down
- * is the part a noun table cannot know: what the format is *for*.
+ * **The cards are the domain's** (`FORMAT_CARDS`, addendum 35 §7): the site's
+ * module chooser reads the same list, so the two cannot drift.
  */
-/**
- * **The order and the `about` are this screen's; the name is not** (addendum
- * 35 §1). The label was written out here and again in the importer, and the
- * two had drifted — *Instructional book* on the grid a writer chooses from,
- * *Instructional or textbook* on the screen that brings one in. What a format
- * is *for* stays written down, a table of nouns having no way to know it.
- */
-const FORMATS: ReadonlyArray<{ value: ProjectFormat; about: string }> = [
-  { value: 'screenplay', about: 'industry formatting' },
-  { value: 'series', about: 'episodes across a series' },
-  { value: 'novel', about: 'manuscript formatting' },
-  { value: 'instructional', about: 'academic, reference and nonfiction' },
-  // **Kept, and no longer a choice** (addendum 30): a game is built in VC Game
-  // Studio, so this card is the door to it. It stays in its place rather than
-  // coming off the grid, because a writer who comes here to write a game and
-  // finds nothing concludes the answer is nothing — which is the fault
-  // addendum 08 §8b names. What it says is read from `builtElsewhere`.
-  { value: 'game', about: 'branching, choices and consequences' },
-  { value: 'stage_play', about: '' },
-  // One story or many: each is a marker over its sections, and the Layout
-  // room sets the collection as a book (addendum 22).
-  { value: 'short_story', about: 'one story, or a collection set as a book' },
-  { value: 'short_form', about: 'commercials, web video, social' },
-  // The eighth card, in the slot the game card's move left open (addendum 42):
-  // a word processor, for everything that is not a story's manuscript.
-  { value: 'document', about: 'A word processor: letters, reports, essays and notes, filed into your other projects' },
-];
-
-const detailFor = (option: { value: ProjectFormat; about: string }): string => {
-  // A document has no parts to list; what it is for says more.
-  if (isWordProcessor(option.value)) return option.about;
-  const nouns = nounsFor(option.value);
-  const parts = `${nouns.unitPlural} and ${nouns.subPlural.toLowerCase()}`;
-  return option.about.length > 0 ? `${parts}, ${option.about}` : parts;
-};
-
 export function Welcome({
   onCreate,
   onOpen,
@@ -203,7 +162,7 @@ export function Welcome({
               the grid it needs to announce nothing, because nothing about it
               claims to be a format. */}
           <div className="format-options">
-            {FORMATS.filter((option) => startsHere(option.value)).map((option) => (
+            {startableFormatCards().map((option) => (
               <button
                 key={option.value}
                 type="button"
@@ -212,7 +171,7 @@ export function Welcome({
                 onClick={() => setFormat(option.value)}
               >
                 <strong>{formatName(option.value)}</strong>
-                <span>{detailFor(option)}</span>
+                <span>{formatCardDetail(option)}</span>
               </button>
             ))}
           </div>

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Emblem } from '../wordmark';
+import { ModuleChooser } from './module-chooser';
 
 const FEATURES = [
   {
@@ -55,6 +56,12 @@ export default function HomePage() {
         </div>
         <Emblem />
       </div>
+
+      <section id="modules">
+        <h2>What are you writing?</h2>
+        <p className="lede">Choose a module to see what VC Writer does for that kind of work.</p>
+        <ModuleChooser />
+      </section>
 
       <section id="features">
         <h2>What it does</h2>

@@ -1005,3 +1005,28 @@ From Ken: *go ahead with comments and tracked changes.* Comments first.
   over a selection, deleting a tracked insertion, accepting and rejecting one
   or all, and nothing changing with tracking off. Looked at in the browser
   preview: typing over a word, Backspace over a word, and Accept all.
+
+## 22. Place on page
+
+From Ken, 7 November: *in the document module, when you go into the research
+section and you edit the note, it says place on track. It should say place on
+page, and then it adds it to the page … where the cursor is at. Right now you
+place it on the track and it does nothing.*
+
+A Document project has no track, so `placeNoteOnTrack` had nowhere to put the
+note. In a word processor the rewrite screen (`NoteRewrite`) now offers
+**Place on page**:
+
+- The note's rewrite, or the note itself if it has not been rewritten, goes
+  into the open document **where the cursor was left**, through a new
+  `insertText` on `documentCommands`. ProseMirror keeps the selection when
+  Research takes the focus, so that is where it lands. A one-paragraph note
+  goes in among the words; a longer note keeps its paragraphs.
+- The note is marked used (`markResearchUsed` with no beat), and its state
+  reads *Placed on the page*. The button then says *Place on page again*.
+- The rewrite and Research both close, leaving the writer on the page with
+  the words in place, ready to edit.
+- If no document is open to take it (a folder opened in its own window), the
+  note says so and stays unused.
+
+Story projects keep *Place on the track* unchanged.

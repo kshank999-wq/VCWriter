@@ -183,3 +183,29 @@ At 1440×900 in the real preview, on a fresh **Instructional book** called
   a remembered one would put somebody back on a screen they left a fortnight
   ago (addendum 02 §6d's rule about where a moved screen stands, pointed at a
   page).
+
+## 7. The module cards on the site
+
+From Ken, 7 November: *on the web front page, I want a working version of the
+project screen … just when you select each of the module types, it goes to a
+promotion screen for that particular module* — and *I don't want a game
+studio included, just the modules, not where you fill in the project name or
+who it is.*
+
+- **One list.** The cards moved out of `Welcome.tsx` into the domain as
+  `FORMAT_CARDS` (`packages/domain/src/format-cards.ts`), with
+  `startableFormatCards`, `formatCardName` and `formatCardDetail`. The desktop's
+  New project screen and the site both draw from it, so the site cannot offer
+  a card the program lacks, in another order, or worded differently.
+- **The front page** has a *What are you writing?* section (`#modules`) with
+  the eight startable cards and nothing else: no title, no author, no folder,
+  and no game (`startsHere` leaves it out, as on the desktop grid).
+- **Each card is a link** to `/write/<slug>`: screenplay, series, novel,
+  instructional, stage-play, short-stories, short-form, document. The page has
+  a headline and intro, four strengths, what comes with the module, and the
+  chooser again at the foot with the current module marked. What each page
+  says is in `apps/web/src/lib/modules.ts`. The pages are static, and any other
+  slug is a 404.
+- **Screenshots are still to come.** They will be taken automatically from the
+  browser preview with a demo project for each module (the screenshot and
+  tutorial plan).

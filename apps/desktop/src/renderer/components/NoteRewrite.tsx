@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  isWordProcessor,
+  markResearchUsed,
   noteBeatIds,
   outlineFolders,
   placeKey,
@@ -14,6 +16,7 @@ import {
   type ResearchItem,
 } from '@vcwriter/domain';
 import { useModal } from '../use-modal';
+import { documentCommands } from '../document/document-commands';
 
 /**
  * The rewrite screen (addendum 28 §7).
@@ -27,6 +30,11 @@ import { useModal } from '../use-modal';
  * rewrite on the right, saved as you type onto the note. **Place on the
  * track** puts the rewrite (or the note, if nothing has been rewritten) into a
  * beat where the note is filed, and from then on the note reads used.
+ *
+ * **In a word processor it is Place on page** (from Ken: *this is a word
+ * processor*). A document has no track, so the words go into the open
+ * document where the cursor was left, the note reads used, and the rewrite
+ * and Research close so the writer is back on the page to shape it.
  */
 export function NoteRewrite({
   file,
@@ -36,6 +44,7 @@ export function NoteRewrite({
   onUpdate,
   onGoToBeat,
   addTo,
+  onPlacedOnPage,
 }: {
   file: ProjectFile;
   item: ResearchItem | null;
@@ -48,6 +57,8 @@ export function NoteRewrite({
    * row it goes under and the kinds it can be added as. The note is archived.
    */
   addTo?: { under: string; choices: ReadonlyArray<{ kind: string; label: string }>; onAdd(kind: string): void } | null;
+  /** After a note goes onto the page in a word processor: back to the page. */
+  onPlacedOnPage?(): void;
 }) {
   const dialog = useModal(item !== null);
   const original = useRef<HTMLDivElement>(null);
@@ -69,8 +80,9 @@ export function NoteRewrite({
 
   if (!item) return null;
 
+  const page = isWordProcessor(file.project.format);
   const beats = noteBeatIds(file, item);
-  const used = beats.length > 0;
+  const used = page ? item.usage === 'used' : beats.length > 0;
   const lastBeat = beats.length > 0 ? file.beats.find((beat) => beat.id === beats[beats.length - 1]) : undefined;
   const unit = lastBeat ? file.units.find((one) => one.id === lastBeat.unitId) : undefined;
 
@@ -96,7 +108,25 @@ export function NoteRewrite({
     }
   };
 
+  const placeOnPage = () => {
+    const text = textToPlace(item);
+    const commands = documentCommands.current;
+    if (!text || !commands || !commands.insertText(text)) {
+      setSaid('Open the document to place this on its page.');
+      return;
+    }
+    onUpdate((current) =>
+      current.researchItems.some((one) => one.id === item.id) ? markResearchUsed(current, { itemId: item.id }) : current,
+    );
+    onClose();
+    onPlacedOnPage?.();
+  };
+
   const place = () => {
+    if (page) {
+      placeOnPage();
+      return;
+    }
     // Worked out before the updater runs, so StrictMode's second run cannot
     // place it twice.
     const result = placeNoteOnTrack(file, item.id, { afterBeatId: currentBeatId });
@@ -122,14 +152,14 @@ export function NoteRewrite({
           spellCheck
           onChange={(event) => onUpdate((current) => updateResearchItem(current, item.id, { title: event.target.value }))}
         />
-        <span className="muted small">{addTo ? `Sorted into ${addTo.under}` : where ? `Filed under ${where}` : 'Not in a chapter yet'}</span>
+        <span className="muted small">{addTo ? `Sorted into ${addTo.under}` : where ? `Filed under ${where}` : page ? 'In Research' : 'Not in a chapter yet'}</span>
         <span className={`note-rewrite-state${used ? ' used' : ''}`}>
           {used ? (
             <>
               <span className="used-x" aria-hidden="true">
                 ✕
               </span>{' '}
-              Used in the book{unit ? ` · ${unit.title}` : ''}
+              {page ? 'Placed on the page' : `Used in the book${unit ? ` · ${unit.title}` : ''}`}
             </>
           ) : (
             'Not used yet'
@@ -177,7 +207,7 @@ export function NoteRewrite({
       <footer className="note-rewrite-foot">
         {said ? <span className="small" role="status">{said}</span> : <span className="muted small">{textToPlace(item) ? '' : 'Nothing written to place yet.'}</span>}
         <span className="note-rewrite-actions">
-          {used && lastBeat && onGoToBeat ? (
+          {!page && used && lastBeat && onGoToBeat ? (
             <button
               type="button"
               className="ghost"
@@ -205,8 +235,14 @@ export function NoteRewrite({
                 </button>
               ))
             : null}
-          <button type="button" className={addTo ? 'ghost' : undefined} onClick={place} disabled={!textToPlace(item)}>
-            {used ? 'Place on the track again' : 'Place on the track'}
+          <button
+            type="button"
+            className={addTo ? 'ghost' : undefined}
+            onClick={place}
+            disabled={!textToPlace(item)}
+            title={page ? 'Put it into the document where your cursor is' : undefined}
+          >
+            {page ? (used ? 'Place on page again' : 'Place on page') : used ? 'Place on the track again' : 'Place on the track'}
           </button>
         </span>
       </footer>

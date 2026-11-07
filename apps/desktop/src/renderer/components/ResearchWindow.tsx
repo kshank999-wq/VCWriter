@@ -1738,6 +1738,7 @@ export function ResearchBody({
         currentBeatId={currentBeatId}
         onClose={() => setRewriting(null)}
         onUpdate={onUpdate}
+        onPlacedOnPage={onClose}
         {...(onGoToBeat ? { onGoToBeat } : {})}
       />
 

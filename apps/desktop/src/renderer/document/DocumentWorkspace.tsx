@@ -704,11 +704,21 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
       exportPdf: () => void exportPdf(),
       exportDocx: () => void exportDocx(),
       flush: () => flush(editorRef.current),
+      insertText: (text: string) => {
+        const current = editorRef.current;
+        if (readOnly || !current || current.isDestroyed || !text.trim()) return false;
+        // The selection outlives the focus, so this lands where the writer
+        // last had the cursor before opening Research.
+        // One paragraph goes in among the words; several keep their breaks.
+        const blocks = textToDocContent(text).content ?? [];
+        const only = blocks.length === 1 && blocks[0]?.type === 'paragraph' ? blocks[0] : null;
+        return current.chain().focus().insertContent(only ? (only.content ?? []) : blocks).run();
+      },
     };
     return () => {
       documentCommands.current = null;
     };
-  }, [print, exportPdf, exportDocx, flush]);
+  }, [print, exportPdf, exportDocx, flush, readOnly]);
 
   // Ctrl+H is Word's replace; Ctrl+F is caught by the app's own menu.
   useEffect(() => {

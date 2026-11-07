@@ -167,6 +167,25 @@ describe('the page', () => {
     act(() => documentCommands.current?.undo());
     expect(editorOf().getText()).toBe('Keep');
   });
+
+  it('places a Research note where the cursor was left', () => {
+    render(<Harness start={start('Before after')} />);
+    act(() => {
+      editorOf().commands.setTextSelection(8);
+    });
+    let placed = false;
+    act(() => {
+      placed = documentCommands.current?.insertText('THE NOTE ') ?? false;
+    });
+    expect(placed).toBe(true);
+    expect(editorOf().getText()).toBe('Before THE NOTE after');
+    act(() => {
+      editorOf().commands.setTextSelection(editorOf().state.doc.content.size - 1);
+      documentCommands.current?.insertText('One.\n\nTwo.');
+    });
+    const lines = editorOf().getText({ blockSeparator: '\n' }).split('\n').filter((line) => line.trim());
+    expect(lines).toEqual(['Before THE NOTE after', 'One.', 'Two.']);
+  });
 });
 
 /**
