@@ -23792,3 +23792,15 @@ input.note-rewrite-title:focus { border-color: var(--gold); outline: none; }
 .outline-row.picked .outline-ink {
   color: #e8f3ff;
 }
+
+/* The outline's tier colours on the light schemes: the same four hues, deep
+   enough to read on white and cream rather than washed out. */
+:root[data-scheme='finaldraft'],
+:root[data-scheme='windows'],
+:root[data-scheme='parchment'],
+:root[data-scheme='green'] {
+  --tier-chapter: #8a5a00;
+  --tier-scene: #00756a;
+  --tier-beat: #5b3cc4;
+  --tier-other: #5a5348;
+}

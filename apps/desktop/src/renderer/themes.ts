@@ -19,7 +19,7 @@
  * names literally would print its most important words at its lowest contrast.
  */
 
-export type SchemeId = 'gold' | 'graphite' | 'slate' | 'parchment' | 'green' | 'cobalt';
+export type SchemeId = 'gold' | 'finaldraft' | 'windows' | 'slate' | 'parchment' | 'green';
 
 export interface Scheme {
   id: SchemeId;
@@ -42,6 +42,20 @@ export interface Scheme {
   };
 }
 
+/**
+ * **Bold, not washed out** (from Ken, 7 November: *punch up the contrast in
+ * the others — they seem faded, which is hard on the eyes when everything
+ * looks washed out … the colors are not bold and the blacks are faded*).
+ * Every dark scheme's ink is now close to true black, every light scheme's
+ * type close to true black, and the accents are saturated. The test asks it
+ * of every scheme: body text at least 7:1 on the ink, secondary text and the
+ * accent at least 4.5:1 on a panel.
+ *
+ * Cobalt and Graphite are gone (Graphite read as the gold look in grey); a
+ * saved choice of either falls back to Gold. Final Draft–style and
+ * Windows-style are new, for writers who want the room they are used to; the
+ * word processor already looks like Word.
+ */
 export const SCHEMES: readonly Scheme[] = [
   {
     id: 'gold',
@@ -49,125 +63,112 @@ export const SCHEMES: readonly Scheme[] = [
     description: 'The VC Writer look: black, gold, a deep red.',
     appearance: 'dark',
     tokens: {
-      ink: '#070604',
-      panel: '#100e09',
-      panel2: '#181509',
-      border: '#3a3018',
-      gold: '#c9a45c',
-      goldBright: '#e8c872',
+      ink: '#050402',
+      panel: '#0e0c07',
+      panel2: '#18150b',
+      border: '#4a3c1c',
+      gold: '#d4ad62',
+      goldBright: '#f0d07a',
       goldDeep: '#8a6f2f',
-      red: '#8b1c1c',
+      red: '#a11f1f',
       redDeep: '#4d0f0f',
-      text: '#f1e7cf',
-      muted: '#a3946f',
+      text: '#f6edd6',
+      muted: '#b8a77d',
     },
   },
   {
-    id: 'graphite',
-    name: 'Graphite',
-    description: 'Editing-room greys with a warm accent.',
-    appearance: 'dark',
+    id: 'finaldraft',
+    name: 'Final Draft style',
+    description: 'Grey working chrome round a white page, with deep blue accents, like the screenwriting program most writers know.',
+    appearance: 'light',
     tokens: {
-      ink: '#19191b',
-      panel: '#212124',
-      panel2: '#2a2a2e',
-      border: '#3b3b41',
-      gold: '#d6a94e',
-      goldBright: '#eec46e',
-      goldDeep: '#9a7a35',
-      red: '#a33a3a',
-      redDeep: '#5a1e1e',
-      text: '#e8e8e6',
-      muted: '#9a9a9f',
+      ink: '#a3a8b0',
+      panel: '#dcdfe3',
+      panel2: '#c9cdd3',
+      border: '#7f868f',
+      gold: '#0f3f8c',
+      goldBright: '#062a63',
+      goldDeep: '#2f74d0',
+      red: '#a50f17',
+      redDeep: '#e48a8f',
+      text: '#07080a',
+      muted: '#30353c',
+    },
+  },
+  {
+    id: 'windows',
+    name: 'Windows style',
+    description: 'The standard Windows look: white and light grey, black type, Windows blue.',
+    appearance: 'light',
+    tokens: {
+      ink: '#eeeeee',
+      panel: '#ffffff',
+      panel2: '#e5e5e5',
+      border: '#a8a8a8',
+      gold: '#005a9e',
+      goldBright: '#003b6f',
+      goldDeep: '#0078d4',
+      red: '#c42b1c',
+      redDeep: '#f1a79f',
+      text: '#000000',
+      muted: '#3d3d3d',
     },
   },
   {
     id: 'slate',
     name: 'Slate',
-    description: 'Cool blue-grey with a sky accent.',
+    description: 'Deep blue-black with a vivid sky accent.',
     appearance: 'dark',
     tokens: {
-      ink: '#0f141b',
-      panel: '#151c25',
-      panel2: '#1d2631',
-      border: '#2e3a48',
-      gold: '#7fb2e5',
-      goldBright: '#a6cbf1',
-      goldDeep: '#4f7ba8',
-      red: '#b04a4a',
-      redDeep: '#5c2323',
-      text: '#e4eaf1',
-      muted: '#8d9bad',
+      ink: '#03060a',
+      panel: '#0a1018',
+      panel2: '#131d2a',
+      border: '#36506d',
+      gold: '#5db4ff',
+      goldBright: '#a8d8ff',
+      goldDeep: '#2a78c8',
+      red: '#e5534b',
+      redDeep: '#6e1f1f',
+      text: '#f5f9fd',
+      muted: '#adbfd3',
     },
   },
   {
     id: 'parchment',
     name: 'Parchment',
-    description: 'A light interface: cream surfaces, dark type, bronze accent.',
+    description: 'A light interface: cream surfaces, near-black type, a strong bronze accent.',
     appearance: 'light',
     tokens: {
-      ink: '#f4f0e6',
-      panel: '#ebe5d8',
-      panel2: '#e1dac9',
-      border: '#c9bfa8',
-      gold: '#8a6f2f',
-      goldBright: '#6b5522',
-      goldDeep: '#a98b48',
-      red: '#8b1c1c',
-      redDeep: '#c46a6a',
-      text: '#1f1a12',
-      muted: '#6f6553',
+      ink: '#fbf6e9',
+      panel: '#f1e7d1',
+      panel2: '#e5d7b9',
+      border: '#a8936a',
+      gold: '#6a4a0e',
+      goldBright: '#452f03',
+      goldDeep: '#b8862b',
+      red: '#9e1414',
+      redDeep: '#d97a7a',
+      text: '#0d0a04',
+      muted: '#4a3f2b',
     },
   },
   {
     id: 'green',
     name: 'Green',
-    description: 'A bright light interface: white cards on grey, green accent.',
+    description: 'A bright light interface: white cards on grey, black type, a bold green.',
     appearance: 'light',
-    // Sampled off Ken's reference rather than guessed at: the page is #f5f6f8,
-    // the cards white, the rules #dfe2e8, the green #3fb950, the type #1b1f27.
-    // The one thing the picture cannot say is which green goes in which token,
-    // and that is the shape above: #3fb950 is lovely as a pill and reads at
-    // 2.5:1 as text, so it is the **fill** and the darker greens carry the
-    // words. This is the only scheme whose panel is *lighter* than its ink —
-    // a white card on a grey page, which is what the reference draws.
     tokens: {
-      ink: '#f5f6f8',
+      ink: '#edf0f3',
       panel: '#ffffff',
-      panel2: '#eceef2',
-      border: '#dfe2e8',
-      gold: '#1a7f37',
-      goldBright: '#116329',
-      goldDeep: '#3fb950',
+      panel2: '#e1e5ea',
+      border: '#b3bcc8',
+      gold: '#0e6a2a',
+      goldBright: '#074d1c',
+      goldDeep: '#2ea043',
       red: '#b42318',
-      redDeep: '#d98b84',
-      text: '#1b1f27',
-      muted: '#5f6877',
-    },
-  },
-  {
-    id: 'cobalt',
-    name: 'Cobalt',
-    description: 'Charcoal panels with a saturated blue, the way a cutting room looks.',
-    appearance: 'dark',
-    // The second reference, measured: #3d3d3d dialogs over #252527 panels,
-    // white type, #939393 beside it, and a blue that is vivid rather than
-    // Slate's soft one — #0075f8 on the button, #2579b1 on the chrome. The
-    // **blue title bar is deliberately not reproduced**: a scheme is eleven
-    // tokens, the bar is `--panel` like every other surface, and painting one
-    // element from a picture would be a twelfth token nothing else could read.
-    tokens: {
-      ink: '#1b1b1d',
-      panel: '#252527',
-      panel2: '#3d3d3d',
-      border: '#4a4a4e',
-      gold: '#4ea1f0',
-      goldBright: '#7cbcff',
-      goldDeep: '#0075f8',
-      red: '#cf5a4e',
-      redDeep: '#5f2520',
-      text: '#f0f1f2',
-      muted: '#a0a0a4',
+      redDeep: '#e08a82',
+      text: '#06090d',
+      muted: '#3b4452',
     },
   },
 ];

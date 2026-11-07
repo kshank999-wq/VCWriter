@@ -3093,3 +3093,36 @@ Each count sits in a pill. The open feature takes a ring of its colour.
   then the Character Creator, the folders and the Graveyard. Features stay
   pinned at the top (`research-features-pane`, sticky) while the rest
   scrolls under them.
+
+## Colour schemes: the rooms writers know, and nothing washed out
+
+From Ken, 7 November: *add color schemes from popular programs so people can
+work how they are used to — MS Word (the document module already has this),
+Final Draft, and the regular Windows color scheme. Remove Cobalt, and punch
+up the contrast in the others: they seem faded, which is hard on the eyes …
+the colors are not bold and the blacks are faded. Remove Graphite, too
+similar to the gold VC look. Keep Slate, Parchment and Green but no faded
+colors, more contrast with dark blacks and bolder color.*
+
+The schemes (`themes.ts`), in the order Preferences lists them:
+
+| Scheme | Look |
+| --- | --- |
+| **Gold** | the VC Writer look, with deeper blacks and a brighter gold and text |
+| **Final Draft style** (new) | grey working chrome round a white page, deep blue accents |
+| **Windows style** (new) | white and light grey, black type, Windows blue (`#0078d4`) |
+| **Slate** | near-black blue, a vivid sky accent, near-white type |
+| **Parchment** | cream, near-black type, a strong bronze |
+| **Green** | white cards on grey, black type, a bold green |
+
+- **Removed: Cobalt and Graphite.** A saved choice of either falls back to
+  Gold.
+- **Contrast is tested, for every scheme**, in `preferences.test.tsx`:
+  - body text at least 7:1 on the ink and on a panel
+  - secondary text and the accent at least 4.5:1 on a panel
+
+  The earlier test that bright is emphatic and deep is a fill still holds for
+  all of them.
+- **The outline's tier colours** take deeper variants on the four light
+  schemes, so chapters, sections and subsections read on white and cream.
+- The word processor keeps its own Word-style look whatever the scheme.
