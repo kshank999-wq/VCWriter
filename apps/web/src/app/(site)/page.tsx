@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Emblem } from '../wordmark';
 import { ModuleChooser } from './module-chooser';
+import { ToolChooser } from './tool-chooser';
 
 const FEATURES = [
   {
@@ -80,6 +81,13 @@ export default function HomePage() {
         <Link href="/layout" className="button">
           Layout
         </Link>
+      </section>
+
+      {/* The rooms and tools, each with a page of its own (from Ken). */}
+      <section id="tools">
+        <h2>The rooms and tools</h2>
+        <p className="lede">Research, plan, map, check, hear and finish — in every module.</p>
+        <ToolChooser />
       </section>
 
       <section id="features">

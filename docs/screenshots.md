@@ -29,9 +29,13 @@ device or simulator (`docs/store-listing.md` §4).
 | [`research`](../apps/web/public/help/research.jpg) | Research: folders and notes | Night of the Living Dead (screenplay, public domain) | help: research |
 | [`research-note`](../apps/web/public/help/research-note.jpg) | A note opened to rewrite and place on the track | Night of the Living Dead (screenplay, public domain) | help: research |
 | [`sculptor`](../apps/web/public/help/sculptor.jpg) | The Story Sculptor: acts, plot points, scenes, cast and links | Night of the Living Dead (screenplay, public domain) | help: story sculptor |
+| [`sculptor-outliner`](../apps/web/public/help/sculptor-outliner.jpg) | The Story Sculptor with the Outliner beside the map, to drag rows onto it | Night of the Living Dead (screenplay, public domain) | /tools/story-sculptor; help: story sculptor |
+| [`character-creator`](../apps/web/public/help/character-creator.jpg) | The Character Creator with a character open | Night of the Living Dead (screenplay, public domain) | /tools/character-creator; help: character creator |
+| [`setups-payoffs`](../apps/web/public/help/setups-payoffs.jpg) | Setups and payoffs, tracked | Night of the Living Dead (screenplay, public domain) | /tools/research |
 | [`outliner`](../apps/web/public/help/outliner.jpg) | The Outliner | Night of the Living Dead (screenplay, public domain) | help: outliner |
 | [`preview`](../apps/web/public/help/preview.jpg) | Preview: the pages as they will print | Night of the Living Dead (screenplay, public domain) | help: preview |
 | [`editors`](../apps/web/public/help/editors.jpg) | The two editors | Great Expectations (novel, Dickens) | help: editors |
+| [`editors-final`](../apps/web/public/help/editors-final.jpg) | The Final editor: a story editor reading each scene | Great Expectations (novel, Dickens) | /tools/editors; help: editors |
 | [`read-back`](../apps/web/public/help/read-back.jpg) | Read back: voices per character | Night of the Living Dead (screenplay, public domain) | help: read back |
 | [`focus`](../apps/web/public/help/focus.jpg) | Focus mode: the page and nothing else | Night of the Living Dead (screenplay, public domain) | help: writing |
 | [`novel-layout`](../apps/web/public/help/novel-layout.jpg) | Layout: the novel set as a book, at its first chapter | Great Expectations (novel, Dickens) | help: layout |

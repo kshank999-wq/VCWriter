@@ -28,6 +28,8 @@ import {
   textToDocContent,
   textToProse,
   addItem,
+  addSetupPayoff,
+  addSetupPoint,
   addNode,
   createOutline,
   beatsForUnit,
@@ -139,6 +141,28 @@ const withOutline = (file, rows) => {
   return next;
 };
 
+/** Setups and payoffs for the screenplay, placed on its beats. */
+const withSetups = (file) => {
+  let next = file;
+  const beats = unitsInStoryOrder(next).flatMap((unit) => beatsForUnit(next, unit.id));
+  const at = (index) => (beats[index] ? { type: 'beat', id: beats[index].id } : null);
+  const plant = (title, description, points) => {
+    next = addSetupPayoff(next, { title, description });
+    const record = next.setupsPayoffs[next.setupsPayoffs.length - 1];
+    for (const [index, words, strength] of points) {
+      next = addSetupPoint(next, { setupPayoffId: record.id, description: words, location: at(index), strength });
+    }
+  };
+  plant('The cellar', 'Harry is sure the cellar is the safest place in the house.', [
+    [3, 'Ben boards up the ground floor and ignores the cellar door', 'written'],
+    [6, 'Harry Cooper climbs up from the cellar: "the safest place"', 'written'],
+  ]);
+  plant('"They\'re coming to get you, Barbra"', 'Johnny\'s joke in the cemetery, said again when it is no longer a joke.', [
+    [1, 'Johnny teases Barbra among the graves', 'written'],
+  ]);
+  return next;
+};
+
 /** A story map for the screenplay: two acts, their turning points, the cast and what causes what. */
 const withMap = (file) => {
   const made = createBoard(file, { name: 'Night of the Living Dead' });
@@ -174,7 +198,7 @@ const withMap = (file) => {
 export function demoProjects() {
   const projects = {};
 
-  projects.screenplay = withOutline(withMap(withNotes(
+  projects.screenplay = withOutline(withSetups(withMap(withNotes(
     titled(
       buildProjectFromImport(readFinalDraft(fdx(NIGHT_OF_THE_LIVING_DEAD)), {
         format: 'screenplay',
@@ -198,7 +222,7 @@ export function demoProjects() {
       ['Ben', 'Takes charge and boards up the house. Clashes with Harry over upstairs or the cellar.'],
       ['Setup: the cellar', 'Harry insists the cellar is the safest place. Pays off at dawn.'],
     ],
-  )), [
+  ))), [
     ['scene', 'Country road, dusk', [['beat', 'Johnny complains about the drive']]],
     ['scene', 'The cemetery', [['beat', '"They\'re coming to get you, Barbra."'], ['beat', 'The man among the graves attacks']]],
     ['scene', 'The farmhouse', [['beat', 'Barbra hides inside'], ['beat', 'Ben arrives in the truck']]],

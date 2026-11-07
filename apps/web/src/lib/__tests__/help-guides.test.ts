@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { GUIDES } from '../help';
 import { MODULE_PAGES } from '../modules';
+import { TOOL_PAGES } from '../tools';
 
 /**
  * The help guides (addendum 35 §9) hold together: every slug once, every
@@ -60,3 +61,20 @@ describe('the help guides', () => {
     }
   });
 });
+
+/** The rooms' pages (addendum 35 §11) point at real pictures and real guides. */
+describe('the tool pages', () => {
+  it('show only pictures that exist and link to guides that exist', () => {
+    for (const tool of TOOL_PAGES) {
+      expect(slugs.has(tool.guide), tool.slug).toBe(true);
+      for (const shot of [tool.shot, ...tool.features.map((feature) => feature.shot)]) {
+        if (shot) expect(existsSync(resolve(publicDir, `${shot}.jpg`)), shot).toBe(true);
+      }
+    }
+  });
+
+  it('has each slug once', () => {
+    expect(new Set(TOOL_PAGES.map((tool) => tool.slug)).size).toBe(TOOL_PAGES.length);
+  });
+});
+

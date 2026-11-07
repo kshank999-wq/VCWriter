@@ -342,3 +342,36 @@ lines known from it; they are to be checked against the film before release.
 A famous film still under copyright, of the kind some other products show,
 would be at most a structure-only breakdown with no script text, after
 advice from an IP lawyer.
+
+## 11. The rooms and tools, promoted
+
+From Ken, 7 November: *we need to also have screenshots and instructionals
+and promotionals for the research, the outliner, the sculptor, and all those
+other ones.*
+
+- **A page for each room or tool** at `/tools/<slug>`: Research, Story
+  Sculptor, Outliner, Character Creator, the two editors, Read back, Preview
+  and Focus mode. Each page has:
+  - a headline and intro, and the room's own screenshot
+  - its features, alternating with their screenshots
+  - *Read the guide* (the instructional for that room)
+  - the other rooms at the foot
+
+  Content is in `apps/web/src/lib/tools.ts`. Every claim there is one the
+  room's guide makes, and the guides were written against the code.
+- **On the front page**, a *Rooms and tools* section under the Layout band:
+  a card for each tool, plus Layout and publishing (`/layout`) and VC Writer
+  Notes (`/notes`), which have pages of their own. *Tools* is in the site's
+  header. The tool pages are in the sitemap.
+- **Four new shots** on the list:
+  - the Story Sculptor with the Outliner panel beside the map
+  - the Character Creator with Barbra open
+  - Setups & payoffs
+  - the Final editor
+
+  The capture gained `button` and `tab` steps that match a name by pattern,
+  for names that carry a count or a symbol. The *Night of the Living Dead*
+  demo now has two setups placed on its scenes, so that screen shows real
+  work.
+- The tool pages are checked by `help-guides.test.ts`: every picture exists,
+  every guide exists, and each slug appears once.

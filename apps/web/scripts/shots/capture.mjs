@@ -91,6 +91,10 @@ const step = async (page, action) => {
     await page.getByRole('navigation', { name: 'Pages' }).getByRole('button', { name: action.page, exact: true }).click({ timeout: 5000 });
   } else if (action.click) {
     await page.getByRole('button', { name: action.click, exact: true }).first().click({ timeout: 5000 });
+  } else if (action.button) {
+    await page.getByRole('button', { name: action.button }).locator('visible=true').first().click({ timeout: 5000 });
+  } else if (action.tab) {
+    await page.getByRole('tab', { name: action.tab }).first().click({ timeout: 5000 });
   } else if (action.select) {
     await page.getByText(action.select, { exact: true }).locator('visible=true').first().click({ timeout: 5000 });
   } else if (action.label) {

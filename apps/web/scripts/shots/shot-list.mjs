@@ -8,6 +8,8 @@
  *
  *   { page: 'Research' }   a button on the bottom bar (a page or a room)
  *   { click: 'Name' }      any button by its accessible name
+ *   { button: /Outliner$/ } a button whose name matches (a pattern for names that change)
+ *   { tab: /^Final/ }      a tab whose name matches
  *   { select: 'Text' }     click the first thing showing that text
  *   { open: 'Text' }       double-click the first thing showing that text
  *   { label: 'Name' }      click the control with that aria-label
@@ -39,9 +41,13 @@ export const SHOTS = [
   { id: 'research', project: 'screenplay', out: 'help', steps: [{ page: 'Research' }], shows: 'Research: folders and notes', uses: ['help: research'] },
   { id: 'research-note', project: 'screenplay', out: 'help', steps: [{ page: 'Research' }, { select: 'Plot Points' }, { select: 'Setup: the cellar' }, { click: 'Rewrite and place…' }], shows: 'A note opened to rewrite and place on the track', uses: ['help: research'] },
   { id: 'sculptor', project: 'screenplay', out: 'help', steps: [{ page: 'Sculptor' }, { wait: 1200 }], shows: 'The Story Sculptor: acts, plot points, scenes, cast and links', uses: ['help: story sculptor'] },
+  { id: 'sculptor-outliner', project: 'screenplay', out: 'help', steps: [{ page: 'Sculptor' }, { wait: 1200 }, { button: /Outliner$/, wait: 1200 }], shows: 'The Story Sculptor with the Outliner beside the map, to drag rows onto it', uses: ['/tools/story-sculptor', 'help: story sculptor'] },
+  { id: 'character-creator', project: 'screenplay', out: 'help', steps: [{ page: 'Research' }, { button: /^barbra$/i, wait: 1500 }], shows: 'The Character Creator with a character open', uses: ['/tools/character-creator', 'help: character creator'] },
+  { id: 'setups-payoffs', project: 'screenplay', out: 'help', steps: [{ page: 'Research' }, { select: 'Setups & payoffs', wait: 1200 }], shows: 'Setups and payoffs, tracked', uses: ['/tools/research'] },
   { id: 'outliner', project: 'screenplay', out: 'help', steps: [{ page: 'Outliner' }], shows: 'The Outliner', uses: ['help: outliner'] },
   { id: 'preview', project: 'screenplay', out: 'help', steps: [{ page: 'Preview' }, { wait: 1500 }], shows: 'Preview: the pages as they will print', uses: ['help: preview'] },
   { id: 'editors', project: 'novel', out: 'help', steps: [{ page: 'Editors' }], shows: 'The two editors', uses: ['help: editors'] },
+  { id: 'editors-final', project: 'novel', out: 'help', steps: [{ page: 'Editors' }, { tab: /^Final/, wait: 1200 }], shows: 'The Final editor: a story editor reading each scene', uses: ['/tools/editors', 'help: editors'] },
   { id: 'read-back', project: 'screenplay', out: 'help', steps: [{ page: 'Read back' }], shows: 'Read back: voices per character', uses: ['help: read back'] },
   { id: 'focus', project: 'screenplay', out: 'help', steps: [{ page: 'Focus' }], shows: 'Focus mode: the page and nothing else', uses: ['help: writing'] },
 
