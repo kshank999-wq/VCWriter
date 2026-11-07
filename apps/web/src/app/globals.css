@@ -199,6 +199,24 @@ a {
   }
 }
 
+.emblem-block {
+  margin: 0;
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  justify-self: center;
+  width: 100%;
+}
+
+.tagline {
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.24em;
+  font-size: 13px;
+  color: var(--gold);
+  text-align: center;
+}
+
 .hero h1 {
   font-size: clamp(30px, 4.4vw, 46px);
   line-height: 1.15;

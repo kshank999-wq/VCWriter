@@ -54,7 +54,11 @@ export default function HomePage() {
             Buy &amp; download
           </Link>
         </div>
-        <Emblem />
+        {/* VC Software's line, under the big mark (from Ken). */}
+        <figure className="emblem-block">
+          <Emblem />
+          <figcaption className="tagline">Organizing creative minds</figcaption>
+        </figure>
       </div>
 
       <section id="modules">
