@@ -35,6 +35,8 @@ import {
   isUnder,
   moveItem,
   dropPlacement,
+  dropOutlineRow,
+  alignScriptToOutline,
   nudgeItem,
   numberOfSub,
   numberOfUnit,
@@ -50,6 +52,7 @@ import {
   promoteKindOf,
   promoteRow,
   promoteAll,
+  refusedRows,
   promotedOf,
   removeItems,
   rowOutOfStep,
@@ -407,6 +410,8 @@ export function OutlinerWindow({
   const numbers = hostNumbers ?? ownNumbers;
   const nouns = nounsFor(file.project.format);
 
+  /** What the last Add all to track did, said under the toolbar. */
+  const [placedSay, setPlacedSay] = useState<string | null>(null);
   const write = (mutate: (current: ProjectFile, id: Outline['id']) => ProjectFile) => {
     if (!outline) return;
     onUpdate((current) => mutate(current, outline.id));
@@ -517,6 +522,25 @@ export function OutlinerWindow({
   /** The structural levels Tab and Shift+Tab step a row through. */
   const levels = useMemo(() => outlineLevels(file.project.format), [file.project.format]);
 
+  /**
+   * The rows a drag carries (from Ken: *grab multiple sub-elements and drag
+   * them to a new place … per the rules*): every picked row when the one
+   * grabbed is among them, else just that one. Top to bottom as the outline
+   * reads, and a row inside another picked row goes with that row rather
+   * than on its own.
+   */
+  const carriedRows = useCallback(
+    (heldId: OutlineItemId): OutlineItemId[] => {
+      if (!outline || !picked.includes(heldId) || picked.length < 2) return [heldId];
+      const chosen = new Set(picked.map((one) => one as string));
+      return outlineRows(outline)
+        .map((row) => row.item.id)
+        .filter((one) => chosen.has(one as string))
+        .filter((one) => !picked.some((other) => other !== one && isUnder(outline, one, other)));
+    },
+    [outline, picked],
+  );
+
   const canDrop = useCallback(
     (targetId: OutlineItemId): boolean => {
       const held = carrying.current;
@@ -524,12 +548,12 @@ export function OutlinerWindow({
       // Anything off the shelf can land anywhere: it is not in this tree yet,
       // so there is nothing for it to be put inside of.
       if (held.kind !== 'row') return true;
-      if (held.id === targetId) return false;
-      // A row cannot be put inside itself; the domain refuses it too, but the
-      // indicator should not offer what will not happen.
-      return !isUnder(outline, targetId, held.id);
+      // No carried row may be the target, or hold it: a row cannot be put
+      // inside itself; the domain refuses it too, but the indicator should
+      // not offer what will not happen.
+      return carriedRows(held.id as OutlineItemId).every((one) => one !== targetId && !isUnder(outline, targetId, one));
     },
-    [outline],
+    [outline, carriedRows],
   );
 
   const drop = (targetId: OutlineItemId, zone: OutlineZone) => {
@@ -602,8 +626,23 @@ export function OutlinerWindow({
       }
       // A row carries everything under it, and lands where the book's shape
       // says: a section beside sections, a subsection inside one.
-      const placed = live ? dropPlacement(live, held.id as OutlineItemId, targetId, zone) : null;
-      return placed ? moveItem(current, id, held.id as OutlineItemId, placed) : current;
+      // Two rules (from Ken): onto a row puts it inside; between rows puts it
+      // beside, at that level. The track then follows the outline's order.
+      // Several picked rows go one after another, in the outline's order:
+      // all inside the target, or in a run beside it.
+      let next = current;
+      let anchor = targetId;
+      let side: OutlineZone = zone;
+      for (const one of carriedRows(held.id as OutlineItemId)) {
+        const dropped = dropOutlineRow(next, id, one, anchor, side, levels);
+        if (!dropped) continue;
+        next = dropped;
+        if (side !== 'into') {
+          anchor = one;
+          side = 'after';
+        }
+      }
+      return next === current ? current : alignScriptToOutline(next);
     });
     if (held.kind === 'row') setSelected(held.id);
   };
@@ -814,7 +853,24 @@ export function OutlinerWindow({
                     ? 'Everything in the outline is in the track, in the outline’s order'
                     : `Put the ${missing} not in the track yet on the track, each where it belongs${outOfStep > 0 ? `, and move ${outOfStep} already there to match the outline` : ''}`
                 }
-                onClick={() => write((current, id) => promoteAll(current, id).file)}
+                onClick={() => {
+                  if (!outline) return;
+                  // Worked out once, here, so the message says what this click did.
+                  const result = promoteAll(file, outline.id);
+                  onUpdate(() => result.file);
+                  const refused = refusedRows(result.file, outline.id);
+                  const name = (item: OutlineItem) => `“${item.title.trim() || nameOf(item.kind, file.project.format)}”`;
+                  setPlacedSay(
+                    refused.length === 0
+                      ? result.added > 0
+                        ? `Added ${result.added} to the track, in the outline’s order.`
+                        : 'The track now follows the outline’s order.'
+                      : `Added ${result.added}. ${refused.length} could not go: ${refused
+                          .slice(0, 3)
+                          .map((one) => `${name(one.item)} — ${one.why}`)
+                          .join('; ')}${refused.length > 3 ? `; and ${refused.length - 3} more` : ''}.`,
+                  );
+                }}
               >
                 Add all to track{missing > 0 ? ` (${missing})` : ''}
               </button>
@@ -980,6 +1036,15 @@ export function OutlinerWindow({
         </button>
       </header>
 
+      {placedSay ? (
+        <p className="outline-placed" role="status">
+          {placedSay}
+          <button type="button" className="ghost small" aria-label="Dismiss" onClick={() => setPlacedSay(null)}>
+            ×
+          </button>
+        </p>
+      ) : null}
+
       {/* What can be done to more than one row at once (§8). It appears only
           when there is more than one, because a strip of bulk actions over a
           single row is a strip of things already in the panel. */}
@@ -1108,6 +1173,7 @@ export function OutlinerWindow({
               hit={filtering && found.hits.has(row.item.id as string)}
               editing={editing === row.item.id}
               onSelect={(how) => choose(row.item.id, how)}
+              pickedCount={picked.length}
               onOpen={onOpenRow ? () => onOpenRow(row.item) : undefined}
               onEdit={(on) => {
                 setEditing(on ? row.item.id : null);
@@ -1716,6 +1782,7 @@ function Row({
   wordsOut,
   selected,
   picked,
+  pickedCount = 1,
   hit,
   editing,
   onSelect,
@@ -1752,6 +1819,8 @@ function Row({
   selected: boolean;
   /** One of several chosen at once (§8). */
   picked: boolean;
+  /** How many rows are picked in all, so pressing one of several keeps the group. */
+  pickedCount?: number;
   /** What the search was actually looking for, as against a parent along for the ride. */
   hit: boolean;
   /** A double-click: where the host has somewhere to go for this row (addendum 42 §9). */
@@ -1790,6 +1859,8 @@ function Row({
   /** A row folds where it has rows under it, or words of its own. */
   const foldable = childCount > 0 || item.body.trim().length > 0;
   const input = useRef<HTMLTextAreaElement | null>(null);
+  /** A press on one of several picked rows, waiting to see if it becomes a drag. */
+  const narrowOnClick = useRef(false);
   /** Whether the name is being typed in; until it is, dragging it drags the row. */
   const [typing, setTyping] = useState(false);
 
@@ -1812,7 +1883,7 @@ function Row({
       ]
         .filter(Boolean)
         .join(' ')}
-      style={{ paddingLeft: `${8 + depth * STEP}px` }}
+      style={{ paddingLeft: `${8 + depth * STEP}px`, '--drop-indent': `${8 + depth * STEP}px` } as React.CSSProperties}
       /* A row bound to a real beat carries its id, so the hover reads the
          writing rather than the row's own name (§4c). An idea that is not on
          the track yet has no writing to show and carries nothing. */
@@ -1821,12 +1892,32 @@ function Row({
       aria-level={depth + 1}
       aria-selected={selected}
       aria-expanded={foldable ? !item.collapsed : undefined}
-      onPointerDown={(event) => onSelect({ add: event.metaKey || event.ctrlKey, through: event.shiftKey })}
+      // Shift, Ctrl or Cmd adds a row to the ones picked, or takes it back out
+      // (from Ken: *shift click different elements and it grabs multiple*).
+      // Pressing on a row that is already one of several picked keeps them
+      // all — that press may be the start of dragging the lot — and a plain
+      // click with no drag then narrows to this one.
+      onPointerDown={(event) => {
+        const add = event.metaKey || event.ctrlKey || event.shiftKey;
+        if (!add && (picked || selected) && pickedCount > 1) {
+          narrowOnClick.current = true;
+          return;
+        }
+        narrowOnClick.current = false;
+        onSelect({ add });
+      }}
+      onClick={() => {
+        if (narrowOnClick.current) {
+          narrowOnClick.current = false;
+          onSelect({});
+        }
+      }}
       onDoubleClick={onOpen}
       // The whole row is the handle. A grip would be one more thing to aim at,
       // and the title is an input, so the browser leaves its text alone.
       draggable
       onDragStart={(event) => {
+        narrowOnClick.current = false;
         // Something has to be set or the drag never begins; the payload the
         // handlers actually read is held by the panel (§8).
         event.dataTransfer.setData('text/plain', item.title || nameOf(item.kind, format));

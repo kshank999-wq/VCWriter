@@ -862,3 +862,47 @@ to collapse that in the outliner, but also in the research section.*
   words under it, and Collapse all and Expand all at the top, in the Outliner
   and in Research's outline column. Nothing about it changed except that the
   colours make it easier to see what a fold hides.
+
+## Dragging by two rules, picking several, and Tab that stays put
+
+From Ken, 7 November: *the add all to track does not work and dragging
+outline elements is still cumbersome and unpredictable — let's make some
+rules: if you drag onto an element it puts it as a sub element of that
+element; if you drag in between, a line shows up to show where it is in
+between and drops it as the same level. That also reorders the track
+beats.* Then: *when you tab, it drops it to the bottom; it needs to stay in
+its position*, and *grab multiple sub-elements and drag them … shift click
+different elements and it grabs multiple; every selected element needs to
+highlight*.
+
+- **Two drag rules** (`dropOutlineRow` in `outline.ts`), replacing the
+  rank-guessing `dropPlacement` for rows. Each row's height is in thirds:
+  - **Onto** the middle third: the row goes inside the target as its last
+    child. It takes the level under the target, and everything it carries
+    moves down with it. A folded target opens. The whole target row lights
+    up.
+  - **Between**, on the top or bottom third: the row goes beside the target
+    at the target's level. A heavier gold line with a dot shows the place,
+    indented to that level.
+  - A row already on the track keeps its kind, as does everything under it,
+    so the plan and the writing never part.
+  - After every drop the track follows the outline (`alignScriptToOutline`):
+    scenes reorder, beats move between scenes, and chapters start on their
+    first section.
+- **Several rows at once.** Shift-click (or Ctrl/Cmd-click) adds a row to
+  the picked rows or takes it out. This replaces Shift's old run-of-rows.
+  Picked rows show a gold ring over the tier colours. Dragging any picked
+  row carries them all, top to bottom, by the same two rules. A row inside
+  another picked row travels with that row. Pressing on one of several
+  picked rows keeps the group, since the press may start a drag; a plain
+  click then narrows to that row.
+- **Tab stays put.** Indenting under a *folded* row now puts the row first
+  inside it and opens the fold, because the row was standing right under
+  the fold line. Before, it went last, vanished into the folded branch and
+  turned up at the bottom. Under an open row it still goes last, which is
+  the line it was already on.
+- **Add all to track says what it did.** It places everything it can, then
+  names any row it could not place and why, in a line under the toolbar
+  (`refusedRows`). For example, a subsection with no section above it reads
+  *it needs a section above it — drag it onto one*. It used to pass such
+  rows over in silence, which looked like a button that did nothing.

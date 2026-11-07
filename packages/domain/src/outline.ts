@@ -483,6 +483,64 @@ export const dropPlacement = (
   return first ? { parentId: target.id, beforeId: first.id } : { parentId: target.id };
 };
 
+/**
+ * A row dropped on the outline, by two rules a writer can predict (from Ken:
+ * *if you drag onto an element it puts it as a sub element of that element;
+ * if you drag in between, a line shows up to show where it is, and drops it
+ * as the same level*).
+ *
+ * - **Onto** a row (`into`): it goes inside that row, as its last child, and
+ *   takes the level under it — a section dropped on a chapter stays a
+ *   section, a section dropped on a section becomes its subsection — with
+ *   everything it carries moving down with it. A folded row opens.
+ * - **Between** two rows (`before` / `after`): it goes beside the row the
+ *   line is at, at that row's level.
+ *
+ * A row already on the track keeps its kind (and so does everything under
+ * it): retyping a section that is a scene would part the plan from the
+ * writing. It still moves, and the track follows (`alignScriptToOutline`).
+ * Null where the drop makes no sense: onto itself or into its own branch.
+ */
+export const dropOutlineRow = (
+  file: ProjectFile,
+  outlineId: OutlineId,
+  heldId: OutlineItemId,
+  targetId: OutlineItemId,
+  zone: DropZone,
+  levels: readonly string[] = [],
+): ProjectFile | null => {
+  const outline = findOutline(file, outlineId);
+  const held = outline ? findOutlineItem(outline, heldId) : null;
+  const target = outline ? findOutlineItem(outline, targetId) : null;
+  if (!outline || !held || !target || held.id === target.id) return null;
+  if (isUnder(outline, target.id, held.id)) return null;
+  const onTrack = outlineSubtree(outline, held.id).some((row) => row.boundUnitId || row.boundBeatId || row.boundMarkerId);
+  const structural = (row: OutlineItem) => levels.includes(row.kind);
+
+  if (zone === 'into') {
+    const kind = structural(held) && !onTrack ? levelUnder(levels, target.kind) : null;
+    if ((kind ?? held.kind) === 'chapter') return null;
+    let next = relevel(file, outlineId, held.id, kind, levels);
+    if (target.collapsed) {
+      next = withOutline(next, outlineId, (current) => ({
+        ...current,
+        items: current.items.map((candidate) => (candidate.id === target.id ? touch({ ...candidate, collapsed: false }) : candidate)),
+      }));
+    }
+    const moved = moveItem(next, outlineId, held.id, { parentId: target.id, afterId: null });
+    return moved === next ? null : moved;
+  }
+
+  const kind = structural(held) && structural(target) && !onTrack ? target.kind : null;
+  if ((kind ?? held.kind) === 'chapter' && target.parentId !== null) return null;
+  const next = relevel(file, outlineId, held.id, kind, levels);
+  const moved = moveItem(next, outlineId, held.id, {
+    parentId: target.parentId,
+    ...(zone === 'before' ? { beforeId: target.id } : { afterId: target.id }),
+  });
+  return moved === next && kind === null ? null : moved;
+};
+
 /** Whether one row reads above another, top to bottom, folds ignored. */
 const readsBefore = (outline: Outline, a: OutlineItemId, b: OutlineItemId): boolean => {
   const order: string[] = [];
@@ -700,6 +758,19 @@ export const indentItem = (
   // Only a row that is part of the structure is retyped on the way in.
   const kind = levels.includes(item.kind) ? levelUnder(levels, above.kind) : null;
   const retyped = relevel(file, outlineId, itemId, kind, levels);
+  // **It stays where it stands** (from Ken: *when you tab, it drops it to
+  // the bottom; it needs to stay in its position*). Under an open row the
+  // last child is the line it is already on. Under a folded one the row is
+  // standing right below the fold, so it goes in first and the fold opens —
+  // last, it vanished into the folded branch and turned up at its foot.
+  if (above.collapsed) {
+    const opened = withOutline(retyped, outlineId, (current) => ({
+      ...current,
+      items: current.items.map((candidate) => (candidate.id === above.id ? touch({ ...candidate, collapsed: false }) : candidate)),
+    }));
+    const first = outlineChildren(findOutline(opened, outlineId) as Outline, above.id).find((one) => one.id !== itemId);
+    return moveItem(opened, outlineId, itemId, first ? { parentId: above.id, beforeId: first.id } : { parentId: above.id });
+  }
   return moveItem(retyped, outlineId, itemId, { parentId: above.id, afterId: null });
 };
 

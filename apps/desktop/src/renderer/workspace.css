@@ -23425,3 +23425,70 @@ input.note-rewrite-title:focus { border-color: var(--gold); outline: none; }
 .folder-notes-rewrite {
   justify-self: start;
 }
+
+/* What Add all to track did, and what it could not place and why. */
+.outline-placed {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--gold) 10%, var(--panel));
+  font-size: 13px;
+}
+
+/* The drop line between rows (from Ken: *a line shows up to show where it
+   is in between*): heavier than a guide, with a dot where the row will
+   land, so beside-it can never be mistaken for inside-it. */
+.outline-row.drop-before::before,
+.outline-row.drop-after::before {
+  height: 3px;
+  border-radius: 2px;
+  left: var(--drop-indent, 0);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--gold) 35%, transparent);
+}
+
+.outline-row.drop-before::after,
+.outline-row.drop-after::after {
+  content: '';
+  position: absolute;
+  left: calc(var(--drop-indent, 0px) - 4px);
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--gold);
+  pointer-events: none;
+}
+
+.outline-row.drop-before::after {
+  top: -4px;
+}
+
+.outline-row.drop-after::after {
+  bottom: -4px;
+}
+
+/* Onto a row: the whole row lights up, because it is going inside it. */
+.outline-row.drop-into {
+  border-color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 16%, var(--panel-2));
+  box-shadow: inset 0 0 0 2px var(--gold);
+}
+
+/* Picked rows, one or many, stand out over the tier colours (from Ken:
+   *every selected element needs to highlight*). */
+.outline-row.picked {
+  background: color-mix(in srgb, var(--gold) 12%, transparent);
+}
+
+.outline-row.picked .outline-box {
+  border-color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 22%, var(--panel-2));
+  box-shadow: 0 0 0 2px var(--gold);
+}
+
+.outline-row.picked.carried,
+.outline-row.carried {
+  opacity: 0.55;
+}

@@ -401,6 +401,31 @@ export const promoteAll = (file: ProjectFile, outlineId: OutlineId): { file: Pro
   return { file: current, added, left };
 };
 
+/**
+ * The rows Add all to track could not place, and why, in words a writer can
+ * act on (from Ken: *the add all to track does not work*). It placed what it
+ * could and passed the rest over in silence, so a subsection with no section
+ * above it looked like a button that did nothing.
+ */
+export const refusedRows = (
+  file: ProjectFile,
+  outlineId: OutlineId,
+): Array<{ item: OutlineItem; why: string }> => {
+  const outline = findOutline(file, outlineId);
+  if (!outline) return [];
+  const PLAIN: Record<string, string> = {
+    'a chapter starts on a section, and this one has none yet': 'a chapter needs a section inside it first',
+    'its scene is still a plan': 'it needs a section above it — drag it onto one',
+    'there is no track to put a scene in': 'there is no track to put it on',
+  };
+  return outlineRowsInOrder(outline)
+    .filter((item) => promoteKindOf(item) !== null && !isPromoted(item))
+    .map((item) => {
+      const why = canPromote(file, outline, item) ?? 'it could not be placed';
+      return { item, why: PLAIN[why] ?? why };
+    });
+};
+
 /** Rows whose binding names something no longer in the project, made plans again. */
 const releaseDangling = (file: ProjectFile, outlineId: OutlineId): ProjectFile => {
   const outline = findOutline(file, outlineId);
