@@ -3085,3 +3085,11 @@ button with a filled face, a rounded border and its own colour:
 | Character review | olive |
 
 Each count sits in a pill. The open feature takes a ring of its colour.
+- **Features first, and pinned** (from Ken: *put the new color-coded features
+  in the research at the top, with another section for whether the research
+  was used or not, and then all the categories underneath that, and you can
+  scroll down for those*). The side menu now runs Features, then the
+  *Everything* views (all research, not yet used, sorted, used, put away),
+  then the Character Creator, the folders and the Graveyard. Features stay
+  pinned at the top (`research-features-pane`, sticky) while the rest
+  scrolls under them.

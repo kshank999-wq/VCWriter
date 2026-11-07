@@ -906,3 +906,8 @@ highlight*.
   (`refusedRows`). For example, a subsection with no section above it reads
   *it needs a section above it — drag it onto one*. It used to pass such
   rows over in silence, which looked like a button that did nothing.
+- **Chosen rows in light blue** (from Ken: *the highlight looks just like the
+  ones that are in boxes anyway … a light blue when you select or multiple
+  select*). The selected row and every picked row take a pale blue band and
+  a blue ring round the box. Blue is no tier's colour, so a chosen row can
+  never be read as a chapter, section or subsection.

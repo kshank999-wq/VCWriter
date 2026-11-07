@@ -23753,3 +23753,42 @@ input.note-rewrite-title:focus { border-color: var(--gold); outline: none; }
 .research-features .folder-row[data-feature='mobile'] { --feature: #3fae6a; }
 .research-features .folder-row[data-feature='charmap'] { --feature: #e06b9a; }
 .research-features .folder-row[data-feature='review'] { --feature: #8fa83a; }
+
+/* Research's features stay at the top of the side menu while the views and
+   the categories under them scroll. */
+.research-features-pane {
+  position: sticky;
+  top: -10px;
+  z-index: 2;
+  margin-top: -10px;
+  padding-top: 10px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 6px 8px -6px rgba(0, 0, 0, 0.6);
+}
+
+/* The Outliner's chosen rows in light blue (from Ken: *the highlight looks
+   just like the ones that are in boxes anyway … maybe a light blue when you
+   select or multiple select*). Blue is no tier's colour, so a chosen row can
+   never be mistaken for a chapter, a section or a subsection. */
+.outline-row.selected,
+.outline-row.picked {
+  background: rgba(110, 180, 255, 0.16);
+  border-color: rgba(110, 180, 255, 0.55);
+}
+
+.outline-row.selected .outline-box,
+.outline-row.picked .outline-box,
+.outline-row.selected:hover .outline-box,
+.outline-row.picked:hover .outline-box {
+  border-color: #6eb4ff;
+  background: color-mix(in srgb, #6eb4ff 28%, var(--panel-2));
+  box-shadow: 0 0 0 2px #6eb4ff;
+}
+
+.outline-row.selected .outline-title,
+.outline-row.picked .outline-title,
+.outline-row.selected .outline-ink,
+.outline-row.picked .outline-ink {
+  color: #e8f3ff;
+}

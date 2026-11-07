@@ -859,190 +859,12 @@ export function ResearchBody({
       >
         {/* The side menu: what is not a place, then the folders. */}
         <nav className="research-side" aria-label="Research folders">
-          {/* The table of contents, at the top and on a book alone (addendum
-              28 §4, from Ken: *the research section on the top will have table
-              of contents*). It stands first because on an instructional book
-              it is the thing the room is organised around — where in the book
-              a note goes is the question, and which shelf it is on is the
-              filing. Absent rather than greyed elsewhere: a screenplay has no
-              chapters to file against. */}
-          {instructional || wordProcessor ? (
-            <ul className="research-views">
-              {/* **No Table of contents here any more** (from Ken: *there
-                  should be nothing but the table of contents there. I don't
-                  even know if that's necessary because you have it in the
-                  outliner. So maybe we can just remove that*). The chapters
-                  are the Outliner's, and the outline beside the notes is
-                  where notes are sorted into them. */}
-              {/* The Reference Library (addendum 43, spec §2: *References >
-                  Manage Library*), beside the contents on a book, and on a
-                  Document project, whose documents cite it too (§11). */}
-              <li>
-                <button
-                  type="button"
-                  className={selection.kind === 'references' ? 'folder-row selected' : 'folder-row'}
-                  title="The sources the book cites: enter each once, cite it as often as you like"
-                  onClick={() => setSelection({ kind: 'references' })}
-                >
-                  <span className="folder-name">References</span>
-                  <span className="count muted">{file.references.filter((reference) => !reference.archivedAt).length}</span>
-                </button>
-              </li>
-            </ul>
-          ) : null}
-
-          <ul className="research-views">
-            <li>
-              <button
-                type="button"
-                className={selection.kind === 'wiring' ? 'folder-row selected' : 'folder-row'}
-                title="Links, threads, setups and payoffs, plots, themes and arcs — the story's wiring, in one place"
-                onClick={() => setSelection({ kind: 'wiring' })}
-              >
-                <span className="folder-name">Links &amp; threads</span>
-                <span className="count muted">{threadsInOrder(file).length}</span>
-              </button>
-            </li>
-          </ul>
-
-          <h4>Everything</h4>
-          <ul className="research-views">
-            {views.map((entry) => (
-              <li key={entry.view}>
-                <button
-                  type="button"
-                  className={selection.kind === 'view' && selection.view === entry.view ? 'folder-row selected' : 'folder-row'}
-                  aria-current={selection.kind === 'view' && selection.view === entry.view ? 'true' : undefined}
-                  onClick={() => setSelection({ kind: 'view', view: entry.view })}
-                >
-                  <span className="folder-name">{entry.label}</span>
-                  <span className="count muted">{researchItemsIn(file, { view: entry.view }).length}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-
-          {/* The Character Creator, by the people in it. It is named rather
-              than called "Cast" because it is a thing the product *does* —
-              build a character — and a menu that says what a feature is called
-              is how somebody finds it after reading about it. The order is the
-              order names are offered while a cue is being typed: main
-              characters first. */}
-          {/* **The section stands whether or not anybody is in it** (§8b,
-              from Ken: *I accidentally deleted all the characters and I
-              don't know how to get those back*). It used to be drawn only
-              where the cast had somebody in it, so deleting the last person
-              took the whole module off the menu — with no way to make
-              another and nothing saying where the old ones had gone. A
-              feature that vanishes when its list is empty is one a writer
-              cannot get back into. */}
-          {!instructional ? (
-            <>
-              <h4>Character Creator</h4>
-              {groups.map((group) => (
-                <ul key={group.category?.id ?? 'unfiled'} className="research-views research-cast">
-                  {/* The heading is the character **type** — the writer's own
-                      word for who these people are to the story (§4c).
-
-                      **It is drawn as soon as anybody has a type**, which is
-                      the correction: it used to appear only where there was
-                      more than one group, so a cast filed entirely as main
-                      characters said nothing about being one — which is what
-                      Ken asked the left-hand list to say.
-
-                      And it is **all of the headings or none**. The first
-                      draft drew one over every real type and none over *Not
-                      filed*, since that names nothing; driving it showed what
-                      that costs — a group with no heading takes the one above
-                      it, so Victor Marsh, whom nobody had typed, sat under
-                      BACKGROUND CHARACTERS reading as one. */}
-                  {typed ? <li className="research-cast-head">{group.name}</li> : null}
-                  {group.characters.map((person) => (
-                    <CastMenuRow
-                      key={person.id}
-                      file={file}
-                      person={person}
-                      chosen={selection.kind === 'creator' && selection.id === person.id}
-                      waiting={onDeck[person.id as string] ?? 0}
-                      onOpen={() => openCreator(person.id)}
-                      onDragOver={(event) => {
-                        if (dragging?.kind === 'capture') event.preventDefault();
-                      }}
-                      onDrop={() => {
-                        const capture = draggedCapture();
-                        setDragging(null);
-                        if (capture) {
-                          void placeCapture(capture, { kind: 'about_character', characterId: person.id });
-                        }
-                      }}
-                      onUpdate={onUpdate}
-                    />
-                  ))}
-                </ul>
-              ))}
-              <ul className="research-views">
-                <li>
-                  {/* **A form, not `window.prompt`.**
-
-                      It was a prompt, and **Electron does not implement one**
-                      — it writes *prompt() is and will not be supported.* to a
-                      console no writer sees and returns nothing — so on the
-                      desktop build this button did nothing at all, silently.
-                      That is Ken's report: *I added two new characters and
-                      neither of them show up.* In the browser preview it
-                      worked, which is why it survived.
-
-                      The rule it breaks is the one the whole room follows
-                      anyway: **an act asks for what it needs where it stands**,
-                      the way a folder, a trait and a story are named. */}
-                  <NewCharacter
-                    onMake={(name) =>
-                      onUpdate((current) => {
-                        const made = addCharacter(current, { name });
-                        const person = made.characters[made.characters.length - 1];
-                        if (person) setSelection({ kind: 'creator', id: person.id });
-                        return made;
-                      })
-                    }
-                  />
-                </li>
-                {/* **The cast the script already names** (§4d). Whatever
-                    happened at import — a document read as prose, a PDF with
-                    no geometry to read, a cue style the reader did not know —
-                    the script itself still says who speaks, and this files
-                    them. It is a **reading**, so it is absent the moment there
-                    is nobody left to add, and it says how many rather than
-                    promising something it may not do. */}
-                {unknownCues.length > 0 ? (
-                  <li>
-                    <button
-                      type="button"
-                      className="folder-row"
-                      title="Every name that speaks in the script and has no record yet"
-                      onClick={() => onUpdate((current) => notedCast(current))}
-                    >
-                      <span className="folder-name">
-                        + {unknownCues.length === 1 ? 'Add 1 name from the script' : `Add ${unknownCues.length} names from the script`}
-                      </span>
-                    </button>
-                  </li>
-                ) : null}
-                {/* Where the deleted ones went, said **here** rather than
-                    only at the foot of the menu: somebody who has just lost
-                    a cast is looking at where it used to be. */}
-                {cast.length === 0 && buried > 0 ? (
-                  <li>
-                    <button type="button" className="folder-row" onClick={() => setSelection({ kind: 'graveyard' })}>
-                      <span className="folder-name">
-                        {buried === 1 ? '1 deleted record is in the Graveyard' : `${buried} deleted records are in the Graveyard`}
-                      </span>
-                    </button>
-                  </li>
-                ) : null}
-              </ul>
-            </>
-          ) : null}
-
+          {/* **The features first** (from Ken: *put the new color-coded
+              features in the research at the top, then the section for
+              whether the research was used or not, and then all the
+              categories underneath that, and you can scroll down for
+              those*). */}
+          <div className="research-features-pane">
           <h4>Features</h4>
           <ul className="research-views research-features">
             {/* **Every format's** (addendum 33). It was an instructional
@@ -1228,6 +1050,191 @@ export function ResearchBody({
               </>
             ) : null}
           </ul>
+          </div>
+
+          {/* The table of contents, at the top and on a book alone (addendum
+              28 §4, from Ken: *the research section on the top will have table
+              of contents*). It stands first because on an instructional book
+              it is the thing the room is organised around — where in the book
+              a note goes is the question, and which shelf it is on is the
+              filing. Absent rather than greyed elsewhere: a screenplay has no
+              chapters to file against. */}
+          {instructional || wordProcessor ? (
+            <ul className="research-views">
+              {/* **No Table of contents here any more** (from Ken: *there
+                  should be nothing but the table of contents there. I don't
+                  even know if that's necessary because you have it in the
+                  outliner. So maybe we can just remove that*). The chapters
+                  are the Outliner's, and the outline beside the notes is
+                  where notes are sorted into them. */}
+              {/* The Reference Library (addendum 43, spec §2: *References >
+                  Manage Library*), beside the contents on a book, and on a
+                  Document project, whose documents cite it too (§11). */}
+              <li>
+                <button
+                  type="button"
+                  className={selection.kind === 'references' ? 'folder-row selected' : 'folder-row'}
+                  title="The sources the book cites: enter each once, cite it as often as you like"
+                  onClick={() => setSelection({ kind: 'references' })}
+                >
+                  <span className="folder-name">References</span>
+                  <span className="count muted">{file.references.filter((reference) => !reference.archivedAt).length}</span>
+                </button>
+              </li>
+            </ul>
+          ) : null}
+
+          <ul className="research-views">
+            <li>
+              <button
+                type="button"
+                className={selection.kind === 'wiring' ? 'folder-row selected' : 'folder-row'}
+                title="Links, threads, setups and payoffs, plots, themes and arcs — the story's wiring, in one place"
+                onClick={() => setSelection({ kind: 'wiring' })}
+              >
+                <span className="folder-name">Links &amp; threads</span>
+                <span className="count muted">{threadsInOrder(file).length}</span>
+              </button>
+            </li>
+          </ul>
+
+          <h4>Everything</h4>
+          <ul className="research-views">
+            {views.map((entry) => (
+              <li key={entry.view}>
+                <button
+                  type="button"
+                  className={selection.kind === 'view' && selection.view === entry.view ? 'folder-row selected' : 'folder-row'}
+                  aria-current={selection.kind === 'view' && selection.view === entry.view ? 'true' : undefined}
+                  onClick={() => setSelection({ kind: 'view', view: entry.view })}
+                >
+                  <span className="folder-name">{entry.label}</span>
+                  <span className="count muted">{researchItemsIn(file, { view: entry.view }).length}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+
+          {/* The Character Creator, by the people in it. It is named rather
+              than called "Cast" because it is a thing the product *does* —
+              build a character — and a menu that says what a feature is called
+              is how somebody finds it after reading about it. The order is the
+              order names are offered while a cue is being typed: main
+              characters first. */}
+          {/* **The section stands whether or not anybody is in it** (§8b,
+              from Ken: *I accidentally deleted all the characters and I
+              don't know how to get those back*). It used to be drawn only
+              where the cast had somebody in it, so deleting the last person
+              took the whole module off the menu — with no way to make
+              another and nothing saying where the old ones had gone. A
+              feature that vanishes when its list is empty is one a writer
+              cannot get back into. */}
+          {!instructional ? (
+            <>
+              <h4>Character Creator</h4>
+              {groups.map((group) => (
+                <ul key={group.category?.id ?? 'unfiled'} className="research-views research-cast">
+                  {/* The heading is the character **type** — the writer's own
+                      word for who these people are to the story (§4c).
+
+                      **It is drawn as soon as anybody has a type**, which is
+                      the correction: it used to appear only where there was
+                      more than one group, so a cast filed entirely as main
+                      characters said nothing about being one — which is what
+                      Ken asked the left-hand list to say.
+
+                      And it is **all of the headings or none**. The first
+                      draft drew one over every real type and none over *Not
+                      filed*, since that names nothing; driving it showed what
+                      that costs — a group with no heading takes the one above
+                      it, so Victor Marsh, whom nobody had typed, sat under
+                      BACKGROUND CHARACTERS reading as one. */}
+                  {typed ? <li className="research-cast-head">{group.name}</li> : null}
+                  {group.characters.map((person) => (
+                    <CastMenuRow
+                      key={person.id}
+                      file={file}
+                      person={person}
+                      chosen={selection.kind === 'creator' && selection.id === person.id}
+                      waiting={onDeck[person.id as string] ?? 0}
+                      onOpen={() => openCreator(person.id)}
+                      onDragOver={(event) => {
+                        if (dragging?.kind === 'capture') event.preventDefault();
+                      }}
+                      onDrop={() => {
+                        const capture = draggedCapture();
+                        setDragging(null);
+                        if (capture) {
+                          void placeCapture(capture, { kind: 'about_character', characterId: person.id });
+                        }
+                      }}
+                      onUpdate={onUpdate}
+                    />
+                  ))}
+                </ul>
+              ))}
+              <ul className="research-views">
+                <li>
+                  {/* **A form, not `window.prompt`.**
+
+                      It was a prompt, and **Electron does not implement one**
+                      — it writes *prompt() is and will not be supported.* to a
+                      console no writer sees and returns nothing — so on the
+                      desktop build this button did nothing at all, silently.
+                      That is Ken's report: *I added two new characters and
+                      neither of them show up.* In the browser preview it
+                      worked, which is why it survived.
+
+                      The rule it breaks is the one the whole room follows
+                      anyway: **an act asks for what it needs where it stands**,
+                      the way a folder, a trait and a story are named. */}
+                  <NewCharacter
+                    onMake={(name) =>
+                      onUpdate((current) => {
+                        const made = addCharacter(current, { name });
+                        const person = made.characters[made.characters.length - 1];
+                        if (person) setSelection({ kind: 'creator', id: person.id });
+                        return made;
+                      })
+                    }
+                  />
+                </li>
+                {/* **The cast the script already names** (§4d). Whatever
+                    happened at import — a document read as prose, a PDF with
+                    no geometry to read, a cue style the reader did not know —
+                    the script itself still says who speaks, and this files
+                    them. It is a **reading**, so it is absent the moment there
+                    is nobody left to add, and it says how many rather than
+                    promising something it may not do. */}
+                {unknownCues.length > 0 ? (
+                  <li>
+                    <button
+                      type="button"
+                      className="folder-row"
+                      title="Every name that speaks in the script and has no record yet"
+                      onClick={() => onUpdate((current) => notedCast(current))}
+                    >
+                      <span className="folder-name">
+                        + {unknownCues.length === 1 ? 'Add 1 name from the script' : `Add ${unknownCues.length} names from the script`}
+                      </span>
+                    </button>
+                  </li>
+                ) : null}
+                {/* Where the deleted ones went, said **here** rather than
+                    only at the foot of the menu: somebody who has just lost
+                    a cast is looking at where it used to be. */}
+                {cast.length === 0 && buried > 0 ? (
+                  <li>
+                    <button type="button" className="folder-row" onClick={() => setSelection({ kind: 'graveyard' })}>
+                      <span className="folder-name">
+                        {buried === 1 ? '1 deleted record is in the Graveyard' : `${buried} deleted records are in the Graveyard`}
+                      </span>
+                    </button>
+                  </li>
+                ) : null}
+              </ul>
+            </>
+          ) : null}
 
           {/* Last, because they are the least of it. The research a writer
               actually opens this window for has a name higher up the menu; the
