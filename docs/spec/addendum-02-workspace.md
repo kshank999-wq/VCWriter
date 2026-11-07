@@ -3009,3 +3009,30 @@ module.*
   list on this machine and to the operating system's dictionary. On Windows and
   Linux the underline's language is set to the system's English, or US
   English.
+
+## The continuous page is a sheet of paper
+
+From Ken, 7 November: *the script or manuscript on the left … needs to be a
+little wider, like a regular 8.5 by 11 sheet of paper. On the screen they
+look smashed … in all the modules, a standard width for the text height, so
+it looks like it actually would if you were going to print it out.*
+
+- **The continuous view is laid out on a sheet.** It used to be a column of
+  14px type wrapped to whatever width the column happened to be, so a
+  60-character action line broke early and the page looked squeezed. Now the
+  manuscript is drawn on an 8½-inch sheet with the print margins (1½ inches
+  at the left, 1 inch elsewhere) in 12pt type, where each element's width in
+  characters is its width in inches. The whole sheet is then scaled to the
+  column, the way the page view's stack always was (`sheet-frame` /
+  `sheet-paper` in `StoryView.tsx`). Every line turns where it turns on
+  paper. It runs on without page breaks; that is what keeps it continuous.
+- **Print spacing on both views.** The page view's rules (six lines to the
+  inch, one blank line between blocks, none inside a speech) now apply to the
+  continuous sheet as well. A manuscript (`PROSE_LAYOUT`) is double spaced
+  with run-on paragraphs, so prose sheets on both views draw it that way.
+  The paginator has always counted it so; the screen had not shown it.
+- **The column starts wider**: 40% of the window instead of 25%, so the page
+  is readable without dragging. It is stored under a new key
+  (`scriptColumnWidth`) so the wider start reaches every install once; the
+  divider still moves it.
+- Every screenshot (`apps/web/scripts/shots`) was retaken with the new page.

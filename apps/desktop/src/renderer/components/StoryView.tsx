@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  layoutForFile,
   beatsForUnit,
   carveBeat,
   carveUnit,
@@ -139,6 +140,14 @@ export function StoryView({
 }: StoryViewProps) {
   const layout = useMemo(() => givenLayout ?? storyLayout(file), [givenLayout, file]);
   const prose = isProseFormat(file.project.format);
+  /**
+   * How the printed page spaces its lines, said to the sheet as classes: a
+   * manuscript is double spaced, and where its paragraphs run on (the
+   * five-space indent marks them) there is no blank line between them. The
+   * screen draws what the paginator counts.
+   */
+  const pageSpec = layoutForFile(file);
+  const spacing = `${pageSpec.doubleSpaced ? ' double-spaced' : ''}${pageSpec.runOn?.has('paragraph') ? ' run-on' : ''}`;
   // §14: no screen names a unit itself. Every label below reads the table.
   const nouns = nounsFor(file.project.format);
   /**
@@ -269,6 +278,35 @@ export function StoryView({
     return () => observer.disconnect();
   }, [paged, sheets?.length, display, file]);
   const scale = zoom === FIT ? Math.max(0.25, Math.min(1.6, room / PAGE_PX)) : zoom;
+
+  /**
+   * **The continuous page is a sheet too** (from Ken: *the script or
+   * manuscript on the left … needs to be like a regular 8.5 by 11 sheet of
+   * paper; on the screen they look smashed*). It is laid out at the printed
+   * width — 8½ inches, the print margins, 12pt type — and scaled to fit the
+   * column, the same way the page view is, so every line turns where it turns
+   * on paper however narrow the column is. It runs on without page breaks;
+   * that is what makes it continuous.
+   */
+  const sheetShell = useRef<HTMLDivElement>(null);
+  const sheetPaper = useRef<HTMLDivElement>(null);
+  const [sheetRoom, setSheetRoom] = useState(PAGE_PX);
+  const [sheetTall, setSheetTall] = useState(0);
+  useEffect(() => {
+    const scroller = sheetShell.current;
+    const paper = sheetPaper.current;
+    if (paged || !scroller || !paper || typeof ResizeObserver !== 'function') return;
+    const measure = () => {
+      if (scroller.clientWidth > 0) setSheetRoom(scroller.clientWidth - 32);
+      setSheetTall(paper.offsetHeight);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(scroller);
+    observer.observe(paper);
+    return () => observer.disconnect();
+  }, [paged, display, file]);
+  const sheetScale = Math.max(0.3, Math.min(1.6, sheetRoom / PAGE_PX));
 
   // A selection made in the tracks or the inspector brings the beat into view.
   // One made here — the cursor is already in it — must not yank the page.
@@ -586,7 +624,7 @@ export function StoryView({
               {sheets.map((items, index) => (
             <section
               key={index}
-              className={display.headings ? 'page-sheet' : 'page-sheet no-headings'}
+              className={`${display.headings ? 'page-sheet' : 'page-sheet no-headings'}${spacing}`}
               aria-label={`Page ${index + 1}`}
             >
               <span className="page-sheet-number" aria-hidden="true">
@@ -624,7 +662,15 @@ export function StoryView({
           ) : null}
         </div>
       ) : (
-        <div className={display.headings ? 'script-sheet' : 'script-sheet no-headings'}>
+        <div
+          className={display.headings ? 'script-sheet' : 'script-sheet no-headings'}
+          ref={sheetShell}
+          style={{ '--sheet-zoom': sheetScale } as React.CSSProperties}
+        >
+          {/* The room the scaled sheet looks like it takes; the paper inside
+              is laid out at its true printed size. */}
+          <div className="sheet-frame" style={{ width: PAGE_PX * sheetScale, height: sheetTall > 0 ? sheetTall * sheetScale : undefined }}>
+          <div className={`sheet-paper${spacing}`} ref={sheetPaper}>
           {layout.spans.map((span) => {
             const unit = span.unit;
             // A scene switched off leaves the script and stays on the timeline.
@@ -678,6 +724,8 @@ export function StoryView({
               Add a {nouns.unit.toLowerCase()} from the tracks toolbar to start writing.
             </p>
           ) : null}
+          </div>
+          </div>
         </div>
       )}
 

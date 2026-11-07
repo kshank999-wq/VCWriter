@@ -294,7 +294,10 @@ export default function App() {
   const [projectsChanged, setProjectsChanged] = useState(0);
   // The Edit-page proportions (addendum 02 §3): a quarter for the script,
   // and of the rest, just under half for the viewport above the tracks.
-  const columns = useSplit({ key: 'leftWidth', initial: 0.25, min: 300, reserve: 640, axis: 'x' });
+  // The script column starts wide enough to read its page (from Ken: the
+  // manuscript is a sheet of 8½ by 11 paper, scaled to the column). A new key,
+  // so the wider start reaches everyone once; the divider still moves it.
+  const columns = useSplit({ key: 'scriptColumnWidth', initial: 0.4, min: 300, reserve: 640, axis: 'x' });
   /**
    * Short form is written on the sheet, so the sheet opens at full size and
    * the timeline is the strip docked under it (addendum 05 §3e). Its own key,

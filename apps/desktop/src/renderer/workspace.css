@@ -2777,7 +2777,7 @@ input[type='color'].swatch {
   display: none;
 }
 
-.script-pages .page-column {
+:is(.script-pages, .sheet-paper) .page-column {
   font-size: 12pt;
   /* Six lines to the inch, exactly, and no gap between elements: the blank
      line between them is a real blank line, put there below. */
@@ -2788,34 +2788,34 @@ input[type='color'].swatch {
 /* One blank line between blocks, as the paginator counts it — between two
    elements of a beat, and equally between two beats, which are two blocks on
    the page whatever they are in the structure. */
-.script-pages .element + .element,
-.script-pages .dual-row,
-.script-pages .element + .dual-row,
-.script-pages .dual-row + .element,
-.script-pages .beat-block + .beat-block,
-.script-pages .beat-block + .beat-name,
-.script-pages .beat-name + .beat-block,
-.script-pages .beat-block + .scene-name,
-.script-pages .beat-block + .act-bar {
+:is(.script-pages, .sheet-paper) .element + .element,
+:is(.script-pages, .sheet-paper) .dual-row,
+:is(.script-pages, .sheet-paper) .element + .dual-row,
+:is(.script-pages, .sheet-paper) .dual-row + .element,
+:is(.script-pages, .sheet-paper) .beat-block + .beat-block,
+:is(.script-pages, .sheet-paper) .beat-block + .beat-name,
+:is(.script-pages, .sheet-paper) .beat-name + .beat-block,
+:is(.script-pages, .sheet-paper) .beat-block + .scene-name,
+:is(.script-pages, .sheet-paper) .beat-block + .act-bar {
   margin-top: 12pt;
 }
 
 /* Except inside a speech, which is one block of consecutive lines — the
    paginator counts it that way, and the page prints it that way. */
-.script-pages .element-character + .element-parenthetical,
-.script-pages .element-character + .element-dialogue,
-.script-pages .element-parenthetical + .element-dialogue,
-.script-pages .element-parenthetical + .element-parenthetical,
-.script-pages .element-dialogue + .element-parenthetical,
-.script-pages .element-dialogue + .element-dialogue {
+:is(.script-pages, .sheet-paper) .element-character + .element-parenthetical,
+:is(.script-pages, .sheet-paper) .element-character + .element-dialogue,
+:is(.script-pages, .sheet-paper) .element-parenthetical + .element-dialogue,
+:is(.script-pages, .sheet-paper) .element-parenthetical + .element-parenthetical,
+:is(.script-pages, .sheet-paper) .element-dialogue + .element-parenthetical,
+:is(.script-pages, .sheet-paper) .element-dialogue + .element-dialogue {
   margin-top: 0;
 }
 
 /* Nothing may add height that the printed page does not have, so the box the
    writer types in carries no padding and no border; the focus ring is an
    outline, which takes no room. */
-.script-pages .element .ink,
-.script-pages .element textarea {
+:is(.script-pages, .sheet-paper) .element .ink,
+:is(.script-pages, .sheet-paper) .element textarea {
   padding: 0;
   border: 0;
 }
@@ -2823,11 +2823,11 @@ input[type='color'].swatch {
 /* The same on the paged Script: the caret says where you are and nothing else
    does (§19). An outline here would be a box that follows the cursor down the
    page. */
-.script-pages .element textarea:focus {
+:is(.script-pages, .sheet-paper) .element textarea:focus {
   outline: none;
 }
 
-.script-pages .beat-block {
+:is(.script-pages, .sheet-paper) .beat-block {
   padding: 0;
   margin: 0;
   border: 0;
@@ -2836,13 +2836,13 @@ input[type='color'].swatch {
 /* The scaffolding — act bars, scene names, beat names — prints nothing, so
    it is kept to a single line's worth of room and never pushes a line onto
    another sheet. */
-.script-pages .beat-name,
-.script-pages .scene-name,
-.script-pages .act-bar {
+:is(.script-pages, .sheet-paper) .beat-name,
+:is(.script-pages, .sheet-paper) .scene-name,
+:is(.script-pages, .sheet-paper) .act-bar {
   margin-bottom: 12pt;
 }
 
-.script-pages .script-title-block {
+:is(.script-pages, .sheet-paper) .script-title-block {
   margin-bottom: 24pt;
 }
 
@@ -4128,7 +4128,7 @@ dialog.marker-dialog {
    are named apart from it because the sheet declares `--paper` on itself and
    a variable cannot be inherited past a declaration on the element it lands
    on. */
-.workspace .script-view.own-paper .script-sheet,
+.workspace .script-view.own-paper .sheet-paper,
 .workspace .script-view.own-paper .page-sheet {
   background: var(--own-paper);
   color: var(--own-ink);
@@ -23153,3 +23153,68 @@ input.note-rewrite-title:focus { border-color: var(--gold); outline: none; }
 .sc-outline-row:hover { border-color: var(--gold-deep); }
 .sc-outline-kind { flex: 0 0 auto; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gold); }
 .sc-outline-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; }
+
+
+/* ------------------------------------------------------ continuous sheet */
+
+/* The continuous page as a sheet of 8½-inch paper (from Ken: *it needs to be
+   like a regular 8.5 by 11 sheet of paper; on the screen they look
+   smashed*). Laid out at the printed width with the print margins and 12pt
+   type, then scaled to the column as one piece, exactly as the page view is:
+   the line that turns on screen is the line that turns on paper. The
+   surround is the dark of the workspace, so the page reads as a page. */
+.script-sheet {
+  padding: 16px;
+  background: var(--ink);
+}
+
+.workspace.script-paper .script-sheet {
+  background: var(--ink);
+  color-scheme: dark;
+}
+
+.sheet-frame {
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+.sheet-paper {
+  width: 8.5in;
+  box-sizing: border-box;
+  min-height: 11in;
+  padding: 1in 1in 1in 1.5in;
+  background: var(--paper, var(--panel-2));
+  color: var(--paper-ink, var(--text));
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 16px color-mix(in srgb, #000 45%, transparent);
+  transform: scale(var(--sheet-zoom, 1));
+  transform-origin: top left;
+}
+
+.workspace.script-paper .sheet-paper {
+  color-scheme: light;
+}
+
+/* Printed type: 12pt, so each element's width in characters is its width in
+   inches on paper. The column is the page's, centred in the margins. */
+.sheet-paper .page-column {
+  font-size: 12pt;
+  margin: 0 auto;
+  width: fit-content;
+  max-width: none;
+}
+
+.script-view.focus .script-sheet {
+  padding-top: 4vh;
+}
+
+/* A manuscript is double spaced (PROSE_LAYOUT), and its paragraphs run on,
+   the five-space indent saying where each begins — so no blank line between
+   them. Both page views draw the spacing the paginator counts. */
+:is(.sheet-paper, .page-sheet).double-spaced .page-column {
+  line-height: 2;
+}
+
+:is(.sheet-paper, .page-sheet).run-on .element-paragraph + .element-paragraph {
+  margin-top: 0;
+}
