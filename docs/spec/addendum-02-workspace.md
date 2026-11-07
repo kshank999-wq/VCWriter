@@ -3036,3 +3036,52 @@ it looks like it actually would if you were going to print it out.*
   (`scriptColumnWidth`) so the wider start reaches every install once; the
   divider still moves it.
 - Every screenshot (`apps/web/scripts/shots`) was retaken with the new page.
+
+## Spelling: both checkers, every right-click
+
+From Ken, 7 November: *the spell checker catches misspellings but does not
+give you the standard right click menu to change out the word. This needs to
+be standard everywhere in the program in all modules.*
+
+- **The cause.** In the desktop app the red underline is drawn by the
+  operating system's spellchecker, but the program's right-click menu asked
+  only the bundled dictionary (nspell). Where the two disagreed, the word was
+  underlined and the menu had no replacement for it. The browser preview,
+  where the bundled dictionary does both jobs, never showed the fault.
+- **The fix, in one place.** `checkWord` (`spelling.ts`) feeds every
+  right-click menu in the program: the program-wide `TextMenu`, the Write
+  page's own menu and the word processor's. It now also asks the system's
+  checker through the preload (`window.vcwriter.spelling.check`, Electron's
+  `webFrame`). A word either checker marks is misspelled. The suggestions are
+  the system's first, then the bundled dictionary's, each once, up to eight.
+- **Ignore and Add to Dictionary quiet both.** A word ignored this session,
+  added to the dictionary, or one of the project's own names (the cast, the
+  places) is no longer asked of the system's checker either, so it stops
+  being offered for correction everywhere at once.
+- Where the program's menu does not take a right-click at all, the main
+  process's native menu (`attachEditMenu`) still offers the system's
+  suggestions, as before.
+
+## Research's side menu: features as buttons
+
+From Ken: *import, the note sorter, graphics, links, themes and motifs —
+these all need to be buttons, colorized so they look different, because
+these are main features; they look like they're part of the outline and the
+folder structure.* The *Also* group is now **Features**. Each entry is a
+button with a filled face, a rounded border and its own colour:
+
+| Feature | Colour |
+| --- | --- |
+| Import | blue |
+| Note Sorter | orange |
+| Graphics | magenta |
+| Plots | red |
+| Setups & payoffs | gold |
+| Locations | teal |
+| Links | sky |
+| Themes & motifs | violet |
+| Mobile App | green |
+| Character map | pink |
+| Character review | olive |
+
+Each count sits in a pill. The open feature takes a ring of its colour.

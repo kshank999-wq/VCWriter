@@ -96,6 +96,54 @@ const LETTERS = /^[\p{L}][\p{L}'’-]*$/u;
 export const checkWord = (raw: string): { misspelled: boolean; suggestions: string[] } => {
   const word = raw.replace(/^[^\p{L}]+|[^\p{L}]+$/gu, '').replace(/’/g, "'");
   if (word.length < 2 || !LETTERS.test(word)) return { misspelled: false, suggestions: [] };
+  const own = checkOwn(word);
+  /**
+   * **And the checker that drew the underline** (from Ken: *the spell checker
+   * catches misspellings but does not give you the standard right click menu
+   * to change out the word*). In the desktop app the red line is the
+   * operating system's, while this menu asked only the bundled dictionary;
+   * where the two disagreed the word was underlined and the menu had nothing
+   * to put in its place. Now a word either calls wrong is wrong, and the
+   * suggestions are the system's first, then the bundled ones, each once.
+   */
+  const native = nativeCheck(word);
+  if (!own.misspelled && !native.misspelled) return own;
+  if (ignored.has(word.toLowerCase()) || projectWordsLower().has(word.toLowerCase())) return { misspelled: false, suggestions: [] };
+  const merged = [...native.suggestions, ...own.suggestions, ...(own.misspelled ? [] : ownSuggest(word))];
+  const seen = new Set<string>();
+  const suggestions = merged.filter((one) => {
+    const key = one.toLowerCase();
+    if (seen.has(key) || key === word.toLowerCase()) return false;
+    seen.add(key);
+    return true;
+  });
+  return { misspelled: true, suggestions: suggestions.slice(0, 8) };
+};
+
+/** The project's own names and the writer's own words, which no checker should mark. */
+const projectWordsLower = (): Set<string> => new Set([...projectWords, ...personal()].map((one) => one.toLowerCase()));
+
+/** The operating system's verdict, where the desktop app can ask it; nothing in a browser. */
+const nativeCheck = (word: string): { misspelled: boolean; suggestions: string[] } => {
+  try {
+    const bridge = (window as unknown as { vcwriter?: { spelling?: { check(word: string): { misspelled: boolean; suggestions: string[] } } } }).vcwriter;
+    return bridge?.spelling?.check(word) ?? { misspelled: false, suggestions: [] };
+  } catch {
+    return { misspelled: false, suggestions: [] };
+  }
+};
+
+/** The bundled dictionary's suggestions for a word it thinks is fine but the system does not. */
+const ownSuggest = (word: string): string[] => {
+  try {
+    return ready().suggest(word).slice(0, 6);
+  } catch {
+    return [];
+  }
+};
+
+/** The bundled dictionary alone. */
+const checkOwn = (word: string): { misspelled: boolean; suggestions: string[] } => {
   const spell = ready();
   if (spell.correct(word)) return { misspelled: false, suggestions: [] };
   // A screenplay's cues and sluglines are in capitals: check them as words.
@@ -118,13 +166,19 @@ export const addToDictionary = (word: string): void => {
   } catch {
     // Kept for this session only.
   }
+  ignored.add(clean.toLowerCase());
   void window.vcwriter?.spelling?.addWord(clean);
 };
 
-/** Ignore it for this session: added to the checker, not saved. */
+/** Ignore it for this session: added to the checker, not saved, and asked of the system's no more. */
 export const ignoreWord = (word: string): void => {
-  if (word.trim()) ready().add(word.trim());
+  if (!word.trim()) return;
+  ready().add(word.trim());
+  ignored.add(word.trim().toLowerCase());
 };
+
+/** Words ignored this session or added to the dictionary: the system's checker is not asked about them. */
+const ignored = new Set<string>();
 
 const STEMS: [RegExp, string][] = [
   [/ies$/, 'y'],

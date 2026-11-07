@@ -1043,8 +1043,8 @@ export function ResearchBody({
             </>
           ) : null}
 
-          <h4>Also</h4>
-          <ul className="research-views">
+          <h4>Features</h4>
+          <ul className="research-views research-features">
             {/* **Every format's** (addendum 33). It was an instructional
                 book's alone, which is a fair reading of who has a folder of
                 lecture notes and a wrong one about who has research: a
@@ -1054,6 +1054,7 @@ export function ResearchBody({
                 drawn. Nothing in `importFiles` asks the format. */}
             <li>
               <button
+                data-feature="import"
                 type="button"
                 className={selection.kind === 'importer' ? 'folder-row selected' : 'folder-row'}
                 title="Bring in notes, documents and pictures"
@@ -1071,6 +1072,7 @@ export function ResearchBody({
             {onOpenSorter ? (
               <li>
                 <button
+                data-feature="sorter"
                   type="button"
                   className="folder-row"
                   title="Read a page of notes, highlight, and drop the pieces into categories"
@@ -1086,6 +1088,7 @@ export function ResearchBody({
             {prose ? (
               <li>
                 <button
+                data-feature="graphics"
                   type="button"
                   className={selection.kind === 'graphics' ? 'folder-row selected' : 'folder-row'}
                   title="The book’s pictures: plates, chapter art and figures"
@@ -1105,6 +1108,7 @@ export function ResearchBody({
               <>
                 <li>
                   <button
+                data-feature="plots"
                     type="button"
                     className={selection.kind === 'plots' ? 'folder-row selected' : 'folder-row'}
                     onClick={() => setSelection({ kind: 'plots' })}
@@ -1115,6 +1119,7 @@ export function ResearchBody({
                 </li>
                 <li>
                   <button
+                data-feature="setups"
                     type="button"
                     className={selection.kind === 'setups' ? 'folder-row selected' : 'folder-row'}
                     onClick={() => setSelection({ kind: 'setups' })}
@@ -1129,6 +1134,7 @@ export function ResearchBody({
                     a location is a project asset like a character (addendum 14). */}
                 <li>
                   <button
+                data-feature="locations"
                     type="button"
                     className={selection.kind === 'locations' ? 'folder-row selected' : 'folder-row'}
                     onClick={() => setSelection({ kind: 'locations' })}
@@ -1148,6 +1154,7 @@ export function ResearchBody({
                 the track engine for all four and belongs to none. */}
             <li>
               <button
+                data-feature="links"
                 type="button"
                 className={selection.kind === 'links' ? 'folder-row selected' : 'folder-row'}
                 title="How story elements travel through the script"
@@ -1162,6 +1169,7 @@ export function ResearchBody({
                 is where a writer looks for the pair. */}
             <li>
               <button
+                data-feature="themes"
                 type="button"
                 className={selection.kind === 'thematics' ? 'folder-row selected' : 'folder-row'}
                 onClick={() => setSelection({ kind: 'thematics' })}
@@ -1172,6 +1180,7 @@ export function ResearchBody({
             </li>
             <li>
               <button
+                data-feature="mobile"
                 type="button"
                 className={selection.kind === 'mobile' ? 'folder-row selected' : 'folder-row'}
                 title="What the phone caught, waiting to be put somewhere"
@@ -1189,6 +1198,7 @@ export function ResearchBody({
               <>
                 <li>
                   <button
+                data-feature="charmap"
                     type="button"
                     className={selection.kind === 'charmap' ? 'folder-row selected' : 'folder-row'}
                     onClick={() => setSelection({ kind: 'charmap' })}
@@ -1199,6 +1209,7 @@ export function ResearchBody({
                 </li>
                 <li>
                   <button
+                data-feature="review"
                     type="button"
                     className={selection.kind === 'review' ? 'folder-row selected' : 'folder-row'}
                     onClick={() => {

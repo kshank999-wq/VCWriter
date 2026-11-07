@@ -23691,3 +23691,65 @@ input.note-rewrite-title:focus { border-color: var(--gold); outline: none; }
 .element.line-drop-after {
   box-shadow: 0 3px 0 var(--gold);
 }
+
+/* The features in Research's side menu, as buttons (from Ken: *these all
+   need to be buttons, colorized so they look different … they look like
+   they're part of the outline and the folder structure; we want them to look
+   like features*). Each has its own colour, a filled face and a border, so
+   none can be mistaken for a folder. */
+.research-features {
+  display: grid;
+  gap: 5px;
+  padding: 2px 6px 6px;
+}
+
+.research-features .folder-row[data-feature] {
+  --feature: var(--gold);
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid color-mix(in srgb, var(--feature) 55%, transparent);
+  border-left: 4px solid var(--feature);
+  border-radius: 6px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--feature) 22%, var(--panel-2)), color-mix(in srgb, var(--feature) 10%, var(--panel)));
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.research-features .folder-row[data-feature] .folder-name {
+  color: var(--text);
+}
+
+.research-features .folder-row[data-feature] .count {
+  margin-left: auto;
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--feature) 35%, transparent);
+  color: var(--text);
+  text-align: center;
+}
+
+.research-features .folder-row[data-feature]:hover {
+  background: color-mix(in srgb, var(--feature) 32%, var(--panel-2));
+}
+
+.research-features .folder-row[data-feature].selected {
+  background: color-mix(in srgb, var(--feature) 40%, var(--panel-2));
+  box-shadow: 0 0 0 2px var(--feature);
+}
+
+.research-features .folder-row[data-feature='import'] { --feature: #5b8def; }
+.research-features .folder-row[data-feature='sorter'] { --feature: #e08a3c; }
+.research-features .folder-row[data-feature='graphics'] { --feature: #c25bd6; }
+.research-features .folder-row[data-feature='plots'] { --feature: #d9534f; }
+.research-features .folder-row[data-feature='setups'] { --feature: #c9a45c; }
+.research-features .folder-row[data-feature='locations'] { --feature: #4fb3a5; }
+.research-features .folder-row[data-feature='links'] { --feature: #3ea0d6; }
+.research-features .folder-row[data-feature='themes'] { --feature: #a48ae6; }
+.research-features .folder-row[data-feature='mobile'] { --feature: #3fae6a; }
+.research-features .folder-row[data-feature='charmap'] { --feature: #e06b9a; }
+.research-features .folder-row[data-feature='review'] { --feature: #8fa83a; }
