@@ -343,6 +343,62 @@ a {
   }
 }
 
+.notes-band {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+  gap: 24px;
+  align-items: center;
+  margin: 0 0 16px;
+  padding: 22px 28px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--gold);
+  border-radius: 2px;
+  background: var(--bg-raised);
+}
+
+.notes-band-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+}
+
+.notes-band .eyebrow {
+  font-family: var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 11px;
+  color: var(--gold-bright);
+  margin: 0 0 4px;
+}
+
+.notes-band h2 {
+  margin: 0 0 6px;
+  font-size: 18px;
+  letter-spacing: 0.14em;
+}
+
+.notes-band p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+@media (max-width: 720px) {
+  .notes-band {
+    grid-template-columns: 56px minmax(0, 1fr);
+    padding: 18px;
+  }
+
+  .notes-band-icon {
+    width: 56px;
+    height: 56px;
+  }
+
+  .notes-band .button {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}
+
 .emblem-block {
   margin: 0;
   display: grid;

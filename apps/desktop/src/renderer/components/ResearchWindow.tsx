@@ -56,6 +56,7 @@ import {
   type Track,
   type CharacterId,
   type ProjectFile,
+  type OutlineFolder,
   type ProjectFormat,
   type ResearchCategoryId,
   type ResearchFolder,
@@ -69,6 +70,7 @@ import {
   isWordProcessor,
   fileNoteUnder,
   noteUsed,
+  outlineFolders,
   importFiles,
   type NotePlace,
 } from '@vcwriter/domain';
@@ -331,6 +333,15 @@ export function ResearchBody({
   /** The note open in the rewrite screen (addendum 28 §7). */
   const [rewriting, setRewriting] = useState<ResearchItemId | null>(null);
   /**
+   * The outline folder whose notes are open in the pane beside (from Ken: *you
+   * open that chapter, section, scene, and it has another right-hand menu list
+   * of those notes that were dropped in; you double-click those, and that's
+   * where you can rewrite it, and then you can add it as a beat*).
+   */
+  const [openFolderKey, setOpenFolderKey] = useState<string | null>(null);
+  /** Where a rewrite opened from that list goes, said on its button. */
+  const [rewriteInto, setRewriteInto] = useState<string | null>(null);
+  /**
    * Whether the outline stands beside the notes (addendum 28 §7). Shown unless
    * the writer hid it, and remembered on this computer.
    */
@@ -506,6 +517,9 @@ export function ResearchBody({
   }, [file, selection, query]);
 
   const selectedItem = selectedItemId ? file.researchItems.find((item) => item.id === selectedItemId) ?? null : null;
+  const folderNouns = nounsFor(file.project.format);
+  /** The open outline folder, read fresh so a note filed or used shows at once. */
+  const filedHere = openFolderKey ? (outlineFolders(file).find((folder) => folder.key === openFolderKey) ?? null) : null;
   const folderOf = (item: ResearchItem) => file.researchCategories.find((category) => category.id === item.categoryId);
 
   /** Where a new note goes: the folder in hand, or the first one there is. */
@@ -1663,9 +1677,15 @@ export function ResearchBody({
             onSelect={(item) => setSelectedItemId(item.id)}
             onRewrite={(item) => {
               setSelectedItemId(item.id);
+              setRewriteInto(null);
               setRewriting(item.id);
             }}
             onHide={() => showOutline(false)}
+            openKey={openFolderKey}
+            onOpenFolder={(folder) => {
+              setOpenFolderKey(folder.key);
+              setSelectedItemId(null);
+            }}
           />
         ) : null}
 
@@ -1676,7 +1696,21 @@ export function ResearchBody({
           aria-label="Detail"
           hidden={creator !== null || selection.kind === 'charmap' || selection.kind === 'review'}
         >
-          {selectedItem ? (
+          {filedHere && (!selectedItem || filedHere.notes.some((note) => note.id === selectedItem.id)) ? (
+            <FolderNotes
+              file={file}
+              folder={filedHere}
+              selectedId={selectedItem?.id ?? null}
+              sub={folderNouns.sub}
+              onSelect={(note) => setSelectedItemId(note.id)}
+              onRewrite={(note) => {
+                setSelectedItemId(note.id);
+                setRewriteInto(folderLabel(filedHere));
+                setRewriting(note.id);
+              }}
+              onClose={() => setOpenFolderKey(null)}
+            />
+          ) : selectedItem ? (
             <Detail
               file={file}
               item={selectedItem}
@@ -1736,9 +1770,13 @@ export function ResearchBody({
         file={file}
         item={rewriting ? (file.researchItems.find((one) => one.id === rewriting) ?? null) : null}
         currentBeatId={currentBeatId}
-        onClose={() => setRewriting(null)}
+        onClose={() => {
+          setRewriting(null);
+          setRewriteInto(null);
+        }}
         onUpdate={onUpdate}
         onPlacedOnPage={onClose}
+        {...(rewriteInto ? { placeLabel: `Add as ${folderNouns.sub.toLowerCase()} in ${rewriteInto}` } : {})}
         {...(onGoToBeat ? { onGoToBeat } : {})}
       />
 
@@ -2581,3 +2619,88 @@ const caughtOn = (iso: string): string => {
   const date = new Date(iso);
   return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 };
+
+/** A folder's name as the outline column shows it: its number, then its title. */
+const folderLabel = (folder: OutlineFolder): string =>
+  `${folder.number ? `${folder.number} ` : ''}${folder.title || 'this part'}`;
+
+/**
+ * The notes filed under one part of the outline, in the pane beside it (from
+ * Ken: *you open that chapter, section, scene, and it has another right-hand
+ * menu list of those notes that were dropped in. And you double-click those,
+ * and that's where you can rewrite it, and then you can add it as a beat.*)
+ *
+ * A click shows which one is chosen; a double-click opens the rewrite screen,
+ * whose button adds the rewrite as a beat (in the format's own word) in this
+ * part. Each note says whether it is already on the track.
+ */
+function FolderNotes({
+  file,
+  folder,
+  selectedId,
+  sub,
+  onSelect,
+  onRewrite,
+  onClose,
+}: {
+  file: ProjectFile;
+  folder: OutlineFolder;
+  selectedId: ResearchItemId | null;
+  sub: string;
+  onSelect(note: ResearchItem): void;
+  onRewrite(note: ResearchItem): void;
+  onClose(): void;
+}) {
+  return (
+    <section className="folder-notes" aria-label={`Notes filed under ${folderLabel(folder)}`}>
+      <header className="folder-notes-head">
+        <div>
+          <p className="muted small">Filed here</p>
+          <h4>{folderLabel(folder)}</h4>
+        </div>
+        <button type="button" className="ghost small" aria-label="Close the list" onClick={onClose}>
+          ×
+        </button>
+      </header>
+      {folder.notes.length === 0 ? (
+        <p className="muted small">Nothing filed here yet. Drag a note onto this {folder.kind === 'chapter' ? 'chapter' : 'part'} in the outline.</p>
+      ) : (
+        <>
+          <p className="muted small">Double-click a note to rewrite it and add it as a {sub.toLowerCase()} here.</p>
+          <ul className="folder-notes-list">
+            {folder.notes.map((note) => {
+              const used = noteUsed(file, note);
+              return (
+                <li key={note.id}>
+                  <button
+                    type="button"
+                    className={`folder-note${selectedId === note.id ? ' selected' : ''}${used ? ' used' : ''}`}
+                    aria-pressed={selectedId === note.id}
+                    onClick={() => onSelect(note)}
+                    onDoubleClick={() => onRewrite(note)}
+                  >
+                    <strong>{note.title || 'Untitled note'}</strong>
+                    {note.body.trim() ? <span className="folder-note-body">{note.body.trim()}</span> : null}
+                    <span className="folder-note-state muted small">{used ? `✕ A ${sub.toLowerCase()} already` : 'Not used yet'}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          {selectedId && folder.notes.some((note) => note.id === selectedId) ? (
+            <button
+              type="button"
+              className="folder-notes-rewrite"
+              onClick={() => {
+                const note = folder.notes.find((one) => one.id === selectedId);
+                if (note) onRewrite(note);
+              }}
+            >
+              Rewrite and add as a {sub.toLowerCase()}…
+            </button>
+          ) : null}
+        </>
+      )}
+    </section>
+  );
+}

@@ -28,6 +28,7 @@ import {
   textToDocContent,
   textToProse,
   addItem,
+  fileNoteUnder,
   addSetupPayoff,
   addSetupPoint,
   addNode,
@@ -141,6 +142,24 @@ const withOutline = (file, rows) => {
   return next;
 };
 
+/**
+ * Notes dropped on a part of the outline (Research's outline column), so the
+ * list of what is filed there has something in it.
+ */
+const fileUnderRow = (file, rowTitle, notes) => {
+  let next = file;
+  const outline = next.outlines?.[0];
+  const row = outline?.items.find((item) => item.title === rowTitle);
+  if (!row) return next;
+  for (const [title, body] of notes) {
+    const folder = next.researchCategories[1] ?? next.researchCategories[0];
+    next = addResearchItem(next, { categoryId: folder.id, title, body });
+    const note = next.researchItems[next.researchItems.length - 1];
+    next = fileNoteUnder(next, note.id, { kind: 'plan', itemId: row.id });
+  }
+  return next;
+};
+
 /** Setups and payoffs for the screenplay, placed on its beats. */
 const withSetups = (file) => {
   let next = file;
@@ -198,7 +217,7 @@ const withMap = (file) => {
 export function demoProjects() {
   const projects = {};
 
-  projects.screenplay = withOutline(withSetups(withMap(withNotes(
+  projects.screenplay = fileUnderRow(withOutline(withSetups(withMap(withNotes(
     titled(
       buildProjectFromImport(readFinalDraft(fdx(NIGHT_OF_THE_LIVING_DEAD)), {
         format: 'screenplay',
@@ -230,6 +249,9 @@ export function demoProjects() {
     ['scene', 'The radio and the television', [['beat', 'Killings across the eastern states'], ['beat', 'The sheriff: "Beat \'em or burn \'em"']]],
     ['note', 'Act Two: the house under siege'],
     ['scene', 'The cellar door', [['beat', 'Harry Cooper and the others come up'], ['beat', 'Upstairs or the cellar?']]],
+  ]), 'The cemetery', [
+    ['Johnny has the car keys', 'They are in his pocket when he falls. Barbra cannot drive away.'],
+    ['The man among the graves', 'Slow, but he never stops coming. Keep him in the back of the frame first.'],
   ]);
 
   projects.stage_play = withNotes(

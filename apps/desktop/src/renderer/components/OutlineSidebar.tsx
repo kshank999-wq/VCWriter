@@ -27,6 +27,14 @@ export interface OutlineSidebarProps {
   onSelect(item: ResearchItem): void;
   onRewrite(item: ResearchItem): void;
   onHide(): void;
+  /** The folder whose notes are open in the pane beside, if any. */
+  openKey?: string | null;
+  /**
+   * Open a folder's notes in the pane beside the outline (from Ken: *you open
+   * that chapter, section, scene, and it has another right-hand list of those
+   * notes that were dropped in*). The arrow still folds; the name opens.
+   */
+  onOpenFolder?(folder: OutlineFolder): void;
 }
 
 const KIND_LABEL: Record<OutlineFolder['kind'], string> = {
@@ -45,7 +53,7 @@ const KIND_MARK: Record<OutlineFolder['kind'], string> = {
   heading: '▤',
 };
 
-export function OutlineSidebar({ file, dragging, selectedId, onFile, onDragNote, onSelect, onRewrite, onHide }: OutlineSidebarProps) {
+export function OutlineSidebar({ file, dragging, selectedId, onFile, onDragNote, onSelect, onRewrite, onHide, openKey = null, onOpenFolder }: OutlineSidebarProps) {
   const folders = useMemo(() => outlineFolders(file), [file]);
   const [closed, setClosed] = useState<ReadonlySet<string>>(() => new Set());
   const [over, setOver] = useState<string | null>(null);
@@ -127,9 +135,10 @@ export function OutlineSidebar({ file, dragging, selectedId, onFile, onDragNote,
                   >
                     <button
                       type="button"
-                      className="research-outline-toggle"
+                      className="research-outline-toggle research-outline-fold"
                       aria-expanded={open}
                       aria-label={`${open ? 'Fold' : 'Unfold'} ${label}`}
+                      disabled={!hasInside}
                       onClick={() =>
                         setClosed((current) => {
                           const next = new Set(current);
@@ -142,6 +151,14 @@ export function OutlineSidebar({ file, dragging, selectedId, onFile, onDragNote,
                       <span className="research-outline-chevron" aria-hidden="true">
                         {hasInside ? (open ? '▾' : '▸') : ''}
                       </span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`research-outline-toggle research-outline-open${openKey === folder.key ? ' open' : ''}`}
+                      aria-label={`Open ${label}`}
+                      title={folder.notes.length > 0 ? `See the ${folder.notes.length === 1 ? 'note' : `${folder.notes.length} notes`} filed here` : 'Nothing filed here yet — drag a note onto it'}
+                      onClick={() => onOpenFolder?.(folder)}
+                    >
                       <span className="research-outline-mark" title={KIND_LABEL[folder.kind]}>
                         {KIND_MARK[folder.kind]}
                       </span>

@@ -47,6 +47,20 @@ export const GUIDES_PLANNING: Guide[] = [
         ],
       },
       {
+        heading: 'Notes dropped on a chapter, section or scene',
+        body: [
+          'Drag a note onto a chapter, section or scene in the **Outline** column and it is filed there. Click that part\u2019s name and the notes dropped on it are listed in the pane on the right. The arrow beside the name still folds it.',
+        ],
+        steps: [
+          'Click the name of a chapter, section or scene in the **Outline** column.',
+          'In the list on the right, double-click a note, or choose it and press **Rewrite and add as a beat…** (the word follows your project: beat, passage or subsection).',
+          'Rewrite it beside the original.',
+          'Press **Add as beat in** followed by the part\u2019s name. It becomes a new beat in that part, and the note reads as used.',
+        ],
+        shot: 'help/research-filed',
+        shotAlt: 'A scene opened from the outline, with the notes dropped on it listed on the right',
+      },
+      {
         heading: 'Rewrite and place a note',
         body: [
           'Rough notes are rarely ready to go straight into the script. The rewrite screen keeps the note exactly as you caught it on one side, and gives you a clean page beside it.',

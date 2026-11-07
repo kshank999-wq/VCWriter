@@ -45,6 +45,7 @@ export function NoteRewrite({
   onGoToBeat,
   addTo,
   onPlacedOnPage,
+  placeLabel,
 }: {
   file: ProjectFile;
   item: ResearchItem | null;
@@ -59,6 +60,13 @@ export function NoteRewrite({
   addTo?: { under: string; choices: ReadonlyArray<{ kind: string; label: string }>; onAdd(kind: string): void } | null;
   /** After a note goes onto the page in a word processor: back to the page. */
   onPlacedOnPage?(): void;
+  /**
+   * What the place button says when the note was opened from a part of the
+   * outline (from Ken: *rewrite it, and then you can add it as a beat*):
+   * "Add as beat in 1.2 The cemetery". It does what Place on the track does —
+   * a new beat in the part the note is filed under.
+   */
+  placeLabel?: string;
 }) {
   const dialog = useModal(item !== null);
   const original = useRef<HTMLDivElement>(null);
@@ -242,7 +250,15 @@ export function NoteRewrite({
             disabled={!textToPlace(item)}
             title={page ? 'Put it into the document where your cursor is' : undefined}
           >
-            {page ? (used ? 'Place on page again' : 'Place on page') : used ? 'Place on the track again' : 'Place on the track'}
+            {page
+              ? used
+                ? 'Place on page again'
+                : 'Place on page'
+              : placeLabel
+                ? `${placeLabel}${used ? ' again' : ''}`
+                : used
+                  ? 'Place on the track again'
+                  : 'Place on the track'}
           </button>
         </span>
       </footer>

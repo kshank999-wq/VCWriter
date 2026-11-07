@@ -62,6 +62,24 @@ export default function HomePage() {
         </figure>
       </div>
 
+      {/* The companion app, at the top (from Ken: *capturing every idea when
+          inspiration takes you, and organizing and loading it right into your
+          writing software*). */}
+      <section id="notes-app" className="notes-band">
+        <img src="/notes-icon-512.png" width={512} height={512} alt="" className="notes-band-icon" />
+        <div>
+          <p className="eyebrow">The companion app</p>
+          <h2>VC Writer Notes</h2>
+          <p>
+            Capture every idea the moment inspiration takes you. Speak it or type it on your phone, and it arrives in
+            VC Writer titled, dated and filed where it belongs, ready to write into your story.
+          </p>
+        </div>
+        <Link href="/notes" className="button secondary">
+          VC Writer Notes
+        </Link>
+      </section>
+
       <section id="modules">
         <h2>What are you writing?</h2>
         <p className="lede">Choose a module to see what VC Writer does for that kind of work.</p>

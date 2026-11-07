@@ -28,6 +28,8 @@ device or simulator (`docs/store-listing.md` §4).
 | [`project-home`](../apps/web/public/help/project-home.jpg) | A project's home page: logline, synopsis, where it stands | Night of the Living Dead (screenplay, public domain) | help: getting started |
 | [`research`](../apps/web/public/help/research.jpg) | Research: folders and notes | Night of the Living Dead (screenplay, public domain) | help: research |
 | [`research-note`](../apps/web/public/help/research-note.jpg) | A note opened to rewrite and place on the track | Night of the Living Dead (screenplay, public domain) | help: research |
+| [`research-filed`](../apps/web/public/help/research-filed.jpg) | A section opened from the outline: the notes dropped on it, to rewrite and add as beats | Night of the Living Dead (screenplay, public domain) | /tools/research; help: research |
+| [`research-filed-rewrite`](../apps/web/public/help/research-filed-rewrite.jpg) | The rewrite screen opened from a section, with Add as beat | Night of the Living Dead (screenplay, public domain) | help: research |
 | [`sculptor`](../apps/web/public/help/sculptor.jpg) | The Story Sculptor: acts, plot points, scenes, cast and links | Night of the Living Dead (screenplay, public domain) | help: story sculptor |
 | [`sculptor-outliner`](../apps/web/public/help/sculptor-outliner.jpg) | The Story Sculptor with the Outliner beside the map, to drag rows onto it | Night of the Living Dead (screenplay, public domain) | /tools/story-sculptor; help: story sculptor |
 | [`character-creator`](../apps/web/public/help/character-creator.jpg) | The Character Creator with a character open | Night of the Living Dead (screenplay, public domain) | /tools/character-creator; help: character creator |

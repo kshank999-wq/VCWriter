@@ -23329,3 +23329,99 @@ input.note-rewrite-title:focus { border-color: var(--gold); outline: none; }
   border-left: 2px solid color-mix(in srgb, var(--tier) 55%, transparent);
   margin-left: 14px;
 }
+
+/* An outline folder's row: the arrow folds, the name opens its notes. */
+.research-outline-row {
+  display: flex;
+  align-items: stretch;
+}
+
+.research-outline-fold {
+  flex: 0 0 auto;
+  width: auto;
+  padding-right: 0;
+}
+
+.research-outline-fold:disabled {
+  cursor: default;
+}
+
+.research-outline-open {
+  flex: 1;
+  min-width: 0;
+}
+
+.research-outline-open.open .research-outline-title {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* The notes filed under a part of the outline, in the pane beside it. */
+.folder-notes {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.folder-notes-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  border-left: 3px solid var(--gold);
+  padding-left: 10px;
+}
+
+.folder-notes-head h4 {
+  margin: 2px 0 0;
+  font-size: 15px;
+}
+
+.folder-notes-head p {
+  margin: 0;
+}
+
+.folder-notes-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.folder-note {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid #e0b84a;
+  border-radius: 3px;
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.folder-note.used {
+  border-left-color: var(--muted);
+  opacity: 0.8;
+}
+
+.folder-note.selected {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold);
+}
+
+.folder-note-body {
+  color: var(--muted);
+  font-size: 13px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.folder-notes-rewrite {
+  justify-self: start;
+}

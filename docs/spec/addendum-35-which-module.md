@@ -375,3 +375,12 @@ other ones.*
   work.
 - The tool pages are checked by `help-guides.test.ts`: every picture exists,
   every guide exists, and each slug appears once.
+
+## 12. VC Writer Notes at the top of the front page
+
+From Ken: *we need to mention the VC Writer Notes companion app on the front
+top of the page, capturing every idea when inspiration takes you and
+organizing and loading it right into your writing software.* A band under
+the opening section has the Notes icon, *The companion app — VC Writer
+Notes*, a line on capturing an idea when inspiration takes you and having it
+arrive in VC Writer titled, dated and filed, and a button to `/notes`.

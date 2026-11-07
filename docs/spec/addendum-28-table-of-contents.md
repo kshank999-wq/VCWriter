@@ -956,3 +956,30 @@ dictated in and it's wrong, or misspelled.* The rewrite window a double-click
 opens now carries the title as a field at its head, saved as typed and
 spell-checked like every other field (right-click for suggestions). The detail
 panel beside the list already had one.
+
+## Notes dropped on a part of the outline, opened from it
+
+From Ken, 7 November: *in the research section, when you drop a note under a
+section, you open that chapter, section, scene, and it has another
+right-hand menu list of those notes that were dropped in. And you
+double-click those, and that's where you can rewrite it, and then you can
+add it as a beat.*
+
+- **The arrow folds; the name opens.** Each folder in Research's outline
+  column is now two controls: the ▾ that folds it (*Fold …* / *Unfold …*),
+  and the name, *Open …*, which lists the notes dropped there in the
+  detail pane (`FolderNotes` in `ResearchWindow.tsx`). The open folder's
+  name is underlined.
+- **The list.** It shows each note's title, the start of its words, and
+  whether it is used. A click chooses a note; a double-click, or **Rewrite
+  and add as a beat…**, opens the rewrite screen. The list is read fresh, so
+  a note added or used shows at once.
+- **Add as beat.** Opened from there, the rewrite screen's place button
+  reads *Add as beat in 1.2 The cemetery*, in the format's own word for a
+  beat (`placeLabel` on `NoteRewrite`). It does what *Place on the track*
+  always did: `placeNoteOnTrack` puts the rewrite in as a new beat in the
+  part the note is filed under, adding that part to the track first if it
+  is still only in the outline, and marks the note used.
+- Two new shots (`research-filed`, `research-filed-rewrite`). The *Night of
+  the Living Dead* demo has two notes filed under *The cemetery*. The
+  Research guide has a section on it.
