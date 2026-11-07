@@ -376,6 +376,25 @@ export function OutlinerWindow({
   );
   const tally = useMemo(() => (outline ? outlineTally(outline) : null), [outline]);
   /**
+   * Each row's ancestors' kinds, outermost first, so the guide at each level
+   * can take the colour of the row it hangs from (from Ken: *each tier has a
+   * different colour, a box around it, so you can easily see what is where*).
+   */
+  const lineage = useMemo(() => {
+    const byId = new Map((outline?.items ?? []).map((one) => [one.id as string, one]));
+    const out = new Map<string, string[]>();
+    for (const one of outline?.items ?? []) {
+      const kinds: string[] = [];
+      let at = one.parentId ? byId.get(one.parentId as string) : undefined;
+      while (at) {
+        kinds.unshift(at.kind);
+        at = at.parentId ? byId.get(at.parentId as string) : undefined;
+      }
+      out.set(one.id as string, kinds);
+    }
+    return out;
+  }, [outline]);
+  /**
    * The decimal numbers down the outline (addendum 16 §15).
    *
    * Read from the tree every time, so indenting a row makes it 1.2.1 with
@@ -1078,6 +1097,7 @@ export function OutlinerWindow({
               format={file.project.format}
               key={row.item.id as string}
               row={row}
+              lineage={lineage.get(row.item.id as string) ?? []}
               number={numbers.get(row.item.id as string) ?? ''}
               title={rowTitle(file, row.item)}
               linked={row.item.source?.type === 'research_item'}
@@ -1688,6 +1708,7 @@ const chainOf = (outline: Outline, item: OutlineItem): OutlineItem[] => {
 function Row({
   format,
   row,
+  lineage = [],
   number,
   title,
   linked,
@@ -1717,6 +1738,8 @@ function Row({
   /** So a row names its own kind the way this format names it (§14). */
   format: ProjectFormat;
   row: OutlineRow;
+  /** The kinds of the rows above this one, outermost first, for the coloured guides. */
+  lineage?: ReadonlyArray<string>;
   /** `1.2` where this book numbers its divisions, `''` everywhere else. */
   number: string;
   /** Read through to the shelf where the row references research (§5). */
@@ -1827,7 +1850,12 @@ function Row({
     >
       {/* The guides: one per level, so the eye can run back up to the parent. */}
       {Array.from({ length: depth }, (unused, level) => (
-        <span key={level} className="outline-guide" style={{ left: `${8 + level * STEP + 7}px` }} aria-hidden="true" />
+        <span
+          key={level}
+          className={`outline-guide tier-${lineage[level] ?? 'none'}`}
+          style={{ left: `${8 + level * STEP + 7}px` }}
+          aria-hidden="true"
+        />
       ))}
 
       {/* A handle that always drags the row, even while its name is being

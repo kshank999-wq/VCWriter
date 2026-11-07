@@ -836,3 +836,29 @@ The same code serves every format with a track and an outline. Tests in
 `outline-link.test.ts` cover the seed and promotion led by the outline.
 `outline-drop.test.ts` covers Add all with shared keys, a row whose section
 was deleted, and a screenplay transferred in order through the link.
+
+## Tiers in colour
+
+From Ken, 7 November: *in the outliner, I want the chapters to be a
+different color than the sections — each tier has a different color, box
+around it, so you can easily see what is where — and you need to be able
+to collapse that in the outliner, but also in the research section.*
+
+- **Four colours, one per tier**, used in both the Outliner and Research's
+  outline column:
+  - chapters: the program's gold
+  - sections (a script's scenes): teal
+  - subsections (beats): violet
+  - notes, ideas and the rest: a quiet grey
+
+  Each row's box takes its tier's colour: the border, a heavier left edge, a
+  tinted fill, and the title in that colour for chapters and sections.
+- **The box around the group.** The guide at each level takes the colour of
+  the row it hangs from, through a `lineage` of ancestor kinds worked out in
+  the Outliner. So a chapter's gold rail runs down beside everything inside
+  it, and a section's teal rail beside its subsections. In Research, a
+  folder's notes sit on a rail of its colour.
+- **Folding was already in both places**: the ▾ on every row with rows or
+  words under it, and Collapse all and Expand all at the top, in the Outliner
+  and in Research's outline column. Nothing about it changed except that the
+  colours make it easier to see what a fold hides.
