@@ -261,3 +261,37 @@ describe('importing a map from JSON', () => {
     expect(latest!.boards).toHaveLength(1);
   });
 });
+
+describe('the Outliner beside the map (from Ken)', () => {
+  it('lists the outline as a tree and places a row with its branch, by click or by dropping it on a card', async () => {
+    const { createOutline, addItem } = await import('@vcwriter/domain');
+    const { file: base } = shaped();
+    const made = createOutline(base, { name: 'Outline' });
+    const chapter = addItem(made.file, made.outline.id, { kind: 'chapter', title: 'Chapter One' });
+    const section = addItem(chapter.file, made.outline.id, { kind: 'scene', parentId: chapter.itemId!, title: 'Why write' });
+    render(<Harness initial={section.file} />);
+    fireEvent.click(screen.getByRole('button', { name: /Outliner/ }));
+    const panel = screen.getByRole('complementary', { name: 'Outliner' });
+    expect(within(panel).getByText('Why write')).toBeTruthy();
+    // Folding the chapter hides the section under it.
+    fireEvent.click(within(panel).getByRole('button', { name: 'Fold Chapter One' }));
+    expect(within(panel).queryByText('Why write')).toBeNull();
+    fireEvent.click(within(panel).getByRole('button', { name: 'Unfold Chapter One' }));
+
+    // A click places the chapter, and its section with it, at the top.
+    fireEvent.click(within(panel).getByTitle(/Place “Chapter One” and everything under it/));
+    const top = board().nodes.find((node) => node.title === 'Chapter One')!;
+    expect(top.parentId).toBeNull();
+    expect(top.kind).toBe('frame');
+    expect(board().nodes.find((node) => node.title === 'Why write')!.parentId).toBe(top.id);
+
+    // Dropped on a card, a row goes inside it.
+    const row = within(panel).getByTitle(/Place “Why write”/);
+    const data = new Map<string, string>();
+    const dataTransfer = { setData: (k: string, v: string) => data.set(k, v), getData: (k: string) => data.get(k) ?? '', effectAllowed: '' };
+    fireEvent.dragStart(row, { dataTransfer });
+    fireEvent.drop(card('The interview'), { dataTransfer });
+    const interview = board().nodes.find((node) => node.title === 'The interview')!;
+    expect(board().nodes.some((node) => node.title === 'Why write' && node.parentId === interview.id)).toBe(true);
+  });
+});

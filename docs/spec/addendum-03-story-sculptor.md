@@ -246,6 +246,25 @@ it, selects it and centres it.
   card land inside it, as before. The Outliner's *carry to the board* and the
   board's *carry to the outline* still work; rows arrive as typed cards.
 
+## 11a. The Outliner beside the map
+
+From Ken: *in the story sculptor, there needs to be access to the outliner. So
+there's a button next to research that will say outliner, and you can drag
+pieces of that onto the board and put them in categories.*
+
+**Outliner** on the toolbar, next to **Notes**, opens the outline down the
+left in place of the palette: its rows as a tree (Chapter, Scene, Beat, Note…
+labelled), folded here with ▸/▾ and **Collapse all** / **Expand all** without
+touching the Outliner's own folds, with a choice of outline where a project has
+more than one.
+
+A row and everything under it goes onto the map as typed cards (a chapter as a
+Frame, a scene or section as a Scene, a beat or subsection as a Beat, the rest
+as Notes; `carryRowToBoard`). Dropped on a card it goes inside it; dropped on
+the empty canvas it goes at the top (or under the card shown as a mini map); a
+click places it under the selected card. It is a copy: the outline is not
+changed.
+
 ## 12. Storage
 
 The same document and the same three tables carry v2. Migration

@@ -29,6 +29,8 @@ import {
   canChangeType,
   canReparent,
   carryRowToBoard,
+  kindLabel,
+  outlineRows,
   castForLibrary,
   childrenOf,
   collapseAll,
@@ -168,7 +170,9 @@ type Payload =
   | { kind: 'type'; type: string }
   | { kind: 'source'; source: { kind: SculptorSourceKind; id: string } }
   | { kind: 'entity'; id: string }
-  | { kind: 'unit'; id: string };
+  | { kind: 'unit'; id: string }
+  /** A row of the outline and everything under it (from Ken: *access to the outliner… drag pieces of that onto the board*). */
+  | { kind: 'row'; outlineId: string; id: string };
 
 type Camera = { zoom: number; pan: { x: number; y: number } };
 
@@ -223,6 +227,7 @@ export function SculptorWindow({
   const [searchOpen, setSearchOpen] = useState(false);
   const [clip, setClip] = useState<SculptClip | null>(null);
   const [shelfOpen, setShelfOpen] = useState(false);
+  const [outlineOpen, setOutlineOpen] = useState(false);
   const [viewName, setViewName] = useState('');
   const [status, setStatus] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
@@ -345,6 +350,9 @@ export function SculptorWindow({
     if (payload.kind === 'type') return addUnder(parentId, payload.type);
     if (payload.kind === 'source') return write((current, id) => placeSource(current, id, payload.source, parentId).file);
     if (payload.kind === 'entity') return write((current, id) => placeEntity(current, id, payload.id as SculptorEntityId, parentId).file);
+    if (payload.kind === 'row') {
+      return write((current, id) => carryRowToBoard(current, payload.outlineId as never, payload.id as never, id, parentId).file);
+    }
     // A scene already in the script: a scene card bound to it.
     write((current, id) => {
       const made = addNode(current, id, { parentId, kind: 'scene' });
@@ -381,7 +389,7 @@ export function SculptorWindow({
       });
       return;
     }
-    if (held.kind === 'row' && parentId) {
+    if (held.kind === 'row') {
       const outline = outlinesOf(file)[0];
       if (outline) write((current, id) => carryRowToBoard(current, outline.id, held.id, id, parentId).file);
     }
@@ -927,9 +935,24 @@ export function SculptorWindow({
           className={shelfOpen ? 'tool on' : 'tool'}
           aria-pressed={shelfOpen}
           title="Research and phone notes, to drag onto cards"
-          onClick={() => setShelfOpen(!shelfOpen)}
+          onClick={() => {
+            setShelfOpen(!shelfOpen);
+            setOutlineOpen(false);
+          }}
         >
           {shelfOpen ? '◧ Notes' : '▤ Notes'}
+        </button>
+        <button
+          type="button"
+          className={outlineOpen ? 'tool on' : 'tool'}
+          aria-pressed={outlineOpen}
+          title="The Outliner's chapters, sections and notes, to drag onto the map"
+          onClick={() => {
+            setOutlineOpen(!outlineOpen);
+            setShelfOpen(false);
+          }}
+        >
+          {outlineOpen ? '◧ Outliner' : '☰ Outliner'}
         </button>
         {boards.length > 1 && board ? (
           <>
@@ -967,6 +990,12 @@ export function SculptorWindow({
             onCarry={(held) => {
               carrying.current = held;
             }}
+          />
+        ) : outlineOpen ? (
+          <OutlinePanel
+            file={file}
+            hasSelection={chosen !== null}
+            onPlace={(outlineId, rowId) => place({ kind: 'row', outlineId, id: rowId }, chosen?.id ?? canvasParent())}
           />
         ) : (
           <Palette onAdd={(type) => addUnder(chosen?.id ?? canvasParent(), type)} hasSelection={chosen !== null} />
@@ -1520,6 +1549,113 @@ function Palette({ onAdd, hasSelection }: { onAdd(type: string): void; hasSelect
           );
         })}
       </ul>
+    </aside>
+  );
+}
+
+// -------------------------------------------------------------- the outliner
+
+/**
+ * The Outliner beside the map (from Ken: *in the story sculptor, there needs
+ * to be access to the outliner… you can drag pieces of that onto the board and
+ * put them in categories*). The outline as its tree, folded here without
+ * touching the Outliner's own folds. A row and everything under it goes onto
+ * the map as typed cards: dropped on a card it goes inside it, on the canvas it
+ * goes at the top; a click places it under the selected card. It is a copy:
+ * the outline is not changed.
+ */
+function OutlinePanel({
+  file,
+  hasSelection,
+  onPlace,
+}: {
+  file: ProjectFile;
+  hasSelection: boolean;
+  onPlace(outlineId: string, rowId: string): void;
+}) {
+  const outlines = outlinesOf(file);
+  const [outlineId, setOutlineId] = useState<string | null>(null);
+  const outline = outlines.find((one) => (one.id as string) === outlineId) ?? outlines[0] ?? null;
+  const [closed, setClosed] = useState<ReadonlySet<string>>(() => new Set());
+  const rows = useMemo(() => (outline ? outlineRows(outline, new Set(outline.items.map((item) => item.id as string))) : []), [outline]);
+  const shown: typeof rows = [];
+  let hideDeeper: number | null = null;
+  for (const row of rows) {
+    if (hideDeeper !== null && row.depth > hideDeeper) continue;
+    hideDeeper = closed.has(row.item.id as string) ? row.depth : null;
+    shown.push(row);
+  }
+  const toggle = (id: string) =>
+    setClosed((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  return (
+    <aside className="sc-palette sc-outline" aria-label="Outliner">
+      <h3>Outliner</h3>
+      {outlines.length > 1 && outline ? (
+        <select aria-label="Which outline" value={outline.id as string} onChange={(event) => setOutlineId(event.target.value)}>
+          {outlines.map((one) => (
+            <option key={one.id as string} value={one.id as string}>
+              {one.name || 'Outline'}
+            </option>
+          ))}
+        </select>
+      ) : null}
+      {rows.length === 0 ? (
+        <p className="muted small">The outline is empty. Add chapters and sections in the Outliner and they show here.</p>
+      ) : (
+        <>
+          <p className="muted small">
+            Drag a row onto a card to put it inside, or onto the canvas. Click to place it {hasSelection ? 'under the selected card' : 'at the top'}. Everything under it comes too.
+          </p>
+          <div className="sc-outline-folding">
+            <button type="button" className="ghost small" onClick={() => setClosed(new Set(rows.filter((row) => row.childCount > 0).map((row) => row.item.id as string)))}>
+              Collapse all
+            </button>
+            <button type="button" className="ghost small" onClick={() => setClosed(new Set())}>
+              Expand all
+            </button>
+          </div>
+          <ul className="sc-outline-list">
+            {shown.map((row) => {
+              const id = row.item.id as string;
+              const open = !closed.has(id);
+              const title = row.item.title.trim() || `Untitled ${kindLabel(row.item.kind).toLowerCase()}`;
+              return (
+                <li key={id} style={{ paddingLeft: row.depth * 12 }}>
+                  {row.childCount > 0 ? (
+                    <button
+                      type="button"
+                      className="sc-outline-fold"
+                      aria-expanded={open}
+                      aria-label={`${open ? 'Fold' : 'Unfold'} ${title}`}
+                      onClick={() => toggle(id)}
+                    >
+                      {open ? '▾' : '▸'}
+                    </button>
+                  ) : (
+                    <span className="sc-outline-fold" aria-hidden="true" />
+                  )}
+                  <button
+                    type="button"
+                    className="sc-outline-row"
+                    draggable
+                    onDragStart={(event) => dragPayload(event, { kind: 'row', outlineId: outline!.id as string, id })}
+                    onClick={() => onPlace(outline!.id as string, id)}
+                    title={`Place “${title}”${row.childCount > 0 ? ' and everything under it' : ''} on the map`}
+                  >
+                    <span className="sc-outline-kind">{kindLabel(row.item.kind)}</span>
+                    <span className="sc-outline-title">{title}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )}
     </aside>
   );
 }

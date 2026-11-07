@@ -1,5 +1,6 @@
 import {
   addChild,
+  addNode,
   childrenOf,
   findBoard,
   findNode,
@@ -135,20 +136,24 @@ export const carryRowToBoard = (
   outlineId: OutlineId,
   itemId: OutlineItemId,
   boardId: BoardId,
-  under: SculptorNodeId,
+  /** The card it goes inside, or null for the top of the map (from Ken: drag from the Outliner onto the board). */
+  under: SculptorNodeId | null,
 ): { file: ProjectFile; nodeId: SculptorNodeId | null; leftBehind: number } => {
   const outline = findOutline(file, outlineId);
   const board = findBoard(file, boardId);
   const item = outline ? findOutlineItem(outline, itemId) : null;
-  const parent = board ? findNode(board, under) : null;
-  if (!outline || !board || !item || !parent) return { file, nodeId: null, leftBehind: 0 };
+  const parent = board && under ? findNode(board, under) : null;
+  if (!outline || !board || !item || (under !== null && !parent)) return { file, nodeId: null, leftBehind: 0 };
 
   let current = file;
   let top: SculptorNodeId | null = null;
   let leftBehind = 0;
 
-  const carry = (from: typeof item, parentId: SculptorNodeId): void => {
-    const made = addChild(current, boardId, parentId, { title: from.title, kind: CARD_KIND[from.kind] ?? 'note' });
+  const carry = (from: typeof item, parentId: SculptorNodeId | null): void => {
+    const kind = CARD_KIND[from.kind] ?? 'note';
+    const made = parentId
+      ? addChild(current, boardId, parentId, { title: from.title, kind })
+      : addNode(current, boardId, { parentId: null, title: from.title, kind });
     if (!made.nodeId) {
       // No column to the right of the parent: everything from here down stays
       // in the outline, and is counted rather than silently dropped.

@@ -23143,3 +23143,13 @@ input.note-rewrite-title {
   color: var(--text);
 }
 input.note-rewrite-title:focus { border-color: var(--gold); outline: none; }
+/* The Outliner beside the Sculptor's map (from Ken). */
+.sc-outline { flex-basis: 240px; display: flex; flex-direction: column; gap: 6px; }
+.sc-outline-folding { display: flex; gap: 4px; }
+.sc-outline-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; overflow-y: auto; overflow-x: hidden; }
+.sc-outline-list li { display: flex; align-items: center; gap: 2px; min-width: 0; }
+.sc-outline-fold { flex: 0 0 16px; width: 16px; background: none; border: none; color: var(--muted); cursor: pointer; padding: 0; font-size: 11px; }
+.sc-outline-row { flex: 1; min-width: 0; display: flex; justify-content: flex-start; overflow: hidden; gap: 6px; align-items: baseline; padding: 4px 6px; border-radius: 6px; border: 1px solid transparent; background: rgba(255, 255, 255, 0.02); color: var(--text); cursor: grab; text-align: left; }
+.sc-outline-row:hover { border-color: var(--gold-deep); }
+.sc-outline-kind { flex: 0 0 auto; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gold); }
+.sc-outline-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; }

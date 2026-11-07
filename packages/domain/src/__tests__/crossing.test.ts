@@ -155,6 +155,16 @@ describe('a row carried onto the board', () => {
     expect(childrenOf(live, carried.nodeId!).map((node) => node.title)).toEqual(['She enters']);
   });
 
+  it('can land at the top of the map, with its branch, when dropped on empty canvas (from Ken)', () => {
+    const made = written();
+    const carried = carryRowToBoard(made.file, made.outline.id, made.scene, made.board.id, null);
+    const live = board(carried.file, made.board);
+    const top = findNode(live, carried.nodeId!)!;
+    expect(top.parentId).toBeNull();
+    expect(top.kind).toBe('scene');
+    expect(childrenOf(live, top.id).map((node) => node.title)).toEqual(['She enters']);
+  });
+
   it('brings the whole subtree, however deep, as typed cards (v2: no column limit)', () => {
     const made = written();
     const carried = carryRowToBoard(made.file, made.outline.id, made.scene, made.board.id, made.blockNode);
