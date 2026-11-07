@@ -23131,3 +23131,15 @@ dialog.readback-dialog[open] {
 .research-outline-chevron { display: inline-block; width: 10px; color: var(--muted); font-size: 10px; }
 .mobile-text { max-height: 11em; overflow-y: auto; padding-right: 4px; }
 .mobile-subject.phone-note-label { font-weight: 600; }
+input.note-rewrite-title {
+  flex: 1 1 260px;
+  min-width: 160px;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 4px 8px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+}
+input.note-rewrite-title:focus { border-color: var(--gold); outline: none; }

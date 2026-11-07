@@ -7,6 +7,7 @@ import {
   placeNow,
   placeOf,
   setNoteRewrite,
+  updateResearchItem,
   textToPlace,
   type BeatId,
   type ProjectFile,
@@ -111,7 +112,16 @@ export function NoteRewrite({
   return (
     <dialog ref={dialog} className="note-rewrite" aria-label={`Rewrite ${item.title}`} onClose={onClose} onCancel={onClose}>
       <header className="note-rewrite-head">
-        <strong className="note-rewrite-title">{item.title}</strong>
+        {/* The title is retyped here too (from Ken: *a lot of times it's
+            dictated in and it's wrong, or misspelled*). Saved as typed. */}
+        <input
+          className="note-rewrite-title"
+          aria-label="Title"
+          value={item.title}
+          placeholder="Untitled note"
+          spellCheck
+          onChange={(event) => onUpdate((current) => updateResearchItem(current, item.id, { title: event.target.value }))}
+        />
         <span className="muted small">{addTo ? `Sorted into ${addTo.under}` : where ? `Filed under ${where}` : 'Not in a chapter yet'}</span>
         <span className={`note-rewrite-state${used ? ' used' : ''}`}>
           {used ? (

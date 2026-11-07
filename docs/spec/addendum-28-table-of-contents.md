@@ -947,3 +947,12 @@ chapters just to make it easy.* Folding a chapter in Research's outline
 sidebar now hides its sections and subsections too, not only its notes; each
 folder that holds anything shows ▸ or ▾; and **Collapse all** and **Expand
 all** sit beside the heading.
+
+## The title is retyped where the note opens (November 2026)
+
+From Ken: *when you open up a note in the research section, it needs to allow
+you to retype and edit the title of it also, because a lot of times it's
+dictated in and it's wrong, or misspelled.* The rewrite window a double-click
+opens now carries the title as a field at its head, saved as typed and
+spell-checked like every other field (right-click for suggestions). The detail
+panel beside the list already had one.
