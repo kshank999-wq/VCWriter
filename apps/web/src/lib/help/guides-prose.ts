@@ -283,6 +283,8 @@ export const GUIDES_PROSE: Guide[] = [
           'A column down the right edge holds the writer’s tools. **Document** and **Outliner** switch between the page and an outline of its headings. **Navigate** shows the headings beside the page. **Research** opens your notes. **Extract** opens Extract & Organize. **Sources** is the library and the citation style, **Cite** puts a citation at the cursor, and **Find** searches the document.',
           '**Extract** is for pulling passages out of what you have written. Select some words and press a category — **Character**, **Location**, **Idea** and so on. The words stay in the page, a copy goes into that category’s bin, and **Send…** copies extracts on to another project.',
         ],
+        shot: 'help/document-research',
+        shotAlt: 'Research opened from the right-hand menu of a Document project',
       },
       {
         heading: 'Research, and Place on page',

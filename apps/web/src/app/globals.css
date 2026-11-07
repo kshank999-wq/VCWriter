@@ -399,6 +399,56 @@ section > .lede {
   font-size: 14px;
 }
 
+/* The release check (admin): every guide's steps to tick. */
+.release-check-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  padding: 8px 0 16px;
+}
+
+.release-check-count {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.release-check-ok {
+  color: var(--gold);
+  font-size: 14px;
+}
+
+.release-check-guide {
+  border: 1px solid var(--border);
+  background: var(--bg-raised);
+  padding: 10px 14px;
+  margin: 8px 0;
+}
+
+.release-check-guide summary {
+  cursor: pointer;
+}
+
+.release-check-guide summary a {
+  color: var(--gold);
+  font-size: 13px;
+}
+
+.release-check-guide ul {
+  list-style: none;
+  padding: 8px 0 0;
+  margin: 0;
+}
+
+.release-check-guide li {
+  padding: 4px 0;
+  font-size: 15px;
+}
+
+.release-check-section {
+  color: var(--text-muted);
+}
+
 /* The help centre (addendum 35 §9). */
 .help-cards {
   display: grid;

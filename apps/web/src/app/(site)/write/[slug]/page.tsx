@@ -53,6 +53,9 @@ export default async function ModulePage({ params }: { params: Params | Promise<
         <p>{page.intro}</p>
         <Link href="/download" className="button">
           Buy &amp; download
+        </Link>{' '}
+        <Link href={`/help/${page.slug}`} className="button secondary">
+          Read the guide
         </Link>
       </div>
 

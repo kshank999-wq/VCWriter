@@ -11,6 +11,7 @@ const ITEMS = [
   { href: '/admin/discounts', label: 'Discounts' },
   { href: '/admin/licenses', label: 'Licenses' },
   { href: '/admin/releases', label: 'Releases' },
+  { href: '/admin/release-check', label: 'Release check' },
   { href: '/admin/errors', label: 'Errors' },
 ] as const;
 

@@ -258,3 +258,59 @@ of the plan).
 - **Not the phone.** The store screenshots for VC Writer Notes have to come
   from a real device or simulator (`docs/store-listing.md` §4) and are not
   made here.
+
+## 9. The help centre, and help from inside the program
+
+Part C of the plan: tutorials and in-app help.
+
+- **vc-writer.com/help.** Twenty-three guides in three groups:
+  - *Getting started*: getting started, finding your way round, saving and
+    recovery, notes from your phone.
+  - *Modules*: one guide for each of the eight.
+  - *Rooms and tools*: Research, the Story Sculptor, the Outliner, the
+    Character Creator, Preview, the editors, Read back, Focus, Layout,
+    citations and references, spelling and the thesaurus.
+
+  A guide is data (`apps/web/src/lib/help/`, typed by `types.ts`): short
+  sections of paragraphs and numbered steps, with button and menu names in
+  the program's own words, **bold** for what to press and *italic* for what
+  the program says. The pictures are the shots of §8. Pages:
+  `/help` (the index, a card per guide) and `/help/<slug>` (the guide, with
+  the list of guides beside it, *Read next*, and where to report a guide that
+  does not match the program). Each has its own title, description,
+  canonical address and share image, and all are in the sitemap.
+- **Written from the code.** Each guide was drafted against its addenda and
+  the components, and every label was checked against the source. Where the
+  spec and the code disagree, the guides follow the code. For example, the
+  stage-play styles are chosen in *File ▸ Page setup…* (seven of them,
+  counting US musical), and the instructional book's learning aids are
+  Summary, What you learned and Review questions.
+  `src/lib/__tests__/help-guides.test.ts` checks:
+  - every slug appears once
+  - every *Read next* link points to a guide that exists
+  - every picture is on disk
+  - every module, and every guide the program opens, has a guide
+  - no section is empty
+- **Help ▸ Guide for this screen (F1)** in the program opens the guide for
+  what is in front: a room first (Layout, Sculptor, Outliner, Research), then
+  Read back or Focus, then the page (Preview, Editors, the book's Outline page,
+  Home), then the project's own module. With nothing open it is *Getting
+  started*. **Help ▸ All guides** opens the index. `help-links.ts` decides;
+  `window.open` sends it to the browser in the desktop app and to a tab in the
+  preview.
+- **Each module page links to its guide** (*Read the guide*). *Help* is in
+  the site's header and footer.
+- **The release check** (`/admin/release-check`, administrators only) lists
+  every step of every guide as a box to tick, separately for Windows and for
+  Mac, kept in that browser. Before a release, someone works through it on a
+  clean machine of each kind. A step that does not do what its guide says is
+  fixed, in the program or in the guide, before the installer ships. It reads
+  the guides themselves, so it is never a check of an older guide.
+- **Not built yet: the videos.** The same capture can record the walk to
+  each screen, but a 60–90 second tutorial needs a script and a voice. That
+  is its own piece of work.
+- **Found while writing the guides.** The import dialog still pointed at
+  *File ▸ Add stories to the collection…*, which became *File ▸ Import… ▸
+  More stories*; it is corrected. Ctrl/Cmd+Shift+P is two things at once: the
+  Inspector's own key, and *Export PDF…* on the File menu. It is left for Ken
+  to choose which keeps it.

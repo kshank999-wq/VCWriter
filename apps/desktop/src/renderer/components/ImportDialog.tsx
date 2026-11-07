@@ -680,7 +680,7 @@ export function ImportDialog({ open, kind, file, landed, onClose, onImported, on
                       A collection — each named heading begins a story ({storyHeads.length} of{' '}
                       {storyHeads.length === 1 ? 'it' : 'them'} here: {storyHeads.slice(0, 3).join(', ')}
                       {storyHeads.length > 3 ? '…' : ''}). A numeral on its own divides a story rather than
-                      beginning one. More can be added later from File ▸ Add stories to the collection…
+                      beginning one. More can be added later from File ▸ Import… ▸ More stories.
                     </label>
                   </fieldset>
                 ) : format === 'short_story' && parts.length === 1 ? (

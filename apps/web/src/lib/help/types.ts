@@ -13,7 +13,7 @@ export type ShotPath = `help/${string}` | `modules/${string}`;
 
 export interface GuideSection {
   readonly heading: string;
-  /** Paragraphs, in order. Plain text; **bold** with double asterisks is allowed. */
+  /** Paragraphs, in order. Plain text; **bold** (what to press) and *italic* (the program's own words) are allowed. */
   readonly body?: ReadonlyArray<string>;
   /** Numbered steps, each one action. Button and menu names exactly as the program shows them. */
   readonly steps?: ReadonlyArray<string>;
