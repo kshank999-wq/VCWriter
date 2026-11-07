@@ -47,6 +47,9 @@ export const SHOTS = [
 
   // ----------------------------------------------------- per-module rooms
   { id: 'novel-layout', project: 'novel', out: 'help', steps: [{ page: 'Layout' }, { wait: 2000 }, { label: 'Next spread' }, { label: 'Next spread' }, { label: 'Next spread', wait: 1500 }], shows: 'Layout: the novel set as a book, at its first chapter', uses: ['help: layout'] },
+  { id: 'layout-book-settings', project: 'novel', out: 'help', steps: [{ page: 'Layout' }, { wait: 2000 }, { click: 'Book settings…', wait: 1200 }], shows: 'Book settings: trim size, typeface, margins', uses: ['/layout', 'help: layout'] },
+  { id: 'layout-chapter-openings', project: 'novel', out: 'help', steps: [{ page: 'Layout' }, { wait: 2000 }, { click: 'Chapter openings…', wait: 1200 }], shows: 'Chapter openings: one style for every chapter', uses: ['/layout'] },
+  { id: 'layout-ebook', project: 'novel', out: 'help', steps: [{ page: 'Layout' }, { wait: 2000 }, { click: 'Export as eBook…', wait: 1500 }], shows: 'Export as eBook: the store presets and the preflight', uses: ['/layout'] },
   { id: 'novel-research', project: 'novel', out: 'help', steps: [{ page: 'Research' }], shows: 'Research in a novel', uses: ['help: research'] },
   { id: 'instructional-outliner', project: 'instructional', out: 'help', steps: [{ page: 'Outline' }], shows: 'The book outliner: chapters, sections, subsections', uses: ['help: instructional'] },
   { id: 'instructional-research', project: 'instructional', out: 'help', steps: [{ page: 'Research' }], shows: 'Research with the references library', uses: ['help: citations'] },

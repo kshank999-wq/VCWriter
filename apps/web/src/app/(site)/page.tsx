@@ -37,34 +37,6 @@ const FEATURES = [
   },
 ];
 
-/** What the Layout room does, for its band on the front page. */
-const LAYOUT_FEATURES = [
-  {
-    title: 'Pick a trim size',
-    body: 'The margins, headers, footers and page numbers set themselves from it, with the spreads balanced.',
-  },
-  {
-    title: 'Chapter openings',
-    body: 'Styled once for the whole book: drop caps, small caps, ornaments, chapters opening on the right.',
-  },
-  {
-    title: 'Front and back matter',
-    body: 'Half title, title page, copyright, contents, about the author, and pages of your own.',
-  },
-  {
-    title: 'Pictures',
-    body: 'Illustrations placed in the text or given a page of their own.',
-  },
-  {
-    title: 'Print and Word',
-    body: 'A print-ready PDF for your printer, and a Word file for an editor.',
-  },
-  {
-    title: 'eBooks for every store',
-    body: 'One EPUB, checked before it is written against Amazon Kindle, Apple Books, Barnes & Noble, Kobo, Google Play Books, Draft2Digital and IngramSpark.',
-  },
-];
-
 export default function HomePage() {
   return (
     <>
@@ -95,38 +67,19 @@ export default function HomePage() {
         <ModuleChooser />
       </section>
 
-      {/* Layout, promoted on its own (from Ken: *most people use a separate
-          layout program, but this is included in the package. It's a major
-          feature.*). Novels, short stories and instructional books. */}
-      <section id="layout" className="feature-band">
-        <p className="eyebrow">Included — no separate layout program</p>
-        <h2>Layout: the finished book, set where you wrote it</h2>
-        <p className="lede">
-          Most writers finish a manuscript and then buy a second program to turn it into a book. VC Writer has the
-          layout room built in, for novels, short-story collections and instructional books.
-        </p>
-        <figure className="feature-band-shot">
-          <img
-            src="/help/novel-layout.jpg"
-            width={2880}
-            height={1800}
-            alt="The Layout room with a novel set as a book, open at chapter one"
-            loading="lazy"
-          />
-        </figure>
-        <div className="feature-grid">
-          {LAYOUT_FEATURES.map((feature) => (
-            <div key={feature.title}>
-              <h3>{feature.title}</h3>
-              <p>{feature.body}</p>
-            </div>
-          ))}
+      {/* Layout and publishing, under all the modules (from Ken): one line and
+          a button to its own page. */}
+      <section id="layout" className="publish-band">
+        <div>
+          <h2>Layout and publishing included</h2>
+          <p>
+            Format your book for print and publish it as an eBook for every major store, without a separate layout
+            program. For novels, short-story collections and instructional books.
+          </p>
         </div>
-        <p>
-          <Link href="/help/layout" className="button secondary">
-            See how Layout works
-          </Link>
-        </p>
+        <Link href="/layout" className="button">
+          Layout
+        </Link>
       </section>
 
       <section id="features">

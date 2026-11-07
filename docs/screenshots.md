@@ -35,6 +35,9 @@ device or simulator (`docs/store-listing.md` §4).
 | [`read-back`](../apps/web/public/help/read-back.jpg) | Read back: voices per character | The Green Light (screenplay) | help: read back |
 | [`focus`](../apps/web/public/help/focus.jpg) | Focus mode: the page and nothing else | The Green Light (screenplay) | help: writing |
 | [`novel-layout`](../apps/web/public/help/novel-layout.jpg) | Layout: the novel set as a book, at its first chapter | The Heron Letter (novel) | help: layout |
+| [`layout-book-settings`](../apps/web/public/help/layout-book-settings.jpg) | Book settings: trim size, typeface, margins | The Heron Letter (novel) | /layout; help: layout |
+| [`layout-chapter-openings`](../apps/web/public/help/layout-chapter-openings.jpg) | Chapter openings: one style for every chapter | The Heron Letter (novel) | /layout |
+| [`layout-ebook`](../apps/web/public/help/layout-ebook.jpg) | Export as eBook: the store presets and the preflight | The Heron Letter (novel) | /layout |
 | [`novel-research`](../apps/web/public/help/novel-research.jpg) | Research in a novel | The Heron Letter (novel) | help: research |
 | [`instructional-outliner`](../apps/web/public/help/instructional-outliner.jpg) | The book outliner: chapters, sections, subsections | Plain and Clear (instructional book) | help: instructional |
 | [`instructional-research`](../apps/web/public/help/instructional-research.jpg) | Research with the references library | Plain and Clear (instructional book) | help: citations |
