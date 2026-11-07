@@ -16,9 +16,20 @@ export const dynamicParams = false;
 export async function generateMetadata({ params }: { params: Params | Promise<Params> }): Promise<Metadata> {
   const page = moduleBySlug((await params).slug);
   if (!page) return {};
+  const name = formatName(page.format);
+  const picture = `/modules/${page.slug}.jpg`;
   return {
-    title: `${formatName(page.format)} — VC Writer`,
+    title: name,
     description: page.intro,
+    alternates: { canonical: `/write/${page.slug}` },
+    openGraph: {
+      title: `${name} — VC Writer`,
+      description: page.intro,
+      url: `/write/${page.slug}`,
+      type: 'website',
+      images: [{ url: picture, width: 2880, height: 1800, alt: `VC Writer with a ${name.toLowerCase()} project open` }],
+    },
+    twitter: { card: 'summary_large_image', title: `${name} — VC Writer`, description: page.intro, images: [picture] },
   };
 }
 
@@ -44,6 +55,18 @@ export default async function ModulePage({ params }: { params: Params | Promise<
           Buy &amp; download
         </Link>
       </div>
+
+      {/* The program itself, with a demo project of this kind open. Taken by
+          scripts/module-shots/capture.mjs, which is rerun when a screen changes. */}
+      <figure className="module-shot">
+        <img
+          src={`/modules/${page.slug}.jpg`}
+          width={2880}
+          height={1800}
+          alt={`VC Writer with a ${formatName(page.format).toLowerCase()} project open`}
+          loading="eager"
+        />
+      </figure>
 
       <section>
         <h2>Why it works</h2>

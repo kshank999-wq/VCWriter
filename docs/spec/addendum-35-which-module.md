@@ -206,6 +206,20 @@ who it is.*
   chooser again at the foot with the current module marked. What each page
   says is in `apps/web/src/lib/modules.ts`. The pages are static, and any other
   slug is a 404.
-- **Screenshots are still to come.** They will be taken automatically from the
-  browser preview with a demo project for each module (the screenshot and
-  tutorial plan).
+- **Each page shows the program.** Under the headline is a screenshot of VC
+  Writer with a demo project of that kind open: `public/modules/<slug>.jpg`,
+  2880×1800. They are not drawn by hand. `pnpm --filter @vcwriter/web shots`
+  (`scripts/module-shots/capture.mjs`) builds the browser preview, serves it,
+  puts each demo project from `scripts/module-shots/demo-projects.mjs` into the
+  preview's own storage, opens it as a writer would and saves the workspace.
+  The demo projects are original sample writing (a lighthouse screenplay, a
+  newsroom series, a novel, a style guide, a one-act play, three short stories,
+  a 30-second bakery spot and a heritage proposal), built with the domain's
+  importers so they open exactly as a writer's would. Rerun the script when a
+  screen changes. `--no-build` reuses the last preview build, and
+  `CHROMIUM_PATH` names a browser outside Playwright's cache.
+- **Sharing and search.** Each module page has its own title (*Novel · VC
+  Writer*), description, canonical address, and Open Graph and Twitter card
+  images (its screenshot), so a shared link shows the module. `sitemap.xml`
+  lists the front page, buying, every module page, Notes and Writers Room.
+- **The top menu** has *Modules* first, going to the chooser on the front page.

@@ -42,6 +42,7 @@ export async function SiteChrome({ children }: { children: React.ReactNode }) {
             <Link href="/" className="wordmark" aria-label="VC Writer home">
               <Wordmark />
             </Link>
+            <Link href="/#modules">Modules</Link>
             <Link href="/#features">Features</Link>
             <Link href="/download">Buy &amp; download</Link>
             <Link href="/notes">Notes</Link>

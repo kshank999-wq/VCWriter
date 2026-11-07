@@ -10,7 +10,8 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "check:csp": "node scripts/check-csp.mjs"
+    "check:csp": "node scripts/check-csp.mjs",
+    "shots": "node scripts/module-shots/capture.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.124.0",
