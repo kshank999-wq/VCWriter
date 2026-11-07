@@ -10,12 +10,12 @@ import { SHOTS } from './shot-list.mjs';
 
 const root = resolve(import.meta.dirname, '..', '..', '..', '..');
 const PROJECTS = {
-  screenplay: 'The Green Light (screenplay)',
-  series: 'Night Desk (series)',
-  novel: 'The Heron Letter (novel)',
+  screenplay: 'Night of the Living Dead (screenplay, public domain)',
+  series: 'Sherlock Holmes (series, after Conan Doyle)',
+  novel: 'Great Expectations (novel, Dickens)',
   instructional: 'Plain and Clear (instructional book)',
-  stage_play: 'Ten Past Nine (stage play)',
-  short_story: 'Salt and Iron: Stories (collection)',
+  stage_play: 'Hamlet (stage play, Shakespeare)',
+  short_story: 'Tales of Mystery (collection, Poe)',
   short_form: 'Harbour Bakery — 30s Spot (short form)',
   document: 'Heron Window Proposal (document)',
 };
@@ -34,7 +34,7 @@ edit by hand.** Rewrite it with \`node apps/web/scripts/shots/write-list.mjs\`.
 Retake them all with \`pnpm --filter @vcwriter/web shots\`, or retake some by
 naming them: \`pnpm --filter @vcwriter/web shots -- sculptor outliner\`. The
 capture builds the browser preview, opens each shot's demo project
-(\`demo-projects.mjs\`: original sample writing, one project per module),
+(\`demo-projects.mjs\`: public-domain classics for the story modules, original writing for the rest),
 walks to the screen and saves it at 2880×1800. Retake after any change to a
 screen a shot shows. Addendum 35 §7–§8 says how it works.
 

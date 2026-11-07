@@ -1,10 +1,18 @@
 /**
  * The demo projects the module screenshots are taken from (addendum 35 §7).
  *
- * One small, original project per module, built with the domain's own
- * importers and mutations so each opens in the program exactly as a writer's
- * would. All the writing here is made up for the purpose.
+ * One small project per module, built with the domain's own importers and
+ * mutations so each opens in the program exactly as a writer's would.
+ *
+ * **The story modules use public-domain classics** (from Ken; addendum 35
+ * §10): Night of the Living Dead (screenplay), Sherlock Holmes (series),
+ * Great Expectations (novel), Poe's tales (short stories) and Hamlet (stage
+ * play). Their texts are in ./classics. The instructional book, the short-form
+ * spot and the document are original, written for the purpose.
  */
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { NIGHT_OF_THE_LIVING_DEAD, SHERLOCK_EPISODES } from './classics/adaptations.mjs';
 import {
   addResearchItem,
   addRow,
@@ -30,6 +38,8 @@ import {
   updateBeat,
   updateUnit,
 } from '@vcwriter/domain';
+
+const classic = (name) => readFileSync(resolve(import.meta.dirname, 'classics', name), 'utf8');
 
 /** Titles for the beats, in story order, so no card reads *Untitled*. */
 const titled = (file, beatTitles, unitTitles = []) => {
@@ -64,91 +74,12 @@ const withNotes = (file, notes) => {
   return next;
 };
 
-const SCREENPLAY = [
-  ['Scene Heading', 'EXT. LIGHTHOUSE POINT - NIGHT'],
-  ['Action', 'Rain hammers the gallery rail. MARA OKONJO (40s), keeper\'s coat over a nightdress, fights the door open against the wind.'],
-  ['Action', 'Far out, a single green light blinks where no ship should be.'],
-  ['Character', 'MARA'],
-  ['Dialogue', 'That is not a boat.'],
-  ['Scene Heading', 'INT. LAMP ROOM - CONTINUOUS'],
-  ['Action', 'The great lens turns. Mara grabs the logbook and runs a finger down thirty years of her father\'s handwriting.'],
-  ['Character', 'TEO (V.O.)'],
-  ['Parenthetical', '(over the radio, crackling)'],
-  ['Dialogue', 'Point station, this is the harbour. You seeing what I\'m seeing?'],
-  ['Character', 'MARA'],
-  ['Dialogue', 'Every night since Tuesday, Teo. And it\'s getting closer.'],
-  ['Scene Heading', 'EXT. HARBOUR WALL - DAWN'],
-  ['Action', 'TEO BRANDT (30s), harbourmaster, lowers his binoculars. The green light is gone. On the shingle below, something has washed up.'],
-  ['Character', 'TEO'],
-  ['Dialogue', 'Mara. You need to come down here.'],
-  ['Transition', 'CUT TO:'],
-  ['Scene Heading', 'INT. KEEPER\'S COTTAGE - KITCHEN - DAY'],
-  ['Action', 'A brass ship\'s lantern sits on the table between them, still warm, its glass painted green.'],
-  ['Character', 'MARA'],
-  ['Dialogue', 'This came off the Ariadne. She went down in 1962.'],
-];
-
-const STAGE_PLAY = [
-  ['Scene Heading', 'ACT ONE, SCENE ONE'],
-  ['Action', 'A railway waiting room, after the last train. One bench, one clock that has stopped at ten past nine. JUNE sits with a suitcase on her knees.'],
-  ['Character', 'JUNE'],
-  ['Dialogue', 'They said there would be one more. They always say there\'s one more.'],
-  ['Action', 'Enter ALBIE, a porter, carrying a lamp.'],
-  ['Character', 'ALBIE'],
-  ['Dialogue', 'Nothing more tonight, miss. Not on this line.'],
-  ['Character', 'JUNE'],
-  ['Dialogue', 'Then I\'ll wait for the morning.'],
-  ['Character', 'ALBIE'],
-  ['Parenthetical', '(setting the lamp down)'],
-  ['Dialogue', 'It\'s a long night to spend with a clock that won\'t move.'],
-  ['Character', 'JUNE'],
-  ['Dialogue', 'I\'ve spent longer with less.'],
-  ['Action', 'He sits at the far end of the bench. Neither looks at the other. Lights narrow to the lamp.'],
-];
-
 const episode = (number, title, lines) => ({ number, title, xml: fdx(lines) });
 
-const SERIES = [
-  episode(1, 'Pilot', [
-    ['Scene Heading', 'INT. NIGHT DESK, CITY RECORD - NIGHT'],
-    ['Action', 'Three desks, one working lamp. DEV ASHBY (20s) types with the phone wedged under his ear.'],
-    ['Character', 'DEV'],
-    ['Dialogue', 'No, I understand it\'s two in the morning. That\'s why I\'m calling you.'],
-    ['Action', 'RUTH CALDER (50s), night editor, drops a folder on his keyboard.'],
-    ['Character', 'RUTH'],
-    ['Dialogue', 'Forget the council. The river\'s gone red at the weir.'],
-  ]),
-  episode(2, 'The Weir', [
-    ['Scene Heading', 'EXT. RIVERSIDE WEIR - DAWN'],
-    ['Action', 'Dev and Ruth stand on the footbridge. Below them the water runs the colour of rust.'],
-    ['Character', 'RUTH'],
-    ['Dialogue', 'Whoever did this wanted it seen.'],
-  ]),
-  episode(3, 'Upstream', [
-    ['Scene Heading', 'INT. DYE WORKS - DAY'],
-    ['Action', 'Abandoned vats. Fresh footprints in the dust lead to a door that should be locked.'],
-    ['Character', 'DEV'],
-    ['Dialogue', 'Somebody\'s been here this week.'],
-  ]),
-];
+const HAMLET = JSON.parse(classic('hamlet-act-one-scene-one.json'));
+const SERIES = SHERLOCK_EPISODES.map((one, index) => episode(index + 1, one.title, one.lines));
 
-const NOVEL = `Chapter One
-
-The letter arrived on the first warm day of April, which Nell would later decide was the only sign the universe ever gave her.
-
-It was addressed to her grandmother, who had been dead for eleven years, and it had been posted in a town Nell had never heard of. The stamp showed a heron standing in reeds. The handwriting was careful, old-fashioned, the kind taught with a ruler across the knuckles.
-
-She did not open it at the door. She carried it through the house the way you might carry a bird that had flown into a window, not sure yet whether it would live.
-
-Chapter Two
-
-Marsh End was three streets, a church with no spire, and a pub that had changed its name so many times the locals simply called it the Pub.
-
-Nell parked by the war memorial and sat for a while with the engine ticking. The letter lay on the passenger seat. She had read it six times on the drive and it still said the same thing: Your grandmother left something with me in 1974. It is time someone came for it.
-
-Chapter Three
-
-The woman who answered the door was older than anyone Nell had ever met, and she looked at Nell as though she had been expecting someone else entirely.`;
+const NOVEL = classic('great-expectations.txt');
 
 const INSTRUCTIONAL = `Chapter 1: Writing Clear Sentences
 
@@ -172,21 +103,7 @@ Chapter 2: Building Paragraphs
 
 A paragraph is a unit of thought. It opens with a claim, supports it, and hands the reader on to the next.`;
 
-const STORIES = `Chapter 1: The Glassblower's Daughter
-
-Every morning her father lit the furnace before the sun came up, and every morning Ilse watched the orange light climb the workshop wall like a second, smaller dawn.
-
-He made bottles for the apothecary and windows for the church. But once a year, on the night of the first frost, he made something for no one at all.
-
-Chapter 2: Salt and Iron
-
-The fishing boats came back at four, and by five the harbour smelled of diesel and gutted mackerel and the particular cold that lives in wet rope.
-
-Tomas had been coming down to watch them for forty years. His wife said he was waiting for something. He said he was only counting.
-
-Chapter 3: The Last Bus to Kettering
-
-The driver did not take her money. He looked at her once in the mirror, the way you look at a word you are sure you have spelled wrong, and pulled away from the stop.`;
+const STORIES = classic('poe-tales.txt');
 
 const DOCUMENT = `Marsh End Heritage Trust
 
@@ -224,7 +141,7 @@ const withOutline = (file, rows) => {
 
 /** A story map for the screenplay: two acts, their turning points, the cast and what causes what. */
 const withMap = (file) => {
-  const made = createBoard(file, { name: 'The Green Light' });
+  const made = createBoard(file, { name: 'Night of the Living Dead' });
   let next = made.file;
   const board = made.board.id;
   const node = (input) => {
@@ -232,25 +149,25 @@ const withMap = (file) => {
     next = added.file;
     return added.nodeId;
   };
-  const actOne = node({ kind: 'frame', title: 'Act One: The light' });
-  const inciting = node({ parentId: actOne, kind: 'plot_point', title: 'The green light returns' });
-  node({ parentId: inciting, kind: 'scene', title: 'Lighthouse point, night' });
-  node({ parentId: inciting, kind: 'scene', title: 'Teo on the radio' });
-  const discovery = node({ parentId: actOne, kind: 'plot_point', title: 'Something washes up' });
-  node({ parentId: discovery, kind: 'scene', title: 'The harbour wall at dawn' });
-  const actTwo = node({ kind: 'frame', title: 'Act Two: The Ariadne' });
-  const lantern = node({ parentId: actTwo, kind: 'plot_point', title: 'The lantern is from the wreck' });
-  node({ parentId: lantern, kind: 'scene', title: 'Keeper\'s cottage kitchen' });
-  node({ parentId: actTwo, kind: 'plot_point', title: 'Mara reads her father\'s log' });
+  const actOne = node({ kind: 'frame', title: 'Act One: The cemetery' });
+  const attack = node({ parentId: actOne, kind: 'plot_point', title: 'Johnny is attacked' });
+  node({ parentId: attack, kind: 'scene', title: 'The drive out' });
+  node({ parentId: attack, kind: 'scene', title: 'At their father\'s grave' });
+  const refuge = node({ parentId: actOne, kind: 'plot_point', title: 'Barbra finds the farmhouse' });
+  node({ parentId: refuge, kind: 'scene', title: 'Ben boards up the house' });
+  const actTwo = node({ kind: 'frame', title: 'Act Two: Under siege' });
+  const radio = node({ parentId: actTwo, kind: 'plot_point', title: 'The radio: the dead are walking' });
+  node({ parentId: radio, kind: 'scene', title: 'Beat \'em or burn \'em' });
+  node({ parentId: actTwo, kind: 'plot_point', title: 'The Coopers come up from the cellar' });
   const cast = node({ kind: 'frame', title: 'Cast' });
-  for (const person of next.characters) {
+  for (const person of next.characters.slice(0, 4)) {
     const placed = placeSource(next, board, { kind: 'character', id: person.id }, cast);
     next = placed.file;
   }
-  const theme = node({ kind: 'note', title: 'What the dead leave lit for us' });
-  if (inciting && discovery) next = linkNodes(next, board, inciting, discovery, { type: 'causes' }).file;
-  if (discovery && lantern) next = linkNodes(next, board, discovery, lantern, { type: 'causes' }).file;
-  if (theme && lantern) next = linkNodes(next, board, theme, lantern).file;
+  const theme = node({ kind: 'note', title: 'The danger is inside the house too' });
+  if (attack && refuge) next = linkNodes(next, board, attack, refuge, { type: 'causes' }).file;
+  if (refuge && radio) next = linkNodes(next, board, refuge, radio, { type: 'causes' }).file;
+  if (theme && radio) next = linkNodes(next, board, theme, radio).file;
   return next;
 };
 
@@ -259,61 +176,80 @@ export function demoProjects() {
 
   projects.screenplay = withOutline(withMap(withNotes(
     titled(
-      buildProjectFromImport(readFinalDraft(fdx(SCREENPLAY)), { format: 'screenplay', title: 'The Green Light', author: 'A. Writer', fileCast: true, keepLocations: true }).file,
-      ['The light returns', 'Teo on the radio', 'Something washed up', 'The Ariadne\'s lantern'],
+      buildProjectFromImport(readFinalDraft(fdx(NIGHT_OF_THE_LIVING_DEAD)), {
+        format: 'screenplay',
+        title: 'Night of the Living Dead',
+        author: 'George A. Romero & John A. Russo',
+        fileCast: true,
+        keepLocations: true,
+      }).file,
+      [
+        'The drive out',
+        'They\'re coming to get you, Barbra',
+        'Barbra reaches the farmhouse',
+        'Ben boards up the house',
+        'The radio reports',
+        'Beat \'em or burn \'em',
+        'The Coopers come up from the cellar',
+      ],
     ),
     [
-      ['The Ariadne', 'Cargo ship lost off the point in 1962. Twelve crew. The inquiry never found the cause.'],
-      ['Mara wants', 'To prove her father was right about the light, without becoming him.'],
-      ['Setup: the lantern', 'Painted green glass. Pays off when Mara finds the matching pane in the lamp room.'],
+      ['The farmhouse', 'One house, one night. Everything happens inside it or at its windows.'],
+      ['Ben', 'Takes charge and boards up the house. Clashes with Harry over upstairs or the cellar.'],
+      ['Setup: the cellar', 'Harry insists the cellar is the safest place. Pays off at dawn.'],
     ],
   )), [
-    ['scene', 'Lighthouse point, night', [['beat', 'Mara sees the green light'], ['beat', '"That is not a boat."']]],
-    ['scene', 'Lamp room', [['beat', 'The logbook: thirty years of the same entry'], ['beat', 'Teo on the radio']]],
-    ['scene', 'Harbour wall, dawn', [['beat', 'The light is gone'], ['beat', 'Something on the shingle']]],
-    ['scene', 'Keeper\'s cottage kitchen', [['beat', 'The lantern from the Ariadne']]],
-    ['note', 'Act Two opens on the inquiry papers'],
-    ['scene', 'County archive', [['beat', 'Mara finds the crew list'], ['beat', 'Her father\'s name is on it']]],
-    ['scene', 'The point in a storm', [['beat', 'The light comes in to shore']]],
+    ['scene', 'Country road, dusk', [['beat', 'Johnny complains about the drive']]],
+    ['scene', 'The cemetery', [['beat', '"They\'re coming to get you, Barbra."'], ['beat', 'The man among the graves attacks']]],
+    ['scene', 'The farmhouse', [['beat', 'Barbra hides inside'], ['beat', 'Ben arrives in the truck']]],
+    ['scene', 'Boarding up', [['beat', 'Ben tears up the table for the windows']]],
+    ['scene', 'The radio and the television', [['beat', 'Killings across the eastern states'], ['beat', 'The sheriff: "Beat \'em or burn \'em"']]],
+    ['note', 'Act Two: the house under siege'],
+    ['scene', 'The cellar door', [['beat', 'Harry Cooper and the others come up'], ['beat', 'Upstairs or the cellar?']]],
   ]);
 
-  projects.stage_play = titled(
-    buildProjectFromImport(readFinalDraft(fdx(STAGE_PLAY)), { format: 'stage_play', title: 'Ten Past Nine', author: 'A. Writer', fileCast: true }).file,
-    ['June waits; Albie closes up'],
+  projects.stage_play = withNotes(
+    titled(
+      buildProjectFromImport(readFinalDraft(fdx(HAMLET)), { format: 'stage_play', title: 'Hamlet', author: 'William Shakespeare', fileCast: true }).file,
+      ['The Ghost on the battlements'],
+    ),
+    [
+      ['Elsinore', 'A platform before the castle, at midnight. Bitter cold.'],
+      ['The Ghost', 'Appears in the armour of the dead King. Will not speak to Horatio.'],
+    ],
   );
 
   {
     const [first, ...rest] = SERIES;
-    let file = buildProjectFromImport(readFinalDraft(first.xml), { format: 'series', title: 'Night Desk', author: 'A. Writer', fileCast: true }).file;
+    let file = buildProjectFromImport(readFinalDraft(first.xml), { format: 'series', title: 'Sherlock Holmes', author: 'after Arthur Conan Doyle', fileCast: true }).file;
     for (const next of rest) {
       const added = appendImportedEpisode(file, readFinalDraft(next.xml), { title: next.title });
       if (added) file = added.file;
     }
-    projects.series = withOutline(withNotes(titled(file, ['The river story lands', 'Red water at the weir', 'Footprints in the dye works']), [
-      ['Season arc', 'Who poisoned the river, and why the paper\'s owner wants it left alone.'],
-      ['Ruth', 'Thirty years on the night desk. Has never once taken a day off.'],
+    projects.series = withOutline(withNotes(titled(file, ['Seen but not observed', 'Jabez Wilson, read at a glance', 'A three pipe problem', 'Helen Stoner\'s terror', 'The speckled band']), [
+      ['Holmes', 'Sees and observes. Smokes over a problem and will not be spoken to.'],
+      ['Watson', 'Friend and chronicler. Sees, but does not observe.'],
     ]), [
-      ['note', 'Episode 1: Pilot'],
-      ['scene', 'Night desk', [['beat', 'Dev chasing the council story'], ['beat', 'Ruth: the river has gone red']]],
-      ['note', 'Episode 2: The Weir'],
-      ['scene', 'Riverside weir', [['beat', 'Rust-coloured water'], ['beat', '"Whoever did this wanted it seen."']]],
-      ['note', 'Episode 3: Upstream'],
-      ['scene', 'The dye works', [['beat', 'Fresh footprints'], ['beat', 'A door that should be locked']]],
-      ['note', 'Episode 4: The Owner'],
-      ['scene', 'Publisher\'s office', [['beat', 'The story is spiked']]],
+      ['note', 'Episode 1: A Scandal in Bohemia'],
+      ['scene', 'Baker Street, night', [['beat', 'Seventeen steps'], ['beat', 'A royal visitor on the stair']]],
+      ['note', 'Episode 2: The Red-Headed League'],
+      ['scene', 'Baker Street, day', [['beat', 'Jabez Wilson, read at a glance'], ['beat', 'A three pipe problem']]],
+      ['note', 'Episode 3: The Speckled Band'],
+      ['scene', 'Baker Street, early morning', [['beat', '"It is fear, Mr. Holmes."']]],
+      ['scene', 'Stoke Moran, night', [['beat', 'The low, clear whistle'], ['beat', 'The band! the speckled band!']]],
     ]);
   }
 
   projects.novel = withNotes(
     titled(
-      buildProjectFromImport(textToProse(NOVEL), { format: 'novel', title: 'The Heron Letter', author: 'A. Writer' }).file,
-      ['The letter arrives', 'Marsh End', 'The woman at the door'],
-      ['The Letter', 'Marsh End', 'Mrs Fenwick'],
+      buildProjectFromImport(textToProse(NOVEL), { format: 'novel', title: 'Great Expectations', author: 'Charles Dickens' }).file,
+      ['Pip meets the convict in the churchyard', 'The file and the pork pie', 'The second convict in the mist'],
+      ['Pip meets the convict', 'Christmas Eve at the forge', 'The convict in the mist'],
     ),
     [
-      ['Marsh End', 'Three streets, a church with no spire, and the Pub.'],
-      ['Nell', 'Thirty-four. Archivist. Collects other people\'s letters for a living and has never written one.'],
-      ['The heron stamp', 'Appears on the letter, the church window and the town seal.'],
+      ['The marshes', 'Ours was the marsh country, down by the river, within, as the river wound, twenty miles of the sea.'],
+      ['Pip', 'Philip Pirrip, an orphan, brought up by hand by his sister, Mrs. Joe Gargery.'],
+      ['Setup: the file and the wittles', 'What the convict demands of Pip in the churchyard. Pays off at the forge on Christmas Day.'],
     ],
   );
 
@@ -340,10 +276,13 @@ export function demoProjects() {
     ['chapter', 'Revising for Clarity', [['scene', 'Reading aloud'], ['scene', 'Cutting by a third']]],
   ]);
 
-  projects.short_story = buildProjectFromImport(
-    textToProse(STORIES),
-    { format: 'short_story', title: 'Salt and Iron: Stories', author: 'A. Writer', stories: 'many' },
-  ).file;
+  projects.short_story = withNotes(
+    buildProjectFromImport(textToProse(STORIES), { format: 'short_story', title: 'Tales of Mystery', author: 'Edgar Allan Poe', stories: 'many' }).file,
+    [
+      ['The narrator', 'Insists he is not mad. The more calmly he says it, the less we believe him.'],
+      ['Montresor', 'Never says what Fortunato\'s insult was.'],
+    ],
+  );
 
   {
     let file = createProjectFile({ title: 'Harbour Bakery — 30s Spot', format: 'short_form', author: 'A. Writer' });

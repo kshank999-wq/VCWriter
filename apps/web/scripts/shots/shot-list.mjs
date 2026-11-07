@@ -37,7 +37,7 @@ export const SHOTS = [
 
   // ---------------------------------------------------------------- rooms
   { id: 'research', project: 'screenplay', out: 'help', steps: [{ page: 'Research' }], shows: 'Research: folders and notes', uses: ['help: research'] },
-  { id: 'research-note', project: 'screenplay', out: 'help', steps: [{ page: 'Research' }, { select: 'Plot Points' }, { select: 'Setup: the lantern' }, { click: 'Rewrite and place…' }], shows: 'A note opened to rewrite and place on the track', uses: ['help: research'] },
+  { id: 'research-note', project: 'screenplay', out: 'help', steps: [{ page: 'Research' }, { select: 'Plot Points' }, { select: 'Setup: the cellar' }, { click: 'Rewrite and place…' }], shows: 'A note opened to rewrite and place on the track', uses: ['help: research'] },
   { id: 'sculptor', project: 'screenplay', out: 'help', steps: [{ page: 'Sculptor' }, { wait: 1200 }], shows: 'The Story Sculptor: acts, plot points, scenes, cast and links', uses: ['help: story sculptor'] },
   { id: 'outliner', project: 'screenplay', out: 'help', steps: [{ page: 'Outliner' }], shows: 'The Outliner', uses: ['help: outliner'] },
   { id: 'preview', project: 'screenplay', out: 'help', steps: [{ page: 'Preview' }, { wait: 1500 }], shows: 'Preview: the pages as they will print', uses: ['help: preview'] },

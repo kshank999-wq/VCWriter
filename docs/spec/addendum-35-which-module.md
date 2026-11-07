@@ -314,3 +314,31 @@ Part C of the plan: tutorials and in-app help.
   More stories*; it is corrected. Ctrl/Cmd+Shift+P is two things at once: the
   Inspector's own key, and *Export PDF…* on the File menu. It is left for Ken
   to choose which keeps it.
+
+## 10. The classics in the samples
+
+From Ken, 7 November: *I've collected classic stories from all the
+different modules … we need to create examples of the software using these
+stories.* He chose **public domain only** after being told that two of the
+collection, *Chinatown* and *Sweat*, are under copyright and would show
+pages of their text on a sales site.
+
+The demo projects (`apps/web/scripts/shots/demo-projects.mjs`) now use:
+
+| Module | Classic |
+| --- | --- |
+| Screenplay | *Night of the Living Dead* (1968; Ken's choice), opening scenes written out from the film, with a Story Sculptor map and an outline |
+| Series | Sherlock Holmes: *A Scandal in Bohemia*, *The Red-Headed League* and *The Speckled Band* as three episodes, with Doyle's dialogue |
+| Novel | *Great Expectations*, chapters I–III |
+| Short stories | *Tales of Mystery*: three Poe tales as a collection |
+| Stage play | *Hamlet*, Act I, Scene I (Ken's choice) |
+
+The instructional book, the short-form spot and the document stay original.
+The texts and where each came from are in `scripts/shots/classics/`. All 30
+shots were retaken from them.
+
+The *Night of the Living Dead* scenes are written from the film, using only
+lines known from it; they are to be checked against the film before release.
+A famous film still under copyright, of the kind some other products show,
+would be at most a structure-only breakdown with no script text, after
+advice from an IP lawyer.

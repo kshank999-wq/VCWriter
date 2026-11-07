@@ -126,7 +126,7 @@ export const GUIDES_PLANNING: Guide[] = [
         heading: 'The library',
         body: [
           'The library on the right holds what you can place on the map: **Characters** (your cast), **Places**, **Plot & scenes** you have made reusable, scenes already **In the script**, and **Research**. Search it, star favourites with ★, and see how many times each is placed. Drag one onto a card, or click it to place it under the selected card.',
-          'A character on the map is your cast’s own character, not a copy. Put Mara in five scenes and rename her once, and every card follows. Her *Scene objective* in one scene stays on that card. Press **+ Character** in the library to add someone new to the cast.',
+          'A character on the map is your cast’s own character, not a copy. Put Barbra in five scenes and rename her once, and every card follows. Her *Scene objective* in one scene stays on that card. Press **+ Character** in the library to add someone new to the cast.',
           'Right-click a card for **Make reusable (add to the library)**, **Duplicate placement**, **Copy branch**, **Paste inside** and more.',
         ],
       },
