@@ -44,6 +44,7 @@ import {
 } from '@vcwriter/domain';
 import { DocumentWorkspace } from './document/DocumentWorkspace';
 import { documentCommands } from './document/document-commands';
+import { guideFor, openGuide } from './help-links';
 import { useProject } from './use-project';
 import { useBuildStanding } from './use-build-standing';
 import { useWritingAccess } from './use-writing-access';
@@ -972,12 +973,27 @@ export default function App() {
         case 'window.preferences':
           return setPreferencesOpen(true);
 
+        case 'help.guide':
+          return openGuide(
+            guideFor({
+              format: project.file?.project.format ?? null,
+              view,
+              research: researchOpen,
+              sculptor: sculptorOpen,
+              outliner: outlinerOpen,
+              layout: layoutOpen,
+              readBack: readBackOpen,
+              focus: focusMode,
+            }),
+          );
+        case 'help.guides':
+          return openGuide(null);
         case 'help.spec':
         case 'help.about':
           return setPreferencesOpen(true);
       }
     },
-    [project, print, exportPdf, exportDocx, saveSomewhere, selectedBeat, detached, view, openPane, closePane, resetWindows],
+    [project, print, exportPdf, exportDocx, saveSomewhere, selectedBeat, detached, view, openPane, closePane, resetWindows, researchOpen, sculptorOpen, outlinerOpen, layoutOpen, readBackOpen, focusMode],
   );
 
   /** The items with a tick beside them right now. */

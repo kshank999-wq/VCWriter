@@ -46,6 +46,7 @@ export async function SiteChrome({ children }: { children: React.ReactNode }) {
             <Link href="/#features">Features</Link>
             <Link href="/download">Buy &amp; download</Link>
             <Link href="/notes">Notes</Link>
+            <Link href="/help">Help</Link>
             {/* Signing in opens the room, not the software (addendum 07 §5),
                 so the way in is in the site's own nav rather than behind an
                 account page. */}
@@ -66,7 +67,7 @@ export async function SiteChrome({ children }: { children: React.ReactNode }) {
                 the phone app links straight to them (addendum 27 §15) — these
                 are the same two documents, reachable from the site as well,
                 because a page only the app can reach is one nobody finds. */}
-            <Link href="/privacy">Privacy</Link> · <Link href="/terms">Terms</Link> ·{' '}
+            <Link href="/help">Help</Link> · <Link href="/privacy">Privacy</Link> · <Link href="/terms">Terms</Link> ·{' '}
             <a href="https://vc-software.com/support">Support</a>
           </p>
           {/* The company page above every VC app, as vc-gamestudio.com and

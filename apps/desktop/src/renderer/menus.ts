@@ -83,6 +83,8 @@ export type CommandId =
   | 'window.reset'
   | 'window.preferences'
   // Help
+  | 'help.guide'
+  | 'help.guides'
   | 'help.spec'
   | 'help.about';
 
@@ -288,6 +290,10 @@ export const menusFor = (format: ProjectFormat | null): readonly Menu[] => {
     id: 'help',
     label: 'Help',
     items: [
+      // The guides on vc-writer.com (addendum 35 §9).
+      { command: 'help.guide', label: 'Guide for this screen', accelerator: 'F1' },
+      { command: 'help.guides', label: 'All guides' },
+      null,
       { command: 'help.spec', label: 'What this build does' },
       { command: 'help.about', label: 'About VC Writer' },
     ],
@@ -355,6 +361,10 @@ const DOCUMENT_MENUS: readonly Menu[] = [
     id: 'help',
     label: 'Help',
     items: [
+      // The guides on vc-writer.com (addendum 35 §9).
+      { command: 'help.guide', label: 'Guide for this screen', accelerator: 'F1' },
+      { command: 'help.guides', label: 'All guides' },
+      null,
       { command: 'help.spec', label: 'What this build does' },
       { command: 'help.about', label: 'About VC Writer' },
     ],
