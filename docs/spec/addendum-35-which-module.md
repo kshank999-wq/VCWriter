@@ -209,8 +209,8 @@ who it is.*
 - **Each page shows the program.** Under the headline is a screenshot of VC
   Writer with a demo project of that kind open: `public/modules/<slug>.jpg`,
   2880×1800. They are not drawn by hand. `pnpm --filter @vcwriter/web shots`
-  (`scripts/module-shots/capture.mjs`) builds the browser preview, serves it,
-  puts each demo project from `scripts/module-shots/demo-projects.mjs` into the
+  (`scripts/shots/capture.mjs`) builds the browser preview, serves it,
+  puts each demo project from `scripts/shots/demo-projects.mjs` into the
   preview's own storage, opens it as a writer would and saves the workspace.
   The demo projects are original sample writing (a lighthouse screenplay, a
   newsroom series, a novel, a style guide, a one-act play, three short stories,
@@ -223,3 +223,38 @@ who it is.*
   images (its screenshot), so a shared link shows the module. `sitemap.xml`
   lists the front page, buying, every module page, Notes and Writers Room.
 - **The top menu** has *Modules* first, going to the chooser on the front page.
+
+## 8. The screenshots, all of them
+
+From Ken, 7 November: *we need to start assembling screenshots and tutorials
+for this whole system before release* — this is the screenshot half (part B
+of the plan).
+
+- **One shot list.** `apps/web/scripts/shots/shot-list.mjs` names every
+  screenshot: its id, the demo project it opens, the steps that walk to the
+  screen (a bottom-bar page or room, a button, a folder, a key), what it must
+  show, and where it is used. `docs/screenshots.md` is generated from it
+  (`write-list.mjs`), so the list a person reads and the list the capture runs
+  cannot differ.
+- **27 shots today.** The eight module pages (`public/modules/`), and
+  nineteen for the help guides (`public/help/`):
+  - the New project screen and a project's home page
+  - Research, a note in the rewrite screen, the Story Sculptor, the Outliner,
+    Preview, the editors, Read back and Focus
+  - Layout for a novel and for a collection
+  - the book outliner and references for an instructional book
+  - a season in the Outliner
+  - the AV sheet as it prints
+  - Research and *Place on page* in a Document
+- **Demo projects grew to fill them.** The screenplay has a Story Sculptor
+  map (two acts, plot points, scenes, the cast as placed characters and
+  *causes* links) and an outline. The series and the instructional book have
+  outlines. Every beat, passage and chapter is titled.
+- **One command retakes them**: `pnpm --filter @vcwriter/web shots`, or name
+  the shots to retake only those. A shot that cannot reach its screen fails
+  and is listed, rather than saving the wrong picture. Steps match visible
+  elements only, because Research keeps hidden copies of some titles.
+- **Dark only.** The program has one theme, so there is no light set.
+- **Not the phone.** The store screenshots for VC Writer Notes have to come
+  from a real device or simulator (`docs/store-listing.md` §4) and are not
+  made here.

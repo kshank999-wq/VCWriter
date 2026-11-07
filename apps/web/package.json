@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "check:csp": "node scripts/check-csp.mjs",
-    "shots": "node scripts/module-shots/capture.mjs"
+    "shots": "node scripts/shots/capture.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.124.0",

@@ -57,7 +57,7 @@ export default async function ModulePage({ params }: { params: Params | Promise<
       </div>
 
       {/* The program itself, with a demo project of this kind open. Taken by
-          scripts/module-shots/capture.mjs, which is rerun when a screen changes. */}
+          scripts/shots/capture.mjs, which is rerun when a screen changes. */}
       <figure className="module-shot">
         <img
           src={`/modules/${page.slug}.jpg`}

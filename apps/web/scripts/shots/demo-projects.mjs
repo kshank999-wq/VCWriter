@@ -19,7 +19,13 @@ import {
   setRowDialogue,
   textToDocContent,
   textToProse,
+  addItem,
+  addNode,
+  createOutline,
   beatsForUnit,
+  createBoard,
+  linkNodes,
+  placeSource,
   unitsInStoryOrder,
   updateBeat,
   updateUnit,
@@ -202,10 +208,56 @@ Timetable and cost
 
 Removal and survey in May; conservation through the summer; reinstallation in September. The total estimated cost is £18,400, of which the Trust has already raised £11,000.`;
 
+/** An outline: [kind, title, children] rows, as a writer plans before (and while) writing. */
+const withOutline = (file, rows) => {
+  const made = createOutline(file, { name: 'Outline' });
+  let next = made.file;
+  const add = (row, parentId) => {
+    const [kind, title, children = []] = row;
+    const added = addItem(next, made.outline.id, { parentId, kind, title });
+    next = added.file;
+    for (const child of children) add(child, added.itemId);
+  };
+  for (const row of rows) add(row, null);
+  return next;
+};
+
+/** A story map for the screenplay: two acts, their turning points, the cast and what causes what. */
+const withMap = (file) => {
+  const made = createBoard(file, { name: 'The Green Light' });
+  let next = made.file;
+  const board = made.board.id;
+  const node = (input) => {
+    const added = addNode(next, board, input);
+    next = added.file;
+    return added.nodeId;
+  };
+  const actOne = node({ kind: 'frame', title: 'Act One: The light' });
+  const inciting = node({ parentId: actOne, kind: 'plot_point', title: 'The green light returns' });
+  node({ parentId: inciting, kind: 'scene', title: 'Lighthouse point, night' });
+  node({ parentId: inciting, kind: 'scene', title: 'Teo on the radio' });
+  const discovery = node({ parentId: actOne, kind: 'plot_point', title: 'Something washes up' });
+  node({ parentId: discovery, kind: 'scene', title: 'The harbour wall at dawn' });
+  const actTwo = node({ kind: 'frame', title: 'Act Two: The Ariadne' });
+  const lantern = node({ parentId: actTwo, kind: 'plot_point', title: 'The lantern is from the wreck' });
+  node({ parentId: lantern, kind: 'scene', title: 'Keeper\'s cottage kitchen' });
+  node({ parentId: actTwo, kind: 'plot_point', title: 'Mara reads her father\'s log' });
+  const cast = node({ kind: 'frame', title: 'Cast' });
+  for (const person of next.characters) {
+    const placed = placeSource(next, board, { kind: 'character', id: person.id }, cast);
+    next = placed.file;
+  }
+  const theme = node({ kind: 'note', title: 'What the dead leave lit for us' });
+  if (inciting && discovery) next = linkNodes(next, board, inciting, discovery, { type: 'causes' }).file;
+  if (discovery && lantern) next = linkNodes(next, board, discovery, lantern, { type: 'causes' }).file;
+  if (theme && lantern) next = linkNodes(next, board, theme, lantern).file;
+  return next;
+};
+
 export function demoProjects() {
   const projects = {};
 
-  projects.screenplay = withNotes(
+  projects.screenplay = withOutline(withMap(withNotes(
     titled(
       buildProjectFromImport(readFinalDraft(fdx(SCREENPLAY)), { format: 'screenplay', title: 'The Green Light', author: 'A. Writer', fileCast: true, keepLocations: true }).file,
       ['The light returns', 'Teo on the radio', 'Something washed up', 'The Ariadne\'s lantern'],
@@ -215,7 +267,15 @@ export function demoProjects() {
       ['Mara wants', 'To prove her father was right about the light, without becoming him.'],
       ['Setup: the lantern', 'Painted green glass. Pays off when Mara finds the matching pane in the lamp room.'],
     ],
-  );
+  )), [
+    ['scene', 'Lighthouse point, night', [['beat', 'Mara sees the green light'], ['beat', '"That is not a boat."']]],
+    ['scene', 'Lamp room', [['beat', 'The logbook: thirty years of the same entry'], ['beat', 'Teo on the radio']]],
+    ['scene', 'Harbour wall, dawn', [['beat', 'The light is gone'], ['beat', 'Something on the shingle']]],
+    ['scene', 'Keeper\'s cottage kitchen', [['beat', 'The lantern from the Ariadne']]],
+    ['note', 'Act Two opens on the inquiry papers'],
+    ['scene', 'County archive', [['beat', 'Mara finds the crew list'], ['beat', 'Her father\'s name is on it']]],
+    ['scene', 'The point in a storm', [['beat', 'The light comes in to shore']]],
+  ]);
 
   projects.stage_play = titled(
     buildProjectFromImport(readFinalDraft(fdx(STAGE_PLAY)), { format: 'stage_play', title: 'Ten Past Nine', author: 'A. Writer', fileCast: true }).file,
@@ -229,9 +289,18 @@ export function demoProjects() {
       const added = appendImportedEpisode(file, readFinalDraft(next.xml), { title: next.title });
       if (added) file = added.file;
     }
-    projects.series = withNotes(titled(file, ['The river story lands', 'Red water at the weir', 'Footprints in the dye works']), [
+    projects.series = withOutline(withNotes(titled(file, ['The river story lands', 'Red water at the weir', 'Footprints in the dye works']), [
       ['Season arc', 'Who poisoned the river, and why the paper\'s owner wants it left alone.'],
       ['Ruth', 'Thirty years on the night desk. Has never once taken a day off.'],
+    ]), [
+      ['note', 'Episode 1: Pilot'],
+      ['scene', 'Night desk', [['beat', 'Dev chasing the council story'], ['beat', 'Ruth: the river has gone red']]],
+      ['note', 'Episode 2: The Weir'],
+      ['scene', 'Riverside weir', [['beat', 'Rust-coloured water'], ['beat', '"Whoever did this wanted it seen."']]],
+      ['note', 'Episode 3: Upstream'],
+      ['scene', 'The dye works', [['beat', 'Fresh footprints'], ['beat', 'A door that should be locked']]],
+      ['note', 'Episode 4: The Owner'],
+      ['scene', 'Publisher\'s office', [['beat', 'The story is spiked']]],
     ]);
   }
 
@@ -248,7 +317,7 @@ export function demoProjects() {
     ],
   );
 
-  projects.instructional = withNotes(
+  projects.instructional = withOutline(withNotes(
     titled(
       buildProjectFromImport(textToProse(INSTRUCTIONAL), { format: 'instructional', title: 'Plain and Clear', author: 'A. Writer' }).file,
       ['One idea, one sentence', 'What a paragraph does'],
@@ -258,7 +327,18 @@ export function demoProjects() {
       ['Constructing sentences with adverbs', 'If you use an adverb, make it fight the verb.'],
       ['Readability studies', 'Average sentence length and reader recall: sources for chapter 1.'],
     ],
-  );
+  ), [
+    ['chapter', 'Writing Clear Sentences', [
+      ['scene', 'One idea per sentence', [['beat', 'Why two ideas tire the reader'], ['beat', 'Splitting a long sentence']]],
+      ['scene', 'Put the action in the verb', [['beat', 'Nouns that hide verbs']]],
+      ['scene', 'Adverbs and the verbs they prop up', [['beat', 'Choosing the stronger verb']]],
+    ]],
+    ['chapter', 'Building Paragraphs', [
+      ['scene', 'The paragraph as a unit of thought', [['beat', 'Claim, support, hand-off']]],
+      ['scene', 'Transitions that carry the reader'],
+    ]],
+    ['chapter', 'Revising for Clarity', [['scene', 'Reading aloud'], ['scene', 'Cutting by a third']]],
+  ]);
 
   projects.short_story = buildProjectFromImport(
     textToProse(STORIES),
