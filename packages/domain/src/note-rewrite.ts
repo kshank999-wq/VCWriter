@@ -2,7 +2,7 @@ import { addBeat, markResearchUsed, setResearchArchived, updateBeat } from './mu
 import { beatsForUnit, noteOnTrack, shelvedItems } from './selectors.js';
 import { onlyLiving } from './graveyard.js';
 import { outlineNumbers } from './numbering.js';
-import { addItem, findOutline, findOutlineItem, outlineRows, rowTitle, updateItem } from './outline.js';
+import { addItem, findOutline, findOutlineItem, outlineRows, outlineSubtree, rowTitle, updateItem } from './outline.js';
 import { canPromote, divisionSpan, promoteRow } from './outline-binding.js';
 import { defaultElementType } from './editing.js';
 import { contentsShelf, placeKey, placeNow, placeOf, placeStillThere, type NotePlace } from './chapter-notes.js';
@@ -334,3 +334,95 @@ export const addNoteToOutline = (
   const used = markResearchUsed(written, { itemId: item.id, confirmed: true });
   return { file: setResearchArchived(used, item.id, true), rowId: made.itemId };
 };
+
+// ------------------------------------------- the notes of one part, beside it
+
+/**
+ * The notes filed to one section or scene (from Ken: the scene or section box
+ * *has the same right hand menu with imported notes*): those dropped on it,
+ * and those dropped on the outline row it came from. In the order filed,
+ * each once.
+ */
+export const notesForSection = (file: ProjectFile, unitId: string): ResearchItem[] => {
+  const seen = new Set<string>();
+  const out: ResearchItem[] = [];
+  for (const folder of outlineFolders(file)) {
+    const here =
+      (folder.place.kind === 'section' && (folder.place.unitId as string) === unitId) ||
+      (folder.place.kind === 'plan' && boundUnitOf(file, folder.place.itemId as string) === unitId);
+    if (!here) continue;
+    for (const note of folder.notes) {
+      if (seen.has(note.id as string)) continue;
+      seen.add(note.id as string);
+      out.push(note);
+    }
+  }
+  return out;
+};
+
+/** The outline rows that are a beat (bound to it), in every outline. */
+const rowsBoundToBeat = (file: ProjectFile, beatId: string) =>
+  (file.outlines ?? []).flatMap((outline) =>
+    outline.items.filter((item) => (item.boundBeatId as string | null) === beatId).map((item) => ({ outline, item })),
+  );
+
+const boundUnitOf = (file: ProjectFile, itemId: string): string | null => {
+  for (const outline of file.outlines ?? []) {
+    const item = outline.items.find((one) => (one.id as string) === itemId);
+    if (item) return (item.boundUnitId as string | null) ?? null;
+  }
+  return null;
+};
+
+/** The notes filed to one beat or subsection: those dropped on the outline row it came from. */
+export const notesForBeat = (file: ProjectFile, beatId: string): ResearchItem[] => {
+  const rows = new Set(rowsBoundToBeat(file, beatId).map(({ item }) => item.id as string));
+  if (rows.size === 0) return [];
+  const out: ResearchItem[] = [];
+  for (const folder of outlineFolders(file)) {
+    if (folder.place.kind === 'plan' && rows.has(folder.place.itemId as string)) out.push(...folder.notes);
+  }
+  return out;
+};
+
+/**
+ * The outline rows beneath a beat or subsection: anything deeper than a beat,
+ * which is written in the beat's own screen rather than standing on the track
+ * (from Ken: *anything beneath that will be in a right hand menu with the
+ * beat or subsection writing screen*).
+ */
+export const rowsBeneathBeat = (file: ProjectFile, beatId: string): OutlineItem[] =>
+  rowsBoundToBeat(file, beatId).flatMap(({ outline, item }) => outlineSubtree(outline, item.id).filter((one) => one.id !== item.id));
+
+/**
+ * **Place text**, in a beat or subsection's writing screen (from Ken: *the
+ * rewrite screen text will be added at the location of the cursor but still
+ * be a block that can be dragged to the correct location, and in the corner a
+ * button that says "place text" — that will turn the note green*).
+ *
+ * The rewrite (or the note) goes in as lines of its own — a block — just
+ * after the line the cursor was in, or at the end where there was none. The
+ * note is marked used in this beat. Returns the new lines' ids so the screen
+ * can show the block that arrived.
+ */
+export const placeNoteText = (
+  file: ProjectFile,
+  itemId: ResearchItemId,
+  beatId: BeatId,
+  afterElementId: ManuscriptElementId | null,
+): { ok: true; file: ProjectFile; elementIds: ManuscriptElementId[] } | { ok: false; why: string } => {
+  const item = onlyLiving(file.researchItems).find((one) => (one.id as string) === (itemId as string));
+  if (!item) return { ok: false, why: 'That note is not on the shelf any more.' };
+  const beat = file.beats.find((one) => one.id === beatId);
+  if (!beat) return { ok: false, why: 'That is not open any more.' };
+  const lines = linesOf(file, textToPlace(item));
+  if (lines.length === 0) return { ok: false, why: 'There is nothing written to place yet.' };
+  const elements = beat.manuscript.elements;
+  const at = afterElementId ? elements.findIndex((one) => one.id === afterElementId) : -1;
+  const index = at === -1 ? elements.length : at + 1;
+  const next = [...elements.slice(0, index), ...lines, ...elements.slice(index)];
+  let current = updateBeat(file, beat.id, { manuscript: { ...beat.manuscript, elements: next } });
+  current = markResearchUsed(current, { itemId: item.id, beatId: beat.id });
+  return { ok: true, file: current, elementIds: lines.map((one) => one.id) };
+};
+

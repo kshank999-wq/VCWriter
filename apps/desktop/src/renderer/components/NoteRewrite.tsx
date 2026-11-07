@@ -46,6 +46,7 @@ export function NoteRewrite({
   addTo,
   onPlacedOnPage,
   placeLabel,
+  onPlaceText,
 }: {
   file: ProjectFile;
   item: ResearchItem | null;
@@ -67,6 +68,12 @@ export function NoteRewrite({
    * a new beat in the part the note is filed under.
    */
   placeLabel?: string;
+  /**
+   * Opened from a beat or subsection's writing screen (from Ken): the button
+   * in the corner says **Place text** and puts the rewrite into the writing
+   * where the cursor was, as a block. The screen does the placing.
+   */
+  onPlaceText?(item: ResearchItem): string | null;
 }) {
   const dialog = useModal(item !== null);
   const original = useRef<HTMLDivElement>(null);
@@ -131,6 +138,15 @@ export function NoteRewrite({
   };
 
   const place = () => {
+    if (onPlaceText) {
+      const why = onPlaceText(item);
+      if (why) {
+        setSaid(why);
+        return;
+      }
+      onClose();
+      return;
+    }
     if (page) {
       placeOnPage();
       return;
@@ -250,7 +266,11 @@ export function NoteRewrite({
             disabled={!textToPlace(item)}
             title={page ? 'Put it into the document where your cursor is' : undefined}
           >
-            {page
+            {onPlaceText
+              ? used
+                ? 'Place text again'
+                : 'Place text'
+              : page
               ? used
                 ? 'Place on page again'
                 : 'Place on page'

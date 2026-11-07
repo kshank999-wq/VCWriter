@@ -983,3 +983,50 @@ add it as a beat.*
 - Two new shots (`research-filed`, `research-filed-rewrite`). The *Night of
   the Living Dead* demo has two notes filed under *The cemetery*. The
   Research guide has a section on it.
+
+## Notes beside a scene and beside a beat
+
+From Ken, 7 November: *anything beneath that will be in a right hand menu
+with the beat or subsection writing screen. Menu can be collapsed; it will
+hold any notes for that element including the notes from VC Writer Notes
+that have been sorted into that section. The section/scene dialogue box has
+the same right hand menu … when you open the note screen you can drop that
+in as a subsection/beat. The notes will have a red element showing they have
+not been used … hidden with a check box … in the writing screen the rewrite
+text will be added at the location of the cursor but still be a block that
+can be dragged, and in the corner a button that says "place text" — that will
+turn the note green. If the box is unchecked all the notes reappear but at
+the bottom of the list.*
+
+- **`ElementNotes`** is one panel used in two places: the scene/section box
+  (`SceneDialog`) and the beat/subsection writing screen (`BeatWriter`).
+  - It lists the notes filed to that part: `notesForSection` (dropped on the
+    section, or on the outline row it came from) and `notesForBeat` (dropped
+    on the beat's outline row). Notes sorted there from VC Writer Notes are
+    research notes by then, so they come in the same way.
+  - Each note has a dot: red while unused, green once used.
+  - **Hide used notes**, ticked by default, takes the used ones away.
+    Unticked, they return at the foot of the list.
+  - The panel folds to a narrow strip that keeps a count of unused notes.
+  - Both choices are kept in the browser.
+  - In a beat's screen it also lists the outline rows beneath that beat
+    (`rowsBeneathBeat`): anything deeper than a beat, written there rather
+    than placed on the track. It also includes the scene's own notes after
+    the beat's.
+- **In the scene box**, double-clicking a note opens the rewrite screen with
+  *Add as beat in <scene>*, the format's own word. It goes in as a new beat
+  there (`placeNoteOnTrack`).
+- **In the writing screen**, the rewrite screen's corner button is **Place
+  text** (`onPlaceText`). `placeNoteText` puts the rewrite in as lines of its
+  own just after the line the cursor was last in, or at the end, and marks
+  the note used in that beat. The block arrives tinted green.
+- **Lines can be moved.** The writing screen's `BeatBody` is `movable`:
+  each line has a ⠿ grip in the margin, and a drop on the top or bottom half
+  of another line puts it before or after. The grip of a just-placed block
+  carries the whole block.
+- The chapter tier was already drawn as the track's *Chapters* row above the
+  scenes, each chapter's bar spanning its sections; sections are the scenes
+  and subsections the beats.
+- Three shots (`scene-notes`, `writer-notes`, `writer-place-text`). The
+  *Night of the Living Dead* demo has three notes filed to scene 4, one
+  already used. The Research and Outliner guides cover all of this.

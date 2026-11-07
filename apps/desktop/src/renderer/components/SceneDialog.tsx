@@ -39,10 +39,14 @@ import {
   type LocationDescriptionId,
   type LocationId,
   type PolarityValue,
+  notesForSection,
+  type ResearchItemId,
 } from '@vcwriter/domain';
 import { useModal } from '../use-modal';
 import { PolarityPair } from './PolarityGraph';
 import { PlantSetupOrPayoff } from './BeatBody';
+import { ElementNotes } from './ElementNotes';
+import { NoteRewrite } from './NoteRewrite';
 
 interface SceneDialogProps {
   file: ProjectFile;
@@ -131,6 +135,9 @@ function SceneDialogBody({
   /** The two acts the side column's *+ Add* buttons open (§4b). */
   const [adding, setAdding] = useState(false);
   const [linking, setLinking] = useState(false);
+  /** The note open in the rewrite screen, from the notes down the right. */
+  const [rewriting, setRewriting] = useState<ResearchItemId | null>(null);
+  const filedHere = notesForSection(file, unit.id as string);
   /** Where this scene's writing ends: a cue and a promise both anchor there. */
   const lastBeat = beats[beats.length - 1] ?? null;
 
@@ -188,6 +195,8 @@ function SceneDialogBody({
 
       {prose ? null : <HeadingFields file={file} unit={unit} onUpdate={onUpdate} />}
 
+      <div className="scene-dialog-with-notes">
+      <div>
       <div className="scene-dialog-body">
         {/* Both of these stay **readings** — the cast off the cues, the
             promises off the passages that were tagged — so neither *+ Add*
@@ -349,6 +358,24 @@ function SceneDialogBody({
           onSplit={split}
         />
       </div>
+      </div>
+      {/* The notes filed to this scene or section, down the right (from
+          Ken): opened, rewritten and added as a beat here. */}
+      <ElementNotes
+        file={file}
+        notes={filedHere}
+        placeWord={`add it as a ${nouns.sub.toLowerCase()} here`}
+        onOpen={(note) => setRewriting(note.id)}
+      />
+      </div>
+      <NoteRewrite
+        file={file}
+        item={rewriting ? (file.researchItems.find((one) => one.id === rewriting) ?? null) : null}
+        currentBeatId={null}
+        onClose={() => setRewriting(null)}
+        onUpdate={onUpdate}
+        placeLabel={`Add as ${nouns.sub.toLowerCase()} in ${unit.title || noun.toLowerCase()}`}
+      />
 
       {/* The figures were a grey sentence under the notes, where they read as
           another field's help text (§4a). A status bar puts them where a

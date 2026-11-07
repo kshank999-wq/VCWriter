@@ -180,6 +180,14 @@ interface BeatBodyProps {
    * surface rather than of the paper.
    */
   toolbar?: boolean;
+  /**
+   * Lines can be picked up by a grip in the margin and dropped before or
+   * after another (from Ken: placed text arrives *as a block that can be
+   * dragged to the correct location*). The writing screen only.
+   */
+  movable?: boolean;
+  /** Lines just placed from a note: drawn as one block, and dragged as one. */
+  placedBlock?: ReadonlyArray<string>;
 }
 
 const MARK_KEYS: Record<string, InlineMark> = { b: 'bold', i: 'italic', u: 'underline' };
@@ -273,10 +281,34 @@ export function BeatBody({
   dictation = false,
   dictationSlot = null,
   toolbar = false,
+  movable = false,
+  placedBlock = [],
 }: BeatBodyProps) {
   const format = file.project.format;
   const layout = layoutForFile(file);
   const elementTypes = elementTypesFor(format);
+  /** The lines a drag in the margin is carrying. */
+  const carryingLines = useRef<string[] | null>(null);
+  const [dropAt, setDropAt] = useState<{ id: string; before: boolean } | null>(null);
+  /** Move lines, keeping their order, to before or after another line. */
+  const moveLines = (ids: readonly string[], targetId: string, before: boolean) => {
+    if (ids.includes(targetId)) return;
+    onUpdate((current) => {
+      const live = current.beats.find((one) => one.id === beat.id);
+      if (!live) return current;
+      const all = live.manuscript.elements;
+      const moving = all.filter((one) => ids.includes(one.id as string));
+      const rest = all.filter((one) => !ids.includes(one.id as string));
+      const at = rest.findIndex((one) => (one.id as string) === targetId);
+      if (at === -1 || moving.length === 0) return current;
+      const index = before ? at : at + 1;
+      const elements = [...rest.slice(0, index), ...moving, ...rest.slice(index)];
+      return {
+        ...current,
+        beats: current.beats.map((one) => (one.id === beat.id ? { ...one, manuscript: { ...one.manuscript, elements } } : one)),
+      };
+    });
+  };
   const shortcuts = useMemo(() => styleShortcuts(format), [format]);
 
   /**
@@ -918,7 +950,32 @@ export function BeatBody({
         ) : null}
         <div
           data-element-id={element.id as string}
+          onDragOver={
+            movable
+              ? (event) => {
+                  if (!carryingLines.current) return;
+                  event.preventDefault();
+                  const box = event.currentTarget.getBoundingClientRect();
+                  const before = event.clientY < box.top + box.height / 2;
+                  setDropAt((current) => (current?.id === element.id && current.before === before ? current : { id: element.id as string, before }));
+                }
+              : undefined
+          }
+          onDrop={
+            movable
+              ? (event) => {
+                  event.preventDefault();
+                  const ids = carryingLines.current;
+                  carryingLines.current = null;
+                  const box = event.currentTarget.getBoundingClientRect();
+                  setDropAt(null);
+                  if (ids) moveLines(ids, element.id as string, event.clientY < box.top + box.height / 2);
+                }
+              : undefined
+          }
           className={[
+            placedBlock.includes(element.id as string) ? 'placed-block' : '',
+            dropAt?.id === element.id ? (dropAt.before ? 'line-drop-before' : 'line-drop-after') : '',
             `element element-${element.type}`,
             // **Centred where the page centres it** (addendum 40): a stage
             // play's cue and heading, or anything the writer centred in
@@ -972,6 +1029,25 @@ export function BeatBody({
               {(marks.get(element.id) ?? []).map((mark, at) => (
                 <i key={at} className={`element-mark mark-${mark.kind}`} />
               ))}
+            </span>
+          ) : null}
+          {movable && !readOnly ? (
+            <span
+              className="element-grip"
+              draggable
+              title={placedBlock.includes(element.id as string) ? 'Drag the placed text to where it belongs' : 'Drag this line somewhere else'}
+              aria-hidden="true"
+              onDragStart={(event) => {
+                event.dataTransfer.setData('text/plain', element.text);
+                event.dataTransfer.effectAllowed = 'move';
+                carryingLines.current = placedBlock.includes(element.id as string) ? [...placedBlock] : [element.id as string];
+              }}
+              onDragEnd={() => {
+                carryingLines.current = null;
+                setDropAt(null);
+              }}
+            >
+              ⠿
             </span>
           ) : null}
           <select

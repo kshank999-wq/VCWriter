@@ -23492,3 +23492,202 @@ input.note-rewrite-title:focus { border-color: var(--gold); outline: none; }
 .outline-row.carried {
   opacity: 0.55;
 }
+
+/* The notes for one part of the story, down the right of its screen. */
+.element-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+  border-left: 1px solid var(--border);
+  background: var(--panel);
+  overflow-y: auto;
+}
+
+.element-notes.folded {
+  padding: 0;
+  width: 30px;
+}
+
+.element-notes-unfold {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  width: 30px;
+  padding: 10px 0;
+}
+
+.element-notes-strip {
+  writing-mode: vertical-rl;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 11px;
+  color: var(--gold);
+}
+
+.element-notes-badge {
+  min-width: 18px;
+  padding: 1px 4px;
+  border-radius: 9px;
+  background: #c0392b;
+  color: #fff;
+  font-size: 10px;
+  text-align: center;
+}
+
+.element-notes-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.element-notes-head h4 {
+  margin: 0;
+  font-size: 13px;
+}
+
+.element-notes-hide {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.element-notes-list,
+.element-notes-rows ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.element-note {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--panel-2);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.element-note-dot {
+  width: 10px;
+  height: 10px;
+  margin-top: 3px;
+  border-radius: 50%;
+  background: #d9443a;
+}
+
+.element-note.used .element-note-dot {
+  background: #3fae6a;
+}
+
+.element-note.used {
+  opacity: 0.85;
+}
+
+.element-note-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.element-note-body {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.element-notes-rows h5 {
+  margin: 8px 0 6px;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.element-notes-rows li {
+  display: grid;
+  gap: 2px;
+  padding: 6px 8px;
+  border-left: 3px solid var(--tier-beat, #a48ae6);
+  background: var(--panel-2);
+  font-size: 12px;
+}
+
+/* The scene box with its notes down the right. */
+.scene-dialog-with-notes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 0;
+}
+
+.scene-dialog-with-notes > .element-notes:not(.folded) {
+  width: 250px;
+}
+
+/* The writing screen with its notes down the right. */
+.writer-body:not(.comparing) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+}
+
+.writer-body.with-plan:not(.comparing) {
+  grid-template-columns: minmax(0, 1fr) clamp(260px, 30%, 420px) auto;
+}
+
+.writer-body > .element-notes {
+  position: sticky;
+  top: 0;
+  max-height: calc(100vh - 220px);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+}
+
+.writer-body > .element-notes:not(.folded) {
+  width: 250px;
+}
+
+/* A line's grip in the margin, to move it (and a placed block with it). */
+.element-grip {
+  position: absolute;
+  left: -150px;
+  top: 2px;
+  cursor: grab;
+  opacity: 0;
+  color: var(--paper-muted, var(--muted));
+  font-size: 12px;
+  user-select: none;
+}
+
+.element:hover > .element-grip,
+.element.placed-block > .element-grip {
+  opacity: 1;
+}
+
+/* Text just placed from a note: one block, marked until it is moved or written over. */
+.element.placed-block {
+  background: color-mix(in srgb, #3fae6a 12%, transparent);
+  box-shadow: inset 3px 0 0 #3fae6a;
+}
+
+.element.line-drop-before {
+  box-shadow: 0 -3px 0 var(--gold);
+}
+
+.element.line-drop-after {
+  box-shadow: 0 3px 0 var(--gold);
+}

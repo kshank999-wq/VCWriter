@@ -1,6 +1,6 @@
 import { BookHeadingLine } from './BookHeadingLine';
 import { BeatPlanPanel } from './BeatPlanPanel';
-import { useMemo, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import {
   countWords,
   draftText,
@@ -26,7 +26,15 @@ import {
   type BeatRevisionId,
   type ManuscriptElementId,
   type ProjectFile,
+  notesForBeat,
+  notesForSection,
+  rowsBeneathBeat,
+  placeNoteText,
+  type ResearchItem,
+  type ResearchItemId,
 } from '@vcwriter/domain';
+import { ElementNotes } from './ElementNotes';
+import { NoteRewrite } from './NoteRewrite';
 import { BeatBody } from './BeatBody';
 import { ManuscriptDataLists } from './ManuscriptDataLists';
 import { usePreference } from '../use-split';
@@ -77,6 +85,30 @@ export interface BeatWriterProps {
  */
 export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, onGrab }: BeatWriterProps) {
   const unit = findUnit(file, beat.unitId);
+  /**
+   * The notes for this beat, down the right (from Ken): those filed to it,
+   * then those filed to its scene or section, each once; and the outline's
+   * rows beneath it, which are written here rather than placed on the track.
+   */
+  const beatNotes = (() => {
+    const mine = notesForBeat(file, beat.id as string);
+    const seen = new Set(mine.map((one) => one.id as string));
+    const scene = unit ? notesForSection(file, unit.id as string).filter((one) => !seen.has(one.id as string)) : [];
+    return [...mine, ...scene];
+  })();
+  const beneath = rowsBeneathBeat(file, beat.id as string);
+  const [rewritingNote, setRewritingNote] = useState<ResearchItemId | null>(null);
+  /** The line the cursor was last in, where placed text goes. */
+  const cursorLine = useRef<ManuscriptElementId | null>(null);
+  /** The lines just placed from a note, drawn and dragged as one block. */
+  const [placed, setPlaced] = useState<string[]>([]);
+  const placeText = (note: ResearchItem): string | null => {
+    const result = placeNoteText(file, note.id, beat.id, cursorLine.current);
+    if (!result.ok) return result.why;
+    onUpdate(() => result.file);
+    setPlaced(result.elementIds as string[]);
+    return null;
+  };
   const track = unit ? findTrack(file, unit.trackId) : undefined;
   const [naming, setNaming] = useState(false);
   /** The beat's plan beside its writing, open or not, remembered on this computer (from Ken). */
@@ -313,7 +345,15 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
 
       <div className={[comparing !== null ? 'writer-body comparing' : 'writer-body', planOpen ? 'with-plan' : ''].filter(Boolean).join(' ')}>
         {/* The page itself, at the size it prints, scaled by the zoom. */}
-        <div className="writer-sheet" style={{ '--page-zoom': zoom } as React.CSSProperties}>
+        <div
+          className="writer-sheet"
+          style={{ '--page-zoom': zoom } as React.CSSProperties}
+          // Where the cursor is, so a note's text can be placed there.
+          onFocusCapture={(event) => {
+            const line = (event.target as HTMLElement).closest('[data-element-id]');
+            if (line) cursorLine.current = line.getAttribute('data-element-id') as ManuscriptElementId;
+          }}
+        >
           {comparing !== null ? <p className="writer-column-name muted">{beat.revisionName} — writing</p> : null}
           {headed && unit && firstInUnit ? (
             <BookHeadingLine
@@ -344,6 +384,8 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
             // once, and a row of buttons over each would be the distraction
             // §8c took the Dictate button off the page to avoid.
             toolbar
+            movable
+            placedBlock={placed}
           />
         </div>
 
@@ -361,7 +403,24 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
           </div>
         ) : null}
         {planOpen ? <BeatPlanPanel file={file} beatId={beat.id} onClose={() => setPlanOpen(false)} /> : null}
+        {comparing === null ? (
+          <ElementNotes
+            file={file}
+            notes={beatNotes}
+            rows={beneath}
+            placeWord="place its text where your cursor is"
+            onOpen={(note) => setRewritingNote(note.id)}
+          />
+        ) : null}
       </div>
+      <NoteRewrite
+        file={file}
+        item={rewritingNote ? (file.researchItems.find((one) => one.id === rewritingNote) ?? null) : null}
+        currentBeatId={beat.id}
+        onClose={() => setRewritingNote(null)}
+        onUpdate={onUpdate}
+        onPlaceText={placeText}
+      />
 
       <footer className="writer-status muted">
         <span>

@@ -8,6 +8,7 @@
  *
  *   { page: 'Research' }   a button on the bottom bar (a page or a room)
  *   { click: 'Name' }      any button by its accessible name
+ *   { dblclickNth: ['.block-head', 3] }  double-click the nth match of a selector
  *   { button: /Outliner$/ } a button whose name matches (a pattern for names that change)
  *   { tab: /^Final/ }      a tab whose name matches
  *   { select: 'Text' }     click the first thing showing that text
@@ -42,6 +43,9 @@ export const SHOTS = [
   { id: 'research-note', project: 'screenplay', out: 'help', steps: [{ page: 'Research' }, { select: 'Plot Points' }, { select: 'Setup: the cellar' }, { click: 'Rewrite and place…' }], shows: 'A note opened to rewrite and place on the track', uses: ['help: research'] },
   { id: 'research-filed', project: 'screenplay', out: 'help', steps: [{ page: 'Research' }, { button: /^Open The cemetery$/, wait: 1000 }], shows: 'A section opened from the outline: the notes dropped on it, to rewrite and add as beats', uses: ['/tools/research', 'help: research'] },
   { id: 'research-filed-rewrite', project: 'screenplay', out: 'help', steps: [{ page: 'Research' }, { button: /^Open The cemetery$/, wait: 800 }, { button: /^Johnny has the car keys/, wait: 300 }, { button: /^Rewrite and add as/, wait: 1200 }], shows: 'The rewrite screen opened from a section, with Add as beat', uses: ['help: research'] },
+  { id: 'scene-notes', project: 'screenplay', out: 'help', steps: [{ dblclickNth: ['.block-head', 3], wait: 1200 }], shows: 'A scene box with its notes down the right: red until used, used ones hidden', uses: ['help: research', '/tools/research'] },
+  { id: 'writer-notes', project: 'screenplay', out: 'help', steps: [{ dblclickNth: ['.beat-row', 3], wait: 1500 }], shows: 'A beat’s writing screen with its notes down the right', uses: ['help: the workspace'] },
+  { id: 'writer-place-text', project: 'screenplay', out: 'help', steps: [{ dblclickNth: ['.beat-row', 3], wait: 1500 }, { open: 'The table legs', wait: 1000 }], shows: 'A note opened from the writing screen, with Place text', uses: ['help: research'] },
   { id: 'sculptor', project: 'screenplay', out: 'help', steps: [{ page: 'Sculptor' }, { wait: 1200 }], shows: 'The Story Sculptor: acts, plot points, scenes, cast and links', uses: ['help: story sculptor'] },
   { id: 'sculptor-outliner', project: 'screenplay', out: 'help', steps: [{ page: 'Sculptor' }, { wait: 1200 }, { button: /Outliner$/, wait: 1200 }], shows: 'The Story Sculptor with the Outliner beside the map, to drag rows onto it', uses: ['/tools/story-sculptor', 'help: story sculptor'] },
   { id: 'character-creator', project: 'screenplay', out: 'help', steps: [{ page: 'Research' }, { button: /^barbra$/i, wait: 1500 }], shows: 'The Character Creator with a character open', uses: ['/tools/character-creator', 'help: character creator'] },

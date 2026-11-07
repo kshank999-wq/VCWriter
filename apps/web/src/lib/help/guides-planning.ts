@@ -47,6 +47,21 @@ export const GUIDES_PLANNING: Guide[] = [
         ],
       },
       {
+        heading: 'Notes beside a scene, and beside a beat',
+        body: [
+          'Every scene or section box, and every beat or subsection writing screen, has a **Notes** panel down its right: the notes filed to that part, including ones sorted there from VC Writer Notes. A red dot means not used yet; green means used. **Hide used notes** (ticked to start) takes the green ones away; untick it and they come back at the foot of the list. The **›** folds the panel to a narrow strip.',
+          'In a beat or subsection\u2019s screen the panel also lists the outline\u2019s rows beneath it — anything deeper than a beat is written here rather than placed on the track.',
+        ],
+        steps: [
+          'In a scene box, double-click a note, rewrite it, and press **Add as beat in** followed by the scene\u2019s name. It becomes a new beat in that scene.',
+          'In a beat\u2019s writing screen, click in the line you want the note to follow, then double-click the note.',
+          'Rewrite it, and press **Place text** in the corner. The words go in after that line as a block, marked in green, and the note turns green.',
+          'Drag the block by its **⠿** grip in the margin to wherever it belongs: drop on the top half of a line to go before it, the bottom half to go after.',
+        ],
+        shot: 'help/scene-notes',
+        shotAlt: 'A scene box with its notes down the right',
+      },
+      {
         heading: 'Notes dropped on a chapter, section or scene',
         body: [
           'Drag a note onto a chapter, section or scene in the **Outline** column and it is filed there. Click that part\u2019s name and the notes dropped on it are listed in the pane on the right. The arrow beside the name still folds it.',
@@ -205,9 +220,10 @@ export const GUIDES_PLANNING: Guide[] = [
         steps: [
           'Press **+ Scene** to add a scene. Scenes always go at the top level.',
           'Select a row and press **+ Beat**, **+ Note** or another type to put one under it.',
-          'Type its name straight into the box. Press Return for another row of the same kind beside it (Return on a scene adds a beat under it).',
-          'Press Tab to move a row in a level, and Shift+Tab to move it back out. A scene moved in becomes a beat, and whatever is under it comes along.',
-          'Drag a row by its grip (⠿) to move it, with everything under it. A line above or below means it lands beside that row; an outlined row means it lands inside.',
+          'Type its name straight into the box. Press Return for another row of the same kind just below it.',
+          'Press Tab to move a row in a level, and Shift+Tab to move it back out. It stays where it stands: under a folded row, Tab opens the fold and puts it first. A scene moved in becomes a beat, and whatever is under it comes along.',
+          'Drag a row by its grip (⠿) to move it, with everything under it. Drop it **onto** a row (the row lights up) and it goes inside it, a level down. Drop it **between** rows (a gold line with a dot appears) and it goes there, at that row\u2019s level. The track reorders to match.',
+          'To move several rows at once, Shift-click (or Ctrl/Cmd-click) each one; picked rows are ringed in gold. Drag any of them and they all go, in order, by the same two rules.',
           'Use **Collapse all** and **Expand all** to fold or open the whole outline, or the arrow on any row to fold just that one.',
         ],
         tip: 'Alt with the up or down arrow moves the selected row among its neighbours, and the arrow keys on their own walk the list.',

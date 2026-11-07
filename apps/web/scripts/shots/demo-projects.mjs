@@ -29,6 +29,7 @@ import {
   textToProse,
   addItem,
   fileNoteUnder,
+  markResearchUsed,
   addSetupPayoff,
   addSetupPoint,
   addNode,
@@ -160,6 +161,25 @@ const fileUnderRow = (file, rowTitle, notes) => {
   return next;
 };
 
+/**
+ * Notes filed to a scene on the track (the scene box and the writing screen
+ * list them), one of them already used, so both colours show.
+ */
+const fileUnderScene = (file, sceneIndex, notes, usedCount = 0) => {
+  let next = file;
+  const unit = unitsInStoryOrder(next)[sceneIndex];
+  if (!unit) return next;
+  const beat = beatsForUnit(next, unit.id)[0];
+  notes.forEach(([title, body], index) => {
+    const folder = next.researchCategories[0];
+    next = addResearchItem(next, { categoryId: folder.id, title, body });
+    const note = next.researchItems[next.researchItems.length - 1];
+    next = fileNoteUnder(next, note.id, { kind: 'section', unitId: unit.id });
+    if (index < usedCount && beat) next = markResearchUsed(next, { itemId: note.id, beatId: beat.id });
+  });
+  return next;
+};
+
 /** Setups and payoffs for the screenplay, placed on its beats. */
 const withSetups = (file) => {
   let next = file;
@@ -217,7 +237,7 @@ const withMap = (file) => {
 export function demoProjects() {
   const projects = {};
 
-  projects.screenplay = fileUnderRow(withOutline(withSetups(withMap(withNotes(
+  projects.screenplay = fileUnderScene(fileUnderRow(withOutline(withSetups(withMap(withNotes(
     titled(
       buildProjectFromImport(readFinalDraft(fdx(NIGHT_OF_THE_LIVING_DEAD)), {
         format: 'screenplay',
@@ -252,7 +272,11 @@ export function demoProjects() {
   ]), 'The cemetery', [
     ['Johnny has the car keys', 'They are in his pocket when he falls. Barbra cannot drive away.'],
     ['The man among the graves', 'Slow, but he never stops coming. Keep him in the back of the frame first.'],
-  ]);
+  ]), 3, [
+    ['The radio on the mantel', 'Ben finds it while boarding up. It is how the house learns what is happening outside.'],
+    ['The table legs', 'Ben breaks up the dining table for boards. Keep one leg in reach: it becomes a club later.'],
+    ['Barbra in shock', 'She barely speaks once she is inside. Let her silence carry the scene.'],
+  ], 1);
 
   projects.stage_play = withNotes(
     titled(
