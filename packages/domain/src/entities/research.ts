@@ -206,6 +206,14 @@ export const researchItemSchema = z.object({
   orderKey: orderKey(),
   origin: z.enum(['desktop', 'mobile_capture', 'import']).default('desktop'),
   /**
+   * For a note from VC Writer Notes: the category it was caught under (`idea`,
+   * `sub`, `theme`…) and the moment it was caught, so it reads at the desk as
+   * it read on the phone (from Ken: *it needs to have a date on it… look exactly
+   * like the notes from VC Writer Notes*). Null on everything else.
+   */
+  captureCategory: z.string().nullable().default(null),
+  capturedAt: z.string().nullable().default(null),
+  /**
    * Who wrote it, in a room (addendum 07 §11).
    *
    * **Called `author` rather than `origin`** because `origin` above already

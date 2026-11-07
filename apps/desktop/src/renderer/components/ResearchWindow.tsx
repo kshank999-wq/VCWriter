@@ -26,6 +26,8 @@ import {
   inboxGroups,
   rejectCapture,
   suggestRouting,
+  captureKeyName,
+  repairCaptureTitles,
   trackKindSchema,
   tracksInOrder,
   markResearchUsed,
@@ -398,6 +400,32 @@ export function ResearchBody({
    * removes from it have to be the same piece of state.
    */
   const phone = usePhoneNotes(file.project.id as string);
+
+  /**
+   * Notes brought in from VC Writer Notes by an earlier build were named after
+   * their first line rather than the title they had on the phone (from Ken:
+   * *the notes that are being imported… are not coming in with the correct
+   * titles*). Once, when Research opens, every note filed from the phone is
+   * matched to the note it came from and given back its title, category and
+   * date; a title changed at the desk is left alone.
+   */
+  const repaired = useRef(false);
+  useEffect(() => {
+    if (repaired.current) return;
+    const api = window.vcwriter;
+    if (typeof api?.listArchivedNotes !== 'function') return;
+    repaired.current = true;
+    void Promise.all([api.listArchivedNotes(), Promise.resolve({ ok: true as const, data: phone.notes })])
+      .then(([archived, waiting]) => {
+        const captures = [...(archived.ok ? archived.data ?? [] : []), ...(waiting.ok ? waiting.data : [])];
+        if (captures.length === 0) return;
+        // Only when something needs it: an update marks the project changed.
+        if (repairCaptureTitles(file, captures) === file) return;
+        onUpdate((current) => repairCaptureTitles(current, captures));
+      })
+      .catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   /** Which view of the phone's notes is open in Mobile App (addendum 27 §25). */
   const [mobileTab, setMobileTab] = useState<'inbox' | 'phone' | 'archive'>('inbox');
   const [archiveRead, setArchiveRead] = useState(0);
@@ -2465,9 +2493,10 @@ function NoteCard({
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
 }) {
   const [asking, setAsking] = useState(false);
+  const phoneNote = item.origin === 'mobile_capture';
   return (
     <li>
-      <div className="research-card-wrap">
+      <div className={phoneNote ? 'research-card-wrap phone' : 'research-card-wrap'}>
         <button
           type="button"
           className={chosen ? 'research-card selected' : 'research-card'}
@@ -2479,9 +2508,23 @@ function NoteCard({
           onClick={onChoose}
           onDoubleClick={onOpen}
         >
-          <span className="research-card-head">
-            <span className="research-card-title">{item.title}</span>
-          </span>
+          {phoneNote ? (
+            /* A note from VC Writer Notes looks as it did on the phone (from
+               Ken: *in a little box that looks just like it… if it's too long,
+               then you can scroll down within the box*): its category and title
+               on one gold line, the day it was caught, and every word of it. */
+            <span className="research-card-head phone">
+              <span className="phone-note-label">
+                {captureKeyName(item.captureCategory ?? 'idea', file.project.format as ProjectFormat)}
+                {item.title ? ` · ${item.title}` : ''}
+              </span>
+              {item.capturedAt ? <span className="phone-note-date muted">{caughtOn(item.capturedAt)}</span> : null}
+            </span>
+          ) : (
+            <span className="research-card-head">
+              <span className="research-card-title">{item.title}</span>
+            </span>
+          )}
           {/* Used means on the track (addendum 28 §7, from Ken: *when used a
               red X will be placed in the corner*). */}
           {noteUsed(file, item) ? (
@@ -2489,7 +2532,9 @@ function NoteCard({
               ✕
             </span>
           ) : null}
-          {item.body.trim().length > 0 ? <span className="research-card-body">{item.body}</span> : null}
+          {item.body.trim().length > 0 ? (
+            <span className={phoneNote ? 'research-card-body phone' : 'research-card-body'}>{item.body}</span>
+          ) : null}
           <span className="research-card-foot muted">
             {folderName}
             {item.tags.length > 0 ? ` · ${item.tags.join(', ')}` : ''}
@@ -2529,3 +2574,9 @@ function NoteCard({
     </li>
   );
 }
+
+/** The day a phone note was caught, as the phone says it: *Nov 5, 2026*. */
+const caughtOn = (iso: string): string => {
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+};

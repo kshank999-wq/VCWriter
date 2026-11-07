@@ -63,6 +63,23 @@ export function OutlineSidebar({ file, dragging, selectedId, onFile, onDragNote,
     <aside className="research-outline" aria-label="Outline folders">
       <header className="research-outline-head">
         <h3>Outline</h3>
+        {/* Fold the lot to the chapters, or open everything (from Ken: *I want
+            to be able to collapse the sections and subsections and chapters*). */}
+        {folders.length > 0 ? (
+          <span className="research-outline-folding">
+            <button
+              type="button"
+              className="ghost small"
+              title="Fold every chapter, section and subsection"
+              onClick={() => setClosed(new Set(folders.filter((one, index) => (folders[index + 1]?.depth ?? -1) > one.depth || one.notes.length > 0).map((one) => one.key)))}
+            >
+              Collapse all
+            </button>
+            <button type="button" className="ghost small" title="Open every chapter, section and subsection" onClick={() => setClosed(new Set())}>
+              Expand all
+            </button>
+          </span>
+        ) : null}
         <button type="button" className="ghost small" aria-label="Hide the outline" title="Hide the outline" onClick={onHide}>
           ›
         </button>
@@ -76,7 +93,21 @@ export function OutlineSidebar({ file, dragging, selectedId, onFile, onDragNote,
           <p className="muted small research-outline-hint">Drag a note onto a folder. Double-click a note to rewrite it.</p>
           <ul className="research-outline-list">
             {folders.map((folder, index) => {
+              // A folded chapter hides its sections and subsections too: the
+              // folders after it that sit deeper, up to the next at its level.
+              const hiddenBy = folders
+                .slice(0, index)
+                .reverse()
+                .reduce<{ depth: number; hidden: boolean }>(
+                  (walk, above) => {
+                    if (walk.hidden || above.depth >= walk.depth) return walk;
+                    return { depth: above.depth, hidden: closed.has(above.key) };
+                  },
+                  { depth: folder.depth, hidden: false },
+                );
+              if (hiddenBy.hidden) return null;
               const open = !closed.has(folder.key);
+              const hasInside = folder.notes.length > 0 || (folders[index + 1]?.depth ?? -1) > folder.depth;
               const label = `${folder.number ? `${folder.number} ` : ''}${folder.title || KIND_LABEL[folder.kind]}`;
               return (
                 <li key={folder.key} className={`research-outline-folder kind-${folder.kind}`}>
@@ -108,6 +139,9 @@ export function OutlineSidebar({ file, dragging, selectedId, onFile, onDragNote,
                         })
                       }
                     >
+                      <span className="research-outline-chevron" aria-hidden="true">
+                        {hasInside ? (open ? '▾' : '▸') : ''}
+                      </span>
                       <span className="research-outline-mark" title={KIND_LABEL[folder.kind]}>
                         {KIND_MARK[folder.kind]}
                       </span>

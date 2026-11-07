@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   approveCapture,
   addBlock,
+  addResearchCategory,
   blocksOf,
   boardsOf,
   captureItemSchema,
@@ -165,13 +166,15 @@ describe('what the suggestion says about a word it has no folder for', () => {
     const said = suggestRouting(project(), note({ category: 'dialogue' }));
     expect(said.reason).toContain('You said Dialogue');
     expect(said.reason).not.toContain('No category identified');
-    expect(said.decision?.kind).toBe('research');
+    // Its own division (from Ken: *when you pick the category in the app…
+    // there needs to be those divisions*): a Dialogue folder, made for it.
+    expect(said.decision).toEqual({ kind: 'research_folder', name: 'Dialogue' });
 
-    // And a `scene` note, which has no folder **on purpose**: this module may
-    // not file into the manuscript, so it waits where general thoughts wait.
+    // A `scene` note goes to a Scene folder in Research — never into the
+    // manuscript, which this module may not file into.
     const scene = suggestRouting(project(), note({ category: 'scene' }));
     expect(scene.reason).toContain('You said Scene');
-    expect(scene.reason).toContain('unless you place it yourself');
+    expect(scene.decision).toEqual({ kind: 'research_folder', name: 'Scene' });
   });
 
   it('reads the structural words in the format’s own vocabulary', () => {
@@ -182,5 +185,61 @@ describe('what the suggestion says about a word it has no folder for', () => {
 
     const book = createProjectFile({ title: 'The Lamp', format: 'novel' });
     expect(suggestRouting(book, note({ category: 'unit' })).reason).toContain('You said Chapter');
+  });
+});
+
+describe('notes from VC Writer Notes come in as they read on the phone (from Ken)', () => {
+  it('takes the title from the phone, keeps the category and the day it was caught, and makes the division', async () => {
+    const { approveCapture, captureTitle } = await import('../index.js');
+    const book = createProjectFile({ title: 'Guide', format: 'instructional' });
+    const capture = note({
+      category: 'sub',
+      subjectName: 'Constructing sentences adverbs',
+      rawText: "If you're going to use an adverb, make it fight the verb.",
+      capturedAt: '2026-11-05T22:56:32.891Z',
+    });
+    expect(captureTitle(capture)).toBe('Constructing sentences adverbs');
+    const route = suggestRouting(book, capture);
+    expect(route.decision).toEqual({ kind: 'research_folder', name: 'Subsection' });
+    const done = approveCapture(book, capture, route.decision!);
+    const item = done.file.researchItems.at(-1)!;
+    expect(item.title).toBe('Constructing sentences adverbs');
+    expect(item.captureCategory).toBe('sub');
+    expect(item.capturedAt).toBe('2026-11-05T22:56:32.891Z');
+    expect(done.file.researchCategories.find((one) => one.id === item.categoryId)?.name).toBe('Subsection');
+    // The next one goes into the same folder, not a second one.
+    const again = approveCapture(done.file, note({ category: 'sub', subjectName: 'Another' }), suggestRouting(done.file, note({ category: 'sub' })).decision!);
+    expect(again.file.researchCategories.filter((one) => one.name === 'Subsection')).toHaveLength(1);
+  });
+
+  it('files a note into the folder its title names', () => {
+    let file = createProjectFile({ title: 'Guide', format: 'instructional' });
+    file = addResearchCategory(file, { name: 'Characterization' }).file;
+    const route = suggestRouting(file, note({ category: 'idea', subjectName: 'characterization' }));
+    expect(route.decision?.kind).toBe('research');
+    const folder = file.researchCategories.find((one) => one.name === 'Characterization')!;
+    expect(route.decision).toEqual({ kind: 'research', categoryId: folder.id });
+  });
+
+  it('repairs notes brought in earlier under their first line, and leaves a title the writer changed', async () => {
+    const { repairCaptureTitles, approveCapture } = await import('../index.js');
+    const book = createProjectFile({ title: 'Guide', format: 'instructional' });
+    const ideas = book.researchCategories.find((one) => one.systemKey === 'ideas')!;
+    const first = note({ subjectName: 'Good sentences', rawText: 'Now good sentences do without adverbs.' });
+    const second = note({ subjectName: 'Delay', rawText: 'Delay delay delay.' });
+    // As an earlier build filed them: titled by the first line.
+    let file = approveCapture(book, first, { kind: 'research', categoryId: ideas.id, title: 'Now good sentences do without adverbs.' }).file;
+    const a = approveCapture(file, second, { kind: 'research', categoryId: ideas.id, title: 'My own name for it' });
+    file = a.file;
+    const firstItem = file.researchItems.find((one) => one.title === 'Now good sentences do without adverbs.')!;
+    const secondItem = file.researchItems.find((one) => one.title === 'My own name for it')!;
+    const captures = [
+      { ...first, status: 'approved' as const, resultRef: { type: 'research_item' as const, id: firstItem.id } },
+      { ...second, status: 'approved' as const, resultRef: { type: 'research_item' as const, id: secondItem.id } },
+    ];
+    const repaired = repairCaptureTitles(file, captures as never);
+    expect(repaired.researchItems.find((one) => one.id === firstItem.id)!.title).toBe('Good sentences');
+    expect(repaired.researchItems.find((one) => one.id === secondItem.id)!.title).toBe('My own name for it');
+    expect(repairCaptureTitles(repaired, captures as never)).toBe(repaired);
   });
 });

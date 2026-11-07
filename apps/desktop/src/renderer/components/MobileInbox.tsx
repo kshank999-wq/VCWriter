@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   CAPTURE_CATEGORY_NAMES,
   captureTitle,
+  captureKeyName,
   captureVocabulary,
   filingFolder,
   groupOffer,
@@ -339,11 +340,12 @@ function Note({
             about. When they did not, there is no heading at all:
             `captureTitle` falls back to the first line, which would print the
             note twice. */}
-        {capture.subjectName ? (
-          <strong className="mobile-subject">{capture.subjectName}</strong>
-        ) : (
-          <span className="mobile-subject" />
-        )}
+        {/* As the phone heads it (from Ken: *look exactly like the notes from VC
+            Writer Notes*): IDEA · Constructing sentences adverbs. */}
+        <strong className="mobile-subject phone-note-label">
+          {captureKeyName(capture.category ?? 'idea', file.project.format as ProjectFormat)}
+          {capture.subjectName ? ` · ${capture.subjectName}` : ''}
+        </strong>
         {/* The story of a collection it was said for (addendum 27 §23): the
             marker's title as it is now, and nothing where the story has gone. */}
         {storyTitle ? <span className="mobile-story small">{storyTitle}</span> : null}

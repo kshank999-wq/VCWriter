@@ -939,3 +939,11 @@ the outline column beside the notes (§7) and on the Outliner's own shelf
 (§9). `ContentsPanel` and `contentsShelf` stay in the code: the shelf still
 answers *where in the book a note belongs*, and the chapter page is still
 reached from **File ▸ Chapter page…**.
+
+## Folding the outline sidebar (November 2026)
+
+From Ken: *I want to be able to collapse the sections and subsections and
+chapters just to make it easy.* Folding a chapter in Research's outline
+sidebar now hides its sections and subsections too, not only its notes; each
+folder that holds anything shows ▸ or ▾; and **Collapse all** and **Expand
+all** sit beside the heading.

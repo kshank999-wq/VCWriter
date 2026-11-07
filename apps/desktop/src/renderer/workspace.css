@@ -23107,3 +23107,27 @@ dialog.readback-dialog[open] {
 .preview-purpose { margin: 6px 16px 0; }
 .preview-empty { margin: 12px auto; max-width: 640px; display: grid; gap: 8px; justify-items: start; }
 .context-heading { padding: 6px 12px 2px; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+
+/* A note from VC Writer Notes, as it reads on the phone (from Ken): the
+   category and title on one gold line, the day it was caught, and the whole
+   note in a box that scrolls rather than three clipped lines. */
+.research-card-head.phone { display: flex; flex-direction: column; gap: 2px; }
+.phone-note-label { color: var(--gold); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; line-height: 1.35; }
+.phone-note-date { font-size: 10.5px; }
+.research-card-body.phone {
+  display: block;
+  -webkit-line-clamp: unset;
+  max-height: 9.5em;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  color: var(--text);
+  font-size: 12.5px;
+  line-height: 1.5;
+  padding-right: 4px;
+  text-align: left;
+}
+.research-outline-folding { display: inline-flex; gap: 2px; margin-left: auto; margin-right: 4px; }
+.research-outline-folding .ghost.small { padding: 1px 6px; font-size: 10.5px; }
+.research-outline-chevron { display: inline-block; width: 10px; color: var(--muted); font-size: 10px; }
+.mobile-text { max-height: 11em; overflow-y: auto; padding-right: 4px; }
+.mobile-subject.phone-note-label { font-weight: 600; }

@@ -528,6 +528,9 @@ export const addResearchItem = (
     /** Where the fact came from (addendum 16 §3). What an importer fills in. */
     source?: string;
     origin?: 'desktop' | 'mobile_capture' | 'import';
+    /** A phone note's category and the moment it was caught. */
+    captureCategory?: string | null;
+    capturedAt?: string | null;
   },
 ): ProjectFile => {
   if (!file.researchCategories.some((category) => category.id === input.categoryId)) {
@@ -544,6 +547,8 @@ export const addResearchItem = (
     tags: input.tags ?? [],
     source: input.source ?? '',
     origin: input.origin ?? 'desktop',
+    captureCategory: input.captureCategory ?? null,
+    capturedAt: input.capturedAt ?? null,
     orderKey: orderKeyForIndex(siblings, siblings.length),
     createdAt: timestamp,
     updatedAt: timestamp,

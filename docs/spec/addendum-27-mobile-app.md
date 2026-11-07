@@ -1187,3 +1187,36 @@ On the project list, **New project** and **Which projects** sit directly under
 the heading, and the form they open (title, kind, *Start it*, *Cancel*) opens
 there too, above every existing project. The list follows. A tap on *Start it*
 with the keyboard up lands the first time instead of only closing the keyboard.
+
+## Notes come in as they read on the phone (November 2026)
+
+From Ken: *the notes that are being imported from VC Writer Notes are not
+coming in with the correct titles… they need to come into the categories… it
+also needs to have a date on it… they need to come in and look exactly like
+the notes from VC Writer Notes, in a little box… if it's too long, then you can
+scroll down within the box.*
+
+- **The title.** `captureTitle` now reads the note's title from the phone
+  (`subject_name`) first. It used to skip it, so every note came in named
+  after its first line, and a note titled *Constructing sentences adverbs* was
+  filed as *If you're going to use an adverb…*.
+- **The category and the date travel with the note.** A Research note made
+  from a phone note keeps `captureCategory` and `capturedAt` (migration 0077,
+  `research_items.capture_category` and `captured_at`).
+- **Where it goes.** A note whose title matches a folder goes into that folder
+  (*Characterization*). Otherwise it goes to its category's folder: Ideas for
+  an idea, Themes for a theme, and for a category with no folder of its own
+  (*Section*, *Subsection*, *Scene*, *Dialogue* where there is no shelf) a
+  folder of that name, made the first time one goes in (`research_folder`
+  decision).
+- **How it looks.** In Research, a phone note's card reads as on the phone: its
+  category and title on one gold line, the day it was caught, and the whole
+  note in a box that scrolls. The Mobile App list heads each note the same way,
+  and its text scrolls in a box too.
+- **Notes brought in earlier** are repaired once, when Research opens
+  (`repairCaptureTitles`): each is matched to the phone note it came from and
+  given back its title, category and date. A title changed at the desk is left
+  alone.
+- **Deleted notes.** *Delete* on the phone, or in the desktop's archive,
+  removes the note from the cloud for good. *Clear transferred notes* only
+  hides notes already brought in; those stay in the project's Research.

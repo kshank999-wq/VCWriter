@@ -346,6 +346,8 @@ const researchItemToRow = (item: ResearchItem): Row => ({
   archived: item.archived,
   order_key: item.orderKey,
   origin: item.origin,
+  capture_category: item.captureCategory ?? null,
+  captured_at: item.capturedAt ?? null,
   // Whose idea it was, in a room (addendum 07 §11). `origin` beside it means
   // *how it got here*, which is a different question and older.
   author: item.author,
@@ -1215,6 +1217,8 @@ const researchItemFromRow = (row: Row): ResearchItem =>
     archived: flag(row['archived']),
     orderKey: row['order_key'],
     origin: row['origin'],
+    captureCategory: nullableText(row['capture_category']),
+    capturedAt: nullableText(row['captured_at']),
     author: row['author'] ?? null,
     createdAt: row['created_at'],
     updatedAt: row['updated_at'],

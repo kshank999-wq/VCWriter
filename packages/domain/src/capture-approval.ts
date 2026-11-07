@@ -42,6 +42,12 @@ import type {
 
 export type ApprovalDecision =
   | { kind: 'research'; categoryId: ResearchCategoryId; title?: string; body?: string }
+  /**
+   * Into a folder named after the note's category — *Section*, *Subsection* —
+   * made at the top of Research the first time one is needed (from Ken: *when
+   * you pick the category in the app… there needs to be those divisions*).
+   */
+  | { kind: 'research_folder'; name: string; title?: string; body?: string }
   | { kind: 'beat'; unitId: StructuralUnitId; title?: string }
   /** A new person in the cast. */
   | { kind: 'character'; name?: string }
@@ -113,10 +119,53 @@ const firstLine = (text: string): string => {
 
 /** A short title derived from the capture, when the writer does not supply one. */
 export const captureTitle = (capture: CaptureItem): string => {
+  // The title the writer gave it in VC Writer Notes, first (from Ken: *if you
+  // look at the app, there is a title… I can't find that anywhere*). It used to
+  // be skipped, so every note came in named after its first line.
+  const titled = capture.subjectName?.trim();
+  if (titled && titled.length > 0) return titled;
   const named = capture.inference?.entityName?.trim();
   if (named && named.length > 0) return named;
   const line = firstLine(capture.rawText);
   return line.length > 0 ? line : 'Untitled capture';
+};
+
+/** The title an earlier build gave a note: its first line, ignoring the title it had. */
+const oldCaptureTitle = (capture: CaptureItem): string => {
+  const named = capture.inference?.entityName?.trim();
+  if (named && named.length > 0) return named;
+  const line = firstLine(capture.rawText);
+  return line.length > 0 ? line : 'Untitled capture';
+};
+
+/**
+ * Notes already brought in from the phone under their first line, given the
+ * title they had in VC Writer Notes, their category and the day they were
+ * caught. Only a note still carrying the old derived title is renamed, so a
+ * title the writer changed at the desk stays theirs. Returns the file
+ * unchanged when there is nothing to repair.
+ */
+export const repairCaptureTitles = (file: ProjectFile, captures: readonly CaptureItem[]): ProjectFile => {
+  const byItem = new Map<string, CaptureItem>();
+  for (const capture of captures) {
+    const target = capture.resultRef;
+    if (target && target.type === 'research_item') byItem.set(target.id as string, capture);
+  }
+  if (byItem.size === 0) return file;
+  let changed = false;
+  const researchItems = file.researchItems.map((item) => {
+    const capture = byItem.get(item.id as string);
+    if (!capture) return item;
+    const patch: Partial<typeof item> = {};
+    const titled = capture.subjectName?.trim();
+    if (titled && item.title !== titled && item.title === oldCaptureTitle(capture)) patch.title = titled;
+    if (!item.captureCategory && capture.category) patch.captureCategory = capture.category;
+    if (!item.capturedAt && capture.capturedAt) patch.capturedAt = capture.capturedAt;
+    if (Object.keys(patch).length === 0) return item;
+    changed = true;
+    return { ...item, ...patch };
+  });
+  return changed ? { ...file, researchItems } : file;
 };
 
 /**
@@ -331,36 +380,43 @@ const spokenSuggestion = (file: ProjectFile, capture: CaptureItem): RoutingSugge
    */
   const words = (one: string): string => captureKeyName(one, file.project.format as ProjectFormat);
 
+  /**
+   * **A folder named like the note** (from Ken: *if the title is
+   * characterization, then it should drop into that category*): the note's
+   * title matched against every folder.
+   */
+  if (name) {
+    const match = researchCategoriesInOrder(file).find((one) => plainly(one.name) === plainly(name));
+    if (match) {
+      return {
+        decision: { kind: 'research', categoryId: match.id },
+        confidence: 1,
+        reason: `Its title matches the ${match.name} folder`,
+      };
+    }
+  }
+
   const key = FOLDER_FOR[category];
   const folder = key
     ? researchCategoriesInOrder(file).find((candidate) => candidate.systemKey === key)
     : undefined;
 
   /**
-   * A category with no folder of its own here, which is two cases and one
-   * answer.
-   *
-   * **The structural words and `scene` have none on purpose** — a note said
-   * against a scene is about the manuscript, and the one thing this module may
-   * never do is file into it — and **a mapped folder can simply be absent**,
-   * since a screenplay has no General Notes shelf for a line of dialogue to go
-   * on. Driving it found what falling through cost: the suggestion read *No
-   * category identified*, said to somebody who had just identified one out
-   * loud. It goes where a general thought goes, and the sentence says both that
-   * they were heard and that nobody has decided where it belongs.
+   * **The category's own division** where it has no folder of its own here:
+   * *Section*, *Subsection*, a theme in a project without a Themes shelf. A
+   * folder of that name is used if there is one, and made the first time a note
+   * goes in.
    */
   if (!folder) {
-    const general = filingFolder(file, capture, null);
-    const where = researchCategoriesInOrder(file).find((one) => one.id === general);
-    return general && where
-      ? {
-          decision: { kind: 'research', categoryId: general },
-          // Deliberately short of certainty: this is where it waits rather than
-          // where it belongs, and `needsReview` reads this number.
-          confidence: 0.5,
-          reason: `You said ${words(category)} — no folder for that, so ${where.name} unless you place it yourself`,
-        }
-      : null;
+    const divisionName = words(category);
+    const existing = researchCategoriesInOrder(file).find((one) => plainly(one.name) === plainly(divisionName));
+    return existing
+      ? { decision: { kind: 'research', categoryId: existing.id }, confidence: 1, reason: `You said ${divisionName}` }
+      : {
+          decision: { kind: 'research_folder', name: divisionName },
+          confidence: 1,
+          reason: `You said ${divisionName} — a ${divisionName} folder is made for it`,
+        };
   }
 
   /**
@@ -495,7 +551,27 @@ export const approveCapture = (
   let next = file;
   let resultRef: StoryEntityRef;
 
-  if (decision.kind === 'research') {
+  const fromPhone = { origin: 'mobile_capture' as const, captureCategory: capture.category ?? null, capturedAt: capture.capturedAt ?? null };
+
+  if (decision.kind === 'research_folder') {
+    const wanted = decision.name.trim() || 'Notes';
+    let folder = researchCategoriesInOrder(file).find((one) => plainly(one.name) === plainly(wanted));
+    let base = file;
+    if (!folder) {
+      const made = addResearchCategory(file, { name: wanted });
+      base = made.file;
+      folder = made.category;
+    }
+    next = addResearchItem(base, {
+      categoryId: folder.id,
+      title: decision.title ?? captureTitle(capture),
+      body: decision.body ?? capture.rawText,
+      ...fromPhone,
+    });
+    const created = next.researchItems[next.researchItems.length - 1];
+    if (!created) throw new DomainError('The research note could not be created');
+    resultRef = ref('research_item', created.id);
+  } else if (decision.kind === 'research') {
     next = addResearchItem(file, {
       categoryId: decision.categoryId,
       title: decision.title ?? captureTitle(capture),
@@ -504,7 +580,7 @@ export const approveCapture = (
       // recovery record (§9) — so this is the difference between correcting
       // what goes into the project and editing the testimony behind it.
       body: decision.body ?? capture.rawText,
-      origin: 'mobile_capture',
+      ...fromPhone,
     });
     const created = next.researchItems[next.researchItems.length - 1];
     if (!created) throw new DomainError('The research note could not be created');
@@ -532,7 +608,7 @@ export const approveCapture = (
       categoryId: folder.id,
       title: decision.title ?? captureTitle(capture),
       body: decision.body ?? capture.rawText,
-      origin: 'mobile_capture',
+      ...fromPhone,
     });
     const created = next.researchItems[next.researchItems.length - 1];
     if (!created) throw new DomainError('The research note could not be created');
@@ -555,7 +631,7 @@ export const approveCapture = (
       categoryId: folder,
       title: decision.title ?? captureTitle(capture),
       body: decision.body ?? capture.rawText,
-      origin: 'mobile_capture',
+      ...fromPhone,
     });
     const item = next.researchItems[next.researchItems.length - 1];
     if (!item) throw new DomainError('The research note could not be created');
