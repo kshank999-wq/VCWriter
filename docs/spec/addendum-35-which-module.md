@@ -384,3 +384,29 @@ organizing and loading it right into your writing software.* A band under
 the opening section has the Notes icon, *The companion app — VC Writer
 Notes*, a line on capturing an idea when inspiration takes you and having it
 arrive in VC Writer titled, dated and filed, and a button to `/notes`.
+
+## 13. Work any way you want (`/workflow`)
+
+From Ken: *a promotional page for the outliner, the sculptor, the notes, that
+promotes that you can work any way you want … a flexible workflow, and
+organize yourself with multiple tools at your disposal … a little section that
+highlights those, they're just text boxes … group that into one promotional
+thing.*
+
+The tools each keep their own page under `/tools`; `/workflow` sells the fact
+that they are several ways into **one** story. It runs:
+
+1. The hero, *Work any way you want*, over the Sculptor-with-Outliner shot.
+2. **Tools at your disposal**: the short text boxes (`.workflow-box`), one
+   line each for Notes, Research, Outliner, Story Sculptor, Character Creator
+   and the page itself, each linking to that tool's page.
+3. **Start wherever you start**: four cards, from a pile of ideas, an outline,
+   a map, or the page.
+4. Shot-and-copy bands for catching and sorting notes (`research-filed`), the
+   Outliner (`outliner`), the Sculptor (`sculptor`) and the notes beside the
+   writing (`writer-notes`), all from `scripts/shots`.
+5. A closing band, *All of it, in every module*.
+
+The front page carries a band to it (*Work any way you want* → **Your
+workflow**) between Layout and the rooms-and-tools chooser, and the sitemap
+lists it.

@@ -13,6 +13,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...MODULE_PAGES.map((page) => ({ url: at(`/write/${page.slug}`), changeFrequency: 'monthly' as const, priority: 0.8 })),
     ...TOOL_PAGES.map((tool) => ({ url: at(`/tools/${tool.slug}`), changeFrequency: 'monthly' as const, priority: 0.7 })),
     { url: at('/layout'), changeFrequency: 'monthly', priority: 0.8 },
+    { url: at('/workflow'), changeFrequency: 'monthly', priority: 0.8 },
     { url: at('/help'), changeFrequency: 'weekly', priority: 0.7 },
     ...GUIDES.map((guide) => ({ url: at(`/help/${guide.slug}`), changeFrequency: 'monthly' as const, priority: 0.5 })),
     { url: at('/notes'), changeFrequency: 'monthly', priority: 0.6 },

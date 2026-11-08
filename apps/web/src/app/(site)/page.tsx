@@ -101,6 +101,20 @@ export default function HomePage() {
         </Link>
       </section>
 
+      {/* The organizing tools together: work any way you want (from Ken). */}
+      <section id="workflow" className="publish-band">
+        <div>
+          <h2>Work any way you want</h2>
+          <p>
+            Notes on your phone, Research, the Outliner and the Story Sculptor: several ways to organize the same
+            story. Start with whichever suits you and switch whenever you like.
+          </p>
+        </div>
+        <Link href="/workflow" className="button">
+          Your workflow
+        </Link>
+      </section>
+
       {/* The rooms and tools, each with a page of its own (from Ken). */}
       <section id="tools">
         <h2>The rooms and tools</h2>
