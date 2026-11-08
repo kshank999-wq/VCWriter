@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { WalkthroughButton } from '../walkthrough';
+import { walkthroughBySlug } from '@/lib/walkthroughs';
 
 export const metadata: Metadata = {
   title: 'Work your way',
@@ -116,6 +118,17 @@ export default function WorkflowPage() {
             </Link>
           ))}
         </div>
+      </section>
+
+      <section className="publish-band">
+        <div>
+          <h2>See it step by step</h2>
+          <p>
+            Make a scene, add its beats, write them, and watch them become a screenplay. Six short steps, no
+            jargon.
+          </p>
+        </div>
+        <WalkthroughButton walkthrough={walkthroughBySlug('screenplay')!} />
       </section>
 
       <section>

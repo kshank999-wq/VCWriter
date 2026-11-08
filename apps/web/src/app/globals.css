@@ -2919,3 +2919,39 @@ p.room-stamp {
   font-size: 15px;
   line-height: 1.5;
 }
+
+/* The step-by-step box (addendum 35 §14): one picture, a line or two, Next. */
+.walkthrough-offer { margin-top: 14px; }
+.band-buttons { display: flex; flex-wrap: wrap; gap: 10px; }
+dialog.walkthrough {
+  width: min(1040px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  padding: 0;
+  border: 1px solid var(--gold-deep);
+  border-radius: 4px;
+  background: var(--bg-raised);
+  color: var(--text);
+  overflow: auto;
+}
+dialog.walkthrough::backdrop { background: rgba(0, 0, 0, 0.72); }
+.walkthrough-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px 6px; }
+.walkthrough-head .eyebrow { margin: 0; }
+.walkthrough-close { background: none; border: 0; color: var(--text-muted); font-size: 26px; line-height: 1; cursor: pointer; }
+.walkthrough-close:hover { color: var(--text); }
+.walkthrough-shot { margin: 0 20px; border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
+.walkthrough-shot { text-align: center; background: #000; }
+/* The picture gives way to the words and the buttons, so Next is always on screen. */
+.walkthrough-shot img { display: inline-block; vertical-align: top; width: auto; max-width: 100%; height: auto; max-height: calc(100vh - 330px); }
+.walkthrough-words { padding: 16px 20px 4px; }
+.walkthrough-count { margin: 0 0 4px; color: var(--text-muted); font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; }
+.walkthrough-words h2 { margin: 0 0 8px; font-size: 24px; letter-spacing: 0.08em; }
+.walkthrough-words p { margin: 0; font-size: 17px; line-height: 1.55; max-width: 760px; }
+.walkthrough-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px 20px; }
+.walkthrough-foot .button[disabled] { opacity: 0.4; cursor: default; }
+.walkthrough-dots { display: flex; gap: 8px; }
+.walkthrough-dot { width: 10px; height: 10px; padding: 0; border-radius: 50%; border: 1px solid var(--gold-deep); background: transparent; cursor: pointer; }
+.walkthrough-dot.on { background: var(--gold); border-color: var(--gold); }
+@media (max-width: 640px) {
+  .walkthrough-words h2 { font-size: 20px; }
+  .walkthrough-words p { font-size: 15px; }
+}

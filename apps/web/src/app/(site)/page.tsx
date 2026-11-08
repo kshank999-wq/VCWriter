@@ -1,3 +1,5 @@
+import { WalkthroughButton } from './walkthrough';
+import { walkthroughBySlug } from '@/lib/walkthroughs';
 import Link from 'next/link';
 import { Emblem } from '../wordmark';
 import { ModuleChooser } from './module-chooser';
@@ -110,9 +112,12 @@ export default function HomePage() {
             story. Start with whichever suits you and switch whenever you like.
           </p>
         </div>
-        <Link href="/workflow" className="button">
-          Your workflow
-        </Link>
+        <span className="band-buttons">
+          <WalkthroughButton walkthrough={walkthroughBySlug('screenplay')!} className="button secondary" />
+          <Link href="/workflow" className="button">
+            Your workflow
+          </Link>
+        </span>
       </section>
 
       {/* The rooms and tools, each with a page of its own (from Ken). */}

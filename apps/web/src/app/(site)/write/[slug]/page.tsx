@@ -4,6 +4,8 @@ import { notFound } from 'next/navigation';
 import { formatName } from '@vcwriter/domain';
 import { MODULE_PAGES, moduleBySlug } from '@/lib/modules';
 import { ModuleChooser } from '../../module-chooser';
+import { WalkthroughButton } from '../../walkthrough';
+import { walkthroughBySlug } from '@/lib/walkthroughs';
 
 type Params = { slug: string };
 
@@ -42,6 +44,8 @@ export async function generateMetadata({ params }: { params: Params | Promise<Pa
 export default async function ModulePage({ params }: { params: Params | Promise<Params> }) {
   const page = moduleBySlug((await params).slug);
   if (!page) notFound();
+  // The step-by-step box, where this module has one (addendum 35 §14).
+  const walkthrough = walkthroughBySlug(page.slug);
 
   return (
     <>
@@ -57,6 +61,11 @@ export default async function ModulePage({ params }: { params: Params | Promise<
         <Link href={`/help/${page.slug}`} className="button secondary">
           Read the guide
         </Link>
+        {walkthrough ? (
+          <div className="walkthrough-offer">
+            <WalkthroughButton walkthrough={walkthrough} className="button secondary" />
+          </div>
+        ) : null}
       </div>
 
       {/* The program itself, with a demo project of this kind open. Taken by

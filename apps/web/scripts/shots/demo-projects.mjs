@@ -41,6 +41,7 @@ import {
   unitsInStoryOrder,
   updateBeat,
   updateUnit,
+  setSceneGrid,
 } from '@vcwriter/domain';
 
 const classic = (name) => readFileSync(resolve(import.meta.dirname, 'classics', name), 'utf8');
@@ -180,6 +181,32 @@ const fileUnderScene = (file, sceneIndex, notes, usedCount = 0) => {
   return next;
 };
 
+/**
+ * Where each scene starts and ends, for the Polarity graph and the Story
+ * Grid: what is at stake, which way it turns, and the moment it turns. The
+ * first scene is left flat on purpose, which is what the graph is for.
+ */
+const withPolarity = (file) => {
+  let next = file;
+  const scenes = unitsInStoryOrder(next).filter((unit) => unit.inScript);
+  const marks = [
+    ['Safety', 'neutral', 'neutral', 'flat', ''],
+    ['Safety / danger', 'positive', 'double_negative', 'down', 'The man in the cemetery attacks'],
+    ['Danger / refuge', 'negative', 'neutral', 'up', 'Barbra gets inside the farmhouse'],
+    ['Helpless / in control', 'negative', 'positive', 'up', 'Ben takes charge and boards up the house'],
+    ['Hope / despair', 'positive', 'double_negative', 'down', 'The radio: the dead are walking'],
+    ['Despair / hope', 'negative', 'positive', 'up', 'They can be stopped'],
+    ['Trust / conflict', 'positive', 'negative', 'down', 'Harry has been hiding in the cellar all along'],
+  ];
+  scenes.forEach((unit, index) => {
+    const mark = marks[index];
+    if (!mark) return;
+    const [value, polarityStart, polarityEnd, polarity, turn] = mark;
+    next = setSceneGrid(next, unit.id, { value, polarityStart, polarityEnd, polarity, turn });
+  });
+  return next;
+};
+
 /** Setups and payoffs for the screenplay, placed on its beats. */
 const withSetups = (file) => {
   let next = file;
@@ -237,7 +264,7 @@ const withMap = (file) => {
 export function demoProjects() {
   const projects = {};
 
-  projects.screenplay = fileUnderScene(fileUnderRow(withOutline(withSetups(withMap(withNotes(
+  projects.screenplay = withPolarity(fileUnderScene(fileUnderRow(withOutline(withSetups(withMap(withNotes(
     titled(
       buildProjectFromImport(readFinalDraft(fdx(NIGHT_OF_THE_LIVING_DEAD)), {
         format: 'screenplay',
@@ -276,7 +303,7 @@ export function demoProjects() {
     ['The radio on the mantel', 'Ben finds it while boarding up. It is how the house learns what is happening outside.'],
     ['The table legs', 'Ben breaks up the dining table for boards. Keep one leg in reach: it becomes a club later.'],
     ['Barbra in shock', 'She barely speaks once she is inside. Let her silence carry the scene.'],
-  ], 1);
+  ], 1));
 
   projects.stage_play = withNotes(
     titled(

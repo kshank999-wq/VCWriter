@@ -54,6 +54,7 @@ export const SHOTS = [
   { id: 'preview', project: 'screenplay', out: 'help', steps: [{ page: 'Preview' }, { wait: 1500 }], shows: 'Preview: the pages as they will print', uses: ['help: preview'] },
   { id: 'editors', project: 'novel', out: 'help', steps: [{ page: 'Editors' }], shows: 'The two editors', uses: ['help: editors'] },
   { id: 'editors-final', project: 'novel', out: 'help', steps: [{ page: 'Editors' }, { tab: /^Final/, wait: 1200 }], shows: 'The Final editor: a story editor reading each scene', uses: ['/tools/editors', 'help: editors'] },
+  { id: 'polarity', project: 'screenplay', out: 'help', steps: [{ page: 'Editors' }, { tab: /^Polarity/, wait: 1200 }], shows: 'Polarity: each scene marked up or down, the flat one picked out', uses: ['/workflow/screenplay'] },
   { id: 'read-back', project: 'screenplay', out: 'help', steps: [{ page: 'Read back' }], shows: 'Read back: voices per character', uses: ['help: read back'] },
   { id: 'focus', project: 'screenplay', out: 'help', steps: [{ page: 'Focus' }], shows: 'Focus mode: the page and nothing else', uses: ['help: writing'] },
 

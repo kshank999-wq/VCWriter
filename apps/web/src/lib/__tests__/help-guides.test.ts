@@ -78,3 +78,14 @@ describe('the tool pages', () => {
   });
 });
 
+
+/** The step-by-step boxes (addendum 35 §14) show only pictures that exist. */
+describe('the walkthroughs', () => {
+  it('show only pictures that exist, a few steps each', async () => {
+    const { WALKTHROUGHS } = await import('../walkthroughs');
+    for (const walk of WALKTHROUGHS) {
+      expect(walk.steps.length, walk.slug).toBeGreaterThanOrEqual(3);
+      for (const step of walk.steps) expect(existsSync(resolve(publicDir, `${step.shot}.jpg`)), step.shot).toBe(true);
+    }
+  });
+});

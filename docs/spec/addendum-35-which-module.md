@@ -410,3 +410,46 @@ that they are several ways into **one** story. It runs:
 The front page carries a band to it (*Work any way you want* → **Your
 workflow**) between Layout and the rooms-and-tools chooser, and the sitemap
 lists it.
+
+## 14. The workflow, a step at a time
+
+From Ken:
+
+> *We need to create a workflow for the advertisement and we'll start with
+> the screenplay. You click the workflow but it'll show you a box with you
+> create the scene, then the beat, and then it writes the screenplay for you.
+> You can reorder things. Decide whether your scenes are working with the
+> plus minus features … a simple workflow for advertising so people feel that
+> it's not intimidating.*
+
+A button, **See how a screenplay comes together**, opens a box of six steps.
+Each step has one picture of the program, a title and a line or two of words:
+
+1. **Make a scene**: the scene box (`scene-notes`).
+2. **Add the beats**: scenes and beats on the track (`modules/screenplay`).
+3. **Write each beat**: the writing screen with its notes (`writer-notes`).
+4. **It becomes a screenplay**: the pages as they print (`preview`).
+5. **Move things around**: drag scenes and beats (`outliner`).
+6. **Check every scene works**: the Polarity graph, up and down, plus and
+   minus (`polarity`, a new shot).
+
+The box moves with Back and Next, the arrow keys, or the dots, and closes
+with the ×, Escape, or a click outside it. On the last step, Next becomes
+**Buy & download**. The picture shrinks to the window, so Next is always on
+screen, laptop or phone.
+
+**The wording is careful.** VC Writer sets and formats the screenplay from
+what the writer writes. It does not write the writer's words. Step 4 says
+*everything you write is set as a screenplay for you*, which is true; *it
+writes the screenplay for you* would not be.
+
+**Where it appears:** beside the guide button on `/write/screenplay`, as a
+band on `/workflow`, and beside **Your workflow** on the front page.
+
+**The steps are data** (`lib/walkthroughs.ts`, `WalkthroughButton`), so the
+next module's box is a list of steps, not a new component. The help test
+checks every step's picture exists.
+
+The screenplay demo now marks where each of its seven scenes starts and ends
+(`withPolarity` in `demo-projects.mjs`). The first is left flat on purpose,
+so the graph has something to show.
