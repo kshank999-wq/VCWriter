@@ -127,3 +127,21 @@ System Settings ▸ Accessibility ▸ Spoken Content. They are much better, but
 most writers never download them.
 
 The natural voices are the same on both, which is the point.
+
+## 7. In the Read back box
+
+From Ken, after trying 1.0.21: *the voices sound much better, but I can't get
+to them. They're smashed down at the bottom … the box doesn't stretch … it
+says all the Google voices.*
+
+- **The box stretches:** it has a resize grip at its corner. Everything under
+  its bar scrolls as one panel. Each part keeps its own height, rather than
+  each being squeezed to a sliver with its own scrollbar.
+- **The script takes a share of the box:** about a third of the window by
+  default, and its own corner makes it taller.
+- **Once natural voices are installed, only they are listed.** A tick, *Also
+  list this computer's own voices*, brings the system and browser voices back,
+  and is remembered. A system voice already given to someone stays in the
+  lists so the choice still shows.
+- **In the browser preview**, which cannot run natural voices, the panel says
+  they come with the desktop app.

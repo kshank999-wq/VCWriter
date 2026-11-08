@@ -22818,6 +22818,14 @@ dialog.readback-dialog {
   background: var(--panel);
   color: var(--text);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  /* **It stretches** (from Ken: *the box doesn't stretch*): the corner grip
+     makes it as big as the writer likes, within the window. */
+  resize: both;
+  overflow: hidden;
+  min-width: 460px;
+  min-height: 360px;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
 }
 
 dialog.readback-dialog[open] {
@@ -22836,13 +22844,30 @@ dialog.readback-dialog[open] {
 }
 
 .readback-dialog .readback {
+  /* **Everything under the bar scrolls as one** (from Ken: *they're smashed
+     down at the bottom, and there's no way to see that area*). Without a
+     floor of zero the panel grew past the dialog instead of scrolling, so
+     the voices sat below the edge where no scrollbar reached. */
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
   padding: 0 14px 14px;
 }
 
+/* Each part keeps its own height and the panel scrolls, rather than every
+   part being squeezed to a sliver with a scrollbar of its own. */
+.readback-dialog .readback > * {
+  flex-shrink: 0;
+}
+
 .readback-dialog .readback-script {
+  /* The script takes a share of the box rather than all of it, so the
+     voices below it are in reach; its own corner makes it taller. */
+  flex: none;
+  height: 34vh;
+  min-height: 140px;
   max-height: none;
-  min-height: 200px;
+  resize: vertical;
 }
 
 .readback-exit {
@@ -23825,4 +23850,11 @@ input.note-rewrite-title:focus { border-color: var(--gold); outline: none; }
   width: 100%;
   margin-top: 6px;
   accent-color: var(--gold);
+}
+
+.natural-voices-system {
+  display: block;
+  margin-top: 6px;
+  font-size: var(--small, 12px);
+  color: var(--muted);
 }

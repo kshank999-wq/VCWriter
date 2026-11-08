@@ -87,8 +87,26 @@ describe('natural voices in read-back', () => {
     await waitFor(() => expect((screen.getByRole('button', { name: 'Play' }) as HTMLButtonElement).disabled).toBe(false));
   });
 
-  it('says nothing about natural voices where the build cannot run them', () => {
+  it('says where natural voices are to be had where the build cannot run them, and offers no download', () => {
     render(<ReadBackPanel file={scene()} currentUnitId={null} onUpdate={() => undefined} />);
-    expect(screen.queryByText(/natural voices/i)).toBeNull();
+    expect(screen.getByText(/come with the VC Writer desktop app/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Get natural voices' })).toBeNull();
+  });
+
+  it('lists only the natural voices once installed, the computer’s own a tick away', async () => {
+    bridge(true);
+    vi.stubGlobal('speechSynthesis', {
+      getVoices: () => [{ voiceURI: 'google-us', name: 'Google US English', lang: 'en-US' }],
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      cancel: () => undefined,
+    });
+    render(<ReadBackPanel file={scene()} currentUnitId={null} onUpdate={() => undefined} />);
+    await screen.findByText('Natural voices are installed.');
+    const names = () => [...(screen.getByLabelText('Narrator voice') as HTMLSelectElement).options].map((one) => one.textContent ?? '');
+    expect(names().some((name) => name.includes('Google'))).toBe(false);
+    expect(names().some((name) => name.includes('Heart (natural)'))).toBe(true);
+    fireEvent.click(screen.getByLabelText(/Also list this computer/));
+    expect(names().some((name) => name.includes('Google'))).toBe(true);
   });
 });

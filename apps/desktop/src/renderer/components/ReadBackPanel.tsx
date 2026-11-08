@@ -40,10 +40,28 @@ export function ReadBackPanel({ file, currentUnitId, onUpdate }: ReadBackPanelPr
   /** Natural voices (addendum 45), once the writer has downloaded them. */
   const natural = useNaturalVoices();
   const player = useRef<NaturalPlayer | null>(null);
-  const voices = useMemo(
-    () => sortVoices([...(natural.installed ? naturalVoiceDescriptors() : []), ...systemVoices]),
-    [natural.installed, systemVoices],
-  );
+  /**
+   * **The natural voices, and only them, once they are here** (from Ken:
+   * *it says all the Google voices … let's add in the voices that we're
+   * using now from that new company, since the Google voices sound
+   * terrible*). The computer's own voices are one tick away for anyone who
+   * wants them, and a voice already given to someone stays in their list.
+   */
+  const [showSystem, setShowSystem] = useState(() => {
+    try {
+      return window.localStorage.getItem('vcw-readback-system-voices') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const voices = useMemo(() => {
+    if (!natural.installed) return sortVoices(systemVoices);
+    const assigned = new Set(
+      [file.settings.narratorVoice?.voiceId, ...file.characters.map((character) => character.voice?.voiceId)].filter(Boolean),
+    );
+    const system = showSystem ? systemVoices : systemVoices.filter((voice) => assigned.has(voice.id));
+    return sortVoices([...naturalVoiceDescriptors(), ...system]);
+  }, [natural.installed, systemVoices, showSystem, file.settings.narratorVoice, file.characters]);
   const [scope, setScope] = useState<'scene' | 'project'>('scene');
   const [rate, setRate] = useState(1);
   const [playing, setPlaying] = useState(false);
@@ -287,6 +305,21 @@ export function ReadBackPanel({ file, currentUnitId, onUpdate }: ReadBackPanelPr
               <button type="button" className="ghost small" onClick={() => void natural.remove()}>
                 Remove
               </button>
+              <label className="natural-voices-system">
+                <input
+                  type="checkbox"
+                  checked={showSystem}
+                  onChange={(event) => {
+                    setShowSystem(event.target.checked);
+                    try {
+                      window.localStorage.setItem('vcw-readback-system-voices', event.target.checked ? '1' : '0');
+                    } catch {
+                      // A browser that keeps nothing still shows them for this visit.
+                    }
+                  }}
+                />{' '}
+                Also list this computer’s own voices
+              </label>
             </p>
           ) : natural.progress !== null ? (
             <p>
@@ -307,7 +340,12 @@ export function ReadBackPanel({ file, currentUnitId, onUpdate }: ReadBackPanelPr
           )}
           {natural.error ? <p className="notice">{natural.error}</p> : null}
         </div>
-      ) : null}
+      ) : (
+        <p className="natural-voices muted small">
+          Natural voices that sound like people come with the VC Writer desktop app: download them once from this
+          panel there. Here in the browser, read back uses the browser’s own voices.
+        </p>
+      )}
 
       <div className="panel-header">
         <h3>Voices</h3>
