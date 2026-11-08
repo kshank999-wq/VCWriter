@@ -10,7 +10,7 @@ import type { ProjectFile } from './project-file.js';
 import type { DocNode } from './entities/document.js';
 
 /**
- * **The Reference Library in the word processor** (addendum 45 §11).
+ * **The Reference Library in the word processor** (addendum 43 §11).
  *
  * A Document project keeps a library of its own, the same `references` and
  * `citations` every project file carries, and cites it the way a book does:
@@ -184,7 +184,7 @@ export const bibliographyHtml = (cites: DocumentCitations): string =>
   '</section>';
 
 /**
- * **The editor's HTML with its citations set** (addendum 45 §11): each
+ * **The editor's HTML with its citations set** (addendum 43 §11): each
  * citation node's empty `<sup>` becomes its marker or its parenthetical, each
  * bibliography block its list, and in a footnote style the notes follow the
  * text under *Notes*, before the bibliography where there is one — a document
@@ -273,7 +273,7 @@ const sameSourceKeys = (reference: Reference): string[] => {
 };
 
 /**
- * **Bring sources in from another project's library** (addendum 45 §11): the
+ * **Bring sources in from another project's library** (addendum 43 §11): the
  * library a book was cited from, shared with the report written about it, or
  * the other way round.
  *

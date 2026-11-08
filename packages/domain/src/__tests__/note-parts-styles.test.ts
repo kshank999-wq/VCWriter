@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { addReference, createProjectFile, formatEntry, formatInText, readNotes, recogniseNote, type Reference } from '../index.js';
 
 /**
- * Word notes in APA's and MLA's forms (addendum 45 §27): a whole reference
+ * Word notes in APA's and MLA's forms (addendum 43 §27): a whole reference
  * or works-cited entry read into its parts, and the short forms in
  * parentheses citing the source a note before them gave.
  */

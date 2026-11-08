@@ -5,7 +5,7 @@ import { newId, type CitationId, type ReferenceId } from './ids.js';
 import type { ProjectFile } from './project-file.js';
 
 /**
- * **Reading a Word footnote's parts** (addendum 45 §20).
+ * **Reading a Word footnote's parts** (addendum 43 §20).
  *
  * A Word footnote comes in as one line with its parts run together (§9). Most
  * of the notes a writer has typed follow Chicago's note form, which is regular
@@ -200,7 +200,7 @@ const webPage = (body: string, url: string): Extract<RecognisedNote, { kind: 'fu
 // ------------------------------------------------------------ APA and MLA
 
 /**
- * **Notes in APA's and MLA's forms** (addendum 45 §27). A Word file written
+ * **Notes in APA's and MLA's forms** (addendum 43 §27). A Word file written
  * to either style has its footnotes as the style writes a source: a whole
  * reference-list or works-cited entry, or the short form in parentheses.
  *
@@ -464,7 +464,7 @@ export interface NotesRead {
 }
 
 /**
- * **A Word file's notes, read in order** (addendum 45 §20). A full note gives
+ * **A Word file's notes, read in order** (addendum 43 §20). A full note gives
  * a source; a short note and an *Ibid.* cite the source a note before them
  * gave, at their own page. The same source in two full notes is one source.
  * A note that is not read stays a source of its own, kept as written — once
@@ -612,7 +612,7 @@ export const fromWordReadable = (file: ProjectFile): number =>
 
 /**
  * **A Word file's footnotes, into the library of the project they come into**
- * (addendum 45 §22): Insert → From file in a document. The notes are read as
+ * (addendum 43 §22): Insert → From file in a document. The notes are read as
  * the import reads them (`readNotes`), and each source is matched against
  * the library first, by its author and title, or by its words where it is
  * kept as written, so a source the project already has is cited rather than

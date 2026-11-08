@@ -15,7 +15,7 @@ import {
 } from '../index.js';
 
 /**
- * **A page's heading, where the writer typed none** (addendum 45 §16): asked
+ * **A page's heading, where the writer typed none** (addendum 43 §16): asked
  * of what the page is. A reader extra prints its purpose's heading, as its
  * card has always said it would, and every place that prints or lists the
  * heading reads the same answer.

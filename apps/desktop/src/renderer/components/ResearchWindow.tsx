@@ -170,7 +170,7 @@ type Selection =
    * the chapters are the Outliner's and this is a reading of them.
    */
   | { kind: 'contents' }
-  /** The Reference Library (addendum 45): an instructional book's sources and how it cites them. */
+  /** The Reference Library (addendum 43): an instructional book's sources and how it cites them. */
   | { kind: 'references' }
   /**
    * Somebody open in the Character Creator (addendum 08 §5).
@@ -386,7 +386,7 @@ export function ResearchBody({
    * A professor is not offered a Character Creator to ignore.
    */
   const instructional = isInstructional(file.project.format);
-  /** A Document project keeps a Reference Library too (addendum 45 §11). */
+  /** A Document project keeps a Reference Library too (addendum 43 §11). */
   const wordProcessor = isWordProcessor(file.project.format);
   const prose = isProseFormat(file.project.format);
   const views = useMemo(() => viewsFor(file.project.format), [file.project.format]);
@@ -1067,7 +1067,7 @@ export function ResearchBody({
                   outliner. So maybe we can just remove that*). The chapters
                   are the Outliner's, and the outline beside the notes is
                   where notes are sorted into them. */}
-              {/* The Reference Library (addendum 45, spec §2: *References >
+              {/* The Reference Library (addendum 43, spec §2: *References >
                   Manage Library*), beside the contents on a book, and on a
                   Document project, whose documents cite it too (§11). */}
               <li>

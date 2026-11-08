@@ -165,7 +165,7 @@ export const projectFileSchema = z.object({
    */
   indexMarks: z.array(indexMarkSchema).default([]),
   indexRefs: z.array(indexRefSchema).default([]),
-  /** The Reference Library and its citations (addendum 45). */
+  /** The Reference Library and its citations (addendum 43). */
   references: z.array(referenceSchema).default([]),
   citations: z.array(citationSchema).default([]),
   links: z.array(storyLinkSchema).default([]),

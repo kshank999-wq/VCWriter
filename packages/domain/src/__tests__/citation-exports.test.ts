@@ -30,7 +30,7 @@ import {
 } from '../index.js';
 
 /**
- * Citations leaving the book and coming back (addendum 45 §9, phase 3): Word
+ * Citations leaving the book and coming back (addendum 43 §9, phase 3): Word
  * footnotes and the bibliography in the Word manuscript, linked notes in the
  * EPUB, and Word's footnotes read back in as citations, flagged for the
  * writer to separate.

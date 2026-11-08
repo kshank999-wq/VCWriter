@@ -21,7 +21,7 @@ import {
 } from '../index.js';
 
 /**
- * The Reference Library in the word processor (addendum 45 §11): citations
+ * The Reference Library in the word processor (addendum 43 §11): citations
  * as nodes in a document, each document counting on its own, the notes at the
  * end in print and as Word footnotes, a bibliography block that fills itself,
  * and sources brought in from another project's library.

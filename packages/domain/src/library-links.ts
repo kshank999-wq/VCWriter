@@ -3,7 +3,7 @@ import { referenceSchema, type Reference } from './entities/reference.js';
 import type { ProjectFile } from './project-file.js';
 
 /**
- * **One library, live between projects** (addendum 45 §29).
+ * **One library, live between projects** (addendum 43 §29).
  *
  * A project file is a whole thing of its own — kept, opened, synced and
  * printed on its own — so two projects cannot hold one record. What they can
@@ -227,7 +227,7 @@ export const factDifferences = (here: Reference, there: Reference): { field: Fac
 
 /**
  * **Link a source this library already has to the same source in another
- * project** (addendum 45 §30). Where the two agree they are linked as they
+ * project** (addendum 43 §30). Where the two agree they are linked as they
  * stand. Where they differ the writer has said which stands:
  *
  * - `theirs`: this copy takes the library's facts now;

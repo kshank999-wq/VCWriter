@@ -362,7 +362,7 @@ export function BeatBody({
   const [filing, setFiling] = useState<{ elementId: ManuscriptElementId; text: string } | null>(null);
   /**
    * A citation being inserted at a place in a line, or one already there being
-   * changed (addendum 45). `at` is where the marker goes: after what was
+   * changed (addendum 43). `at` is where the marker goes: after what was
    * picked. A citation already in the line is known by its token's span.
    */
   const [citing, setCiting] = useState<{ elementId: ManuscriptElementId; at: number; key?: string; start?: number; end?: number } | null>(null);
@@ -719,7 +719,7 @@ export function BeatBody({
    * rather than a range the marks go round nothing and the caret lands
    * between them, which is what somebody pressing **B** before typing means.
    */
-  // Citations, on a book that cites (addendum 45): each token drawn as its marker.
+  // Citations, on a book that cites (addendum 43): each token drawn as its marker.
   const cites = isInstructional(file.project.format);
   const markers = useMemo(() => {
     if (!cites) return null;
@@ -819,7 +819,7 @@ export function BeatBody({
       return;
     }
 
-    // Ctrl/Cmd+Shift+C cites a source here (addendum 45).
+    // Ctrl/Cmd+Shift+C cites a source here (addendum 43).
     if (chord && event.shiftKey && !event.altKey && event.key.toLowerCase() === 'c' && cites && !readOnly) {
       event.preventDefault();
       setCiting({ elementId: element.id, at: input.selectionEnd });
@@ -1571,7 +1571,7 @@ function Marked({ text, markers = null }: { text: string; markers?: ReadonlyMap<
 
 function Emphasis({ span, markers = null }: { span: InlineSpan; markers?: ReadonlyMap<string, string> | null }) {
   // A citation token keeps its characters' room, so the box above lines up,
-  // and wears its marker as a chip (addendum 45). One with no record says so.
+  // and wears its marker as a chip (addendum 43). One with no record says so.
   if (span.citation && markers) {
     const marker = markers.get(span.citation);
     return (

@@ -687,7 +687,7 @@ function Card({
           {own.terms.map((one) => (
             <div className="dp-term" key={one.id}>
               <input aria-label="Term" placeholder="Term" value={one.term} onChange={(event) => setTerm(one.id, { term: event.target.value })} />
-              {/* A definition may cite its source (addendum 45 §14). */}
+              {/* A definition may cite its source (addendum 43 §14). */}
               <CitableText
                 file={file}
                 onUpdate={onUpdate}
@@ -894,7 +894,7 @@ function Card({
           <>
             <label className="field">
               <span>Message</span>
-              {/* The message may cite (addendum 45 §17). */}
+              {/* The message may cite (addendum 43 §17). */}
               <CitableText file={file} onUpdate={onUpdate} className="dp-serif-input" aria-label="Message" rows={4} value={own.message} onChange={(message) => write({ message })} />
             </label>
             <label className="field">
@@ -913,7 +913,7 @@ function Card({
               {own.questions.map((one, at) => (
                 <div className="dp-term" key={one.id}>
                   <span className="dp-row-label">{own.numbering === 'numbers' ? `${at + 1}.` : '•'}</span>
-                  {/* A question may cite what it asks about (addendum 45 §15). */}
+                  {/* A question may cite what it asks about (addendum 43 §15). */}
                   <CitableText
                     file={file}
                     onUpdate={onUpdate}
@@ -955,7 +955,7 @@ function Card({
                     value={one.title}
                     onChange={(event) => write({ titles: own.titles.map((two) => (two.id === one.id ? { ...two, title: event.target.value } : two)) })}
                   />
-                  {/* The note beside a title may cite (addendum 45 §17); the title itself is a book's name. */}
+                  {/* The note beside a title may cite (addendum 43 §17); the title itself is a book's name. */}
                   <CitableText
                     file={file}
                     onUpdate={onUpdate}
@@ -981,7 +981,7 @@ function Card({
           <>
             <label className="field">
               <span>Lead-in line</span>
-              {/* The lead-in and the extract may cite (addendum 45 §18). */}
+              {/* The lead-in and the extract may cite (addendum 43 §18). */}
               <CitableText
                 file={file}
                 onUpdate={onUpdate}

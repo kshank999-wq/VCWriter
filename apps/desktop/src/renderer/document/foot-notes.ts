@@ -15,7 +15,7 @@ import {
 } from '@vcwriter/domain';
 
 /**
- * **A document's notes at the foot of each page** (addendum 45 §23).
+ * **A document's notes at the foot of each page** (addendum 43 §23).
  *
  * The browser sets a printed document into pages by itself and cannot put a
  * note at the foot of the page its marker falls on: Chromium has no
@@ -141,7 +141,7 @@ export const NOTE_LINES_KEPT = 2;
  * the editor's HTML with its citations set and no notes at the end; the
  * frame is the measuring page, already holding `documentMeasureHtml`.
  *
- * **A long note carries on** (addendum 45 §24), as a book's does (§12): where
+ * **A long note carries on** (addendum 43 §24), as a book's does (§12): where
  * the note cited last on a page is more than a third of a page and will not
  * stand whole beside its marker, its first lines (two at the least) are set
  * there and the rest first at the foot of the next page, under a rule the

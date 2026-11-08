@@ -86,7 +86,7 @@ export const SYNC_TABLES = {
   // deletes the server's rows.
   indexMarks: 'index_marks',
   indexRefs: 'index_refs',
-  // The Reference Library (addendum 45): the sources before the citations of
+  // The Reference Library (addendum 43): the sources before the citations of
   // them, because a citation's row names its source's. `references` is a word
   // SQL keeps for itself, so the table is `reference_sources`.
   references: 'reference_sources',

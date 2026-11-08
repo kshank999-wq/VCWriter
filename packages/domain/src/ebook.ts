@@ -172,7 +172,7 @@ const styledSpan = (span: InlineSpan, inner: string): string => {
 };
 
 /**
- * Where a footnote style's markers are linked from and to (addendum 45 §9):
+ * Where a footnote style's markers are linked from and to (addendum 43 §9):
  * the keys cited in the section being written, gathered as its markers are
  * set, so its notes can follow it.
  */
@@ -628,14 +628,14 @@ interface Draft {
   kind: EbookSection['kind'];
   epubType: string;
   html: string[];
-  /** The citations whose notes follow this section (addendum 45 §9). */
+  /** The citations whose notes follow this section (addendum 43 §9). */
   notes: string[];
   /** The printed pages that begin in this section (§28): each marker's id and number. */
   pages: { id: string; label: string }[];
 }
 
 /**
- * **Where a printed page begins** (addendum 45 §28): the block it opens in
+ * **Where a printed page begins** (addendum 43 §28): the block it opens in
  * and how far into that block's words, in characters, with the number the
  * page carries. Worked out by the Layout room from the pages it laid, and
  * handed to the reflowable eBook so its page-break markers stand where the
@@ -867,7 +867,7 @@ export const ebookOf = (
         if (block.display) {
           const words = lineStyleAttr(own?.line, bodyPt, settings.fonts);
           const ranged = own?.align ? ` style="text-align:${own.align}"` : '';
-          // A page of words cites too (addendum 45 §13): an epigraph's source.
+          // A page of words cites too (addendum 43 §13): an epigraph's source.
           const draft = current as Draft | null;
           const said = (line: string) => (cites && draft ? renderSpans(parseInline(line), line, { cites, keys: draft.notes }) : escapeXml(line));
           current?.html.push(`<div class="words"${ranged}>${lines(block.text, words, said)}</div>`);

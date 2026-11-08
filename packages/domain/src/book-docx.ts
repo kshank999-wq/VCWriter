@@ -12,7 +12,7 @@ import type { ProjectFile } from './project-file.js';
 import { writeZip } from './zip-write.js';
 
 /**
- * **A book as a Word document** (addendum 45 §9, phase 3).
+ * **A book as a Word document** (addendum 43 §9, phase 3).
  *
  * The script's Word export (`docx-export.ts`) is a script's: Courier, the
  * page's columns, one style per element. A book went nowhere in Word at all,
@@ -194,7 +194,7 @@ const field = (code: string, shown: string): string =>
   `<w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>${shown}</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>`;
 
 /**
- * Words with the page's own fields, as Word's own fields (addendum 45 §10):
+ * Words with the page's own fields, as Word's own fields (addendum 43 §10):
  * *{page}* is PAGE, *{pages}* NUMPAGES and *{date}* DATE, so Word fills them
  * as it lays the pages, as the Layout room does.
  */
@@ -322,7 +322,7 @@ export const bookDocxParts = (file: ProjectFile): { document: string; footnotes:
   };
 
   /**
-   * **A section per division** (addendum 45 §10): the front matter one, and
+   * **A section per division** (addendum 43 §10): the front matter one, and
    * each chapter, part and page-opening heading its own, so each can carry
    * its own heads, stand its first page clear of them and restart its
    * numbers — which is how Word does what the Layout room does.

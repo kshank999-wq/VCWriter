@@ -27,7 +27,7 @@ const marksOf = (span: { bold?: boolean; italic?: boolean; underline?: boolean }
 
 /**
  * A paragraph's words with their emphasis, as the editor's text nodes — and,
- * where its footnotes are kept (addendum 45 §22), a citation node where each
+ * where its footnotes are kept (addendum 43 §22), a citation node where each
  * note's reference stood, under the key the library gave it.
  */
 const inlineOf = (paragraph: DocxParagraph, keys: ReadonlyMap<string, string> | null): DocNode[] => {

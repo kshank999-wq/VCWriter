@@ -61,7 +61,7 @@ export interface Laying {
   context: BookRenderContext;
   laid: LaidBook;
   measured: Measured;
-  /** Where each printed page begins, for the reflowable eBook's page numbers (addendum 45 §28). */
+  /** Where each printed page begins, for the reflowable eBook's page numbers (addendum 43 §28). */
   pageStarts?: PrintPageStart[];
 }
 
@@ -84,7 +84,7 @@ const contextFor = (file: ProjectFile, settings: BookSettings, geometry: BookGeo
   contents: [],
   index: null,
   citations: bookCitationsOf(file),
-  // What a `{date}` field prints (addendum 45 §10): the day the book is laid.
+  // What a `{date}` field prints (addendum 43 §10): the day the book is laid.
   today: printedDate(),
 });
 
@@ -154,7 +154,7 @@ export const measureBlocks = (
    */
   const wraps = new Map<string, number>();
   /**
-   * Where each citation's marker fell, by line of its block (addendum 45 §8):
+   * Where each citation's marker fell, by line of its block (addendum 43 §8):
    * the cutter puts the note on the page that line is on. Read off the raised
    * marker's own box — its middle, since a superscript reaches above its line.
    */
@@ -210,7 +210,7 @@ export const measureBlocks = (
     }
   });
   /**
-   * And how tall each note sets (addendum 45 §8), in the notes' own smaller
+   * And how tall each note sets (addendum 43 §8), in the notes' own smaller
    * type at the measure, as a fraction of the body's leading: the cutter adds
    * a page's notes up before rounding, so three short notes are not three
    * whole lines.
@@ -225,7 +225,7 @@ export const measureBlocks = (
     }
   }
   box.innerHTML = '';
-  // One line of a note, which is what a long note breaks by (addendum 45 §12).
+  // One line of a note, which is what a long note breaks by (addendum 43 §12).
   return { measured, wraps, notes: { anchors, heights, line: noteLinePx(context.geometry) / leadPx } };
 };
 
@@ -278,7 +278,7 @@ export const layBook = (file: ProjectFile, box: HTMLElement): Laying => {
 };
 
 /**
- * **Where each printed page begins, in characters** (addendum 45 §28). The
+ * **Where each printed page begins, in characters** (addendum 43 §28). The
  * laying says which line of which block a page opens on; the eBook needs the
  * character, so each block a page turns inside is drawn again and the first
  * character of that line found, by the middles of the characters' boxes. A
@@ -401,7 +401,7 @@ const layingReads = (file: ProjectFile): readonly unknown[] => [
   file.assets,
   file.indexMarks,
   file.indexRefs,
-  // The citations print in the text and at the foot (addendum 45 §8), and the
+  // The citations print in the text and at the foot (addendum 43 §8), and the
   // bibliography page is made from the library.
   file.references,
   file.citations,

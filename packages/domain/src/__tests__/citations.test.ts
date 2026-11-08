@@ -42,7 +42,7 @@ import {
 } from '../index.js';
 
 /**
- * The Reference Library and citations (addendum 45), against the spec's
+ * The Reference Library and citations (addendum 43), against the spec's
  * acceptance tests: one source cited three times is three notes and one
  * bibliography entry; an edit to the source shows everywhere; markers
  * renumber; a style change re-renders without touching the facts.

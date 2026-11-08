@@ -42,7 +42,7 @@ declare module '@tiptap/core' {
       setHeadingNumbering: (scheme: HeadingNumbering) => ReturnType;
     };
     citation: {
-      /** A citation at the cursor, after anything picked (addendum 45 §11). */
+      /** A citation at the cursor, after anything picked (addendum 43 §11). */
       insertCitation: (key: string) => ReturnType;
       /** Takes a citation out by its key, leaving the words. */
       removeCitation: (key: string) => ReturnType;
@@ -535,7 +535,7 @@ const EMPTY_VIEW: CitationView = { markers: new Map(), raised: true, bibliograph
 
 /**
  * Each citation drawn as its marker, worked out from where it stands every
- * time (addendum 45 §4), and each bibliography block told the view has moved
+ * time (addendum 43 §4), and each bibliography block told the view has moved
  * on so it draws itself again.
  */
 const citationDecorations = (doc: PmNode, view: CitationView, version: number): DecorationSet => {
@@ -573,7 +573,7 @@ const citationDecorations = (doc: PmNode, view: CitationView, version: number): 
 };
 
 /**
- * **A citation in a document** (addendum 45 §11): an inline node holding the
+ * **A citation in a document** (addendum 43 §11): an inline node holding the
  * key of its record, so it moves, copies and undoes with the words around it.
  * Its HTML is an empty `<sup data-cite>`; the screen draws its marker over
  * it, and print sets the marker or the parenthetical in its place.
@@ -876,7 +876,7 @@ export const Footnote = Node.create({
 });
 
 /**
- * **A bibliography where the writer puts it** (addendum 45 §11): a block with
+ * **A bibliography where the writer puts it** (addendum 43 §11): a block with
  * nothing typed in it, filled from the sources the document cites and drawn
  * again as they change. Print and Word set the same list in its place.
  */

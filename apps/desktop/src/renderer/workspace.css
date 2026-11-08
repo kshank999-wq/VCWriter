@@ -18264,7 +18264,7 @@ dialog.designed-page-dialog[open] {
   flex: 2 1 200px;
 }
 
-/* A definition that may cite (addendum 45 §14) is a box of its own, and takes the same share. */
+/* A definition that may cite (addendum 43 §14) is a box of its own, and takes the same share. */
 .dp-term > .citable {
   flex: 2 1 200px;
   min-width: 0;
@@ -21627,7 +21627,7 @@ dialog.track-dialog.format-inspector {
   box-sizing: border-box;
 }
 
-/* ------------------------------------------------ citations (addendum 45) */
+/* ------------------------------------------------ citations (addendum 43) */
 
 /* A citation's token keeps its characters' room, so the box above it lines up
    to the letter, and shows only its marker: a chip in the gold, the number
@@ -21985,7 +21985,7 @@ dialog.track-dialog.format-inspector {
   text-indent: -2em;
 }
 
-/* Heads and numbers by division, and the field chips (addendum 45 §10). */
+/* Heads and numbers by division, and the field chips (addendum 43 §10). */
 .layout-field-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 .layout-field-chips button { font-size: 11px; padding: 2px 6px; border: 1px solid var(--line, #333); border-radius: 10px; }
 .layout-sections { display: flex; flex-direction: column; gap: 4px; }
@@ -21993,16 +21993,16 @@ dialog.track-dialog.format-inspector {
 .layout-section-row.under { margin-left: 16px; }
 .layout-section-name { display: flex; justify-content: space-between; gap: 12px; width: 100%; text-align: left; padding: 6px 10px; }
 .layout-section-body { padding: 4px 10px 10px; display: flex; flex-direction: column; gap: 6px; }
-/* A head or the foot: the book's, nothing, or its own words in the box after (addendum 45 §21). */
+/* A head or the foot: the book's, nothing, or its own words in the box after (addendum 43 §21). */
 .layout-section-line { display: grid; grid-template-columns: 1fr; gap: 4px; }
 .layout-section-line > select { justify-self: start; }
 
-/* A page's words with citations in them (addendum 45 §13). */
+/* A page's words with citations in them (addendum 43 §13). */
 .citable { display: flex; flex-direction: column; gap: 4px; }
 .citable > textarea { width: 100%; }
 .citable-bar { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 
-/* Bring in sources (addendum 45 §11, §29, §30): one source to a row, who and
+/* Bring in sources (addendum 43 §11, §29, §30): one source to a row, who and
    what on the first line, how it stands (and any choice) under it. */
 .refs-bring-list { list-style: none; margin: 8px 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 50vh; overflow: auto; }
 .refs-bring-list li { display: flex; flex-direction: column; gap: 2px; padding: 6px 8px; border: 1px solid var(--line, #333); border-radius: 6px; }

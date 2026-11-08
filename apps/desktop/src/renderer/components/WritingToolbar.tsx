@@ -38,7 +38,7 @@ export interface WritingToolbarProps {
   noun: string;
   onMark(mark: InlineMark): void;
   onType(patch: Partial<LineType>): void;
-  /** Insert a citation at the cursor (addendum 45). Given on a book that cites; absent elsewhere. */
+  /** Insert a citation at the cursor (addendum 43). Given on a book that cites; absent elsewhere. */
   onCite?(): void;
 }
 

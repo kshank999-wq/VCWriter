@@ -18,7 +18,7 @@ import {
 } from '../index.js';
 
 /**
- * Reading a Word footnote's parts (addendum 45 §20): Chicago's note forms
+ * Reading a Word footnote's parts (addendum 43 §20): Chicago's note forms
  * read back into a source's fields and the citation's page, short notes and
  * Ibid. finding the source before them, and anything else kept as written.
  */

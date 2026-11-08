@@ -813,7 +813,7 @@ export function LayoutWindow({ file, open, openOnKind = null, onClose, onUpdate,
   };
 
   /**
-   * The book as a Word manuscript (addendum 45 §9): the same blocks, its
+   * The book as a Word manuscript (addendum 43 §9): the same blocks, its
    * citations as Word's own footnotes and its bibliography as the back
    * matter makes it. Not a page of this room's layout — Word lays its own.
    */
@@ -3662,7 +3662,7 @@ function BookSettingsDialog({
               separates={holdsWholeWorks(file.project.format)}
             />
           </Fold>
-          {/* A division laid out on its own terms (addendum 45 §10, Ken's
+          {/* A division laid out on its own terms (addendum 43 §10, Ken's
               spec §6: chapter-specific heads, a first page different, page
               numbers restarting per section). */}
           <Fold id="by-division" title={`Heads & numbers by ${noun.toLowerCase()}`}>
@@ -5573,7 +5573,7 @@ function HeadTopsRow({
 
 /**
  * **The fields a head or foot may carry**, as chips that type one in
- * (addendum 45 §10): the book's title, this division's, the author, the page,
+ * (addendum 43 §10): the book's title, this division's, the author, the page,
  * the count and the date. Typed by hand they work the same; the chips are so
  * nobody has to know the braces.
  */
@@ -5590,7 +5590,7 @@ function FieldChips({ noun, onField }: { noun: string; onField(field: string): v
 }
 
 /**
- * **Heads and numbers by division** (addendum 45 §10, Ken's spec §6): each
+ * **Heads and numbers by division** (addendum 43 §10, Ken's spec §6): each
  * chapter, part or section may carry its own tops and foot, carry them on its
  * opening page too, start its page numbers again, or number in roman. A row
  * is the contents page's own, so it names the division the way the book does.
@@ -5610,7 +5610,7 @@ function SectionsSection({
   const set = (id: string, patch: Partial<Omit<SectionLayout, 'id'>>) => onUpdate((current) => setSectionLayout(current, id, patch));
   if (rows.length === 0) return <p className="muted small">The book has no {noun.toLowerCase()}s or pages of its own yet.</p>;
   /**
-   * **A head or the foot set to print nothing** (addendum 45 §21). Null is the
+   * **A head or the foot set to print nothing** (addendum 43 §21). Null is the
    * book's, empty words are nothing, and anything else is the division's own.
    * Which a box means is chosen beside it, so an empty box never has to stand
    * for two things; a box being typed in stays its own words while it is empty.
@@ -5801,7 +5801,7 @@ function FurnitureSection({
           </select>
         </label>
       </div>
-      {/* The running foot (addendum 45 §10, Ken's spec §6): a line at the
+      {/* The running foot (addendum 43 §10, Ken's spec §6): a line at the
           foot of every text page, typed with the fields the chips put in. */}
       <div className="layout-two">
         <label className="field">

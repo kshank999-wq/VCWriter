@@ -30,7 +30,7 @@ import {
 } from '../index.js';
 
 /**
- * Citations in the front and back matter (addendum 45 §13): a foreword, an
+ * Citations in the front and back matter (addendum 43 §13): a foreword, an
  * epigraph and an appendix cite as a chapter does, numbered where the book
  * prints them.
  */

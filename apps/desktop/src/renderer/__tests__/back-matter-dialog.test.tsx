@@ -290,7 +290,7 @@ describe('the back matter’s screen', () => {
   });
 });
 
-describe('a glossary that cites (addendum 45 §14)', () => {
+describe('a glossary that cites (addendum 43 §14)', () => {
   it('cites a source from a definition, the token placed at the cursor', () => {
     const start = () => {
       let file = createProjectFile({ title: 'The Sea', format: 'instructional' });

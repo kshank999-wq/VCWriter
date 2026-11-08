@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { SYNC_TABLES, addReference, createProjectFile, fromRows, insertCitation, setCitationSettings, toRows } from '../index.js';
 
 /**
- * The Reference Library syncs (addendum 45): a citation token travels in the
+ * The Reference Library syncs (addendum 43): a citation token travels in the
  * manuscript, which syncs, so the sources and citations it names must too,
  * or another device would read citations of nothing.
  */

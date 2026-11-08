@@ -3,7 +3,7 @@ import type { CitationId, ProjectId, ReferenceId } from '../ids.js';
 import { id, timestamps } from './common.js';
 
 /**
- * **The Reference Library** (addendum 45, Ken's *Citations & References*
+ * **The Reference Library** (addendum 43, Ken's *Citations & References*
  * spec): a source entered once and cited as often as the writer likes.
  *
  * A **reference** is the source's facts, kept apart from any way of printing
@@ -48,7 +48,7 @@ export const referenceSchema = z.object({
   isbn: z.string().max(40).default(''),
   notes: z.string().max(20_000).default(''),
   /**
-   * **A source brought in as one line of text** (addendum 45 §9): a Word
+   * **A source brought in as one line of text** (addendum 43 §9): a Word
    * footnote, read back with its parts run together. Kept exactly as it came,
    * in the inline marks, and printed as written while the source has no
    * title — a style is a rule about parts, and these have none yet. The
@@ -57,7 +57,7 @@ export const referenceSchema = z.object({
   asWritten: z.string().max(5000).default(''),
   tags: z.array(z.string().max(80)).default([]),
   /**
-   * **Linked to the source it was brought in from** (addendum 45 §29): the
+   * **Linked to the source it was brought in from** (addendum 43 §29): the
    * project it came from, that project's own record of it, and the facts as
    * they stood when the two last agreed (a fingerprint), so a change on
    * either side can be told from a change on both. Null where the source is

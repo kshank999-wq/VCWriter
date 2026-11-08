@@ -6,7 +6,7 @@ import { addPart, addReference, createProjectFile, partsOf, updatePart, type Pro
 import { CitableText } from '../components/citations/CitableText';
 
 /**
- * Citing in a page's words (addendum 45 §13): a foreword's text box with Cite
+ * Citing in a page's words (addendum 43 §13): a foreword's text box with Cite
  * beside it, a token placed at the cursor, listed by its note, opened by a
  * click and taken out again.
  */

@@ -22,7 +22,7 @@ import { ReferenceForm } from './ReferenceForm';
 
 /**
  * **Insert Citation**, and the same dialog for a citation already in the text
- * (addendum 45, spec §2 and §4).
+ * (addendum 43, spec §2 and §4).
  *
  * Search the library and pick a source, or make a new one here without
  * leaving the line; add the pinpoint (a page, a section, a time) and any note
@@ -55,7 +55,7 @@ interface CitationDialogProps {
   citation?: Citation | null;
   /** Its key, when the citation's record is missing: the token is shown as needing a source. */
   missingKey?: string | null;
-  /** The word-processor document being cited in (addendum 45 §11); absent in the story. */
+  /** The word-processor document being cited in (addendum 43 §11); absent in the story. */
   documentId?: string | null;
   onDone(choice: CitationChoice): void;
   onRemove?(): void;
