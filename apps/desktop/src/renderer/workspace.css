@@ -23858,3 +23858,23 @@ input.note-rewrite-title:focus { border-color: var(--gold); outline: none; }
   font-size: var(--small, 12px);
   color: var(--muted);
 }
+
+/* The eBook's cover in the export dialog (addendum 23 §14): the picture, the button, the advice. */
+.ebook-cover {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  margin: 6px 0 14px;
+}
+
+.ebook-cover-thumb {
+  width: 72px;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  flex: none;
+}
+
+.ebook-cover p {
+  margin: 6px 0 0;
+}

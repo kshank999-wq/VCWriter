@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   EBOOK_RULES,
   EBOOK_TARGETS,
+  addGraphic,
   bookFigures,
   bookSettingsOf,
   ebookOf,
@@ -21,6 +22,7 @@ import {
 } from '@vcwriter/domain';
 import { useModal } from '../use-modal';
 import { EbookPreview } from './EbookPreview';
+import { PICTURE_ACCEPT, readPicture } from '../read-picture';
 
 /**
  * Export ▸ eBook (addendum 23 §7).
@@ -59,6 +61,27 @@ export function EbookExportDialog({ open, file, laid = null, onClose, onUpdate }
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<Done | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const coverPicker = useRef<HTMLInputElement>(null);
+  /**
+   * **A cover from the computer** (from Ken: *we need to be able to add a
+   * cover picture*). The menu offered only what was already in the library;
+   * this reads a picture into the library and makes it the cover in one go.
+   */
+  const takeCover = async (files: FileList | null) => {
+    const one = files?.[0];
+    if (!one) return;
+    try {
+      const read = await readPicture(one);
+      setDone(null);
+      onUpdate((current) => {
+        const added = addGraphic(current, { name: one.name, ...read });
+        const book = bookSettingsOf(added.file);
+        return setBookSettings(added.file, { ebook: { ...book.ebook, coverAssetId: added.asset.id } });
+      });
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : 'That picture could not be read.');
+    }
+  };
   const [view, setView] = useState<'settings' | 'preview'>('settings');
   const [previewer, setPreviewer] = useState<Previewer>(null);
   const [opened, setOpened] = useState<string | null>(null);
@@ -221,6 +244,25 @@ export function EbookExportDialog({ open, file, laid = null, onClose, onUpdate }
                     <li key={finding.text}>{finding.text}</li>
                   ))}
                 </ul>
+                <h4>Reading it on your own devices</h4>
+                <ul className="ebook-checklist">
+                  <li>
+                    <strong>Kindle</strong> (the device, or the Kindle app on a phone or tablet): send the .epub to your
+                    Kindle with Amazon’s Send to Kindle — the Send to Kindle app on your computer, the page at
+                    amazon.com/sendtokindle, or an email to your Kindle’s address. Amazon converts it and it appears in
+                    your library within a few minutes.
+                  </li>
+                  <li>
+                    <strong>Apple Books</strong>: on a Mac, double-click the .epub and it opens in Books. On an iPhone or
+                    iPad, AirDrop it to yourself or open it from the Files app and choose Books.
+                  </li>
+                  <li>
+                    <strong>Kobo</strong>: plug the reader into your computer and copy the .epub onto it.
+                  </li>
+                  <li>
+                    <strong>Google Play Books</strong> (Android): upload it at play.google.com/books, under Upload files.
+                  </li>
+                </ul>
                 <h4>At {rules.name}</h4>
                 <ul className="ebook-checklist">
                   {rules.checklist.map((step) => (
@@ -285,16 +327,6 @@ export function EbookExportDialog({ open, file, laid = null, onClose, onUpdate }
                   {pkg.layout === 'fixed' && pkg.pages ? `${pkg.pages.count} pages as laid` : `${bodyCount} ${chapters === 1 ? 'chapter' : 'chapters'}`} · {pkg.images.length}{' '}
                   {pkg.images.length === 1 ? 'picture' : 'pictures'}
                 </p>
-                <div className="ebook-fields">
-                  {field('Language', 'language', 'en-US')}
-                  {field('eBook ISBN', 'isbn', 'optional')}
-                  {field('Publisher', 'publisher', settings.imprint || 'optional')}
-                  {field('Publication date', 'published', 'YYYY-MM-DD')}
-                  {field('Series', 'seriesName', 'optional')}
-                  {field('Number in series', 'seriesNumber', '')}
-                </div>
-                {field('Description', 'description', file.project.synopsis || file.project.logline || 'For the store’s listing', true)}
-                {field('Rights', 'rights', `Copyright © ${pkg.metadata.authors.join(', ')}. All rights reserved.`)}
                 <label className="field">
                   Cover
                   <select aria-label="Cover" value={own.coverAssetId ?? ''} onChange={(event) => write({ coverAssetId: event.target.value || null })}>
@@ -306,7 +338,45 @@ export function EbookExportDialog({ open, file, laid = null, onClose, onUpdate }
                     ))}
                   </select>
                 </label>
+                <div className="ebook-cover">
+                  {pkg.cover ? <img src={pkg.cover.dataUrl} alt="The cover" className="ebook-cover-thumb" /> : null}
+                  <div>
+                    <button type="button" className="tool" onClick={() => coverPicker.current?.click()}>
+                      Choose a cover picture…
+                    </button>
+                    <input
+                      ref={coverPicker}
+                      type="file"
+                      accept={PICTURE_ACCEPT}
+                      aria-label="Choose a cover picture"
+                      style={{ display: 'none' }}
+                      onChange={(event) => {
+                        void takeCover(event.target.files);
+                        event.target.value = '';
+                      }}
+                    />
+                    <p className="muted small">
+                      The cover fills the reader’s screen, shown whole and never cropped. It fits most screens edge to edge
+                      when it is a tall picture about 1 : 1.6 — the stores ask for 1600 × 2560 pixels.
+                      {pkg.cover && pkg.cover.width > 0
+                        ? ` This one is ${pkg.cover.width} × ${pkg.cover.height}${
+                            Math.abs(pkg.cover.height / pkg.cover.width - 1.6) > 0.15 ? ', a different shape, so a narrow band will show at the sides or top.' : '.'
+                          }`
+                        : ''}
+                    </p>
+                  </div>
+                </div>
 
+                <div className="ebook-fields">
+                  {field('Language', 'language', 'en-US')}
+                  {field('eBook ISBN', 'isbn', 'optional')}
+                  {field('Publisher', 'publisher', settings.imprint || 'optional')}
+                  {field('Publication date', 'published', 'YYYY-MM-DD')}
+                  {field('Series', 'seriesName', 'optional')}
+                  {field('Number in series', 'seriesNumber', '')}
+                </div>
+                {field('Description', 'description', file.project.synopsis || file.project.logline || 'For the store’s listing', true)}
+                {field('Rights', 'rights', `Copyright © ${pkg.metadata.authors.join(', ')}. All rights reserved.`)}
                 {pkg.images.length > 0 ? (
                   <>
                     <h4>Pictures</h4>

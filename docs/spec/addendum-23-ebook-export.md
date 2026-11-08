@@ -441,3 +441,31 @@ notes.
 **The tablet preview was off-centre.** It was scaled about its own middle
 inside a box the full device's width. It now sits in a box of the scaled
 size and scales from its corner.
+
+## 14. A cover from the computer, and getting the book onto a reader
+
+From Ken: *we need to be able to add a cover picture, and it needs to resize
+it properly so it fills the screen. Also, I'm not sure how to get this into a
+reader.*
+
+- **Choosing the cover:** the Cover menu offered only pictures already in the
+  library, and sat below the fold under Rights. It is now the first thing
+  under *The book*, with a thumbnail of the chosen cover and a **Choose a
+  cover picture…** button. The button reads a picture with `readPicture`
+  (the library's own reader), adds it with `addGraphic`, and makes it the
+  cover in one change.
+- **How the cover fills the screen:** the cover page is an art page (§13):
+  `<body class="art">`, `div.art-page`, the picture centred, whole and as
+  large as the screen allows. It is never cropped, because a cover's title
+  and author are at its edges. Under the button, the dialog says the stores
+  ask for 1600 × 2560 (1 : 1.6), and warns when the chosen picture is a
+  different shape, since a band will then show at the sides or top. Kindle
+  takes the cover from the package's metadata and draws it full screen on
+  its own.
+- **Reading it on your own devices:** after writing, the dialog says how to
+  open the .epub on each:
+  - Kindle: Send to Kindle, by the app, amazon.com/sendtokindle, or email
+  - Apple Books: double-click on a Mac, or AirDrop or the Files app on an
+    iPhone or iPad
+  - Kobo: copy it onto the reader by USB
+  - Google Play Books: upload it at play.google.com/books

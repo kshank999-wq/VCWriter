@@ -1091,7 +1091,9 @@ export const ebookOf = (
         title: 'Cover',
         css: '../css/book.css',
         bodyClass: 'art',
-        body: `<section epub:type="cover" id="cover"><img class="cover" src="../${cover.href}" alt="${escapeXml(cover.alt)}"/></section>`,
+        // Centred on the screen like any page of art (§13, §14): whole,
+        // never cropped, as large as the screen allows.
+        body: `<section epub:type="cover" id="cover"><div class="art-page"><img class="cover" src="../${cover.href}" alt="${escapeXml(cover.alt)}"/></div></section>`,
       }),
     });
   }
