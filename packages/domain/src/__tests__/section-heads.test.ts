@@ -32,7 +32,7 @@ import {
 } from '../index.js';
 
 /**
- * Headers and footers by division (addendum 43 §10, phase 4; Ken's citations
+ * Headers and footers by division (addendum 45 §10, phase 4; Ken's citations
  * spec §6): the fields a head or foot may carry, a running foot, a division's
  * own heads, its opening page carrying them or standing clear, and page
  * numbers restarting or turning roman where a division says — in the Layout

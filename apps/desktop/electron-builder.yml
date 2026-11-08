@@ -22,6 +22,12 @@ files:
   - out/**
   - package.json
 
+# The natural voices' engine (addendum 45) is a native library. It has to sit
+# outside the app archive to load, and the package carries a build for every
+# platform, so each installer keeps only its own (about 35 MB rather than 250).
+asarUnpack:
+  - '**/node_modules/onnxruntime-node/**'
+
 # Installers are uploaded to the private release bucket by CI and handed out as
 # short-lived signed URLs, so electron-builder itself publishes nothing.
 publish: null
@@ -32,6 +38,10 @@ fileAssociations:
     role: Editor
 
 win:
+  files:
+    - '!**/node_modules/onnxruntime-node/bin/napi-v3/linux/**'
+    - '!**/node_modules/onnxruntime-node/bin/napi-v3/darwin/**'
+    - '!**/node_modules/onnxruntime-node/bin/napi-v3/win32/arm64/**'
   target:
     - target: nsis
       arch: [x64]
@@ -58,6 +68,13 @@ nsis:
 
 mac:
   icon: build/icon-mac.png
+  files:
+    - '!**/node_modules/onnxruntime-node/bin/napi-v3/linux/**'
+    - '!**/node_modules/onnxruntime-node/bin/napi-v3/win32/**'
+  # The universal build merges an Intel and an Apple silicon copy of the app.
+  # The voice engine already ships both architectures side by side, identical
+  # in each copy, so they are kept as they are rather than merged.
+  x64ArchFiles: '**/node_modules/onnxruntime-node/bin/**'
   category: public.app-category.productivity
   # **One universal installer** (addendum 41 §2): the release catalogue keeps
   # one build per platform, the download route hands out one file, and the

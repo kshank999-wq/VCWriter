@@ -45,7 +45,7 @@ export interface DocxParts {
   rels?: string;
   /** Pictures by their path in the zip (`word/media/image1.png`) as data URLs. */
   media?: ReadonlyMap<string, string>;
-  /** `word/footnotes.xml`: the notes the document's footnote references name (addendum 43 §9). */
+  /** `word/footnotes.xml`: the notes the document's footnote references name (addendum 45 §9). */
   footnotes?: string;
 }
 
@@ -75,7 +75,7 @@ export interface DocxParagraph {
   pictures: DocxPicture[];
   /**
    * The words with each footnote's place written in as a citation token
-   * (`[^ab12cd]`), where the paragraph had any (addendum 43 §9). `text` never
+   * (`[^ab12cd]`), where the paragraph had any (addendum 45 §9). `text` never
    * carries them, so everything that reads a paragraph for what it is — a
    * heading, a byline, a note — reads the words alone.
    */
@@ -622,7 +622,7 @@ export const readDocx = (parts: DocxParts): DocxDocument => {
 };
 
 /**
- * The footnotes' words, by Word's id (addendum 43 §9): each note's runs with
+ * The footnotes' words, by Word's id (addendum 45 §9): each note's runs with
  * their bold and italic, its paragraphs run together, the separators and the
  * note's own number left out.
  */
@@ -791,7 +791,7 @@ export const docxToProse = (
   let author = '';
   // The page numbers the writer typed are not the book's words (§10).
   const pageNumbers = pageNumberParagraphs(doc.paragraphs);
-  // Footnotes come in as citations on a book that cites (addendum 43 §9);
+  // Footnotes come in as citations on a book that cites (addendum 45 §9);
   // anywhere else they are left out, and the writer is told.
   const footnotes = doc.notes ?? [];
   const citing = options.citations === true && footnotes.length > 0;

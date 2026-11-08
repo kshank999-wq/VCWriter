@@ -97,7 +97,7 @@ export type WpDocumentId = Id<'WpDocument'>;
 export type ExtractPaletteId = Id<'ExtractPalette'>;
 export type ExtractCategoryId = Id<'ExtractCategory'>;
 export type ExtractId = Id<'Extract'>;
-/** The Reference Library and its citations (addendum 43). */
+/** The Reference Library and its citations (addendum 45). */
 export type ReferenceId = Id<'Reference'>;
 export type CitationId = Id<'Citation'>;
 export type AnyId = Id<string>;

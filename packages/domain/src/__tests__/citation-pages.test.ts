@@ -32,7 +32,7 @@ import {
 } from '../index.js';
 
 /**
- * Citations in the printed book (addendum 43 §8, phase 2): the marker raised
+ * Citations in the printed book (addendum 45 §8, phase 2): the marker raised
  * in the line, the note at the foot of the page its marker falls on, the room
  * the cutter keeps for it, and the bibliography page made from the library.
  */

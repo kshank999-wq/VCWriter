@@ -110,7 +110,7 @@ export const documentPrintHtml = (document: WpDocument, bodyHtml: string): strin
 // ------------------------------------------------- pages with their notes
 
 /**
- * **The space on a page the words and notes share** (addendum 43 §23), in
+ * **The space on a page the words and notes share** (addendum 45 §23), in
  * inches: the paper less its margins. The header and footer sit in the
  * margins, so they take none of it.
  */
@@ -149,7 +149,7 @@ export interface DocumentPage {
   /** The notes cited on the page, by number from 1, in order. */
   notes: number[];
   /**
-   * **A long note carried on from the page before** (addendum 43 §24): the
+   * **A long note carried on from the page before** (addendum 45 §24): the
    * rest of it, as HTML, set first at this page's foot under a rule the
    * width of the page, as a book carries one (§12).
    */

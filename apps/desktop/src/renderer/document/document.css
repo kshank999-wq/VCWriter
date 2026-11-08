@@ -1034,7 +1034,7 @@
   white-space: nowrap;
 }
 
-/* Citations and the bibliography in the page (addendum 43 §11). The node is
+/* Citations and the bibliography in the page (addendum 45 §11). The node is
    empty; its marker, worked out from where it stands, is drawn over it. */
 .ProseMirror sup.wp-cite { font-size: 0.7em; line-height: 0; vertical-align: super; color: #8a6d1f; cursor: pointer; padding: 0 1px; border-radius: 3px; }
 .ProseMirror sup.wp-cite::after { content: attr(data-marker); }
@@ -1047,7 +1047,7 @@
 .ProseMirror .wp-bibliography-block.ProseMirror-selectednode { outline: 2px solid rgba(201, 165, 74, 0.6); }
 .ProseMirror .wp-bibliography-empty { color: #888; font-style: italic; }
 
-/* The page view set into pages (addendum 43 §25): the gap at each page's end,
+/* The page view set into pages (addendum 45 §25): the gap at each page's end,
    holding the page's notes at its foot. Never typed into, saved or printed. */
 .wp-sheet .wp-page-gap {
   display: block;

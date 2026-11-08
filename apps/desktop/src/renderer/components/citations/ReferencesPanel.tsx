@@ -46,7 +46,7 @@ import { ReferenceForm } from './ReferenceForm';
 import { BringInSourcesDialog } from './BringInSourcesDialog';
 
 /**
- * **References** (addendum 43, spec §3 and §5): the instructional book's
+ * **References** (addendum 45, spec §3 and §5): the instructional book's
  * Reference Library, in Research.
  *
  * Down the left, the library: search, the kind of source, a tag, the archive.
@@ -63,7 +63,7 @@ interface ReferencesPanelProps {
   readOnly?: boolean;
   /**
    * A word-processor document the notes and bibliography are previewed for
-   * (addendum 43 §11); absent on a book, which previews its story.
+   * (addendum 45 §11); absent on a book, which previews its story.
    */
   documentId?: string | null;
   /** Where the open project is kept, so Bring in does not offer it as its own source. */
@@ -91,7 +91,7 @@ export function ReferencesPanel({ file, onUpdate, readOnly = false, documentId =
   const unread = fromWordUnread(file);
   const readable = fromWordReadable(file);
 
-  /** The sources still one line from Word, read into their parts where they can be (addendum 43 §20). */
+  /** The sources still one line from Word, read into their parts where they can be (addendum 45 §20). */
   const readFromWord = () => {
     const before = unread;
     const done = recogniseFromWord(file);
@@ -106,7 +106,7 @@ export function ReferencesPanel({ file, onUpdate, readOnly = false, documentId =
   };
 
   /**
-   * **The linked sources brought back into step** (addendum 43 §29), once
+   * **The linked sources brought back into step** (addendum 45 §29), once
    * each time the library is opened: every project this one's sources are
    * linked to is read, a change on either side goes to the other, and where
    * both changed the writer is asked. A change for another project is only
@@ -348,7 +348,7 @@ export function ReferencesPanel({ file, onUpdate, readOnly = false, documentId =
             <button type="button" className="primary" disabled={readOnly} onClick={add}>
               Add reference
             </button>
-            {/* Another project's library, shared into this one (addendum 43 §11). */}
+            {/* Another project's library, shared into this one (addendum 45 §11). */}
             <button type="button" className="ghost small" disabled={readOnly} onClick={() => setBringing(true)}>
               Bring in sources from another project…
             </button>
@@ -441,7 +441,7 @@ export function ReferencesPanel({ file, onUpdate, readOnly = false, documentId =
                   <span className="muted small">{counts.get(chosen.id) ? `Cited ${counts.get(chosen.id)} ${counts.get(chosen.id) === 1 ? 'time' : 'times'}` : 'Not cited yet'}</span>
                 </div>
                 {chosen.link ? (
-                  // A source that follows the library it came from (addendum 43 §29).
+                  // A source that follows the library it came from (addendum 45 §29).
                   <p className="refs-linked muted small" aria-label="Linked">
                     Linked to {chosen.link.title || 'another project'}: a change made here goes there, and one made there comes here, when either library is
                     opened.{' '}
@@ -553,7 +553,7 @@ function Preview({
 }) {
   const settings = citationSettingsOf(file);
   const occurrences = occurrencesIn(file, documentId);
-  // The page in the book that prints this list (addendum 43 §8): the back
+  // The page in the book that prints this list (addendum 45 §8): the back
   // matter's bibliography, made from the library unless it was told not to be.
   const page = partsOf(file).find((part) => part.kind === 'bibliography') ?? null;
   const notes = citationNotes(file, occurrences);

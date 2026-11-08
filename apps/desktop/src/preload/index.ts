@@ -458,6 +458,19 @@ export interface VcWriterApi {
     addWord(word: string): Promise<boolean>;
   };
 
+  /**
+   * Natural voices for read-back (addendum 45): whether the model is
+   * installed, fetching it on request with progress, removing it, and
+   * speaking a line — mono samples at `sampleRate`. Absent in the browser
+   * preview.
+   */
+  naturalVoices?: {
+    status(): Promise<DesktopApiResult<{ installed: boolean; installing: boolean }>>;
+    install(onProgress: (progress: { fraction: number; file: string }) => void): Promise<DesktopApiResult<{ installed: boolean; installing: boolean }>>;
+    remove(): Promise<DesktopApiResult<{ installed: boolean; installing: boolean }>>;
+    speak(input: { text: string; voice: string; speed: number }): Promise<DesktopApiResult<{ samples: Float32Array; sampleRate: number }>>;
+  };
+
   /** Sections in windows of their own, and the link between them (§8). */
   panes: PaneApi;
   link: LinkApi;
@@ -615,6 +628,21 @@ const api: VcWriterApi = {
       return { misspelled, suggestions: misspelled ? webFrame.getWordSuggestions(word).slice(0, 6) : [] };
     },
     addWord: (word) => ipcRenderer.invoke('spelling:add', word),
+  },
+
+  naturalVoices: {
+    status: () => ipcRenderer.invoke('naturalVoices:status'),
+    async install(onProgress) {
+      const listener = (_event: unknown, progress: { fraction: number; file: string }) => onProgress(progress);
+      ipcRenderer.on('naturalVoices:progress', listener);
+      try {
+        return await ipcRenderer.invoke('naturalVoices:install');
+      } finally {
+        ipcRenderer.off('naturalVoices:progress', listener);
+      }
+    },
+    remove: () => ipcRenderer.invoke('naturalVoices:remove'),
+    speak: (input) => ipcRenderer.invoke('naturalVoices:speak', input),
   },
 
   link: {

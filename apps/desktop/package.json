@@ -30,7 +30,9 @@
     "@tiptap/starter-kit": "3.31.4",
     "@vcwriter/domain": "workspace:*",
     "nspell": "2.1.5",
-    "pdfjs-dist": "^6.3.289"
+    "onnxruntime-node": "1.21.0",
+    "pdfjs-dist": "^6.3.289",
+    "phonemizer": "1.2.1"
   },
   "devDependencies": {
     "@testing-library/react": "^16.3.3",

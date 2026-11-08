@@ -104,7 +104,7 @@ export const headTextFor = (
   settings: BookSettings,
   names: RunningNames,
   chapterTitle: string,
-  /** The division's own layout, whose words win where it has any (addendum 43 §10). */
+  /** The division's own layout, whose words win where it has any (addendum 45 §10). */
   section: SectionLayout | null = null,
 ): string => {
   const own = section ? (side === 'verso' ? section.verso : section.recto) : null;
@@ -126,7 +126,7 @@ export const footTextFor = (settings: BookSettings, names: RunningNames, chapter
 // ------------------------------------------------------------------ fields
 
 /**
- * **The fields a head or a foot may carry** (addendum 43 §10, Ken's spec §6:
+ * **The fields a head or a foot may carry** (addendum 45 §10, Ken's spec §6:
  * *book title, current chapter/section title, author, page number, page
  * count, date, and custom text*). Typed in braces among the writer's words;
  * the custom text is everything else.

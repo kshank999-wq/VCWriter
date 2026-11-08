@@ -23,7 +23,7 @@ import {
 } from '../index.js';
 
 /**
- * One library, live between projects (addendum 43 §29): a source brought in
+ * One library, live between projects (addendum 45 §29): a source brought in
  * stays linked to the project it came from, and the two are brought back
  * into step whenever the library is opened.
  */

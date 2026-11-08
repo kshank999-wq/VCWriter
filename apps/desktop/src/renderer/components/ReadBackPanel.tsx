@@ -6,6 +6,8 @@ import {
   findUnit,
   playbackPlan,
   isProseFormat,
+  NATURAL_PROVIDER,
+  naturalVoiceDescriptors,
   preferredDefaultVoice,
   sortVoices,
   suggestVoiceAssignments,
@@ -14,7 +16,9 @@ import {
   type ProjectFile,
   type StructuralUnitId,
   type VoiceDescriptor,
+  wordAtFraction,
 } from '@vcwriter/domain';
+import { NaturalPlayer, useNaturalVoices } from '../natural-voices';
 
 interface ReadBackPanelProps {
   file: ProjectFile;
@@ -32,7 +36,14 @@ interface ReadBackPanelProps {
  * specific — swapping in a cloud provider later does not touch the project.
  */
 export function ReadBackPanel({ file, currentUnitId, onUpdate }: ReadBackPanelProps) {
-  const [voices, setVoices] = useState<VoiceDescriptor[]>([]);
+  const [systemVoices, setSystemVoices] = useState<VoiceDescriptor[]>([]);
+  /** Natural voices (addendum 45), once the writer has downloaded them. */
+  const natural = useNaturalVoices();
+  const player = useRef<NaturalPlayer | null>(null);
+  const voices = useMemo(
+    () => sortVoices([...(natural.installed ? naturalVoiceDescriptors() : []), ...systemVoices]),
+    [natural.installed, systemVoices],
+  );
   const [scope, setScope] = useState<'scene' | 'project'>('scene');
   const [rate, setRate] = useState(1);
   const [playing, setPlaying] = useState(false);
@@ -54,7 +65,7 @@ export function ReadBackPanel({ file, currentUnitId, onUpdate }: ReadBackPanelPr
     if (!synthesis) return;
 
     const load = () => {
-      setVoices(
+      setSystemVoices(
         sortVoices(
           synthesis
             .getVoices()
@@ -75,6 +86,7 @@ export function ReadBackPanel({ file, currentUnitId, onUpdate }: ReadBackPanelPr
   const stop = useCallback(() => {
     cancelled.current = true;
     window.speechSynthesis?.cancel();
+    player.current?.stop();
     setPlaying(false);
     setNowPlaying(null);
     setSpoken(null);
@@ -91,28 +103,65 @@ export function ReadBackPanel({ file, currentUnitId, onUpdate }: ReadBackPanelPr
   /** Read from a line — the first, or the one clicked in the script. */
   const play = useCallback(async (from = 0) => {
     const synthesis = window.speechSynthesis;
-    if (!synthesis || plan.steps.length === 0) return;
+    if (plan.steps.length === 0 || (!synthesis && !natural.installed)) return;
 
-    synthesis.cancel();
+    synthesis?.cancel();
+    player.current?.stop();
     cancelled.current = false;
     setPlaying(true);
 
-    const available = synthesis.getVoices();
-    const daniel = fallback ? available.find((voice) => voice.voiceURI === fallback.id) : undefined;
-    for (const step of plan.steps.slice(from)) {
+    const available = synthesis?.getVoices() ?? [];
+    const daniel = fallback && fallback.providerId !== NATURAL_PROVIDER ? available.find((voice) => voice.voiceURI === fallback.id) : undefined;
+    /**
+     * The natural voice a step is read in, if it is one: its own where it has
+     * a natural voice, or the default where it has none and the default is
+     * natural. A natural voice on a computer without them falls to the system.
+     */
+    const naturalFor = (step: (typeof plan.steps)[number]): string | null => {
+      if (!natural.installed) return null;
+      if (step.voice) return step.voice.providerId === NATURAL_PROVIDER ? step.voice.voiceId : null;
+      return fallback?.providerId === NATURAL_PROVIDER ? fallback.id : null;
+    };
+    const speedFor = (step: (typeof plan.steps)[number]) => rate * (step.voice?.rate ?? 1);
+    player.current ??= new NaturalPlayer();
+    const steps = plan.steps.slice(from);
+
+    for (const [position, step] of steps.entries()) {
       if (cancelled.current) break;
       setNowPlaying(step.index);
       setSpoken(null);
 
+      const voiceId = naturalFor(step);
+      // The next natural line is generated while this one is heard.
+      const next = steps[position + 1];
+      const nextVoice = next ? naturalFor(next) : null;
+      if (next && nextVoice) void player.current.prepare(next.text, nextVoice, speedFor(next)).catch(() => undefined);
+
+      if (voiceId) {
+        try {
+          await player.current.play(step.text, voiceId, speedFor(step), (fraction) => {
+            const word = wordAtFraction(step.text, fraction);
+            if (word) setSpoken({ index: step.index, ...word });
+          });
+          continue;
+        } catch {
+          // A line the natural voice could not make is read by the system voice instead.
+        }
+      }
+      if (!synthesis) continue;
+
       await new Promise<void>((resolve) => {
         const utterance = new SpeechSynthesisUtterance(step.text);
-        const match = step.voice ? available.find((voice) => voice.voiceURI === step.voice?.voiceId) : undefined;
+        const match =
+          step.voice && step.voice.providerId !== NATURAL_PROVIDER
+            ? available.find((voice) => voice.voiceURI === step.voice?.voiceId)
+            : undefined;
         const voice = match ?? daniel;
         if (voice) {
           utterance.voice = voice;
           utterance.lang = voice.lang;
         }
-        utterance.rate = rate * (step.voice?.rate ?? 1);
+        utterance.rate = speedFor(step);
         // **The word being read is lit** (from Ken: *it needs to highlight as
         // it's reading so you can follow along and find your errors*).
         utterance.onboundary = (event) => {
@@ -133,11 +182,11 @@ export function ReadBackPanel({ file, currentUnitId, onUpdate }: ReadBackPanelPr
       setNowPlaying(null);
       setSpoken(null);
     }
-  }, [plan, rate, fallback]);
+  }, [plan, rate, fallback, natural.installed]);
 
   const seconds = estimatedSpokenSeconds(plan);
   const unit = currentUnitId ? findUnit(file, currentUnitId) : null;
-  const supported = typeof window !== 'undefined' && Boolean(window.speechSynthesis);
+  const supported = (typeof window !== 'undefined' && Boolean(window.speechSynthesis)) || natural.installed;
 
   return (
     <div className="readback">
@@ -224,6 +273,40 @@ export function ReadBackPanel({ file, currentUnitId, onUpdate }: ReadBackPanelPr
           {plan.unassigned.join(', ')} {plan.unassigned.length === 1 ? 'has' : 'have'} no voice yet and will be
           read by the narrator.
         </p>
+      ) : null}
+
+      {natural.available ? (
+        <div className="natural-voices">
+          {natural.installed ? (
+            <p>
+              <strong>Natural voices are installed.</strong>{' '}
+              <span className="muted">
+                Fourteen voices that sound like people, on this computer. They work offline and nothing you write is
+                sent anywhere.
+              </span>{' '}
+              <button type="button" className="ghost small" onClick={() => void natural.remove()}>
+                Remove
+              </button>
+            </p>
+          ) : natural.progress !== null ? (
+            <p>
+              Downloading natural voices… {Math.round(natural.progress * 100)}%
+              <progress value={natural.progress} max={1} aria-label="Download progress" />
+            </p>
+          ) : (
+            <p>
+              <strong>Want voices that sound like people?</strong>{' '}
+              <span className="muted">
+                Download the natural voices once (about 100 MB, free). They run on this computer, work offline, and
+                nothing you write is sent anywhere.
+              </span>{' '}
+              <button type="button" className="primary small" onClick={() => void natural.install()}>
+                Get natural voices
+              </button>
+            </p>
+          )}
+          {natural.error ? <p className="notice">{natural.error}</p> : null}
+        </div>
       ) : null}
 
       <div className="panel-header">

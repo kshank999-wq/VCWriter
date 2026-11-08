@@ -270,7 +270,7 @@ export function EbookExportDialog({ open, file, laid = null, onClose, onUpdate }
                   </label>
                 </fieldset>
 
-                {/* The print's page numbers in a reflowable book (addendum 43 §28). */}
+                {/* The print's page numbers in a reflowable book (addendum 45 §28). */}
                 {pkg.layout === 'reflowable' ? (
                   <p className="muted small" aria-label="Page numbers">
                     {laid?.pageStarts?.length

@@ -7,7 +7,7 @@ import { LONG_NOTE, NOTE_LINES_KEPT, lineCuts } from './foot-notes';
 
 /**
  * **The page view, set into pages, with each page's notes at its foot**
- * (addendum 43 §25).
+ * (addendum 45 §25).
  *
  * The editor is one long sheet with a rule where each page would end, and
  * the words used to run across the rules: the pages were only set when the
@@ -23,7 +23,7 @@ import { LONG_NOTE, NOTE_LINES_KEPT, lineCuts } from './foot-notes';
  * As the print's: a page ends between lines; a table, a picture or a rule
  * goes over whole; a heading is not left at a page's foot; a page break the
  * writer put in ends the page; and a long note breaks over the page, the rest
- * of it carried first to the next page's foot (addendum 43 §26). The notes
+ * of it carried first to the next page's foot (addendum 45 §26). The notes
  * are drawn in the print's own markup, so the screen and the paper agree.
  */
 
@@ -219,7 +219,7 @@ export const layOutPageView = (
     return height;
   };
   /**
-   * **A long note breaks over the page** (addendum 43 §26), as the print's
+   * **A long note breaks over the page** (addendum 45 §26), as the print's
    * does (§24): the last note cited on a page, where it will not stand whole
    * and is longer than a third of a page, keeps as many lines as fit (two at
    * the least) and the rest is carried to the next page's foot. The cut, or

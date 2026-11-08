@@ -134,7 +134,7 @@ export const bibliographySchema = z.object({
   /** Off is the order they were added, which an import's order preserves. */
   sortByAuthor: z.boolean().default(true),
   /**
-   * **Made from the References library** (addendum 43 §8). On, and the book
+   * **Made from the References library** (addendum 45 §8). On, and the book
    * has sources in its library, the page prints the library's bibliography in
    * the book's citation style — kept current as sources and citations change —
    * and the sources typed here wait unprinted. Off, or with nothing in the

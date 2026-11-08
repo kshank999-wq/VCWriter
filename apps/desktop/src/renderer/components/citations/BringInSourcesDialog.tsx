@@ -13,7 +13,7 @@ import {
 import { InlineText } from './InlineText';
 
 /**
- * **Bring in sources from another project** (addendum 43 §11): the library a
+ * **Bring in sources from another project** (addendum 45 §11): the library a
  * book was cited from, shared with the report written about it, or the other
  * way round.
  *
@@ -43,7 +43,7 @@ export function BringInSourcesDialog({ file, projectPath = null, onUpdate, onClo
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
-  /** Whether the copies stay linked to the library they came from (addendum 43 §29). */
+  /** Whether the copies stay linked to the library they came from (addendum 45 §29). */
   const [linked, setLinked] = useState(true);
   /**
    * **What to do with each source this library already has** (§30), by the

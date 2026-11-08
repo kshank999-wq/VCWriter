@@ -40,7 +40,7 @@ export type Wraps = ReadonlyMap<string, number>;
 const NO_WRAPS: Wraps = new Map();
 
 /**
- * **Footnotes, for the cutter** (addendum 43 §8). Both halves are
+ * **Footnotes, for the cutter** (addendum 45 §8). Both halves are
  * measurements, made where the type is set:
  *
  * - `anchors`: by block, the line each citation's marker fell on, and its key
@@ -137,7 +137,7 @@ export interface BookPage {
   /** Which page this is, printed or not (§9l): a picture page still counts. */
   counted: string;
   runningHead: string;
-  /** The running foot, fields for the page itself still to fill (addendum 43 §10). */
+  /** The running foot, fields for the page itself still to fill (addendum 45 §10). */
   runningFoot: string;
   /** The chapter in force, for the recto head and the inspector. */
   chapterTitle: string;
@@ -150,7 +150,7 @@ export interface BookPage {
    */
   opens: boolean;
   pieces: PagePiece[];
-  /** The citations whose notes this page carries at its foot, in order (addendum 43 §8). */
+  /** The citations whose notes this page carries at its foot, in order (addendum 45 §8). */
   notes: string[];
   /** Which lines of each it carries: a part where a note breaks across pages (§12). */
   noteParts: NotePart[];
@@ -225,7 +225,7 @@ interface Filled {
   numbering: 'roman' | 'arabic' | null;
   /** The flow ran on past this page: the next block continues on the next. */
   continued: boolean;
-  /** The citations whose notes stand at this page's foot, in order (addendum 43 §8). */
+  /** The citations whose notes stand at this page's foot, in order (addendum 45 §8). */
   notes: string[];
   /** Which lines of each, where a note breaks across pages (§12). */
   noteParts: NotePart[];
@@ -236,14 +236,14 @@ const linesOf = (measured: Measured, block: BookBlock): number => Math.max(1, me
 const isFlow = (block: BookBlock): boolean => !block.display;
 
 /**
- * **The division a block opens, by its record** (addendum 43 §10): a
+ * **The division a block opens, by its record** (addendum 45 §10): a
  * chapter's marker, a part, or the unit of a heading that opens a page. The
  * same ids the contents page keys its rows by, so a division's own layout is
  * found again however often the book is laid.
  */
 export const sectionIdOf = (block: BookBlock): string | null => {
   if (block.kind === 'chapter_opening') return block.id;
-  // A page set among others opens nothing: the division it stands in goes on (addendum 43 §21).
+  // A page set among others opens nothing: the division it stands in goes on (addendum 45 §21).
   if (block.kind === 'part_opening') return block.anchored ? null : (block.partId ?? block.id);
   if (block.kind === 'heading' && block.starts !== 'none') return block.unitId ?? block.id;
   return null;
@@ -358,7 +358,7 @@ const fillPage = (
       continued: false,
       // A page of words — an epigraph, a dedication — sets its own notes at
       // its foot, whole: such a page is a few lines a third of the way down,
-      // and the rest of it is room (addendum 43 §13).
+      // and the rest of it is room (addendum 45 §13).
       notes: displayNotes,
       noteParts: displayNotes.map((key) => wholeNote(notes, key)),
     };
@@ -368,7 +368,7 @@ const fillPage = (
   let depth = 0;
   let cursor: Cursor = { index: start.index, offset: start.offset };
   /**
-   * The notes this page carries so far (addendum 43 §8). `depth` counts the
+   * The notes this page carries so far (addendum 45 §8). `depth` counts the
    * text's lines only; what is left for text is the target less the text
    * and less the lines the notes take, rule and all.
    */
@@ -607,7 +607,7 @@ export const layPages = (
   let roman = 0;
   let arabic = 0;
   let numbering: 'roman' | 'arabic' = 'roman';
-  /** The division in force, and the numbering it asked for (addendum 43 §10). */
+  /** The division in force, and the numbering it asked for (addendum 45 §10). */
   let section: SectionLayout | null = null;
   let sectionNumbering: 'roman' | 'arabic' | null = null;
   /** Where each numbering stands: a division that restarts sets its own back to nought. */

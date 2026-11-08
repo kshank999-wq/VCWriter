@@ -74,7 +74,7 @@ export interface ImportedScript {
   source: 'fdx' | 'pdf' | 'text' | 'docx';
   /**
    * Footnotes read from Word, each under the key of the citation token its
-   * place in the text was given (addendum 43 §9). The builder makes a source
+   * place in the text was given (addendum 45 §9). The builder makes a source
    * and a citation of each; present only where the book cites.
    */
   notes?: { key: string; text: string }[];

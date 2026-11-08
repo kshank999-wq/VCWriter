@@ -23,7 +23,7 @@ import {
 import { DocumentWorkspace } from '../document/DocumentWorkspace';
 
 /**
- * Citing in the word processor (addendum 43 §11): the ribbon's References
+ * Citing in the word processor (addendum 45 §11): the ribbon's References
  * tab, the same dialog the manuscript uses, markers drawn where they stand, a
  * bibliography that fills itself, and another project's sources brought in.
  */

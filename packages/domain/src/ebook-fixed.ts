@@ -41,7 +41,7 @@ export interface LaidForEbook {
   pages: readonly BookPage[];
   blocks: readonly BookBlock[];
   context: BookRenderContext;
-  /** Where each printed page begins, for the reflowable book's page numbers (addendum 43 §28). */
+  /** Where each printed page begins, for the reflowable book's page numbers (addendum 45 §28). */
   pageStarts?: readonly PrintPageStart[];
 }
 

@@ -2,6 +2,7 @@ import { app, BrowserWindow, shell } from 'electron';
 import { join } from 'node:path';
 import { registerIpcHandlers } from './ipc';
 import { attachEditMenu, registerSpellingHandlers } from './edit-menu';
+import { registerNaturalVoiceHandlers } from './natural-voices';
 import { restoreSession } from './cloud';
 import { installCrashHandlers } from './reporting';
 import { createWindowRegistry } from './windows';
@@ -93,6 +94,7 @@ installCrashHandlers();
 app.whenReady().then(() => {
   registerIpcHandlers(() => mainWindow, panes);
   registerSpellingHandlers();
+  registerNaturalVoiceHandlers();
   createWindow();
 
   // A stored session is restored in the background: signing in should last

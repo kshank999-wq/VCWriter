@@ -133,7 +133,7 @@ export const usePrinting = (options: {
       // The same page setup the PDF reads: the title page, the cast page,
       // the scene headings and the numbers, so the two exports agree.
       // A book is a book's manuscript, its citations as Word's own footnotes
-      // (addendum 43 §9); a script is the script's page.
+      // (addendum 45 §9); a script is the script's page.
       const bytes = isProseFormat(file.project.format) ? await buildBookDocx(file) : await buildDocx(file, printOptions);
       const result = await window.vcwriter.saveFile({
         name: suggestedDocxFileName(file),

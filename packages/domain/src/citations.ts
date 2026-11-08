@@ -20,7 +20,7 @@ import type { ProjectFile } from './project-file.js';
 import type { BeatId, CitationId, ManuscriptElementId, ReferenceId, StructuralUnitId } from './ids.js';
 
 /**
- * **The Reference Library and its citations** (addendum 43).
+ * **The Reference Library and its citations** (addendum 45).
  *
  * The library is the project's sources; a citation is one place a source is
  * cited, a `[^ab12cd]` token in the manuscript's text naming the citation by
@@ -191,7 +191,7 @@ export const referenceProblems = (reference: Reference): Partial<Record<Referenc
   return problems;
 };
 
-/** A source still as one line of text, brought in from Word with its parts run together (addendum 43 §9). */
+/** A source still as one line of text, brought in from Word with its parts run together (addendum 45 §9). */
 export const flattened = (reference: Pick<Reference, 'asWritten' | 'title'>): boolean =>
   reference.asWritten.trim().length > 0 && reference.title.trim().length === 0;
 
@@ -308,7 +308,7 @@ export interface CitationOccurrence {
   key: string;
   citation: Citation | null;
   reference: Reference | null;
-  /** Where it stands in the story; null in a document (addendum 43 §11). */
+  /** Where it stands in the story; null in a document (addendum 45 §11). */
   unitId: StructuralUnitId | null;
   beatId: BeatId | null;
   elementId: ManuscriptElementId | null;
@@ -381,7 +381,7 @@ export const citationOccurrences = (file: ProjectFile): CitationOccurrence[] => 
     }
   };
   /**
-   * **The front and back matter cite too** (addendum 43 §13): a foreword, an
+   * **The front and back matter cite too** (addendum 45 §13): a foreword, an
    * introduction, an epigraph, an appendix. They are read where the book
    * prints them — the front matter before the story, the back matter after
    * it — and each counts as a division of its own where the count starts
@@ -433,7 +433,7 @@ export const citationOccurrences = (file: ProjectFile): CitationOccurrence[] => 
   // A page whose record has gone prints nowhere; its citations are listed
   // last, so they are found and take no number from a page that prints.
   for (const part of allParts) fromPart(part, true);
-  // Each word-processor document counts on its own (addendum 43 §11): a
+  // Each word-processor document counts on its own (addendum 45 §11): a
   // letter and a report in one project are two pieces of writing, each with
   // its notes from 1 and each citing a source in full the first time.
   for (const document of file.documents ?? []) {
@@ -491,7 +491,7 @@ export const occurrencesIn = (file: ProjectFile, documentId: string | null): Cit
   citationOccurrences(file).filter((occurrence) => occurrence.documentId === documentId);
 
 /**
- * The keys of a document's citations, in reading order (addendum 43 §11).
+ * The keys of a document's citations, in reading order (addendum 45 §11).
  * In the word processor a citation is an inline node of its own, `citation`
  * with its key, rather than a token in the text: the editor keeps a tree, and
  * a node moves, copies and undoes with its words as a token does in a line.

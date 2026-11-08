@@ -13,7 +13,7 @@ import {
 import { InlineText } from './InlineText';
 
 /**
- * **A source's facts** (addendum 43, spec §3): the form the Reference Library
+ * **A source's facts** (addendum 45, spec §3): the form the Reference Library
  * edits and *Edit Source* opens from a citation.
  *
  * Only the fields a kind of source has are shown — a journal article asks for
@@ -85,7 +85,7 @@ export function ReferenceForm({ reference, readOnly = false, onChange }: Referen
   return (
     <div className="ref-form">
       {reference.asWritten.trim() ? (
-        /* A source brought in from Word as one line (addendum 43 §9): shown
+        /* A source brought in from Word as one line (addendum 45 §9): shown
            as it came, so its parts can be copied into the fields below. Once
            it has a title the style sets it from the fields instead — and a
            note whose parts were read (§20) keeps it to check them by. */

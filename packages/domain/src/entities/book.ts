@@ -137,7 +137,7 @@ export const headPlaceSchema = z.enum(HEAD_PLACES);
 export type HeadPlace = z.infer<typeof headPlaceSchema>;
 
 /**
- * **One division's own heads, foot and numbering** (addendum 43 §10, Ken's
+ * **One division's own heads, foot and numbering** (addendum 45 §10, Ken's
  * citations spec §6: *chapter/section-specific and first-page-different
  * layouts… restart per section*). Keyed by the division's record — a chapter's
  * marker, a part, a section's unit — which is what the contents page keys a
@@ -527,7 +527,7 @@ export const bookSettingsSchema = z.object({
       /** Where the head sits across the page, the folio's place's counterpart. */
       place: headPlaceSchema.default('centre'),
       /**
-       * **A running foot** (addendum 43 §10): a line at the foot of every
+       * **A running foot** (addendum 45 §10): a line at the foot of every
        * text page, in words with fields — *{title}*, *{chapter}*,
        * *{author}*, *{page}*, *{pages}*, *{date}*. Empty prints none.
        */
@@ -535,7 +535,7 @@ export const bookSettingsSchema = z.object({
       footPlace: headPlaceSchema.default('centre'),
     })
     .default({}),
-  /** Divisions laid out differently from the book (addendum 43 §10). */
+  /** Divisions laid out differently from the book (addendum 45 §10). */
   sections: z.array(sectionLayoutSchema).default([]),
   folio: folioPlaceSchema.default('foot_outside'),
   /** A chapter opening carries its number at the foot, whatever the folio's place. */

@@ -570,7 +570,7 @@ export const buildProjectFromImport = (script: ImportedScript, options: ImportOp
 
   // ------------------------------------------------------- the footnotes
   //
-  // A Word footnote is one line of text, its parts run together (addendum 43
+  // A Word footnote is one line of text, its parts run together (addendum 45
   // §9). A note in Chicago's form is read into its parts, its page kept on the
   // citation, and the short notes and Ibid.s after it cite the same source
   // (§20); a note that is not read is a source kept as written and flagged for

@@ -20,7 +20,7 @@ import { menusFor } from '../menus';
 import { ReferencesPanel } from '../components/citations/ReferencesPanel';
 
 /**
- * Citations in the writing (addendum 43): Insert Citation from the toolbar,
+ * Citations in the writing (addendum 45): Insert Citation from the toolbar,
  * the right-click and the keyboard; the marker drawn in the line; a click on
  * it to change or remove it; and the References library in Research.
  */

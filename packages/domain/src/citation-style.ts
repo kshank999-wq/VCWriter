@@ -3,7 +3,7 @@ import type { Citation, CitationSettings, LocatorKind, Reference } from './entit
 import type { ProjectFile } from './project-file.js';
 
 /**
- * **Citation styles** (addendum 43, spec §5): the same facts about a source,
+ * **Citation styles** (addendum 45, spec §5): the same facts about a source,
  * written the way a style writes them.
  *
  * - **Chicago Notes & Bibliography**, the footnote-first default: a full note
@@ -455,7 +455,7 @@ export const referenceBibliography = (
 };
 
 /**
- * What the printed book needs to set the citations (addendum 43 §8, phase 2):
+ * What the printed book needs to set the citations (addendum 45 §8, phase 2):
  * what each token prints as in the line, and the note under each marker.
  *
  * Keyed by the token's key, because that is what a block's spans carry. A key

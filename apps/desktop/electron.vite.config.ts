@@ -19,7 +19,13 @@ export default defineConfig(({ mode }) => {
       plugins: [externalizeDepsPlugin({ exclude: ['@vcwriter/domain'] })],
       define: cloudEnv,
       build: {
-        rollupOptions: { input: { index: resolve(__dirname, 'src/main/index.ts') } },
+        rollupOptions: {
+          input: {
+            index: resolve(__dirname, 'src/main/index.ts'),
+            // The natural voices run in a utility process of their own (addendum 45).
+            'natural-voices-worker': resolve(__dirname, 'src/main/natural-voices-worker.ts'),
+          },
+        },
       },
     },
     preload: {

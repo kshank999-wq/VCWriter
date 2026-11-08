@@ -104,7 +104,7 @@ import './document.css';
  * recovery points and sync see a document exactly as they see a beat.
  */
 
-/** The citations' keys in an editor, in order (addendum 43 §11). */
+/** The citations' keys in an editor, in order (addendum 45 §11). */
 const citeKeysOf = (editor: Editor | null): string[] => {
   const keys: string[] = [];
   editor?.state.doc.descendants((node) => {
@@ -172,7 +172,7 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
   const [sending, setSending] = useState<SendSubject | null>(null);
   // Headers, footers and page numbers (addendum 42 §15).
   const [headerFooterOpen, setHeaderFooterOpen] = useState(false);
-  // Citations and the Reference Library (addendum 43 §11): the dialog for a
+  // Citations and the Reference Library (addendum 45 §11): the dialog for a
   // citation (its key, or null to insert one), the library, and bringing in.
   const [citing, setCiting] = useState<{ key: string | null } | null>(null);
   const [libraryOpen, setLibraryOpen] = useState(false);
@@ -214,7 +214,7 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
       // A picture pasted or dropped from another program comes in as a picture.
       handlePaste: (_view, event) => insertPictures(event.clipboardData?.files),
       handleDrop: (_view, event) => insertPictures((event as DragEvent).dataTransfer?.files),
-      // Insert Citation, on the key the manuscript uses (addendum 43 §4).
+      // Insert Citation, on the key the manuscript uses (addendum 45 §4).
       handleKeyDown: (_view, event) => {
         if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'c' && !readOnly) {
           event.preventDefault();
@@ -261,7 +261,7 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
   // ------------------------------------------------------- citations
 
   /**
-   * The citations as the editor holds them now, in order (addendum 43 §11).
+   * The citations as the editor holds them now, in order (addendum 45 §11).
    * Read off the editor rather than the project, which takes the tree a
    * moment after typing settles — a marker drawn from that would be the
    * order of a moment ago.
@@ -613,7 +613,7 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
   /**
    * The page the printer and the PDF are made from. In a footnote style the
    * notes stand at the foot of the page they are cited on, the pages set
-   * here first (addendum 43 §23); otherwise the browser sets the pages.
+   * here first (addendum 45 §23); otherwise the browser sets the pages.
    */
   const printable = useCallback(async () => {
     const current = docOf();
@@ -667,7 +667,7 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
     try {
       if (/\.docx$/i.test(chosen.name)) {
         // A Word file's footnotes come in as citations, their sources into
-        // the library or matched to ones it has (addendum 43 §22).
+        // the library or matched to ones it has (addendum 45 §22).
         const docx = readDocx(await readDocxParts(await chosen.arrayBuffer()));
         const brought = notesIntoLibrary(file, docx.notes ?? []);
         const references = brought.file.references.slice(file.references.length);
@@ -1471,7 +1471,7 @@ export function DocumentWorkspace({ file, document, onUpdate, saveState, onSave,
 
 /**
  * The header and footer on every page, in its margins, with the fields
- * filled in (addendum 42 §15). The page view is set into pages (addendum 43
+ * filled in (addendum 42 §15). The page view is set into pages (addendum 45
  * §25), so each page's bands stand where that page's margins are, as the
  * print sets them. A double-click opens the bar to change them, as in Word.
  */

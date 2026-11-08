@@ -11,7 +11,7 @@ import {
 import { CitationDialog, type CitationChoice } from './CitationDialog';
 
 /**
- * **A page's words, with citations in them** (addendum 43 §13): the text box
+ * **A page's words, with citations in them** (addendum 45 §13): the text box
  * a foreword, an introduction, an epigraph or an appendix is written in, able
  * to cite as a chapter's lines can.
  *

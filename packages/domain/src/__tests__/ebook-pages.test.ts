@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { EBOOK_RULES, addBeat, addMarker, bookBlocks, createProjectFile, ebookOf, updateBeat, type ProjectFile } from '../index.js';
 
 /**
- * The printed book's page numbers in a reflowable eBook (addendum 43 §28):
+ * The printed book's page numbers in a reflowable eBook (addendum 45 §28):
  * a page-break marker where each printed page begins — at a block's start,
  * or among its words where a page turns inside a paragraph — a page list in
  * the navigation, and the package saying so.

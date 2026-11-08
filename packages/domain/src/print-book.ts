@@ -61,7 +61,7 @@ const styled = (span: InlineSpan, inner: string): string => {
 };
 
 /**
- * The words of a block, with its emphasis — and its citations (addendum 43
+ * The words of a block, with its emphasis — and its citations (addendum 45
  * §8): a footnote style raises the marker where the token stands; APA and MLA
  * set the parenthetical there, after a space where the token was typed
  * against the word before it. Without the book's citations a token prints
@@ -96,7 +96,7 @@ const noteMark = (marker: string): string => (/^[0-9a-z]+$/.test(marker) ? `${ma
 const noteMarkup = (key: string, note: { marker: string; text: string }): string =>
   `<p class="bk-note" data-note="${escapeHtml(key)}"><span class="bk-note-mark">${escapeHtml(noteMark(note.marker))}</span> ${renderNoteText(note.text)}</p>`;
 
-/** A note's type against the body's: smaller, and set closer (addendum 43 §8). */
+/** A note's type against the body's: smaller, and set closer (addendum 45 §8). */
 const NOTE_SIZE = 0.8;
 const NOTE_LEADING = 1.3;
 
@@ -104,7 +104,7 @@ const NOTE_LEADING = 1.3;
 export const noteLinePx = (geometry: BookGeometry): number => bookMetrics(geometry).sizePx * NOTE_SIZE * NOTE_LEADING;
 
 /**
- * The notes at the foot of a page, under a short rule (addendum 43 §8). The
+ * The notes at the foot of a page, under a short rule (addendum 45 §8). The
  * cutter has already kept their lines free; this only draws them.
  *
  * **A note broken across pages** (§12) is drawn whole and clipped to its lines
@@ -160,9 +160,9 @@ export interface BookRenderContext {
   contents: readonly BookContentsRow[];
   /** The index, once the book is laid; null while measuring or where there is none. */
   index: BookIndex | null;
-  /** The day the book is printed, as a `{date}` field says it (addendum 43 §10). */
+  /** The day the book is printed, as a `{date}` field says it (addendum 45 §10). */
   today?: string;
-  /** What the citations print as, in the line and at the foot (addendum 43 §8); absent where the book cites nothing. */
+  /** What the citations print as, in the line and at the foot (addendum 45 §8); absent where the book cites nothing. */
   citations?: BookCitations | null;
 }
 
@@ -451,7 +451,7 @@ const displayInner = (block: BookBlock, context: BookRenderContext): string => {
         .map((line, index) =>
           line.trim().length === 0
             ? '<p class="bk-words-gap"></p>'
-            : // The words' own marks, and a citation's marker (addendum 43 §13).
+            : // The words' own marks, and a citation's marker (addendum 45 §13).
               `<p${index === 0 ? '' : ' class="bk-words-under"'}>${renderSpans(parseInline(line), line, context.citations)}</p>`,
         )
         .join('');
@@ -1036,7 +1036,7 @@ export const renderBookPage = (
       return `<div class="${cls}" style="height:${height.toFixed(3)}px"><div class="bk-clip" style="margin-top:-${shift.toFixed(3)}px">${inner}</div></div>`;
     })
     .join('');
-  // The fields only a drawn page knows (addendum 43 §10): its number, the
+  // The fields only a drawn page knows (addendum 45 §10): its number, the
   // book's page count, and the day it is printed.
   const fields = { page: page.counted ?? page.folio ?? '', pages: context.geometry.pages, date: context.today ?? '' };
   const headWords = fillPageFields(page.runningHead ?? '', fields);
@@ -1290,7 +1290,7 @@ ${CHAPTER_STYLES}
      capitals against the recto's italic — is the writer's now. */
   .bk-running { position: absolute; top: var(--bk-head); left: var(--bk-outside); right: var(--bk-outside); line-height: 1; font-family: var(--bk-run-face, var(--bk-face)); }
   .bk-running.centre { text-align: center; }
-  /* The running foot (addendum 43 §10): the head's twin, in the bottom margin
+  /* The running foot (addendum 45 §10): the head's twin, in the bottom margin
      where the folio stands, set like the left-hand head. */
   .bk-running-foot { position: absolute; bottom: var(--bk-foot); left: var(--bk-outside); right: var(--bk-outside); line-height: 1; font-family: var(--bk-run-face, var(--bk-face)); font-size: var(--bk-run-verso-size); font-style: var(--bk-run-verso-style); letter-spacing: var(--bk-run-verso-tracking); }
   .bk-running-foot.centre { text-align: center; }
@@ -1308,7 +1308,7 @@ ${CHAPTER_STYLES}
   .bk-page.verso .bk-folio.left { left: var(--bk-outside); }
   .bk-page.recto .bk-folio.right { right: var(--bk-outside); }
   .bk-folio.centre { left: 0; right: 0; text-align: center; }
-  /* Citations (addendum 43 §8). The raised marker sets no line of its own:
+  /* Citations (addendum 45 §8). The raised marker sets no line of its own:
      line-height 0 keeps it from opening the leading of the line it is in,
      which would move every line after it off the grid the cutter counted. */
   .bk-cite { font-size: 0.68em; line-height: 0; vertical-align: super; padding-left: 0.05em; }

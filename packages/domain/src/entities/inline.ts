@@ -23,14 +23,14 @@ export interface InlineSpan extends InlineStyle {
   /** The marks themselves. They are shown while writing and never printed. */
   marker?: boolean;
   /**
-   * A citation's place in the text (addendum 43): the `[^ab12cd]` token, by
+   * A citation's place in the text (addendum 45): the `[^ab12cd]` token, by
    * its key. Printed as its marker, never as its characters, so where nothing
    * knows how to number it yet the span prints nothing at all.
    */
   citation?: string;
 }
 
-/** A citation token at the start of `text`: `[^` and six hex characters and `]` (addendum 43). */
+/** A citation token at the start of `text`: `[^` and six hex characters and `]` (addendum 45). */
 export const CITATION_TOKEN = /^\[\^([0-9a-f]{6})\]/;
 
 const MARKS = ['***', '**', '*', '_'] as const;

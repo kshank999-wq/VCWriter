@@ -65,7 +65,7 @@ interface Context {
   contentWidthIn: number;
   /** Each heading's number under the document's scheme, by heading id (addendum 42 §14). */
   headingNumbers: ReadonlyMap<string, string>;
-  /** What the document's citations print as (addendum 43 §11); null where it cites nothing. */
+  /** What the document's citations print as (addendum 45 §11); null where it cites nothing. */
   cites: DocumentCitations | null;
   /** Word footnotes made so far, in order: one per citation in a footnote style, and the writer's own. */
   footnotes: string[];
@@ -189,7 +189,7 @@ const markedRuns = (text: string): string =>
     .join('');
 
 /**
- * A citation (addendum 43 §11): a Word footnote in a footnote style, its note
+ * A citation (addendum 45 §11): a Word footnote in a footnote style, its note
  * the next of the document's in order, or the parenthetical in the line.
  */
 const citationRun = (node: DocNode, context: Context): string => {

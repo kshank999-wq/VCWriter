@@ -212,7 +212,7 @@ export const partTitle = (part: BookPart): string => part.title.trim() || PART_I
  * else*, and the page printed **Reader extras**, the kind's name, because
  * nothing read what the extra was. Now its heading is its purpose's
  * (`extraHeading`: *Questions for Discussion*, *Sign Up for the Newsletter*,
- * *Also by …*), and a bibliography's is its style's (addendum 43 §8). Every
+ * *Also by …*), and a bibliography's is its style's (addendum 45 §8). Every
  * place that prints or lists a page's heading reads it here — the page, the
  * contents, the eBook, Word and the rail — so they cannot disagree.
  */
@@ -227,7 +227,7 @@ export const partHeading = (part: BookPart, file?: ProjectFile): string => {
 };
 
 /**
- * **One division laid out on its own terms** (addendum 43 §10): its own heads
+ * **One division laid out on its own terms** (addendum 45 §10): its own heads
  * and foot, the heads on its opening page, a restart of the page numbers, or
  * roman numbers. A layout put back to the book's in every respect is removed
  * rather than kept as a record that changes nothing.
@@ -241,7 +241,7 @@ export const setSectionLayout = (file: ProjectFile, id: string, patch: Partial<O
 };
 
 /**
- * **What a bibliography page prints** (addendum 43 §8): the References
+ * **What a bibliography page prints** (addendum 45 §8): the References
  * library's bibliography, in the book's citation style, where the page is set
  * to take it and the library has anything to give — otherwise the sources
  * typed on the page. `fromLibrary` says which, so the screen can say it.
@@ -454,7 +454,7 @@ export const partParagraphs = (part: BookPart, file?: ProjectFile): string[] => 
     } else if (own.kind === 'also_by') {
       for (const one of own.titles.filter((two) => two.title.trim().length > 0)) listed.push(one.title);
     } else {
-      // A preview: its lead-in, then the extract (addendum 43 §18).
+      // A preview: its lead-in, then the extract (addendum 45 §18).
       if (own.leadIn.trim()) listed.push(own.leadIn.trim());
       listed.push(...paragraphsOf(part.text));
     }
@@ -651,7 +651,7 @@ export interface BookBlock {
    */
   standsIn?: boolean;
   /**
-   * **A page set among others rather than opening a division** (addendum 43
+   * **A page set among others rather than opening a division** (addendum 45
    * §21): a page of your own anchored in front of a line, a chapter's opening
    * or another page. It is a part, but it stands inside whatever it was put
    * in, so the heads, the foot and the numbering of that division carry on
@@ -926,7 +926,7 @@ const partOwnBlocks = (
   plan: readonly BookPart[] = [],
 ): BookBlock[] => {
   // A bibliography made from the library is headed as its style heads it:
-  // *References* in APA, *Works Cited* in MLA (addendum 43 §3).
+  // *References* in APA, *Works Cited* in MLA (addendum 45 §3).
   const title = partHeading(part, file);
   /**
    * **A page of art replaces the page, not the kind** (§9y, from Ken: *instead

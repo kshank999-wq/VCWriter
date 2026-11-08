@@ -2333,7 +2333,7 @@ describe('designing a blank page, from the rail', () => {
   });
 });
 
-describe('heads, feet and numbers by division (addendum 43 §10)', () => {
+describe('heads, feet and numbers by division (addendum 45 §10)', () => {
   it('sets a running foot with fields, and lets a chapter restart its numbers and carry its heads on its opening', () => {
     render(<Harness initial={novel()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Book settings…' }));

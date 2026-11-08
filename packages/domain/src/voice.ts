@@ -113,6 +113,10 @@ export const describeVoice = (input: {
 /** A voice picker reads better grouped: described voices first, then the rest. */
 export const sortVoices = (voices: readonly VoiceDescriptor[]): VoiceDescriptor[] =>
   [...voices].sort((a, b) => {
+    // The natural voices (addendum 45) first: where they are installed they
+    // are the ones worth choosing.
+    const natural = (voice: VoiceDescriptor) => (voice.providerId === 'natural' ? 0 : 1);
+    if (natural(a) !== natural(b)) return natural(a) - natural(b);
     const known = (voice: VoiceDescriptor) => (voice.gender === 'unknown' ? 1 : 0);
     if (known(a) !== known(b)) return known(a) - known(b);
     if (a.lang !== b.lang) return a.lang.localeCompare(b.lang);
@@ -129,6 +133,8 @@ export const sortVoices = (voices: readonly VoiceDescriptor[]): VoiceDescriptor[
  * would have used — null, which leaves the system's own default.
  */
 export const preferredDefaultVoice = (voices: readonly VoiceDescriptor[]): VoiceDescriptor | null =>
+  // George, the natural British male, where natural voices are installed.
+  voices.find((voice) => voice.providerId === 'natural' && voice.id === 'bm_george') ??
   voices.find((voice) => /\bdaniel\b/i.test(voice.name)) ??
   voices.find((voice) => /^en[-_]GB/i.test(voice.lang) && voice.gender === 'male') ??
   voices.find((voice) => /^en[-_]GB/i.test(voice.lang)) ??

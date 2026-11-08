@@ -126,7 +126,7 @@ interface RibbonProps {
     onPageNumbers(preset: PageNumberPreset | 'none'): void;
   };
   speech: DocumentSpeech;
-  /** Citations and the library (addendum 43 §11), as Word's References tab has them. */
+  /** Citations and the library (addendum 45 §11), as Word's References tab has them. */
   references: {
     /** The style the project cites in, in words. */
     style: string;
@@ -803,7 +803,7 @@ function LayoutTab({ pageSetup, onPageSetup, editor }: TabProps) {
 }
 
 /**
- * **References** (addendum 43 §11): Word's tab of the same name, on the
+ * **References** (addendum 45 §11): Word's tab of the same name, on the
  * project's own Reference Library — insert a citation, put a bibliography
  * where the cursor is, open the library and the style, or bring in another
  * project's sources.
