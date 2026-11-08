@@ -51,9 +51,13 @@ export function EbookPreview({ pkg }: EbookPreviewProps) {
     setScreens(Math.max(1, Math.ceil(flow.scrollWidth / device.width - 0.01)));
   };
   useEffect(() => {
-    const flow = frame.current?.contentDocument?.getElementById('flow');
+    const doc = frame.current?.contentDocument;
+    const flow = doc?.getElementById('flow');
     if (flow) flow.scrollLeft = screen * device.width;
-  }, [screen, device.width, html]);
+    // Where the reader is, at the foot of the screen, as a reading app shows it.
+    const folio = doc?.getElementById('folio');
+    if (folio) folio.textContent = `${screen + 1} of ${screens}`;
+  }, [screen, screens, device.width, html]);
 
   const turn = (direction: -1 | 1) => {
     const next = screen + direction;
@@ -123,6 +127,9 @@ export function EbookPreview({ pkg }: EbookPreviewProps) {
         </button>
       </div>
       <div className="ebook-preview-stage" style={{ height: Math.round(device.height * scale) + 24 }}>
+        {/* The box is the scaled size, so the stage centres what is seen; the
+            device inside is scaled from its corner to fill it exactly. */}
+        <div className="ebook-preview-box" style={{ width: Math.round(device.width * scale), height: Math.round(device.height * scale) }}>
         <div className="ebook-preview-device" style={{ width: device.width, height: device.height, transform: `scale(${scale})` }}>
           {html ? (
             <iframe
@@ -137,6 +144,7 @@ export function EbookPreview({ pkg }: EbookPreviewProps) {
           ) : (
             <p className="muted small">Nothing to show.</p>
           )}
+        </div>
         </div>
       </div>
       <p className="muted small">

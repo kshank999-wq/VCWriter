@@ -21,18 +21,24 @@ export interface PreviewDevice {
   /** The screen in CSS pixels, as a reading app lays them out (a 300 ppi e-ink screen is about a third of that). */
   width: number;
   height: number;
+  /** The reading app's own default type size on this screen, in CSS pixels. */
+  fontPx: number;
   note: string;
 }
 
 export const PREVIEW_DEVICES: readonly PreviewDevice[] = [
-  { id: 'kindle', name: 'Kindle 6.8″', width: 412, height: 549, note: 'Paperwhite and Kindle: e-ink, one page at a time' },
-  { id: 'kobo', name: 'Kobo / NOOK 6″', width: 429, height: 579, note: 'Kobo Clara and NOOK GlowLight' },
-  { id: 'phone', name: 'Phone 6.1″', width: 390, height: 844, note: 'Kindle, Apple Books and Play Books on a phone' },
-  { id: 'tablet', name: 'Tablet 11″', width: 820, height: 1180, note: 'iPad and Android tablets' },
+  { id: 'kindle', name: 'Kindle 6.8″', width: 412, height: 549, fontPx: 16, note: 'Paperwhite and Kindle: e-ink, one page at a time' },
+  { id: 'kobo', name: 'Kobo / NOOK 6″', width: 429, height: 579, fontPx: 16, note: 'Kobo Clara and NOOK GlowLight' },
+  { id: 'phone', name: 'Phone 6.1″', width: 390, height: 844, fontPx: 17, note: 'Kindle, Apple Books and Play Books on a phone' },
+  // A tablet's reading app sets bigger type and wider margins than a phone's;
+  // at a phone's sixteen pixels a page of a novel reads as a page of notes.
+  { id: 'tablet', name: 'Tablet 11″', width: 820, height: 1180, fontPx: 21, note: 'iPad and Android tablets' },
 ];
 
 /** The reader's font sizes, as a fraction of the reader's default. */
 export const PREVIEW_SIZES: readonly number[] = [0.8, 0.9, 1, 1.15, 1.3, 1.5, 1.75];
+
+const escapeText = (text: string): string => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 const pictureUrls = (pkg: EbookPackage): Map<string, string> => {
   const map = new Map<string, string>();
@@ -85,6 +91,20 @@ html, body { width: ${device.width}px; height: ${device.height}px; background: #
   }
 
   /**
+   * **A page that is one picture** (§13) fills the screen: no reading-app
+   * header or footer, no margins, the picture centred as large as it goes.
+   */
+  if (/class="art"/.test(bodyAttributes)) {
+    return `<!doctype html><html><head><meta charset="utf-8"><style>${css}
+html, body { margin: 0; padding: 0; width: ${device.width}px; height: ${device.height}px; overflow: hidden; background: #fff; }
+#flow { width: ${device.width}px; height: ${device.height}px; display: flex; align-items: center; justify-content: center; }
+#flow section { width: 100%; height: 100%; }
+#flow div.art-page { height: ${device.height}px; }
+#flow img { max-width: ${device.width}px; max-height: ${device.height}px; }
+</style></head><body class="art"><div id="flow">${inner}</div></body></html>`;
+  }
+
+  /**
    * The reader's font size is the root's; everything in the stylesheet is
    * relative to it, which is the point of the stylesheet.
    *
@@ -98,17 +118,37 @@ html, body { width: ${device.width}px; height: ${device.height}px; background: #
    * file it exists to show.
    */
   const margins = pkg.margins ?? { side: '5%', head: '2em', foot: '2em' };
+  /**
+   * **What the reading app draws round every screen** (§13, from Ken: *on a
+   * page with text, there's no room at the top or the bottom … and there's
+   * no titles on the tops of each page*). A reflowable book cannot carry a
+   * running head or a folio — the reading app draws its own, the title above
+   * and where you are below — and every app keeps a band clear at the head
+   * and foot of each screen. The preview draws the same bands, so the text
+   * stops short of the edges on every screen and not only on the first.
+   * `#folio` is filled in by the frame as it turns.
+   */
+  const band = Math.round(device.height * 0.065);
+  const section = pkg.sections.find((one) => one.href === href);
+  const running = section && (section.kind === 'chapter' || section.kind === 'body') ? section.title : pkg.metadata.title;
+  const flowHeight = device.height - band * 2;
   return `<!doctype html><html><head><meta charset="utf-8"><style>${css}
-html { font-size: ${Math.round(size * 100)}%; }
-html, body { margin: 0; padding: 0; width: ${device.width}px; height: ${device.height}px; overflow: hidden; background: #fff; }
-#flow { height: ${device.height}px; width: ${device.width}px; column-width: ${device.width}px; column-gap: 0; column-fill: auto; overflow: hidden; }
+html { font-size: ${Math.round(size * device.fontPx)}px; }
+html, body { margin: 0; padding: 0; width: ${device.width}px; height: ${device.height}px; overflow: hidden; background: #fff; position: relative; }
+#head, #folio { position: absolute; left: 0; right: 0; height: ${band}px; line-height: ${band}px; text-align: center; font-size: ${Math.max(10, Math.round(device.fontPx * 0.7))}px; color: #777; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 ${margins.side}; box-sizing: border-box; font-family: inherit; }
+#head { top: 0; font-style: italic; }
+#folio { bottom: 0; }
+#flow { position: absolute; top: ${band}px; left: 0; height: ${flowHeight}px; width: ${device.width}px; column-width: ${device.width}px; column-gap: 0; column-fill: auto; overflow: hidden; }
 #flow > * { padding-left: ${margins.side}; padding-right: ${margins.side}; box-sizing: border-box; }
 #flow > *:first-child { padding-top: ${margins.head}; }
 #flow > *:last-child { padding-bottom: ${margins.foot}; }
 /* The one cap that is the device's rather than the book's: a picture taller
    than the screen is a picture nobody can see. The width is the stylesheet's. */
-#flow img { max-height: ${Math.round(device.height * 0.9)}px; }
-</style></head><body><div id="flow">${inner}</div></body></html>`;
+#flow img { max-height: ${Math.round(flowHeight * 0.92)}px; }
+#flow div.art-page { height: auto; }
+/* A chapter inside a story starts a new screen, as the stylesheet's page break asks. */
+#flow h2.section-open { break-before: column; }
+</style></head><body><div id="head">${escapeText(running)}</div><div id="flow">${inner}</div><div id="folio"></div></body></html>`;
 };
 
 /** The sections a preview may turn to: the reading order, cover first. */

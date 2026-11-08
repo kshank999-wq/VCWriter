@@ -15680,7 +15680,8 @@ dialog.chapter-page-dialog {
 .ebook-preview-size { display: inline-flex; gap: 4px; align-items: center; }
 .ebook-preview-count { min-width: 110px; text-align: center; }
 .ebook-preview-stage { position: relative; background: var(--panel-2, #2a2e39); border-radius: 8px; display: flex; justify-content: center; align-items: flex-start; padding: 12px 0; overflow: hidden; }
-.ebook-preview-device { transform-origin: top center; background: #fff; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35); border-radius: 6px; overflow: hidden; }
+.ebook-preview-box { flex: none; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35); }
+.ebook-preview-device { transform-origin: top left; background: #fff; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35); border-radius: 6px; overflow: hidden; }
 .ebook-preview-device iframe { border: 0; display: block; background: #fff; }
 
 /* ---- Layout: figures in the rail and the picked one on the page (addendum 20 §8) ---- */

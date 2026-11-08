@@ -104,6 +104,8 @@ export interface EbookSection {
   kind: 'cover' | 'front' | 'body' | 'chapter' | 'back';
   /** On a fixed-layout page: which side of the spread it is (§10). */
   spread?: 'left' | 'right' | 'center';
+  /** Read in order but not listed in the contents: an art page, or a chapter's words after one (§13). */
+  unlisted?: boolean;
 }
 
 export interface EbookImage {
@@ -403,8 +405,8 @@ export const coverOf = (
 // ------------------------------------------------------- the document shell
 
 /** An XHTML content document: escaped, closed, namespaced, the stylesheet linked. */
-export const xhtmlDocument = (input: { lang: string; title: string; css: string; body: string; head?: string }): string =>
-  `<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE html>\n<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="${escapeXml(input.lang)}" lang="${escapeXml(input.lang)}">\n<head>\n<meta charset="utf-8"/>\n<title>${escapeXml(input.title)}</title>\n${input.head ?? ''}<link rel="stylesheet" type="text/css" href="${input.css}"/>\n</head>\n<body>\n${input.body}\n</body>\n</html>\n`;
+export const xhtmlDocument = (input: { lang: string; title: string; css: string; body: string; head?: string; bodyClass?: string }): string =>
+  `<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE html>\n<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="${escapeXml(input.lang)}" lang="${escapeXml(input.lang)}">\n<head>\n<meta charset="utf-8"/>\n<title>${escapeXml(input.title)}</title>\n${input.head ?? ''}<link rel="stylesheet" type="text/css" href="${input.css}"/>\n</head>\n<body${input.bodyClass ? ` class="${escapeXml(input.bodyClass)}"` : ''}>\n${input.body}\n</body>\n</html>\n`;
 
 /**
  * What the package may truthfully say about its own accessibility (§11).
@@ -632,6 +634,15 @@ interface Draft {
   notes: string[];
   /** The printed pages that begin in this section (§28): each marker's id and number. */
   pages: { id: string; label: string }[];
+  /**
+   * **A page that is one picture** (addendum 23 §13): the cover, a title page
+   * brought in as art, a plate, a chapter's full-page art, an illustrated
+   * page inside a story. Its own file, so every reader starts it on a fresh
+   * screen, with no margins, the picture as large as the screen allows.
+   */
+  art?: boolean;
+  /** Not in the contents: an art page, or the rest of a chapter after one. */
+  unlisted?: boolean;
 }
 
 /**
@@ -743,6 +754,35 @@ export const ebookOf = (
     }
     return current;
   };
+  /** A picture as a whole screen, centred, as large as it will go without cropping. */
+  const artPage = (image: EbookImage, alt: string): string =>
+    `<div class="art-page"><img src="../${image.href}" alt="${escapeXml(alt)}"/></div>`;
+  /**
+   * **A picture that is a page, as a page of its own** (§13, from Ken: *it
+   * double publishes the name instead of using the cover art to the edges …
+   * the illustrations … fill the borders*). Where the section it lands in has
+   * nothing yet, the section becomes the art page; otherwise the art gets a
+   * file of its own and the words after it carry on in another, so the art
+   * always starts and ends a screen. Returns the section the words go on in.
+   */
+  let artCount = 0;
+  const placeArt = (image: EbookImage, alt: string): void => {
+    const into = current as Draft | null;
+    if (into && into.html.length === 0) {
+      into.html.push(artPage(image, alt));
+      into.art = true;
+      return;
+    }
+    artCount += 1;
+    const resume = into;
+    const art = begin({ id: `art-${String(artCount).padStart(3, '0')}`, slug: 'art', title: resume?.title ?? metadata.title, kind: resume?.kind ?? 'body', epubType: resume?.epubType ?? 'bodymatter', art: true, unlisted: true });
+    art.html.push(artPage(image, alt));
+    if (resume) {
+      begin({ id: `${resume.id}-${artCount}`, slug: resume.slug, title: resume.title, kind: resume.kind, epubType: resume.epubType, unlisted: true });
+    } else {
+      current = null;
+    }
+  };
 
   const cites = bookCitationsOf(file);
 
@@ -824,18 +864,21 @@ export const ebookOf = (
     const markedIn = current as Draft | null;
     const markedAt = markedIn ? markedIn.html.length : 0;
     switch (block.kind) {
-      case 'half_title':
-        if (block.assetId && bank.asset(block.assetId, titlePage.title || metadata.title)) {
-          current?.html.push(figure(bank.asset(block.assetId, titlePage.title || metadata.title), '', 'title-art'));
+      case 'half_title': {
+        const whole = block.assetId ? bank.asset(block.assetId, titlePage.title || metadata.title) : null;
+        if (whole) {
+          placeArt(whole, titlePage.title || metadata.title);
           break;
         }
         current?.html.push(`<h1 class="book-title">${escapeXml(titlePage.title || metadata.title)}</h1>`);
         break;
+      }
       case 'title_page': {
         // A title page brought in whole as art (addendum 20 §8) is the
-        // picture alone; the words are in it.
-        if (block.assetId && bank.asset(block.assetId, titlePage.title || metadata.title)) {
-          current?.html.push(figure(bank.asset(block.assetId, titlePage.title || metadata.title), '', 'title-art'));
+        // picture alone, the whole screen; the words are in it.
+        const whole = block.assetId ? bank.asset(block.assetId, titlePage.title || metadata.title) : null;
+        if (whole) {
+          placeArt(whole, titlePage.title || metadata.title);
           break;
         }
         const art = titlePage.titleImage
@@ -878,9 +921,14 @@ export const ebookOf = (
         }
         break;
       }
-      case 'plate':
-        current?.html.push(figure(bank.asset(block.assetId, block.caption ?? ''), block.caption ?? '', 'plate'));
+      case 'plate': {
+        // An art page (§13): the picture is the page. A caption keeps the
+        // figure, since words under it need the margins a page of art has not.
+        const image = bank.asset(block.assetId, block.caption ?? '');
+        if (image && !(block.caption ?? '').trim()) placeArt(image, image.alt);
+        else current?.html.push(figure(image, block.caption ?? '', 'plate'));
         break;
+      }
       // A blank leaf is a fact about a page (§9i), and nothing about a page
       // survives into a reflowable book — the log has said so since phase 1.
       case 'blank':
@@ -891,24 +939,35 @@ export const ebookOf = (
         const label = leaf?.label ?? '';
         const name = leaf?.title ?? block.title ?? '';
         const title = name || label || `Chapter ${chapters}`;
+        const id = `chapter-${String(chapters).padStart(3, '0')}`;
+        /**
+         * **Full-page art opens the chapter as the Layout opens it** (addendum
+         * 19 §7, §13 here; from Ken: *it double publishes the name instead of
+         * using the cover art*): the art is a whole screen of its own, and the
+         * title, which the art already carries, is not printed again under
+         * it. The heading stays in the file — the contents and a reader who
+         * cannot see the picture still have it — but is not drawn, which is
+         * what the printed book does.
+         */
+        const art = leaf && isFullPageArt(leaf) && leaf.image
+          ? bank.take(`device:${id}`, leaf.image.dataUrl, leaf.image.name || 'chapter art', leaf.image.name || 'art', 0, 0, false, false)
+          : null;
+        if (art) {
+          const page = begin({ id: `${id}-art`, slug: 'chapter-art', title, kind: 'chapter', epubType: 'chapter', art: true, unlisted: true });
+          page.html.push(artPage(art, title));
+        }
         const draft = begin({
-          id: `chapter-${String(chapters).padStart(3, '0')}`,
+          id,
           slug: 'chapter',
           title,
           kind: 'chapter',
           epubType: 'chapter',
         });
+        const drawn = art ? ' titled-by-art' : '';
         const head =
           label && name
-            ? `<h1 class="chapter-title"><span class="chapter-label">${escapeXml(label)}</span><br/><span class="chapter-name">${escapeXml(name)}</span></h1>`
-            : `<h1 class="chapter-title">${escapeXml(title)}</h1>`;
-        // Full-page art (addendum 19 §7) goes before the heading, at the
-        // width of the screen: a reflowable book has no page to fill, so the
-        // art leads and the heading follows it for the reader who cannot see.
-        const art = leaf && isFullPageArt(leaf) && leaf.image
-          ? bank.take(`device:${draft.id}`, leaf.image.dataUrl, leaf.image.name || 'chapter art', leaf.image.name || 'art', 0, 0, false, false)
-          : null;
-        if (art) draft.html.push(`<p class="device full-art"><img src="../${art.href}" alt="" role="presentation"/></p>`);
+            ? `<h1 class="chapter-title${drawn}"><span class="chapter-label">${escapeXml(label)}</span><br/><span class="chapter-name">${escapeXml(name)}</span></h1>`
+            : `<h1 class="chapter-title${drawn}">${escapeXml(title)}</h1>`;
         draft.html.push(head);
         if (leaf?.image && !art) {
           // A chapter device is an ornament: it asks for no description.
@@ -957,6 +1016,19 @@ export const ebookOf = (
       }
       case 'heading': {
         const draft = body();
+        /**
+         * **A heading that opens a page opens it here too** (§13, from Ken:
+         * *it also doesn't start a new chapter on another page … it doesn't
+         * center the titles like it does in the layout*). In the Layout it
+         * is a chapter inside a story (addendum 22 §6): a fresh page, the
+         * number centred in the book's chapter-number type, dropped down the
+         * page, and the first line after it opened the way a chapter's is.
+         */
+        if (block.starts !== 'none') {
+          draft.html.push(`<h2 class="section-open">${words(block, draft)}</h2>`);
+          opening = openingClass;
+          break;
+        }
         draft.html.push(`<h2 class="heading">${words(block, draft)}</h2>`);
         break;
       }
@@ -970,9 +1042,18 @@ export const ebookOf = (
         current?.html.push(`<p class="break" role="separator" aria-label="Scene break">${escapeXml(ornament)}</p>`);
         opening = null;
         break;
-      case 'figure':
-        body().html.push(figure(bank.asset(block.assetId, block.caption ?? 'figure', block.decorative), block.caption ?? '', 'figure', block.decorative));
+      case 'figure': {
+        const image = bank.asset(block.assetId, block.caption ?? 'figure', block.decorative);
+        // An illustrated page inside the story (§13): in the Layout the
+        // picture is the page, so here it is a screen of its own.
+        if (block.display && image && !(block.caption ?? '').trim()) {
+          body();
+          placeArt(image, block.decorative ? '' : image.alt);
+          break;
+        }
+        body().html.push(figure(image, block.caption ?? '', 'figure', block.decorative));
         break;
+      }
       case 'contents':
       case 'index':
         break;
@@ -1009,6 +1090,7 @@ export const ebookOf = (
         lang: metadata.language,
         title: 'Cover',
         css: '../css/book.css',
+        bodyClass: 'art',
         body: `<section epub:type="cover" id="cover"><img class="cover" src="../${cover.href}" alt="${escapeXml(cover.alt)}"/></section>`,
       }),
     });
@@ -1016,7 +1098,7 @@ export const ebookOf = (
   const pageList: EbookPageTarget[] = [];
   kept.forEach((draft, index) => {
     const href = `text/${String(index + 1).padStart(3, '0')}-${draft.slug}.xhtml`;
-    sections.push({ id: draft.id, href, title: draft.title, kind: draft.kind });
+    sections.push({ id: draft.id, href, title: draft.title, kind: draft.kind, ...(draft.unlisted ? { unlisted: true } : {}) });
     for (const page of draft.pages) pageList.push({ href: `${href}#${page.id}`, label: page.label });
     content.push({
       path: `OEBPS/${href}`,
@@ -1026,6 +1108,7 @@ export const ebookOf = (
         lang: metadata.language,
         title: draft.title,
         css: '../css/book.css',
+        bodyClass: draft.art ? 'art' : undefined,
         body:
           `<section epub:type="${draft.epubType}" id="${draft.id}">\n${draft.html.join('\n')}\n</section>` +
           (cites ? notesSection({ cites, keys: draft.notes }) : ''),
@@ -1035,7 +1118,7 @@ export const ebookOf = (
 
   log.unshift(...ebookTransferLog(file));
 
-  const listed = sections.filter((section) => section.kind !== 'cover');
+  const listed = sections.filter((section) => section.kind !== 'cover' && !section.unlisted);
   return finishPackage({
     metadata,
     rules,

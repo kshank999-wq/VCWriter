@@ -94,7 +94,8 @@ describe('the device preview (phase 3)', () => {
     const chapter = previewSections(pkg).find((section) => section.title === 'The Road')!;
     const device = PREVIEW_DEVICES.find((one) => one.id === 'kindle')!;
     const html = previewDocument(pkg, chapter.href, device, 1.3)!;
-    expect(html).toContain('html { font-size: 130%; }');
+    // The reader's size times the device's own default (16 px on a Kindle, addendum 23 §13).
+    expect(html).toContain('html { font-size: 21px; }');
     expect(html).toContain(`column-width: ${device.width}px`);
     expect(html).toContain('<h1 class="chapter-title">');
     // The picture is the data URL again rather than a path into a zip nobody has opened.

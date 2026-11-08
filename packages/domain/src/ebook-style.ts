@@ -193,6 +193,21 @@ p.p.center { text-align: center; text-indent: 0; }
 p.p.right { text-align: right; text-indent: 0; }
 p.p.justify { text-align: justify; }
 h2.heading { font-size: 1.2em; margin: 2em 0 1em; text-align: left; }
+/* **A chapter inside a story** (addendum 23 §13): a fresh screen, the number
+   centred in the book's chapter-number type and dropped down the page, as the
+   Layout sets it. Both spellings of the break, for old readers and new. */
+h2.section-open { ${line(chapter.number)} text-align: center; text-indent: 0; margin: 3em 0 1.5em; page-break-before: always; break-before: page; page-break-after: avoid; }
+/* The art carries the title (§13): the heading stays for the contents and a
+   reader who cannot see the picture, and is not drawn twice. */
+h1.titled-by-art { display: none; }
+/* **A page that is one picture** (§13): no margins, the picture centred and
+   as large as the screen allows without cropping. A reader that knows no
+   viewport units still gets it at the width of the screen. */
+body.art { margin: 0; padding: 0; }
+body.art section { margin: 0; padding: 0; }
+div.art-page { margin: 0; padding: 0; text-align: center; text-indent: 0; height: 100vh; display: flex; align-items: center; justify-content: center; page-break-inside: avoid; break-inside: avoid; }
+div.art-page img { display: block; margin: 0 auto; max-width: 100%; max-height: 100vh; width: auto; height: auto; }
+body.art img.cover { display: block; margin: 0 auto; max-width: 100%; max-height: 100vh; width: auto; height: auto; }
 blockquote { margin: 1em 8%; }
 blockquote p { text-indent: 0; }
 p.break { text-align: center; margin: 1.5em 0; text-indent: 0; }
@@ -206,7 +221,7 @@ figure { margin: 1.5em 0; text-align: center; page-break-inside: avoid; }
 .inset-right { float: right; margin: 0.2em 0 0.3em 1em; }
 .inset img { display: block; width: 100%; height: auto; }
 .inset .cap { display: block; font-size: 0.8em; text-align: center; margin-top: 0.3em; }
-figure img { max-width: 100%; height: auto; }
+figure img { max-width: 100%; max-height: 90vh; height: auto; display: block; margin: 0 auto; }
 figcaption { font-size: 0.85em; margin-top: 0.5em; }
 img.cover { max-width: 100%; max-height: 100%; margin: 0 auto; display: block; }
 .words p { text-align: center; text-indent: 0; margin: 0.3em 0; }

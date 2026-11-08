@@ -383,3 +383,61 @@ No font file is **embedded**, so a device without the named face falls back to
 the stack's generic — §8's line since phase 1, and the log says it. The fixed
 layout book is unaffected: it is a reader of the *pages* and already carried
 the trim.
+
+## 13. Set as the Layout sets it
+
+From Ken, 8 November, with screenshots of *Villain's Tales* on each device:
+
+> *it double publishes the name instead of using the cover art to the edges
+> … it doesn't center the titles like it does in the layout … on a page with
+> text, there's no room at the top or the bottom … there's no titles on the
+> tops of each page … it also doesn't start a new chapter on another page
+> … it doesn't really look anything like the layout. Which it should.*
+
+**A page that is one picture is a screen of its own.** This covers:
+
+- the cover
+- a title page or half title brought in as art
+- an uncaptioned art page
+- a chapter's full-page art
+- an uncaptioned illustrated page inside a story
+
+Each goes in its own file with `<body class="art">`, so every reader starts
+it on a fresh screen. There are no margins, and the picture (`div.art-page`)
+is centred and as large as the screen allows without cropping. Where the art
+lands mid-chapter, the chapter's words carry on in another file after it.
+That file and the art file are marked `unlisted`, so the contents still lists
+each story once.
+
+**Full-page art carries the title, so the title is not printed again.** The
+`h1` stays in the file, for the contents and for a reader who cannot see the
+picture, but is `display: none` (`titled-by-art`), as the printed book leaves
+it off.
+
+**A heading that opens a page opens a screen.** In the Layout, a heading with
+`starts` set is a chapter inside a story (addendum 22 §6). The eBook used to
+set it as a left-ranged `h2.heading`. It is now `h2.section-open`:
+
+- a page break before it
+- centred
+- in the book's chapter-number type, dropped 3 em down
+- followed by a first line opened the way a chapter's is (small caps or a
+  drop, as the book sets)
+
+A heading that runs on in the prose is unchanged.
+
+**Running heads and folios belong to the reading app.** A reflowable book
+cannot carry them: Kindle, Apple Books and Kobo draw their own title above
+and position below, and keep a band clear at the head and foot of every
+screen. The preview now draws the same: the story's title in italic at the
+head, the screen number at the foot, and a band of 6.5% of the screen at
+each end. Before, only the first screen of a section had a top margin and
+only the last a bottom one.
+
+**Each device sets its own default type** (`fontPx`): Kindle and Kobo 16 px,
+a phone 17 px, a tablet 21 px. At a phone's size, a tablet page read as
+notes.
+
+**The tablet preview was off-centre.** It was scaled about its own middle
+inside a box the full device's width. It now sits in a box of the scaled
+size and scales from its corner.
