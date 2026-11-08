@@ -30,6 +30,10 @@ import {
   chipWidthAt,
   blockWidthAt,
   BEAT_CHIP_MIN,
+  beatColumnWidthAt,
+  isProseFormat,
+  columnBlockWidthAt,
+  fitColumnZoom,
   laneCarriesWords,
   storyLayout,
   threadLayout,
@@ -265,10 +269,22 @@ export function MasterTimeline({
    * below it, everywhere at once rather than scene by scene.
    */
   const chip = chipWidthAt(pixelsPerPage, beatWidth);
-  const chipsFor = (span: StorySpan): boolean => {
+  /**
+   * **A book's board sizes the beat column, not the pages** (from Ken: *the
+   * part with the beats in it is super narrow, and then it has a huge area
+   * next to it … it'll stretch to a limit … and then it shrinks to a limit to
+   * where it's narrow, but not a sliver*). A section of a novel or a story
+   * can be forty pages and its beats only build down, so on a prose board a
+   * section is as wide as its column and the zoom sizes the column, between
+   * `BEAT_COLUMN_FLOOR` and `BEAT_COLUMN_CEILING`. A script keeps its pages.
+   */
+  const columnBoard = !shortForm && isProseFormat(file.project.format);
+  const chipFor = (span: StorySpan): number => {
+    if (columnBoard) return beatColumnWidthAt(pixelsPerPage, beatWidth);
     void span;
-    return shortForm || chip >= BEAT_CHIP_MIN;
+    return chip;
   };
+  const chipsFor = (span: StorySpan): boolean => shortForm || columnBoard || chipFor(span) >= BEAT_CHIP_MIN;
   // A scene is as wide as its pages, or as wide as its beats need — whichever
   // is more. Past `rows` beats a second column starts and the block stretches
   // rather than growing a scrollbar; every track shares these columns, so the
@@ -299,6 +315,7 @@ export function MasterTimeline({
       const perSecond = pixelsPerPage / 6;
       return Math.round(Math.max(pixelsPerPage * 0.5, secondsOf(span.unit.id) * perSecond));
     }
+    if (columnBoard) return columnBlockWidthAt(pixelsPerPage, beatWidth);
     // Its pages, and never narrower than its column of chips while chips are
     // drawn, so a scene with nothing written yet reads its beats like the rest.
     return blockWidthAt(span, pixelsPerPage, beatWidth, beats.length);
@@ -599,6 +616,7 @@ export function MasterTimeline({
               chipsFor={chipsFor}
               beatWidth={beatWidth}
               chipWidth={chip}
+              chipWidthFor={chipFor}
               {...(onBeatWidth ? { onBeatWidth } : {})}
               onSelectUnit={onSelectUnit}
               onSelectTrack={onSelectTrack}
@@ -678,6 +696,7 @@ export function MasterTimeline({
           across={across}
           perSecond={shortForm}
           onZoom={onZoom}
+          {...(columnBoard ? { fitTo: (room: number) => fitColumnZoom(spans.length, room, beatWidth) } : {})}
           {...(onLane ? { lane: laneAt, onLane } : {})}
         />
         <span className="toolbar-spacer" />
@@ -843,6 +862,8 @@ interface TrackRowProps {
   beatWidth: number;
   /** The chip width at this zoom: `beatWidth` scaled, the same in every scene. */
   chipWidth: number;
+  /** The width a scene's chips are drawn at: the whole scene, never less than `chipWidth`. */
+  chipWidthFor(span: StorySpan): number;
   onBeatWidth?(width: number): void;
   /**
    * Whether a beat is drawn as a chip or as a tick (addendum 02 §4d). It is
@@ -884,6 +905,7 @@ function TrackRow({
   chipsFor,
   beatWidth,
   chipWidth,
+  chipWidthFor,
   onBeatWidth,
   onSelectUnit,
   onSelectTrack,
@@ -946,7 +968,9 @@ function TrackRow({
     grip.setPointerCapture?.(event.pointerId);
     // The setting is the width at the board's starting zoom, so a drag made
     // zoomed out is scaled back up to it and the chip follows the pointer.
-    const scale = chipWidth > 0 ? chipWidth / clampBeatWidth(beatWidth) : 1;
+    // Read off the column as drawn, so the same holds on a book's board,
+    // where the zoom sizes the column rather than scaling the chip.
+    const scale = from > 0 ? from / clampBeatWidth(beatWidth) : chipWidth > 0 ? chipWidth / clampBeatWidth(beatWidth) : 1;
     const move = (moved: PointerEvent) => onBeatWidth(clampBeatWidth((from + moved.clientX - x0) / (scale || 1)));
     const done = () => {
       grip.removeEventListener('pointermove', move);
@@ -1395,7 +1419,7 @@ function TrackRow({
                     // as the writer has dragged it and never wider than the
                     // scene (§4f).
                     '--beat-h': `${laneAt}px`,
-                    '--beat-w': `${chipWidth}px`,
+                    '--beat-w': `${chipWidthFor(span)}px`,
                   } as React.CSSProperties
                 }
                 onDragOver={(event) => {

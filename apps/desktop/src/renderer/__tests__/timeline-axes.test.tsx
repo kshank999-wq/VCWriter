@@ -101,8 +101,9 @@ describe('the beats fit the box', () => {
   it('lets the beats be dragged wider, never past their scene', () => {
     const board = read('components/MasterTimeline.tsx');
     expect(board).toContain('className="beat-resize"');
-    // The chip width at this zoom: the writer's width scaled, the same in every scene.
-    expect(board).toContain("'--beat-w': `${chipWidth}px`");
+    // The chip width at this zoom: the writer's width scaled, the same in every
+    // scene of a script, the column itself on a book's board.
+    expect(board).toContain("'--beat-w': `${chipWidthFor(span)}px`");
     const css = read('workspace.css');
     expect(css).toContain('max-width: min(var(--beat-w, 180px), 100%);');
     expect(css).not.toMatch(/\.block-beats \{[^}]*max-width: 180px;/);

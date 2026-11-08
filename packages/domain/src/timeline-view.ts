@@ -353,3 +353,46 @@ export const valueAt = (position: number, low: number, centre: number, high: num
   const at = Math.max(0, Math.min(SLIDER_STEPS, position));
   return at <= half ? low + ((centre - low) * at) / half : centre + ((high - centre) * (at - half)) / half;
 };
+
+// ---------------------------------------------------------------------------
+// A board of long sections: the column is the scene
+// ---------------------------------------------------------------------------
+
+/**
+ * **On a book's board, a section is as wide as its beats** (from Ken, on a
+ * short-story collection: *the part with the beats in it is super narrow,
+ * and then it has a huge area next to it … it'll stretch to a limit to where
+ * you see more of the beat. And then it shrinks to a limit to where it's
+ * narrow, but not a sliver*).
+ *
+ * A script's scene is a page or two, so drawing it as wide as its pages
+ * costs nothing and shows its length. A book's section can be forty pages,
+ * and its beats only ever build down, so the width the pages asked for was
+ * empty board. On a prose board the zoom therefore sizes the beat column
+ * itself: the writer's beat width at the default zoom, wider as it zooms in
+ * up to a limit, narrower as it zooms out down to a floor that still holds a
+ * word or two. The hover card carries the rest of a beat.
+ */
+export const BEAT_COLUMN_FLOOR = 100;
+export const BEAT_COLUMN_CEILING = 420;
+
+export const beatColumnWidthAt = (zoom: number, beatWidth: number): number => {
+  const base = clampBeatWidth(beatWidth);
+  const ceiling = Math.max(BEAT_COLUMN_CEILING, base);
+  return Math.min(ceiling, Math.max(BEAT_COLUMN_FLOOR, Math.round((base * clampZoom(zoom)) / TRACK_ZOOM_DEFAULT)));
+};
+
+/** The section's block: its column and the block's padding. */
+export const columnBlockWidthAt = (zoom: number, beatWidth: number): number =>
+  beatColumnWidthAt(zoom, beatWidth) + BLOCK_BEAT_PADDING;
+
+/**
+ * *Fit* on such a board: the zoom at which every section's column fits the
+ * room, or the floor where that many sections cannot fit at all (the board
+ * then scrolls, at its narrowest readable width).
+ */
+export const fitColumnZoom = (sections: number, across: number, beatWidth: number): number => {
+  if (sections <= 0 || across <= 0) return TRACK_ZOOM_DEFAULT;
+  const column = Math.max(BEAT_COLUMN_FLOOR, Math.floor(across / sections) - BLOCK_BEAT_PADDING);
+  return clampZoom(Math.floor((column * TRACK_ZOOM_DEFAULT) / clampBeatWidth(beatWidth)));
+};

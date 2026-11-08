@@ -384,6 +384,34 @@ Everything reorders by drag and by keyboard, as today:
   earlier/later in the story, or a track up/down; `Alt+Shift+↑/↓` moves a
   beat to the previous/next scene, or a scene to the previous/next track.
 
+### 4d.8 A book's board sizes the column
+
+From Ken, on a short-story collection, 8 November:
+
+> *the part with the beats in it is super narrow, and then it has a huge
+> area next to it … it'll stretch to a limit to where you see more of the
+> beat. And then it shrinks to a limit to where it's narrow, but not a
+> sliver.*
+
+A script's scene is a page or two, so drawing it as wide as its pages costs
+nothing and shows its length. A book's section can be forty pages, and its
+beats only build down, so most of that width was empty board.
+
+On a prose board (novel, short stories, instructional), the horizontal zoom
+now sizes the beat column itself (`beatColumnWidthAt`), and a section is as
+wide as its column (`columnBlockWidthAt`):
+
+- the writer's beat width at the default zoom
+- wider as the zoom goes in, up to `BEAT_COLUMN_CEILING` (420 px), or the
+  writer's own width if they dragged it wider
+- narrower as it goes out, down to `BEAT_COLUMN_FLOOR` (100 px), where a word
+  or two still shows and the hover card carries the rest
+
+*Fit* fits every section's column into the room (`fitColumnZoom`). Where that
+many sections cannot fit at the floor, the board scrolls. The grip reads its
+scale off the column as drawn, so a drag does not jump. A script, a stage
+play and a series keep page-wide scenes.
+
 ## 4a. The scene's screen, restyled
 
 From Ken, with a handoff and a mockup: *this is going to apply to all the

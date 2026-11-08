@@ -60,11 +60,17 @@ export interface TimelineZoomProps {
   onLane?(height: number): void;
   /** The default zoom, which stands at the slider's centre (from Ken). */
   centre?: number;
+  /**
+   * What *Fit* means on a board that does not draw by pages (a book's board,
+   * where the zoom sizes the beat column): the zoom that fits the room.
+   */
+  fitTo?(room: number): number;
 }
 
-export function TimelineZoom({ zoom, spans, across, perSecond = false, onZoom, lane, onLane, centre = TRACK_ZOOM_DEFAULT }: TimelineZoomProps) {
+export function TimelineZoom({ zoom, spans, across, perSecond = false, onZoom, lane, onLane, centre = TRACK_ZOOM_DEFAULT, fitTo }: TimelineZoomProps) {
   const room = Math.max(120, across);
-  const fits = fitsAt(zoom, spans, room);
+  const fitted = fitTo ? fitTo(room) : fitZoom(spans, room);
+  const fits = fitTo ? Math.abs(clampZoom(zoom) - fitted) <= 1 : fitsAt(zoom, spans, room);
 
   return (
     <label className="zoom">
@@ -89,7 +95,7 @@ export function TimelineZoom({ zoom, spans, across, perSecond = false, onZoom, l
       {fits ? (
         <span className="muted zoom-fits">Fit</span>
       ) : (
-        <button type="button" className="zoom-fit" title="Draw the whole story in the room there is" onClick={() => onZoom(fitZoom(spans, room))}>
+        <button type="button" className="zoom-fit" title="Draw the whole story in the room there is" onClick={() => onZoom(fitted)}>
           Fit
         </button>
       )}
