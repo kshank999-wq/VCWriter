@@ -168,6 +168,9 @@ export function WhoOwesWhat({
     () => seats.filter((seat) => seat.state !== 'deactivated' && seat.userId),
     [seats],
   );
+  // Asked in and not yet answered: they cannot be given work until they have
+  // an account in the room, and the menu says so rather than going quiet.
+  const waitingOn = useMemo(() => seats.filter((seat) => seat.state === 'invited'), [seats]);
 
   const callOff = async (assignment: Assignment) => {
     setBusy(true);
@@ -251,10 +254,26 @@ export function WhoOwesWhat({
           colour, and what there is to point at — or nothing, which makes it a
           plain task. */}
       <h3>Assign</h3>
+      {askable.length === 0 ? (
+        <p className="notice small">
+          {waitingOn.length > 0
+            ? `Nobody can be given work until they join the room. ${waitingOn
+                .map((seat) => seatName(seat))
+                .join(', ')} ${waitingOn.length === 1 ? 'has' : 'have'} been invited and ${
+                waitingOn.length === 1 ? 'needs' : 'need'
+              } to accept the invitation in their email first.`
+            : 'Nobody is in the room to give work to yet. Invite someone from People and seats below.'}
+        </p>
+      ) : null}
       <div className="assign">
         <label className="field">
           <span>To</span>
-          <select value={assigneeId} onChange={(event) => setAssigneeId(event.target.value)}>
+          <select
+            value={assigneeId}
+            disabled={askable.length === 0}
+            onChange={(event) => setAssigneeId(event.target.value)}
+          >
+            {askable.length === 0 ? <option value="">Nobody has joined yet</option> : null}
             {askable.map((seat) => (
               <option key={seat.id} value={seat.userId ?? ''}>
                 {seatName(seat)}

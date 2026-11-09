@@ -2977,3 +2977,125 @@ dialog.walkthrough::backdrop { background: rgba(0, 0, 0, 0.72); }
 
 .band-groups { display: flex; flex-direction: column; gap: 10px; }
 .band-note { margin: 10px 0 0; color: var(--text-muted); font-size: 15px; }
+
+/* ---------------------------------------------------------------------------
+   The Writers Room dashboard (addendum 07 §25). One screen to take in:
+   the room and its button at the head, everybody in it beneath, the work in
+   a grid of panels, and the people and the money at the foot.
+   --------------------------------------------------------------------------- */
+.room-dashboard {
+  display: grid;
+  gap: 24px;
+  padding: 32px 0 48px;
+}
+.room-dashboard .block { display: block; }
+.room-dashboard .muted { color: var(--text-muted); }
+.room-dashboard section,
+.room-dashboard article { margin: 0; }
+
+.room-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.room-head .eyebrow {
+  margin: 0 0 6px;
+  color: var(--gold);
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.room-head h1 {
+  margin: 0;
+  font-size: clamp(26px, 4vw, 40px);
+  line-height: 1.1;
+}
+.room-standing {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+}
+.room-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Everybody in the room, each in their own colour. */
+.room-people-strip {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.room-person-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px 8px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-raised);
+  font-size: 14px;
+  line-height: 1.25;
+}
+.room-person-chip.invited { opacity: 0.6; border-style: dashed; }
+.room-person-chip.empty { padding: 10px 16px; }
+.room-person-chip.empty a { color: var(--gold); }
+.room-person-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  flex: 0 0 auto;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+}
+
+/* The working panels: two across where there is room, one on a phone. */
+.room-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.room-panel {
+  min-width: 0;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-raised);
+}
+.room-panel.wide { grid-column: 1 / -1; }
+.room-panel > h2,
+.room-panel > h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 12px;
+  font-size: 15px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.room-panel .data-table { margin: 8px 0 0; }
+
+.room-people-section {
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+.room-people-section > h2 { margin: 0 0 16px; }
+
+@media (max-width: 760px) {
+  .room-grid { grid-template-columns: minmax(0, 1fr); }
+  .room-head { align-items: flex-start; }
+}

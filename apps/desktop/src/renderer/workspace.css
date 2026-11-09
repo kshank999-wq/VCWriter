@@ -9225,6 +9225,41 @@ dialog.preferences .field {
   box-shadow: inset 3px 0 0 var(--room-colour, transparent);
 }
 
+.room-where {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+  padding-right: 12px;
+  border-right: 1px solid var(--border);
+}
+
+/* Said in words and in the room's gold, so nobody types into a room thinking
+   they are at their own desk. */
+.room-badge {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  padding: 2px 8px;
+  border-radius: 2px;
+  color: #1a1408;
+  background: var(--gold, #c9a45c);
+}
+
+.room-link {
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--gold, #c9a45c);
+  text-decoration: none;
+}
+
+.room-link:hover,
+.room-link:focus-visible {
+  text-decoration: underline;
+}
+
 .room-who {
   display: flex;
   align-items: center;

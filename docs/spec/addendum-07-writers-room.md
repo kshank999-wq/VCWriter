@@ -1655,3 +1655,42 @@ carries renewals, failed cards and cancellations.
 The invite box's error ran off the side of the page because the room's
 controls used `.stack`, the admin console's pre-formatted trace box. They now
 use `.room-stack`, which wraps.
+
+## 25. The room as a dashboard, and the way back to it
+
+From Ken's first live session in a room, 9 November 2026.
+
+**In the script, you know you are in a room.** The room bar above the script
+(`RoomBar`) now opens with a gold **Writers Room** badge and two links:
+
+- **Room dashboard**, back to `/rooms/<id>`. The id is read from the
+  `?room=` the dashboard opened the editor with (`roomIdFrom`).
+- **Exit the room**, to the list of your rooms. Work in a room is saved as you
+  go, so leaving loses nothing.
+
+**The room page is a dashboard, not a long page.** In order:
+
+1. **A head** with the room's name, your standing in it, and its buttons:
+   *Open the room's script* and *Invite and manage seats*.
+2. **A strip of everybody in the room**, each in their own colour. The
+   showrunner comes first, and an invited seat shows dashed until it is
+   accepted. From Ken: *you should be able to see who's in the room somewhere
+   in the top.*
+3. **What's new.**
+4. **The work in a two-column grid of panels:** asked of you, the review queue
+   (or what you have sent), who owes what, the room's ideas, the Curation Tray,
+   desk by desk, talk, what has happened, and AI readings.
+5. **People and seats at the foot:** your pages and stamp, the room's
+   subscription, and the full seat table with the invitation form.
+
+On a phone, the panels fall into one column.
+
+**The showrunner pays for everything.** Ken: *the showrunner pays for the
+extra seats.* That was already how billing worked, since the seats are lines
+on the showrunner's own room subscription. The subscription panel now says so
+in words.
+
+**The Assign menu says why it is empty.** Only a seat somebody has accepted
+can be given work. Before anyone has, the menu used to show an empty list and
+a greyed-out button, and Ken took that for broken. It now names who has been
+invited and says they must accept the invitation first.

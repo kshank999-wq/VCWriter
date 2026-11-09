@@ -29,6 +29,7 @@ import {
   desksIn,
   masterVersion,
   queueOf,
+  ROLE_NAMES,
   seatInitials,
   seatName,
   threadsIn,
@@ -256,19 +257,215 @@ export default async function RoomPage({
     );
   }
 
+  // Who is in the room, in their colours, for the strip at the top (from Ken:
+  // *you should be able to see who's in the room somewhere in the top*). The
+  // showrunner owns the project and holds no seat, so they lead the strip.
+  const present = view.seats.filter((seat) => seat.state !== 'deactivated');
+  const editorHref = `/preview?room=${view.room.id}`;
+  const editorLabel =
+    landing.opens === 'ownBranch' ? OPENS_LABEL.ownBranch : landing.opens === 'master' ? OPENS_LABEL.master : null;
+
   return (
-    <>
-      <div className="hero">
-        <h1>{view.room.name || view.projectTitle || 'The room'}</h1>
-        <p>{landing.standing}</p>
-      </div>
+    <div className="room-dashboard">
+      {/* The head of the dashboard: which room, who you are in it, the one
+          button most visits are for, and everybody in it. */}
+      <header className="room-head">
+        <div className="room-head-main">
+          <p className="eyebrow">Writers Room</p>
+          <h1>{view.room.name || view.projectTitle || 'The room'}</h1>
+          <p className="room-standing">{landing.standing}</p>
+        </div>
+        <div className="room-head-actions">
+          {editorLabel ? (
+            <a className="button" href={editorHref}>
+              {editorLabel}
+            </a>
+          ) : null}
+          {landing.sections.includes('seats') ? (
+            <a className="button secondary" href="#people">
+              {landing.sections.includes('invite') ? 'Invite and manage seats' : 'Who is in the room'}
+            </a>
+          ) : null}
+        </div>
+      </header>
+
+      <ul className="room-people-strip" aria-label="Who is in the room">
+        {view.role === 'owner' ? (
+          <li className="room-person-chip">
+            <span className="room-person-mark" style={{ background: you?.colour || '#c9a45c' }}>
+              {stamp || 'SR'}
+            </span>
+            <span>
+              <strong>{you ? seatName(you) : 'You'}</strong>
+              <span className="small block muted">Showrunner</span>
+            </span>
+          </li>
+        ) : null}
+        {present
+          .filter((seat) => !(view.role === 'owner' && you && seat.id === you.id))
+          .map((seat) => (
+            <li key={seat.id} className={`room-person-chip${seat.state === 'invited' ? ' invited' : ''}`}>
+              <span className="room-person-mark" style={{ background: seat.colour || '#666666' }}>
+                {seatInitials(seat)}
+              </span>
+              <span>
+                <strong>{seatName(seat)}</strong>
+                <span className="small block muted">
+                  {seat.title.trim() || ROLE_NAMES[seat.role]}
+                  {seat.state === 'invited' ? ' · invited' : ''}
+                </span>
+              </span>
+            </li>
+          ))}
+        {present.length === 0 && view.role === 'owner' ? (
+          <li className="room-person-chip empty">
+            <a href="#people">Nobody else yet. Invite your writing partner →</a>
+          </li>
+        ) : null}
+      </ul>
 
       <WhatIsNew news={news} seats={view.seats} />
 
-      <section>
-        <h2>Your part in it</h2>
-        <div className="grid">
-          <article className="card">
+      <div className="room-grid">
+        <section className="room-panel">
+          <h2>What you are being asked for</h2>
+          <YourAsks roomId={view.room.id} assignments={yours} today={today} />
+        </section>
+
+        <section className="room-panel">
+          <h2>
+            {deciding ? 'The review queue' : 'What you have sent'}
+            {deciding && waiting > 0 ? <span className="pill">{waiting} waiting</span> : null}
+          </h2>
+          <Queue roomId={view.room.id} rows={queue} canDecide={deciding} />
+          {deciding ? (
+            <p className="small">
+              Reading a submission opens the version it came from in its own window. Nothing here deletes
+              anything, and a writer’s own line is never touched.
+            </p>
+          ) : null}
+        </section>
+
+        {giving ? (
+          <section className="room-panel wide">
+            <h2>Who owes what</h2>
+            <WhoOwesWhat
+              roomId={view.room.id}
+              rows={owed}
+              assignments={assignments}
+              seats={view.seats}
+              things={things}
+              today={today}
+            />
+          </section>
+        ) : null}
+
+        <section className="room-panel wide">
+          <h2>The room’s ideas</h2>
+          <Ideas roomId={view.room.id} boxes={boxes} categories={headings} canFile={deciding} />
+        </section>
+
+        {curating ? (
+          <section className="room-panel wide">
+            <h2>The Curation Tray</h2>
+            <p className="small">
+              Compare what has come in, take what you want of it, preview the master, and commit. Committing
+              writes a new master beside the one before it and destroys nothing.
+            </p>
+            <Tray
+              roomId={view.room.id}
+              tray={tray}
+              offers={offers}
+              waiting={awaiting}
+              seats={view.seats}
+              sequence={sequence}
+              refusal={mergeRefusal}
+            />
+          </section>
+        ) : null}
+
+        <section className="room-panel wide">
+          <h2>The room, desk by desk</h2>
+          {master ? (
+            <p className="small">
+              The room agreed on{' '}
+              <a href={`/preview?room=${view.room.id}&version=${master.id}`} target="_blank" rel="noreferrer">
+                {describeVersion(master)}
+              </a>
+              . Every draft here was taken from it.
+            </p>
+          ) : (
+            <p className="small">
+              The room has not agreed on a draft yet, so every writer’s line starts from the project as it stands.
+            </p>
+          )}
+          <Desks roomId={view.room.id} desks={desks} />
+        </section>
+
+        <section className="room-panel">
+          <h2>Talk</h2>
+          <p className="small">Threads about the room itself. Nothing said here is ever deleted.</p>
+          <Talk
+            roomId={view.room.id}
+            threads={threads}
+            seats={view.seats}
+            you={user.id}
+            role={view.role}
+            mayComment={canComment(view.role)}
+          />
+        </section>
+
+        <section className="room-panel">
+          <h2>What has happened</h2>
+          <Trail roomId={view.room.id} events={trail} />
+          {curating ? (
+            <p className="small" style={{ marginTop: 16 }}>
+              {/* A plain link rather than a button: it is a download, and the
+                  browser already knows how to do those. */}
+              <a className="button small secondary" href={`/api/rooms/${view.room.id}/export`}>
+                Take the whole room out
+              </a>
+            </p>
+          ) : null}
+        </section>
+
+        {/* Here for anybody in the room, because the *month* is everybody's
+            business (stage 13); whoever curates also gets the readings. */}
+        {isAiConfigured() ? (
+          <section className="room-panel wide">
+            <h2>Read it with AI</h2>
+            <Spend
+              roomId={view.room.id}
+              standing={spend}
+              enabled={view.room.aiEnabled}
+              yours={view.role === 'owner'}
+            />
+            {curating ? (
+              <>
+                <p className="small">
+                  A reading, not a decision: what differs between two passes and where the room has had the same
+                  idea twice. It never writes or merges anything.
+                </p>
+                <Assist
+                  roomId={view.room.id}
+                  available={mayAsk === true}
+                  reason={mayAsk === true ? null : assistRefusalText(mayAsk)}
+                  passes={passes}
+                  scenes={scenesIn}
+                  names={Object.fromEntries(view.seats.map((seat) => [seat.userId, seatName(seat)]))}
+                />
+              </>
+            ) : null}
+          </section>
+        ) : null}
+      </div>
+
+      {/* People and money at the foot, where they are looked after rather than
+          read every visit; the strip at the top already says who is here. */}
+      <section id="people" className="room-people-section">
+        <h2>People and seats</h2>
+        <div className="room-grid">
+          <article className="room-panel">
             <h3>Your pages</h3>
             {you && you.colour ? (
               <>
@@ -284,61 +481,22 @@ export default async function RoomPage({
                 </p>
               </>
             ) : (
-              <p className="lede">
-                The showrunner has not given you a colour yet. Yours appears on every page of your
-                draft once they do.
+              <p className="small">
+                {view.role === 'owner'
+                  ? 'Your pages carry your stamp once you give yourself a colour below.'
+                  : 'The showrunner has not given you a colour yet. Yours appears on every page of your draft once they do.'}
               </p>
             )}
-
-            {/* Yours and nobody else's, including the showrunner's (stage 14):
-                §6 gives them what you are called, not the ability to make your
-                phone ring. */}
+            {/* Yours and nobody else's, including the showrunner's (stage 14). */}
             {you ? <NotifyMe roomId={view.room.id} on={you.notifyByEmail} /> : null}
           </article>
 
-          <article className="card">
-            <h3>The editor</h3>
-            {landing.opens === 'ownBranch' ? (
-              <>
-                <p className="lede">Your own working line, taken from what the room has agreed.</p>
-                {/* The whole application, over the third bridge (§3.1). `?room=`
-                    is what tells the renderer its project lives in the cloud;
-                    nothing else about it changes. */}
-                <p style={{ marginTop: 16 }}>
-                  <a className="button" href={`/preview?room=${view.room.id}`}>
-                    {OPENS_LABEL.ownBranch}
-                  </a>
-                </p>
-                <p className="small">
-                  Nobody else in the room sees it until you submit — not even the showrunner.
-                </p>
-              </>
-            ) : landing.opens === 'master' ? (
-              <>
-                <p className="lede">{OPENS_LABEL.master}.</p>
-                <p style={{ marginTop: 16 }}>
-                  <a className="button" href={`/preview?room=${view.room.id}`}>
-                    {OPENS_LABEL.master}
-                  </a>
-                </p>
-                <p className="small">
-                  {view.role === 'owner'
-                    ? 'The room’s draft, and your own working line on it.'
-                    : 'Read-only until the room asks you to write.'}
-                </p>
-              </>
-            ) : (
-              <p className="lede">Nothing to open yet.</p>
-            )}
-          </article>
-
           {landing.sections.includes('billing') ? (
-            <article className="card">
-              <h3>Seats</h3>
-              <p className="lede">{describeSeats(view.seatsCount)}</p>
-              {/* The subscription itself (stage 15). The line above is who is
-                  in the room; this one is what it costs, and they are kept
-                  apart because a showrunner asks them separately. */}
+            <article className="room-panel">
+              <h3>The room’s subscription</h3>
+              <p className="small">{describeSeats(view.seatsCount)}</p>
+              {/* The subscription itself (stage 15): who is in the room above,
+                  what it costs here, because a showrunner asks them separately. */}
               <Billing
                 roomId={view.room.id}
                 line={describeBilling({ count: view.seatsCount, billing, roomCents, seatCents })}
@@ -347,174 +505,26 @@ export default async function RoomPage({
                 yours={view.role === 'owner'}
               />
               <p className="small">
-                An invitation nobody has answered is not a seat and is not billed. A seat you take
-                out of the room stops being billed and keeps everything it wrote.
+                The showrunner pays for the room and every extra seat; nobody you invite is ever asked to pay. An
+                invitation nobody has answered is not billed, and a seat you take out of the room stops being billed
+                and keeps everything it wrote.
               </p>
+            </article>
+          ) : null}
+
+          {landing.sections.includes('seats') ? (
+            <article className="room-panel wide">
+              <h3>Who is in the room</h3>
+              <Seats
+                roomId={view.room.id}
+                seats={view.seats}
+                canManage={landing.sections.includes('invite')}
+                youId={you?.id ?? null}
+              />
             </article>
           ) : null}
         </div>
       </section>
-
-      <section>
-        <h2>What you are being asked for</h2>
-        <YourAsks roomId={view.room.id} assignments={yours} today={today} />
-      </section>
-
-      {giving ? (
-        <section>
-          <h2>Who owes what</h2>
-          <WhoOwesWhat
-            roomId={view.room.id}
-            rows={owed}
-            assignments={assignments}
-            seats={view.seats}
-            things={things}
-            today={today}
-          />
-        </section>
-      ) : null}
-
-      <section>
-        <h2>
-          {deciding ? 'The review queue' : 'What you have sent'}
-          {deciding && waiting > 0 ? <span className="pill">{waiting} waiting</span> : null}
-        </h2>
-        <Queue roomId={view.room.id} rows={queue} canDecide={deciding} />
-        {deciding ? (
-          <p className="small">
-            Reading a submission opens the version it was taken from, in a window of its own. Nothing here
-            deletes anything — a decision can be unmade, and the writer’s own line is never touched.
-          </p>
-        ) : null}
-      </section>
-
-      {curating ? (
-        <section>
-          <h2>The Curation Tray</h2>
-          <p className="lede">
-            Where the room’s work becomes the script. Compare what has come in, take what you want of
-            it, look at what the master would read like, and commit — which writes a new master
-            beside the one before it and destroys nothing.
-          </p>
-          <Tray
-            roomId={view.room.id}
-            tray={tray}
-            offers={offers}
-            waiting={awaiting}
-            seats={view.seats}
-            sequence={sequence}
-            refusal={mergeRefusal}
-          />
-        </section>
-      ) : null}
-
-      {/* The section is here for anybody in the room, because the *month* is
-          everybody's business (stage 13) — a cap you can hit without seeing it
-          coming is the thing that stage exists to fix. What is inside it
-          differs: whoever curates gets the readings, and everybody gets the
-          number. */}
-      {isAiConfigured() ? (
-        <section>
-          <h2>Read it with AI</h2>
-          <Spend
-            roomId={view.room.id}
-            standing={spend}
-            enabled={view.room.aiEnabled}
-            yours={view.role === 'owner'}
-          />
-          {curating ? (
-            <>
-              <p className="lede">
-                A reading, not a decision. It says what differs between two passes and what each
-                does better, and where the room has had the same idea twice — it never writes
-                anything, never merges anybody’s work, and nothing it says changes a draft.
-              </p>
-              <Assist
-                roomId={view.room.id}
-                available={mayAsk === true}
-                reason={mayAsk === true ? null : assistRefusalText(mayAsk)}
-                passes={passes}
-                scenes={scenesIn}
-                names={Object.fromEntries(view.seats.map((seat) => [seat.userId, seatName(seat)]))}
-              />
-            </>
-          ) : null}
-        </section>
-      ) : null}
-
-      <section>
-        <h2>The room’s ideas</h2>
-        <Ideas roomId={view.room.id} boxes={boxes} categories={headings} canFile={deciding} />
-      </section>
-
-      <section>
-        <h2>The room, desk by desk</h2>
-        {master ? (
-          <p className="lede">
-            The room agreed on{' '}
-            <a href={`/preview?room=${view.room.id}&version=${master.id}`} target="_blank" rel="noreferrer">
-              {describeVersion(master)}
-            </a>
-            . Every draft here was taken from it.
-          </p>
-        ) : (
-          <p className="lede">
-            The room has not agreed on a draft yet. Until it does, every writer's line starts from
-            the project as it stands.
-          </p>
-        )}
-        <Desks roomId={view.room.id} desks={desks} />
-        <p className="small">
-          A point opens in a window of its own, so two of them sit side by side. Each one wears its
-          writer's colour and name — three windows showing the same scene are otherwise the same
-          window three times.
-        </p>
-      </section>
-
-      <section>
-        <h2>The room</h2>
-        <p className="lede">
-          Threads about the room itself — an idea that is not in the script yet, a question nobody has
-          an answer to. Nothing said here is ever deleted: taking something back leaves the thread
-          readable and says who took it back.
-        </p>
-        <Talk
-          roomId={view.room.id}
-          threads={threads}
-          seats={view.seats}
-          you={user.id}
-          role={view.role}
-          mayComment={canComment(view.role)}
-        />
-      </section>
-
-      <section>
-        <h2>What has happened</h2>
-        <Trail roomId={view.room.id} events={trail} />
-        {curating ? (
-          <p className="small" style={{ marginTop: 16 }}>
-            {/* A plain link rather than a button: it is a download, and the
-                browser already knows how to do those. */}
-            <a className="button small secondary" href={`/api/rooms/${view.room.id}/export`}>
-              Take the whole room out
-            </a>{' '}
-            — the room, its seats, every version’s record, the submissions, the assignments, the
-            threads, and the master itself as a readable document.
-          </p>
-        ) : null}
-      </section>
-
-      {landing.sections.includes('seats') ? (
-        <section>
-          <h2>Who is in the room</h2>
-          <Seats
-            roomId={view.room.id}
-            seats={view.seats}
-            canManage={landing.sections.includes('invite')}
-            youId={you?.id ?? null}
-          />
-        </section>
-      ) : null}
-    </>
+    </div>
   );
 }

@@ -46,12 +46,32 @@ export const RoomBar = ({
   // one mistake §3.4 exists to prevent.
   const master = identity.showing === 'master';
   const whose = master ? 'The master' : author ? `${author.name}’s draft` : 'A draft';
+  // Which room this window belongs to, from the address the room's dashboard
+  // opened it with (`/preview?room=<id>`), so the way back goes to that room.
+  const roomId = roomIdFrom(typeof window === 'undefined' ? '' : window.location.search);
 
   return (
     <div
       className={`room-bar${readOnly ? ' reading' : ''}`}
       style={author ? ({ '--room-colour': author.colour } as React.CSSProperties) : undefined}
     >
+      {/* Where you are, said in words, and the two ways out of it (from Ken:
+          *a little something in the corner … that says you're in a writer's
+          room. You can either exit the room … or return to the dashboard*). */}
+      <span className="room-where">
+        <span className="room-badge" title={identity.roomName}>
+          Writers Room
+        </span>
+        {roomId ? (
+          <a className="room-link" href={`/rooms/${encodeURIComponent(roomId)}`}>
+            Room dashboard
+          </a>
+        ) : null}
+        <a className="room-link" href="/rooms" title="Your work in the room is saved as you go">
+          Exit the room
+        </a>
+      </span>
+
       <span className="room-who">
         {author && !master ? <span className="room-chip">{author.initials}</span> : null}
         <strong>{whose}</strong>
@@ -98,6 +118,12 @@ export const RoomBar = ({
 };
 
 export default RoomBar;
+
+/** The room's id from `?room=…`, or null where the window was not opened from a room. */
+export const roomIdFrom = (search: string): string | null => {
+  const id = new URLSearchParams(search).get('room');
+  return id && /^[0-9a-f-]{36}$/i.test(id) ? id : null;
+};
 
 /**
  * The one button (addendum 07 §10).

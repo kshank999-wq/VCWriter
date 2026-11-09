@@ -278,3 +278,12 @@ describe('the one button (§10)', () => {
     await waitFor(() => expect(sent[0]?.kind).toBe('research'));
   });
 });
+
+describe('the way back to the room', () => {
+  it('reads the room from the address the dashboard opened it with', async () => {
+    const { roomIdFrom } = await import('../components/RoomBar');
+    expect(roomIdFrom('?room=b2412c98-cde9-485a-a867-bbac4f2a6f32')).toBe('b2412c98-cde9-485a-a867-bbac4f2a6f32');
+    expect(roomIdFrom('?room=../../admin')).toBeNull();
+    expect(roomIdFrom('')).toBeNull();
+  });
+});
