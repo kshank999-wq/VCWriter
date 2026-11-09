@@ -140,6 +140,7 @@ export default function WorkflowPage() {
         </span>
         <p className="band-note">And the tools that work across every kind of writing:</p>
         <span className="band-buttons">
+          <WalkthroughButton walkthrough={walkthroughBySlug('notes')!} className="button secondary" />
           <WalkthroughButton walkthrough={walkthroughBySlug('research')!} className="button secondary" />
           <WalkthroughButton walkthrough={walkthroughBySlug('outliner')!} className="button secondary" />
           <WalkthroughButton walkthrough={walkthroughBySlug('story-sculptor')!} className="button secondary" />

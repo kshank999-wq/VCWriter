@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { NOTES_PRICE_WORDS } from '@vcwriter/domain';
+import { WalkthroughButton } from '../walkthrough';
+import { walkthroughBySlug } from '@/lib/walkthroughs';
 
 export const metadata: Metadata = {
   title: 'VC Writer Notes',
@@ -97,6 +99,9 @@ export default function NotesPage() {
       <section>
         <h2>What it does</h2>
         <p className="lede">Built for the half hour when you are nowhere near the desk.</p>
+        <div style={{ margin: '0 0 24px' }}>
+          <WalkthroughButton walkthrough={walkthroughBySlug('notes')!} className="button secondary" />
+        </div>
         <div className="grid">
           {WHAT_IT_DOES.map((one) => (
             <article key={one.title} className="card">

@@ -466,6 +466,43 @@ export const WALKTHROUGHS: ReadonlyArray<Walkthrough> = [
       },
     ],
   },
+  {
+    slug: 'notes',
+    label: 'See how Notes works',
+    title: 'VC Writer Notes in five easy steps',
+    steps: [
+      {
+        title: 'Start a project on your phone',
+        body: 'Give it a title and pick the kind: a screenplay, a series, a novel, a stage play and the rest. It will be on your desktop too.',
+        shot: 'help/notes-project',
+        alt: 'VC Writer Notes on a phone: a new project, with its title and the kinds of writing to choose from',
+      },
+      {
+        title: 'Catch the idea',
+        body: 'Type it or press Dictate and say it. Give it a title, pick what kind of note it is, and Save it. Read it back to hear it, or go Hands free on a walk.',
+        shot: 'help/notes-capture',
+        alt: 'A note being written on the phone: a title, the note, and the kinds of note to choose from',
+      },
+      {
+        title: 'It waits at your desk',
+        body: 'Open Research and choose Mobile App. Every note from the phone is there, sorted by kind, with a place suggested for it. File it there, or Move it somewhere else.',
+        shot: 'help/notes-inbox',
+        alt: 'Research on the desktop, with notes from the phone waiting under Mobile App',
+      },
+      {
+        title: 'Drop it on the story',
+        body: 'Drag a note onto a scene, chapter or section in the outline. Open that part of the story and its notes are listed beside it, ready to use.',
+        shot: 'help/research-filed',
+        alt: 'A section opened in Research, with the notes dropped on it',
+      },
+      {
+        title: 'Use it as you write',
+        body: 'When you write that beat, its notes are down the side of the page. Open one, rewrite it, and place it straight into the writing.',
+        shot: 'help/writer-notes',
+        alt: 'A beat’s writing screen with its notes listed down the right',
+      },
+    ],
+  },
 ];
 
 export const walkthroughBySlug = (slug: string): Walkthrough | undefined => WALKTHROUGHS.find((one) => one.slug === slug);

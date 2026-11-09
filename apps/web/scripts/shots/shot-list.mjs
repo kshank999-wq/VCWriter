@@ -19,10 +19,22 @@
  * `start: 'welcome'` leaves the project unopened, on the New project screen.
  *   { wait: 800 }          let something settle
  *
+ * `phone: true` answers the preview's phone-notes requests with PHONE_NOTES
+ * below, so Research ▸ Mobile App shows notes waiting as if sent from VC
+ * Writer Notes. They are made up for the pictures: no real writer's notes.
+ *
  * `out` is the folder under public/ it is saved to: `modules` for the
  * module pages, `help` for the guides. `uses` says where it appears, so a
  * shot nobody uses can be found and dropped.
  */
+/** Made-up notes from the phone, for the Mobile App shots. */
+export const PHONE_NOTES = [
+  { category: 'character', subjectName: 'Barbra', rawText: 'She stops talking after the cemetery. Let the others fill the silence around her until she finally speaks.' },
+  { category: 'idea', subjectName: 'The radio', rawText: 'Every time the radio comes on, the news is a little worse. Use it to mark the night passing.' },
+  { category: 'dialogue', subjectName: 'Ben, at the window', rawText: '"We board it up, all of it. Then we argue."' },
+  { category: 'plot_point', subjectName: 'The truck', rawText: 'The run to the pump is the plan that fails. Everything after it is about who is to blame.' },
+];
+
 export const SHOTS = [
   // ---------------------------------------------------- the module pages
   { id: 'screenplay', project: 'screenplay', out: 'modules', shows: 'A screenplay on the Write page: script, plot tracks, timeline', uses: ['/write/screenplay'] },
@@ -41,6 +53,7 @@ export const SHOTS = [
   // ---------------------------------------------------------------- rooms
   { id: 'research', project: 'screenplay', out: 'help', steps: [{ page: 'Research' }], shows: 'Research: folders and notes', uses: ['help: research'] },
   { id: 'research-note', project: 'screenplay', out: 'help', steps: [{ page: 'Research' }, { select: 'Plot Points' }, { select: 'Setup: the cellar' }, { click: 'Rewrite and place…' }], shows: 'A note opened to rewrite and place on the track', uses: ['help: research'] },
+  { id: 'notes-inbox', project: 'screenplay', out: 'help', phone: true, steps: [{ page: 'Research' }, { select: 'Mobile App', wait: 1500 }], shows: 'Research ▸ Mobile App: notes from the phone waiting to be filed', uses: ['/notes walkthrough'] },
   { id: 'research-filed', project: 'screenplay', out: 'help', steps: [{ page: 'Research' }, { button: /^Open The cemetery$/, wait: 1000 }], shows: 'A section opened from the outline: the notes dropped on it, to rewrite and add as beats', uses: ['/tools/research', 'help: research'] },
   { id: 'research-filed-rewrite', project: 'screenplay', out: 'help', steps: [{ page: 'Research' }, { button: /^Open The cemetery$/, wait: 800 }, { button: /^Johnny has the car keys/, wait: 300 }, { button: /^Rewrite and add as/, wait: 1200 }], shows: 'The rewrite screen opened from a section, with Add as beat', uses: ['help: research'] },
   { id: 'scene-notes', project: 'screenplay', out: 'help', steps: [{ dblclickNth: ['.block-head', 3], wait: 1200 }], shows: 'A scene box with its notes down the right: red until used, used ones hidden', uses: ['help: research', '/tools/research'] },

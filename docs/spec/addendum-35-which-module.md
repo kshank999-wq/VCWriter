@@ -681,7 +681,31 @@ Two Sculptor shots were tried and dropped:
 - the Export menu opens half off the screen's left edge;
 - a link's label cannot be clicked from the capture script.
 
-**VC Writer Notes is not done.** Its walkthrough needs pictures of the phone
-app. The browser version at `/notes/app` asks for a real signed-in account,
-so the capture script cannot reach its screens. It waits on screenshots from
-Ken's phone.
+### 14.9 VC Writer Notes
+
+Five steps, with the button on `/notes` and in the `/workflow` band's tools
+row:
+
+1. Start a project on the phone.
+2. Catch the idea.
+3. It waits at your desk (Research ▸ Mobile App).
+4. Drop it on the story.
+5. Use it as you write.
+
+**The phone pictures are Ken's own screenshots, edited.** The browser version
+at `/notes/app` needs a real signed-in account, so the capture script cannot
+reach it. Two edits were made:
+
+- `notes-project`: the *Sign in first* line and the legacy *Included* line are
+  taken out.
+- `notes-capture`: a made-up note is typed into the empty title and note
+  fields.
+
+Each is centred in a phone frame on the walkthrough's 2880×1800 canvas.
+
+**The desk picture is made up, not anyone's real notes** (from Ken: *I don't
+want the content of these notes to be in the promotion*). A shot marked
+`phone: true` has the capture script answer the preview's `/api/notes/inbox`
+requests with `PHONE_NOTES` from `shot-list.mjs`: four invented notes for the
+Night of the Living Dead demo. That gives `notes-inbox`. Steps 4 and 5 reuse
+`research-filed` and `writer-notes`.

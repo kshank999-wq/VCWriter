@@ -18,7 +18,7 @@ import { extname, resolve } from 'node:path';
 import { execSync } from 'node:child_process';
 import { chromium } from 'playwright';
 import { demoProjects } from './demo-projects.mjs';
-import { SHOTS } from './shot-list.mjs';
+import { PHONE_NOTES, SHOTS } from './shot-list.mjs';
 
 const web = resolve(import.meta.dirname, '..', '..');
 const desktop = resolve(web, '..', 'desktop');
@@ -117,6 +117,41 @@ try {
     if (!file) throw new Error(`${shot.id}: no demo project for ${shot.project}`);
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2, colorScheme: 'dark' });
     const page = await context.newPage();
+    if (shot.phone) {
+      // The notes the phone sent, as the site's inbox route would hand them over.
+      const stamp = '2026-11-02T09:30:00.000Z';
+      const notes = PHONE_NOTES.map((note, index) => ({
+        id: `demo-capture-${index + 1}`,
+        userId: 'demo-writer',
+        projectId: file.project.id,
+        source: 'mobile_voice',
+        capturedAt: stamp,
+        audioAssetId: null,
+        transcriptConfidence: null,
+        inference: null,
+        requestedRouting: null,
+        subcategory: null,
+        storyMarkerId: null,
+        filedInto: null,
+        clearedFromPhoneAt: null,
+        status: 'pending',
+        reviewedAt: null,
+        resultRef: null,
+        syncedAt: stamp,
+        createdAt: stamp,
+        updatedAt: stamp,
+        ...note,
+      }));
+      await page.route('**/api/notes/inbox**', (route) => {
+        const url = new URL(route.request().url());
+        const body = url.searchParams.has('archive')
+          ? { notes: [] }
+          : url.searchParams.has('all')
+            ? { notes, projects: [{ id: file.project.id, title: file.project.title }] }
+            : { notes };
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+      });
+    }
     try {
       await page.goto(base);
       await page.waitForLoadState('networkidle');
