@@ -25,7 +25,7 @@ export function Assist({
   reason,
   passes,
   scenes,
-  nameOf,
+  names,
 }: {
   roomId: string;
   available: boolean;
@@ -35,8 +35,14 @@ export function Assist({
   passes: Submission[];
   /** The scenes each pass offers, by submission. */
   scenes: Record<string, Curatable[]>;
-  nameOf: (userId: string) => string;
+  /**
+   * Each seat's name, by user id. A plain record rather than a lookup
+   * function: this is rendered on the server and handed to the browser, and a
+   * function cannot make that journey (it crashed the whole room page).
+   */
+  names: Record<string, string>;
 }) {
+  const nameOf = (userId: string): string => names[userId] ?? 'Somebody no longer in the room';
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [first, setFirst] = useState('');

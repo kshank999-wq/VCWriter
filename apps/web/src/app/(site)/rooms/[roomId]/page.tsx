@@ -419,10 +419,7 @@ export default async function RoomPage({ params }: { params: { roomId: string } 
                 reason={mayAsk === true ? null : assistRefusalText(mayAsk)}
                 passes={passes}
                 scenes={scenesIn}
-                nameOf={(userId) => {
-                  const seat = view.seats.find((one) => one.userId === userId);
-                  return seat ? seatName(seat) : 'Somebody no longer in the room';
-                }}
+                names={Object.fromEntries(view.seats.map((seat) => [seat.userId, seatName(seat)]))}
               />
             </>
           ) : null}
