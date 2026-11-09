@@ -1552,6 +1552,18 @@ p.room-stamp {
   because the three labels are different lengths, and with `flex-end` a longer
   one drops its field a line below the others.
 */
+/* A column of a room's controls. Not `.stack`, which is the admin console's
+   pre-formatted trace box and would stop an error message wrapping. */
+.room-stack {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.room-stack .error,
+.room-stack .notice {
+  overflow-wrap: anywhere;
+}
+
 .room-invite {
   display: grid;
   grid-template-columns: minmax(200px, 1fr) minmax(140px, 0.6fr) minmax(160px, 0.8fr) auto;

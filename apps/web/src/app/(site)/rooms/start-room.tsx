@@ -33,7 +33,7 @@ export function StartRoom({ projects }: { projects: { id: string; title: string 
   };
 
   return (
-    <div className="stack">
+    <div className="room-stack">
       <label className="field">
         <span>Project</span>
         <select value={projectId} onChange={(event) => setProjectId(event.target.value)}>

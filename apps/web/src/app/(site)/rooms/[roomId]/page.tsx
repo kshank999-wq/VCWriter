@@ -55,7 +55,7 @@ import { Assist } from './assist';
 import { Spend } from './spend';
 import { NotifyMe } from './notify';
 import { Billing } from './billing';
-import { loadBilling, roomPriceCents, seatPriceCents } from '@/lib/room-billing';
+import { loadBilling, roomPriceCents, seatPriceCents, settleCheckout } from '@/lib/room-billing';
 import { standingFor } from '@/lib/room-spend';
 import { assistRefusalText } from '@vcwriter/domain';
 import { isAiConfigured } from '@/lib/ai-room';
@@ -74,7 +74,13 @@ export const dynamic = 'force-dynamic';
  * A stranger does not get a polite refusal here: `loadRoomById` reads through
  * their own session, so the room simply is not there (§16).
  */
-export default async function RoomPage({ params }: { params: { roomId: string } }) {
+export default async function RoomPage({
+  params,
+  searchParams,
+}: {
+  params: { roomId: string };
+  searchParams?: { checkout?: string };
+}) {
   const user = await currentUser();
   if (!user) {
     return (
@@ -216,6 +222,12 @@ export default async function RoomPage({ params }: { params: { roomId: string } 
   // ask: a cap somebody can hit without seeing it coming is the failure stage
   // 13 exists to fix.
   const spend = await standingFor({ roomId: view.room.id, capCents: view.room.aiCapCents });
+
+  // Back from paying: ask Stripe directly rather than wait on the webhook, so
+  // the room says it is paid for the moment it is (§24).
+  if (view.role === 'owner' && typeof searchParams?.checkout === 'string' && searchParams.checkout.startsWith('cs_')) {
+    await settleCheckout({ sessionId: searchParams.checkout, roomId: view.room.id });
+  }
 
   // The room's seat subscription (§14, stage 15). Read for everybody who is
   // shown the billing section, which `landingFor` makes the showrunner's.

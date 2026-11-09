@@ -122,7 +122,9 @@ export const startSubscription = async (input: {
       { price: env.stripeRoomPriceId, quantity: 1 },
       ...(extra > 0 ? [{ price: env.stripeSeatPriceId, quantity: extra }] : []),
     ],
-    success_url: `${env.siteUrl}/rooms/${input.room.id}?seats=1`,
+    // The session id comes back on the way home, so the room can ask Stripe
+    // itself whether it was paid rather than wait on the webhook alone.
+    success_url: `${env.siteUrl}/rooms/${input.room.id}?checkout={CHECKOUT_SESSION_ID}`,
     cancel_url: `${env.siteUrl}/rooms/${input.room.id}`,
     // **`customer_update` goes with `customer` and only with it** — Stripe
     // refuses a session carrying one without the other, which is why it is
@@ -266,3 +268,35 @@ export const recordSubscription = async (subscription: Stripe.Subscription): Pro
   if (!roomId) return;
   await db.from('rooms').update(patch).eq('id', roomId);
 };
+
+/**
+ * Settle a room's checkout from the showrunner's return, without waiting for
+ * the webhook (addendum 07 §24).
+ *
+ * The webhook is still the main road, and nothing here replaces it. But a
+ * showrunner who has just paid and comes back to a room that says *no
+ * subscription yet* has been told the payment failed, and the first live test
+ * showed exactly that: the payment went through and no webhook ever arrived.
+ * So the page Stripe sends them back to asks Stripe directly, and writes the
+ * same answer `recordSubscription` would.
+ *
+ * Only a completed session whose own metadata names **this room** is taken,
+ * so a session id pasted into another room's address does nothing. Never
+ * throws: a room that cannot be settled here is settled by the webhook later.
+ */
+export const settleCheckout = async (input: { sessionId: string; roomId: string }): Promise<void> => {
+  try {
+    const session = await stripe().checkout.sessions.retrieve(input.sessionId);
+    if (session.metadata?.['room_id'] !== input.roomId) return;
+    if (session.status !== 'complete') return;
+    const subscriptionId = typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
+    if (!subscriptionId) return;
+    const subscription = await stripe().subscriptions.retrieve(subscriptionId);
+    if (subscription.metadata?.['room_id'] !== input.roomId) return;
+    await recordSubscription(subscription);
+  } catch (cause) {
+    const message = cause instanceof Error ? cause.message : String(cause);
+    console.error(`Could not settle checkout ${input.sessionId} for room ${input.roomId}: ${message}`);
+  }
+};
+

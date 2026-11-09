@@ -78,7 +78,7 @@ export function Seats({
   const gone = seats.filter((seat) => seat.state === 'deactivated');
 
   return (
-    <div className="stack">
+    <div className="room-stack">
       <div className="room-table">
         <table className="data-table">
         <thead>

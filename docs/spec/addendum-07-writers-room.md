@@ -1635,3 +1635,23 @@ What changed from §23:
 The rest of the site now calls VC Writer a subscription, not a one-off
 purchase: the home page, Notes, the module and tool pages, and the workflow
 page.
+
+### 24.1 Settled on the way back, not only by the webhook
+
+In the first live test, Ken paid for his room's subscription and the room
+went on saying *No subscription yet*. The site's record of Stripe events,
+`stripe_webhook_events`, was empty: no webhook had ever arrived, for any
+product. That fault is in Stripe's settings (the endpoint's address or its
+signing secret), not in the room.
+
+Still, a room should not depend on one delivery to know it has been paid
+for. Checkout now sends the showrunner back to
+`/rooms/<id>?checkout={CHECKOUT_SESSION_ID}`. The room page asks Stripe for
+that session and, if it is complete and its own metadata names this room,
+writes the subscription with the same `recordSubscription` the webhook uses
+(`settleCheckout`). The webhook stays the main road, and it is still what
+carries renewals, failed cards and cancellations.
+
+The invite box's error ran off the side of the page because the room's
+controls used `.stack`, the admin console's pre-formatted trace box. They now
+use `.room-stack`, which wraps.
