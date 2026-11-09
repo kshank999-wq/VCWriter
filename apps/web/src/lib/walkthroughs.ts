@@ -287,6 +287,37 @@ export const WALKTHROUGHS: ReadonlyArray<Walkthrough> = [
       },
     ],
   },
+  {
+    slug: 'short-form',
+    label: 'See how a commercial comes together',
+    title: 'A commercial in four easy steps',
+    steps: [
+      {
+        title: 'Plan it from the brief',
+        body: 'Keep the client’s brief and the must-haves beside you, and plan the spot in a few lines: what happens, beat by beat.',
+        shot: 'help/short-form-outliner',
+        alt: 'The Outliner with the client brief on the shelf and the spot planned in rows',
+      },
+      {
+        title: 'Write what is heard and what is seen',
+        body: 'The two-column sheet the business uses: audio on one side, picture on the other, a row for every shot, and a frame or clip beside each.',
+        shot: 'modules/short-form',
+        alt: 'The AV sheet: audio and visual side by side, a storyboard frame and a duration on every row',
+      },
+      {
+        title: 'A frame for every shot',
+        body: 'Turn the same rows into a storyboard: each frame with its words and its action, timed. The board and the script are one document.',
+        shot: 'help/short-form-board',
+        alt: 'The storyboard: five frames, each with its dialogue, action and time',
+      },
+      {
+        title: 'Timed to the second',
+        body: 'Every row carries its length and the spot adds itself up against your limit, :15, :30 or :60, so you know before the client does. Print the sheet or the board, or send either as a PDF.',
+        shot: 'help/short-form-preview',
+        alt: 'The printed AV sheet with its total running time against a thirty-second limit',
+      },
+    ],
+  },
 ];
 
 export const walkthroughBySlug = (slug: string): Walkthrough | undefined => WALKTHROUGHS.find((one) => one.slug === slug);

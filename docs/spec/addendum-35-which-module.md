@@ -584,3 +584,35 @@ Without these, the library read *References 0* and the end-of-section panel
 
 **Where it appears:** on `/write/instructional`, and as a sixth button in the
 `/workflow` band.
+
+### 14.6 Short form
+
+**See how a commercial comes together**, in **four** steps, since a
+commercial is a short job and the box says so:
+
+1. **Plan it from the brief**: the Outliner, with the client brief and
+   mandatories on its shelf (`short-form-outliner`, new).
+2. **Write what is heard and what is seen**: the AV sheet with a frame on
+   every row (`modules/short-form`, retaken).
+3. **A frame for every shot**: the Board view (`short-form-board`, new).
+4. **Timed to the second**: the printed sheet, its total against a 30-second
+   limit (`short-form-preview`, retaken).
+
+**The Harbour Bakery demo was filled out:**
+
+- a storyboard frame on every row: five rough pencil thumbnails drawn for the
+  demo in `classics/frames/`
+- a 30-second limit (`setMaxSeconds`)
+- a client brief and mandatories in Research
+- the spot planned in the Outliner
+
+**Found, not fixed: the Daily editor misreads short-form sheets.** It flags
+every audio line of the sheet as *a speech with no character cue above it —
+nobody is saying this*, five errors on a correct sheet. A sheet's audio
+column is not dialogue awaiting a cue, so the rule should not apply to
+`short_form`. For that reason no editors step is in this walkthrough. The
+Research shot was dropped too: the brief landed in the Characters folder,
+which read wrongly.
+
+**Where it appears:** on `/write/short-form`, and as a seventh button in the
+`/workflow` band.

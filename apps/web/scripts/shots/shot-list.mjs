@@ -88,6 +88,8 @@ export const SHOTS = [
   { id: 'short-stories-writer', project: 'short_story', out: 'help', steps: [{ dblclickNth: ['.beat-row', 2], wait: 1500 }], shows: 'A passage of a story open for writing', uses: ['/write/short-stories walkthrough'] },
   { id: 'short-stories-editors', project: 'short_story', out: 'help', steps: [{ page: 'Editors' }, { wait: 1200 }], shows: 'The Daily editor on a collection', uses: ['/write/short-stories walkthrough'] },
   { id: 'import-collection', project: 'short_story', start: 'welcome', out: 'help', steps: [{ select: 'Import — a script, a novel, a book or a collection…', wait: 1500 }], shows: 'Import: bring in stories already written', uses: ['/write/short-stories walkthrough'] },
+  { id: 'short-form-outliner', project: 'short_form', out: 'help', steps: [{ page: 'Outliner', wait: 1200 }], shows: 'The spot planned in the Outliner', uses: ['/write/short-form walkthrough'] },
+  { id: 'short-form-board', project: 'short_form', out: 'help', steps: [{ page: 'Preview' }, { select: 'Board', wait: 1500 }], shows: 'The storyboard: a frame for every shot, timed', uses: ['/write/short-form walkthrough'] },
   { id: 'short-form-preview', project: 'short_form', out: 'help', steps: [{ page: 'Preview' }, { wait: 1500 }], shows: 'The AV sheet as it prints', uses: ['help: short form'] },
   { id: 'document-research', project: 'document', out: 'help', steps: [{ click: 'Research' }], shows: 'Research beside the document', uses: ['help: document'] },
   { id: 'document-place-on-page', project: 'document', out: 'help', steps: [{ click: 'Research' }, { select: 'Ideas' }, { select: 'Window history' }, { click: 'Rewrite and place…' }], shows: 'A note ready to Place on page', uses: ['help: document'] },

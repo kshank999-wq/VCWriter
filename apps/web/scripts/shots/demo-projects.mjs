@@ -45,6 +45,8 @@ import {
   addUnit,
   addBeat,
   addReference,
+  setRowFrame,
+  setMaxSeconds,
   aidFor,
   writeAid,
   approveAid,
@@ -505,8 +507,23 @@ export function demoProjects() {
         after = made.beatId;
       });
       file = updateUnit(file, unit.id, { title: 'Dawn at the bakery' });
+      // A storyboard frame on every row: rough pencil thumbnails, as a board
+      // artist would sketch them (classics/frames, drawn for the demo).
+      const frames = ['01-bakery-dawn', '02-hands-dough', '03-oven', '04-fisherman', '05-sign'];
+      beatsForUnit(file, unit.id).forEach((beat, index) => {
+        const name = frames[index];
+        if (!name) return;
+        const data = `data:image/png;base64,${readFileSync(resolve(import.meta.dirname, 'classics', 'frames', `${name}.png`)).toString('base64')}`;
+        file = setRowFrame(file, beat.id, { name: `${name}.png`, data, width: 640, height: 360 }).file;
+      });
+      file = setMaxSeconds(file, 30);
     }
-    projects.short_form = file;
+    projects.short_form = withOutline(withNotes(file, [
+      ['Client brief', 'Harbour Bakery, family-run since 1958. Thirty seconds for local TV and social. Warm, early-morning, unhurried. End on the line: Open at five, every day.'],
+      ['Mandatories', 'Logo on the last shot. Opening hours said aloud. No price claims.'],
+    ]), [
+      ['scene', 'Dawn at the bakery', [['beat', 'The harbour before the boats'], ['beat', 'Dough, oven, bread'], ['beat', 'The first customer'], ['beat', 'Logo and the line']]],
+    ]);
   }
 
   {
