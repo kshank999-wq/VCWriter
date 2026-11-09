@@ -169,6 +169,45 @@ export const TOOL_PAGES: ReadonlyArray<ToolPage> = [
     guide: 'editors',
   },
   {
+    slug: 'citations',
+    name: 'Citations',
+    card: 'A library of your sources, cited in the text, with the notes and bibliography done for you.',
+    headline: 'Cite as you write. The rest is done for you.',
+    intro:
+      'Enter each source once in the References library, then cite it as often as you like. VC Writer numbers the notes, writes them in the style you choose and builds the bibliography, and all of it keeps up as you add, move or remove citations. Citations are part of the instructional book and the Document module.',
+    shot: 'help/citations-bibliography',
+    shotAlt: 'Notes & bibliography: the notes in order, then the bibliography, written from the library',
+    features: [
+      {
+        title: 'One library of sources',
+        body: 'Books, journal articles, websites and more. The fields change with the kind of source, and each one is checked as you type. Already have sources in another project? Bring them in.',
+        shot: 'help/instructional-references',
+        shotAlt: 'The References library in Research: the book’s sources',
+      },
+      {
+        title: 'Cite without leaving the sentence',
+        body: 'Put the cursor where the citation goes and click Cite, right-click and choose Insert citation…, or press Ctrl+Shift+C (Cmd+Shift+C on a Mac). Search for the source, add a page, and a small marker sits in the line. Click it to change the source or the page.',
+      },
+      {
+        title: 'Chicago, APA, MLA or your own',
+        body: 'Footnotes in Chicago Notes & Bibliography, author and year or page in the text for APA and MLA, or footnotes in a form you choose. Pick the markers, count through the whole book or from 1 in each chapter, and say what the bibliography lists and in what order. Change the style and every note and the bibliography are re-set at once; your sources are not touched.',
+        shot: 'help/citations-style',
+        shotAlt: 'How the book cites: the style, the markers, the count and the bibliography',
+      },
+      {
+        title: 'Notes at the foot of the page, the bibliography at the back',
+        body: 'Add the bibliography to the back matter in one click. In the Layout room it is built from the library, and the notes sit at the foot of each page. Export as Word and the citations become Word footnotes, with the bibliography at the back.',
+      },
+      {
+        title: 'In the word processor too',
+        body: 'In a Document, the References tab of the ribbon has Insert citation, Bibliography and Sources & style. Each document counts its own notes from 1.',
+        shot: 'help/citations-document',
+        shotAlt: 'The References tab in the word processor: citations, the bibliography, the library',
+      },
+    ],
+    guide: 'citations',
+  },
+  {
     slug: 'read-back',
     name: 'Read back',
     card: 'Hear the scene played, with a voice for every character.',

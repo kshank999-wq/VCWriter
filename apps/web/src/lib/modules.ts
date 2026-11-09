@@ -31,7 +31,7 @@ const SHARED_ROOMS = ['Research', 'Story Sculptor', 'Outliner', 'Notes from your
 
 /**
  * Where each thing in *What comes with it* is promoted, so the boxes are
- * links. One with no page of its own (Citations, Storyboard, Writers Room)
+ * links. One with no page of its own (Storyboard, Writers Room)
  * stays a plain box rather than a dead link.
  */
 export const ROOM_LINKS: Readonly<Record<string, string>> = {
@@ -40,6 +40,7 @@ export const ROOM_LINKS: Readonly<Record<string, string>> = {
   Outliner: '/tools/outliner',
   'Notes from your phone': '/notes',
   'Read back': '/tools/read-back',
+  Citations: '/tools/citations',
   'Character Creator': '/tools/character-creator',
   Layout: '/layout',
   'eBook export': '/layout#ebook',

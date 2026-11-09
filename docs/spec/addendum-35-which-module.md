@@ -709,3 +709,23 @@ want the content of these notes to be in the promotion*). A shot marked
 requests with `PHONE_NOTES` from `shot-list.mjs`: four invented notes for the
 Night of the Living Dead demo. That gives `notes-inbox`. Steps 4 and 5 reuse
 `research-filed` and `writer-notes`.
+
+### 14.10 Citations, promoted
+
+`/tools/citations` is a tool page like the others in §11. Every claim on it
+comes from the citations guide.
+
+The boxes under *What comes with it* on the module pages are links to each
+item's page (`ROOM_LINKS` in `modules.ts`). Storyboard and Writers Room have
+no page, so they stay plain boxes.
+
+**Pictures.** The instructional demo now cites two of its sources in its
+first section, so these shots have notes to show:
+
+- `citations-style`: How the book cites
+- `citations-bibliography`: Notes & bibliography
+- `citations-document`: the word processor's References tab
+
+A shot of the Insert citation box was tried and dropped: the capture script
+cannot open the beat's toolbar.
+

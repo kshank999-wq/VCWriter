@@ -46,6 +46,7 @@ import {
   addUnit,
   addBeat,
   addReference,
+  insertCitation,
   setRowFrame,
   setMaxSeconds,
   aidFor,
@@ -264,9 +265,39 @@ const withSourcesAndAids = (file) => {
     { type: 'book', authors: ['Gowers, Ernest'], title: 'The Complete Plain Words', publisher: 'HMSO', place: 'London', date: '1954' },
     { type: 'book', authors: ['Flesch, Rudolf'], title: 'The Art of Plain Talk', publisher: 'Harper & Brothers', place: 'New York', date: '1946' },
   ];
-  for (const source of sources) next = addReference(next, source).file;
+  const ids = [];
+  for (const source of sources) {
+    const added = addReference(next, source);
+    next = added.file;
+    ids.push(added.reference.id);
+  }
   const first = unitsInStoryOrder(next).flatMap((unit) => beatsForUnit(next, unit.id))[0];
   if (!first) return next;
+  // Two citations in the first section's opening paragraphs, so the page shows
+  // its markers and the notes and bibliography have something to list.
+  const cites = [
+    [0, { referenceId: ids[0], locator: '23' }],
+    [2, { referenceId: ids[1], locator: '41' }],
+  ];
+  for (const [paragraph, input] of cites) {
+    const made = insertCitation(next, input);
+    next = {
+      ...made.file,
+      beats: made.file.beats.map((beat) =>
+        beat.id !== first.id
+          ? beat
+          : {
+              ...beat,
+              manuscript: {
+                ...beat.manuscript,
+                elements: beat.manuscript.elements.map((element, index) =>
+                  index === paragraph && element.type === 'paragraph' ? { ...element, text: `${element.text}${made.token}` } : element,
+                ),
+              },
+            },
+      ),
+    };
+  }
   const summary = aidFor(next, first.id, 'summary');
   next = approveAid(writeAid(summary.file, summary.aid.id, { text: 'A sentence carries one idea. When it carries two, split it; when the action hides in a noun, give it back to the verb.' }), summary.aid.id);
   const quiz = aidFor(next, first.id, 'quiz');
