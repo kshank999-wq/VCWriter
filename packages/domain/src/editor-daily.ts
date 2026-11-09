@@ -784,6 +784,15 @@ export const runDailyEditor = (file: ProjectFile, options: DailyEditorOptions = 
   const longParenthetical = options.longParentheticalWords ?? 12;
   const actionWall = options.actionWallWords ?? 70;
   const screenplay = !isProseFormat(file.project.format);
+  /**
+   * **A script's shape, but not a sheet's** (from Ken's commercial, addendum
+   * 35 §14.6): a short-form AV sheet keeps its audio column as speech with the
+   * speaker written into the line — *BAKER (V.O.): We start…*, *SFX: Gulls* —
+   * and never a cue above it. The shape rules (a speech needs a cue, a cue
+   * needs a speech, a slug says when) are a screenplay page's, so on a sheet
+   * every audio row read as an uncued speech: five errors on a correct spot.
+   */
+  const shaped = screenplay && file.project.format !== 'short_form';
   const ignored = new Set(options.ignoredRules ?? file.settings.editorIgnoredRules ?? []);
   const allowed = new Set(
     (options.allowedWords ?? file.settings.editorAllowedWords ?? []).map((word) => word.toLowerCase()),
@@ -840,7 +849,7 @@ export const runDailyEditor = (file: ProjectFile, options: DailyEditorOptions = 
         }
       }
 
-      if (screenplay) checkShape(beat.manuscript.elements, context, findings, { longParenthetical, actionWall });
+      if (shaped) checkShape(beat.manuscript.elements, context, findings, { longParenthetical, actionWall });
     }
   }
 

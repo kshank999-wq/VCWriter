@@ -606,7 +606,7 @@ commercial is a short job and the box says so:
 - a client brief and mandatories in Research
 - the spot planned in the Outliner
 
-**Found, not fixed: the Daily editor misreads short-form sheets.** It flags
+**Found, and fixed in 1.0.24: the Daily editor misread short-form sheets.** It flags
 every audio line of the sheet as *a speech with no character cue above it —
 nobody is saying this*, five errors on a correct sheet. A sheet's audio
 column is not dialogue awaiting a cue, so the rule should not apply to
@@ -644,3 +644,10 @@ which read wrongly.
 | Instructional | 6 |
 | Short form | 4 |
 | Document | 5 |
+
+**The fix (1.0.24):** `runDailyEditor` no longer runs the screenplay shape
+checks (`checkShape`: an uncued speech, a cue with no speech) on `short_form`
+projects. A sheet's audio column names its speaker inside the line and never
+has a cue above it. Tested in `editor-daily-short-form.test.ts`, which fails
+on the old code. The demo sheet now reads *Nothing to flag*. That is honest,
+but an empty screen, so the walkthrough still has no editors step.
