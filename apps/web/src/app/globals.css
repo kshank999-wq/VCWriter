@@ -609,13 +609,20 @@ section > .lede {
   gap: 10px;
 }
 
-.module-rooms li {
+.module-rooms li > * {
+  display: block;
   padding: 8px 14px;
   border: 1px solid var(--border);
   border-radius: 2px;
   background: var(--bg-raised);
   font-size: 14px;
+  color: inherit;
+  text-decoration: none;
 }
+/* A box that goes to its own page says so: gold edge, an arrow, and it lifts. */
+.module-rooms a { border-color: var(--gold-deep); transition: border-color 0.15s, background 0.15s; }
+.module-rooms a::after { content: ' →'; color: var(--gold); }
+.module-rooms a:hover, .module-rooms a:focus-visible { border-color: var(--gold); background: var(--bg); }
 
 /* The release check (admin): every guide's steps to tick. */
 .release-check-bar {

@@ -116,7 +116,7 @@ export default function LayoutPage() {
         </div>
       </section>
 
-      <section>
+      <section id="ebook">
         <h2>Publish the eBook</h2>
         <p className="lede">One EPUB 3, checked against the store before it is written.</p>
         <div className="layout-split">

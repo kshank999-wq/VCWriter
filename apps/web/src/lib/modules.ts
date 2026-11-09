@@ -29,6 +29,22 @@ export interface ModulePage {
 
 const SHARED_ROOMS = ['Research', 'Story Sculptor', 'Outliner', 'Notes from your phone', 'Read back'];
 
+/**
+ * Where each thing in *What comes with it* is promoted, so the boxes are
+ * links. One with no page of its own (Citations, Storyboard, Writers Room)
+ * stays a plain box rather than a dead link.
+ */
+export const ROOM_LINKS: Readonly<Record<string, string>> = {
+  Research: '/tools/research',
+  'Story Sculptor': '/tools/story-sculptor',
+  Outliner: '/tools/outliner',
+  'Notes from your phone': '/notes',
+  'Read back': '/tools/read-back',
+  'Character Creator': '/tools/character-creator',
+  Layout: '/layout',
+  'eBook export': '/layout#ebook',
+};
+
 export const MODULE_PAGES: ReadonlyArray<ModulePage> = [
   {
     format: 'screenplay',

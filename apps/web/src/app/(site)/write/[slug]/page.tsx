@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { formatName } from '@vcwriter/domain';
-import { MODULE_PAGES, moduleBySlug } from '@/lib/modules';
+import { MODULE_PAGES, ROOM_LINKS, moduleBySlug } from '@/lib/modules';
 import { ModuleChooser } from '../../module-chooser';
 import { WalkthroughButton } from '../../walkthrough';
 import { walkthroughBySlug } from '@/lib/walkthroughs';
@@ -111,7 +111,7 @@ export default async function ModulePage({ params }: { params: Params | Promise<
         <h2>What comes with it</h2>
         <ul className="module-rooms">
           {page.rooms.map((room) => (
-            <li key={room}>{room}</li>
+            <li key={room}>{ROOM_LINKS[room] ? <Link href={ROOM_LINKS[room]!}>{room}</Link> : <span>{room}</span>}</li>
           ))}
         </ul>
       </section>
