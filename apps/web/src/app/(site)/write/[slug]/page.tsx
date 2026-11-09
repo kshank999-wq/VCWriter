@@ -118,7 +118,7 @@ export default async function ModulePage({ params }: { params: Params | Promise<
 
       <section>
         <h2>Other modules</h2>
-        <p className="lede">One purchase includes every module, on Windows and macOS.</p>
+        <p className="lede">One subscription includes every module, on Windows and macOS.</p>
         <ModuleChooser current={page.slug} />
       </section>
     </>

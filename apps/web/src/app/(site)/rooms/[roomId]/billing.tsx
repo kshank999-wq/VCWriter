@@ -4,7 +4,9 @@ import { useState } from 'react';
 import { LAPSE_PROMISE, inGoodStanding, type RoomBilling } from '@vcwriter/domain';
 
 /**
- * The room's seat subscription (addendum 07 §14, stage 15).
+ * The room's subscription (addendum 07 §23, repriced in §24): the room's own
+ * fee, for the showrunner and one other person, and a seat for each person
+ * after that.
  *
  * **One button with two destinations**, because the room's own row already
  * knows which it needs: Stripe Checkout where there is no subscription, and the
@@ -28,7 +30,7 @@ export function Billing({
   /** What the room is being charged for, in the domain's words. */
   line: string;
   billing: RoomBilling;
-  /** Billed seats the room needs. Zero means there is nothing to pay. */
+  /** Extra seats beyond the room's fee. Zero means only the room's fee. */
   wanted: number;
   yours: boolean;
 }) {
@@ -49,21 +51,20 @@ export function Billing({
   };
 
   const lapsed = billing.subscriptionId !== null && !inGoodStanding(billing.state);
-  const needed = wanted > 0 && billing.subscriptionId === null;
 
   return (
     <>
       <p className="lede">{line}</p>
 
-      {lapsed || needed ? <p className="small">{LAPSE_PROMISE}</p> : null}
+      {lapsed ? <p className="small">{LAPSE_PROMISE}</p> : null}
 
       {yours ? (
         <button type="button" className="button secondary small room-act" disabled={busy} onClick={open}>
           {billing.subscriptionId
             ? 'Card, invoices and cancelling'
             : wanted > 0
-              ? `Add ${wanted === 1 ? 'a billed seat' : `${wanted} billed seats`}`
-              : 'Set up billed seats'}
+              ? `Start the room’s subscription, with ${wanted === 1 ? 'an extra seat' : `${wanted} extra seats`}`
+              : 'Start the room’s subscription'}
         </button>
       ) : null}
 

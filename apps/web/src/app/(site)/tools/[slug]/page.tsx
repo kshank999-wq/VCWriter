@@ -109,7 +109,7 @@ export default async function ToolPage({ params }: { params: Params | Promise<Pa
 
       <section>
         <h2>The other rooms</h2>
-        <p className="lede">One purchase includes every module and the rooms that come with it, on Windows and macOS.</p>
+        <p className="lede">One subscription includes every module and the rooms that come with it, on Windows and macOS.</p>
         <ToolChooser current={tool.slug} />
       </section>
     </>

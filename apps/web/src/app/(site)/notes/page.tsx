@@ -120,7 +120,7 @@ export default function NotesPage() {
         <p>
           It is bought in the app, through the App Store or Google Play, and managed there — {' '}
           {NOTES_PRICE_WORDS.yearly} or {NOTES_PRICE_WORDS.monthly}.{' '}
-          <strong>VC Writer itself is a separate, one-off purchase</strong> and is not affected by this: the
+          <strong>VC Writer itself is a separate subscription</strong> and is not affected by this: the
           desktop application keeps working offline, with or without a Notes subscription.
         </p>
         <p>

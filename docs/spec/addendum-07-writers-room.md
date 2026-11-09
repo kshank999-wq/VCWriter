@@ -1597,3 +1597,41 @@ configured yet — `STRIPE_PRICE_ID_SEAT` is new, and `docs/deployment.md` says
 what to create and which webhook events to subscribe. Until that exists a room
 behaves exactly as it did before: the seat count reads, the subscription reads
 as *none*, and a room inside its included seat never asks for a card.
+
+## 24. The room repriced (November 2026)
+
+Ken's prices, 9 November 2026. VC Writer itself is a subscription ($19.99 a
+month or $199 a year), and Notes is its own ($4.99 a month or $49.99 a year).
+**The Writers Room is a third subscription, held by the showrunner:**
+
+- **The room, $9.99 a month.** It covers the showrunner and one other person.
+  From Ken: *a lot of times people just collaborate with a writing partner. So
+  that's included.*
+- **$4.99 a month for each person after that**, whatever their role.
+
+The prices live in Stripe, as §23 says, under two prices:
+
+- `STRIPE_PRICE_ID_ROOM` (new) for the room's fee
+- `STRIPE_PRICE_ID_SEAT` for the extra seats
+
+What changed from §23:
+
+- **There is no free room with people in it.** `ROOM_INCLUDED_SEATS` is 1, so
+  the showrunner plus one partner. It is fixed by the code, and the *Seats
+  included* box on *Start a room* is gone; a showrunner could type 200 into
+  it. A room alone with its showrunner costs nothing. Its first invitation
+  needs the subscription started: `mayTakeAnotherSeat` refuses with
+  `no_subscription` until there is one, and `needsSubscription` no longer
+  takes a seat count.
+- **A subscription has two lines.** Checkout sells one room plus any extra
+  seats. A seat change moves only the seat line (`setQuantity`), adding it the
+  first time the room grows past its fee. The seat line is found by its price,
+  never by its position. A room that shrinks back keeps its room line, and
+  nothing is cancelled for it.
+- **Unchanged:** a seat is billed from acceptance, never from invitation. And
+  an unpaid room never locks anybody out of what they wrote; all it loses is
+  the power to take someone else in.
+
+The rest of the site now calls VC Writer a subscription, not a one-off
+purchase: the home page, Notes, the module and tool pages, and the workflow
+page.

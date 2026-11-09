@@ -141,7 +141,7 @@ export default function HomePage() {
       </section>
 
       <section>
-        <h2>One purchase, both platforms</h2>
+        <h2>One subscription, both platforms</h2>
         <p className="lede">
           Choose Windows or Mac at checkout and download immediately. Sign in later to re-download the current
           build for either platform.

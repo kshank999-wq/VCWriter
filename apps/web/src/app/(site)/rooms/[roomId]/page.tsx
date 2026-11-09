@@ -55,7 +55,7 @@ import { Assist } from './assist';
 import { Spend } from './spend';
 import { NotifyMe } from './notify';
 import { Billing } from './billing';
-import { loadBilling, seatPriceCents } from '@/lib/room-billing';
+import { loadBilling, roomPriceCents, seatPriceCents } from '@/lib/room-billing';
 import { standingFor } from '@/lib/room-spend';
 import { assistRefusalText } from '@vcwriter/domain';
 import { isAiConfigured } from '@/lib/ai-room';
@@ -219,7 +219,11 @@ export default async function RoomPage({ params }: { params: { roomId: string } 
 
   // The room's seat subscription (§14, stage 15). Read for everybody who is
   // shown the billing section, which `landingFor` makes the showrunner's.
-  const [billing, seatCents] = await Promise.all([loadBilling(view.room.id), seatPriceCents()]);
+  const [billing, roomCents, seatCents] = await Promise.all([
+    loadBilling(view.room.id),
+    roomPriceCents(),
+    seatPriceCents(),
+  ]);
   const mayAsk = canAskHere({
     role: view.role,
     roomEnabled: view.room.aiEnabled,
@@ -325,7 +329,7 @@ export default async function RoomPage({ params }: { params: { roomId: string } 
                   apart because a showrunner asks them separately. */}
               <Billing
                 roomId={view.room.id}
-                line={describeBilling({ count: view.seatsCount, billing, seatCents })}
+                line={describeBilling({ count: view.seatsCount, billing, roomCents, seatCents })}
                 billing={billing}
                 wanted={seatsToBill(view.room, view.seats)}
                 yours={view.role === 'owner'}

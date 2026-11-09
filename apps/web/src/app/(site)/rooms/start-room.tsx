@@ -6,14 +6,12 @@ import { useRouter } from 'next/navigation';
 /**
  * Starting a room over a project you own (§5).
  *
- * The seat count is asked for here rather than left to a default, because it
- * is what the subscription covers and a showrunner who has bought four seats
- * should not discover the number on an invoice (§14).
+ * No seat count is asked for: the room's fee covers the showrunner and one
+ * other person, and each person after that is an extra seat (addendum 07 §24).
  */
 export function StartRoom({ projects }: { projects: { id: string; title: string }[] }) {
   const router = useRouter();
   const [projectId, setProjectId] = useState(projects[0]?.id ?? '');
-  const [seats, setSeats] = useState(2);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,7 +21,7 @@ export function StartRoom({ projects }: { projects: { id: string; title: string 
     const response = await fetch('/api/rooms', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ projectId, includedSeats: seats }),
+      body: JSON.stringify({ projectId }),
     });
     const body = (await response.json()) as { room?: { id: string }; error?: string };
     setBusy(false);
@@ -45,16 +43,6 @@ export function StartRoom({ projects }: { projects: { id: string; title: string 
             </option>
           ))}
         </select>
-      </label>
-      <label className="field">
-        <span>Seats included</span>
-        <input
-          type="number"
-          min={1}
-          max={200}
-          value={seats}
-          onChange={(event) => setSeats(Math.max(1, Number(event.target.value) || 1))}
-        />
       </label>
       <p>
         <button type="button" className="button" disabled={busy || !projectId} onClick={() => void start()}>

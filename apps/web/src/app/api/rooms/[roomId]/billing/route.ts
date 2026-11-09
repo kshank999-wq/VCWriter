@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { describeBilling, seatsToBill } from '@vcwriter/domain';
 import { currentUser } from '@/lib/supabase';
 import { loadRoomById } from '@/lib/rooms';
-import { billingPortal, loadBilling, seatPriceCents, startSubscription } from '@/lib/room-billing';
+import { billingPortal, loadBilling, roomPriceCents, seatPriceCents, startSubscription } from '@/lib/room-billing';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -33,12 +33,17 @@ export async function GET(
   const view = await loadRoomById(params.roomId);
   if (!view || !view.role) return NextResponse.json({ error: 'No such room.' }, { status: 404 });
 
-  const [billing, seatCents] = await Promise.all([loadBilling(view.room.id), seatPriceCents()]);
+  const [billing, roomCents, seatCents] = await Promise.all([
+    loadBilling(view.room.id),
+    roomPriceCents(),
+    seatPriceCents(),
+  ]);
   return NextResponse.json({
     billing,
+    roomCents,
     seatCents,
     wanted: seatsToBill(view.room, view.seats),
-    line: describeBilling({ count: view.seatsCount, billing, seatCents }),
+    line: describeBilling({ count: view.seatsCount, billing, roomCents, seatCents }),
   });
 }
 

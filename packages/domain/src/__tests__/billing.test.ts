@@ -91,17 +91,16 @@ describe('keeping Stripe in step', () => {
     expect(quantityDrifted(billing(), 4)).toBe(false);
   });
 
-  it('does not ask a room inside its plan to start a subscription', () => {
-    // Asking for a card to charge nothing to is asking for a card.
-    expect(needsSubscription(0, billing())).toBe(false);
+  it('asks every room for one: the room’s fee is what pays for the writing partner', () => {
+    expect(needsSubscription(billing())).toBe(true);
   });
 
-  it('asks for one where there are seats to pay for and no subscription', () => {
-    expect(needsSubscription(2, billing())).toBe(true);
+  it('is satisfied by a subscription in good standing', () => {
+    expect(needsSubscription(billing({ subscriptionId: 'sub_1', state: 'active' }))).toBe(false);
   });
 
   it('asks again where the subscription has lapsed', () => {
-    expect(needsSubscription(2, billing({ subscriptionId: 'sub_1', state: 'past_due' }))).toBe(true);
+    expect(needsSubscription(billing({ subscriptionId: 'sub_1', state: 'past_due' }))).toBe(true);
   });
 });
 
@@ -144,16 +143,19 @@ describe('what an unpaid room may still do', () => {
     expect(said).toContain('nothing anybody wrote is affected');
   });
 
-  it('may still take a seat that is inside the plan', () => {
-    // There is nothing to charge for, so refusing would be refusing a free seat
-    // over a bill for something else.
-    expect(
-      mayTakeAnotherSeat({
-        room: room({ includedSeats: 4 }),
-        seats: [seat()],
-        billing: billing({ subscriptionId: 'sub_1', state: 'past_due' }),
-      }),
-    ).toBe(true);
+  it('needs the subscription started even for the writing partner the fee includes', () => {
+    // A room alone with its showrunner is free; the first invitation is where
+    // it starts to cost something, so that is where the subscription starts.
+    const refusal = mayTakeAnotherSeat({ room: room(), seats: [], billing: billing() });
+    expect(refusal).not.toBe(true);
+    if (refusal === true) throw new Error('unreachable');
+    expect(refusal.reason).toBe('no_subscription');
+  });
+
+  it('takes the writing partner without an extra seat once the room is paid for', () => {
+    const paid = billing({ subscriptionId: 'sub_1', state: 'active' });
+    expect(mayTakeAnotherSeat({ room: room(), seats: [], billing: paid })).toBe(true);
+    expect(seatsToBill(room(), [seat()])).toBe(0);
   });
 
   it('asks a room with no subscription to start one rather than calling it unpaid', () => {
@@ -161,7 +163,7 @@ describe('what an unpaid room may still do', () => {
     expect(refusal).not.toBe(true);
     if (refusal === true) throw new Error('unreachable');
     expect(refusal.reason).toBe('no_subscription');
-    expect(billingRefusalText(refusal)).toContain('a billed seat');
+    expect(billingRefusalText(refusal)).toContain('starts the room’s subscription');
   });
 
   it('counts the seat about to be accepted, not only the ones already taken', () => {
@@ -178,26 +180,45 @@ describe('what an unpaid room may still do', () => {
 });
 
 describe('what the dashboard says', () => {
-  const line = (seats: Seat[], over: Partial<RoomBilling> = {}, seatCents: number | null = 1200) =>
+  const line = (
+    seats: Seat[],
+    over: Partial<RoomBilling> = {},
+    seatCents: number | null = 1200,
+    roomCents: number | null = 999,
+  ) =>
     describeBilling({
       count: seatCount(room(), seats),
       billing: billing({ subscriptionId: 'sub_1', state: 'active', ...over }),
+      roomCents,
       seatCents,
     });
 
-  it('says there is nothing to pay where there is nothing to pay', () => {
-    expect(line([seat()])).toContain('Nothing to pay');
+  it('says a room with only the writing partner owes the room’s fee and nothing more', () => {
+    const said = line([seat()]);
+    expect(said).toContain('you and one other person');
+    expect(said).not.toContain('extra');
+  });
+
+  it('says what a room without a subscription would cost, and that it is needed to invite', () => {
+    const said = describeBilling({ count: seatCount(room(), []), billing: billing(), roomCents: 999, seatCents: 499 });
+    expect(said).toContain('$9.99 a month');
+    expect(said).toContain('$4.99 a month each');
+    expect(said).toContain('Start it to invite anyone');
   });
 
   it('says what is being charged for before what it costs', () => {
     // *3 seats* and *$36* answer different questions, and a showrunner reading
     // this is usually asking the first.
     const said = line([seat(), seat(), seat()]);
-    expect(said.indexOf('2 billed seats')).toBeLessThan(said.indexOf('$24'));
+    expect(said.indexOf('2 extra seats')).toBeLessThan(said.indexOf('$24'));
   });
 
-  it('leaves out the money where Stripe has not said what a seat costs', () => {
-    expect(line([seat(), seat()], {}, null)).toBe('1 billed seat.');
+  it('leaves out the money where Stripe has not said what it costs', () => {
+    expect(line([seat(), seat()], {}, null, null)).toBe('The room: you and one other person, plus 1 extra seat.');
+  });
+
+  it('adds up the room and the extra seats', () => {
+    expect(line([seat(), seat(), seat()], {}, 499, 999)).toContain('In all, $19.97 a month.');
   });
 
   it('names the trouble where there is trouble', () => {

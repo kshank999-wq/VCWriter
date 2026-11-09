@@ -3,42 +3,41 @@ import { money } from './spending.js';
 import { seatCount, type Room, type Seat, type SeatCount } from './room.js';
 
 /**
- * What a room's seats cost, month after month (addendum 07 §14, stage 15).
+ * What a room costs, month after month (addendum 07 §23, repriced in §24).
  *
- * §14: *a Writers Room entitlement is separate from the desktop licence — the
- * base subscription includes the owner's seat and further collaborators are
- * billable seats.* The desktop licence is a purchase (spec §12.2); this is a
- * subscription, and it is the only recurring thing in the product.
+ * Ken's prices, November 2026: **a room is a subscription of its own**, separate
+ * from the VC Writer subscription. The room's fee covers the showrunner and one
+ * other person (*a lot of times people just collaborate with a writing
+ * partner*), and every person after that is a seat at a smaller monthly price.
+ * So a subscription has two lines: the room, always one, and the extra seats,
+ * as many as there are.
  *
  * Four decisions carry it, and the second is the one that matters.
  *
- * **A seat is billed from acceptance, never from invitation.** Already true in
- * `seatCount` since stage 1, because §14 made invited and active different
- * states rather than one flag — charging for an invitation would be charging
- * for an email, and a showrunner who asks six people and gets two would be
- * paying for four strangers. Deactivating stops the billing and keeps every
- * contribution (§1, §16), which is that rule applied to the invoice.
+ * **A seat is billed from acceptance, never from invitation.** Charging for an
+ * invitation would be charging for an email, and a showrunner who asks six
+ * people and gets two would be paying for four strangers. Deactivating stops
+ * the billing and keeps every contribution (§1, §16).
  *
  * **An unpaid room never locks anybody out of what they wrote.** This is §1
- * pointed at the money, and it is the decision that shapes the enforcement:
- * the *only* thing a lapsed subscription stops is **taking another seat**.
- * Everybody already in the room keeps writing, keeps reading, keeps submitting,
- * and keeps every draft. A product that held a writer's pages hostage to a card
- * that expired would be destroying work to collect a debt, which is the one
- * thing this module exists not to do.
+ * pointed at the money: the *only* thing billing decides is whether the room
+ * may **take somebody else in**. A room needs its subscription before its first
+ * invitation goes out, and a lapsed one cannot take another person; everybody
+ * already in it keeps writing, reading, submitting and every draft.
  *
  * **The quantity is set, never incremented.** Every seat change tells the
- * subscription what the room's billable count *is*, rather than *add one* —
- * a retried webhook or a double-clicked button can apply an increment twice,
- * and a set is the same answer however many times it arrives. It is also
- * self-healing: a room that drifted out of step is back in step at the next
- * seat change without anybody reconciling anything.
+ * subscription what the room's extra-seat count *is*, rather than *add one*, so
+ * a retried webhook or a double-clicked button gives the same answer.
  *
- * **The price lives in Stripe**, as it does for the desktop licence and for the
- * same reason (`pricing.ts`): it is what the customer is actually charged, and
- * a second copy in a constant is a copy that will eventually disagree with the
- * till.
+ * **The prices live in Stripe**, as the desktop's do (`pricing.ts`): it is what
+ * the customer is actually charged, and a copy here would one day disagree.
  */
+
+/**
+ * How many people the room's own fee covers **besides the showrunner**. The
+ * showrunner owns the project and is never a seat; this is the writing partner.
+ */
+export const ROOM_INCLUDED_SEATS = 1;
 
 // ------------------------------------------------------------ where it stands
 
@@ -117,13 +116,13 @@ export const quantityDrifted = (billing: RoomBilling, wanted: number): boolean =
   billing.subscriptionId !== null && billing.billedSeats !== wanted;
 
 /**
- * Whether a room that needs a subscription has one.
+ * Whether the room still needs its subscription started or put right.
  *
- * A room inside its included seats needs nothing, so *no subscription* is a
- * correct and common answer rather than a problem to nag about.
+ * Every room with anybody in it needs one: the room's fee covers the
+ * showrunner and one other person, so there is no free room to be inside.
  */
-export const needsSubscription = (wanted: number, billing: RoomBilling): boolean =>
-  wanted > 0 && (billing.subscriptionId === null || !inGoodStanding(billing.state));
+export const needsSubscription = (billing: RoomBilling): boolean =>
+  billing.subscriptionId === null || !inGoodStanding(billing.state);
 
 // ------------------------------------------------------------ what it refuses
 
@@ -132,15 +131,15 @@ export type BillingRefusal =
   | { reason: 'no_subscription'; wanted: number };
 
 /**
- * Whether the room may take another seat.
+ * Whether the room may take somebody else in.
  *
  * **The only thing billing decides.** Everything else in the room — writing,
  * reading, submitting, curating, every draft anybody has made — is untouched by
  * the state of a card, on purpose and permanently.
  *
- * A room whose next seat is still inside the plan may take it whatever the
- * subscription says, because there is nothing to charge for: refusing there
- * would be refusing a seat that costs nothing over a bill for something else.
+ * Even the writing partner the fee includes needs the subscription started,
+ * because the fee is what pays for them: a room alone with its showrunner is
+ * free, and the first invitation is where the room begins to cost something.
  */
 export const mayTakeAnotherSeat = (input: {
   room: Pick<Room, 'includedSeats'>;
@@ -156,8 +155,6 @@ export const mayTakeAnotherSeat = (input: {
       1 -
       input.room.includedSeats,
   );
-  if (after === 0) return true;
-
   if (input.billing.subscriptionId === null) return { reason: 'no_subscription', wanted: after };
   if (!inGoodStanding(input.billing.state)) return { reason: 'not_paid', state: input.billing.state };
   return true;
@@ -166,7 +163,7 @@ export const mayTakeAnotherSeat = (input: {
 export const billingRefusalText = (refusal: BillingRefusal): string => {
   switch (refusal.reason) {
     case 'no_subscription':
-      return `Another seat is beyond what the plan includes. The showrunner can add ${refusal.wanted === 1 ? 'a billed seat' : `${refusal.wanted} billed seats`} from the room.`;
+      return 'Inviting someone starts the room’s subscription. The showrunner sets it up from the room: it covers the showrunner and one other person, and each person after that is an extra seat.';
     case 'not_paid':
       return `This room’s subscription is ${SUBSCRIPTION_STATE_NAMES[refusal.state].toLowerCase()}, so it cannot take another seat. Everybody already in it keeps writing, and nothing anybody wrote is affected.`;
   }
@@ -178,28 +175,38 @@ export const billingRefusalText = (refusal: BillingRefusal): string => {
  * The room's bill in one line, for the dashboard.
  *
  * It says what is being charged for, not only what it costs, because *3 seats*
- * and *$36* answer different questions and a showrunner reading this is usually
- * asking the first.
+ * and *$19.97* answer different questions and a showrunner reading this is
+ * usually asking the first.
  */
 export const describeBilling = (input: {
   count: SeatCount;
   billing: RoomBilling;
-  /** Per seat per month, in cents, read from Stripe. Null where unknown. */
+  /** The room's own fee a month, in cents, read from Stripe. Null where unknown. */
+  roomCents: number | null;
+  /** An extra seat a month, in cents, read from Stripe. Null where unknown. */
   seatCents: number | null;
 }): string => {
-  const { count, billing } = input;
-  if (count.billable === 0) {
-    return `${count.included === 1 ? 'One seat' : `${count.included} seats`} included, and the room is inside that. Nothing to pay.`;
+  const { count, billing, roomCents, seatCents } = input;
+  const roomPrice = roomCents === null ? '' : ` for ${money(roomCents)} a month`;
+  const seatPrice = seatCents === null ? '' : ` at ${money(seatCents)} a month each`;
+
+  if (billing.subscriptionId === null) {
+    return `No subscription yet. The room covers you and one other person${roomPrice}; each person after that is an extra seat${seatPrice}. Start it to invite anyone.`;
   }
 
-  const seats = `${count.billable} billed ${count.billable === 1 ? 'seat' : 'seats'}`;
-  const cost = input.seatCents === null ? '' : ` — ${money(count.billable * input.seatCents)} a month`;
-  if (!inGoodStanding(billing.state)) {
-    return `${seats}${cost}. ${SUBSCRIPTION_STATE_NAMES[billing.state]}.`;
-  }
-  return `${seats}${cost}.`;
+  const room = `The room: you and one other person${roomCents === null ? '' : `, ${money(roomCents)} a month`}`;
+  const extra =
+    count.billable === 0
+      ? ''
+      : `, plus ${count.billable} extra ${count.billable === 1 ? 'seat' : 'seats'}${seatCents === null ? '' : `, ${money(count.billable * seatCents)} a month`}`;
+  const total =
+    count.billable > 0 && roomCents !== null && seatCents !== null
+      ? ` In all, ${money(roomCents + count.billable * seatCents)} a month.`
+      : '';
+  const standing = inGoodStanding(billing.state) ? '' : ` ${SUBSCRIPTION_STATE_NAMES[billing.state]}.`;
+  return `${room}${extra}.${total}${standing}`;
 };
 
 /** What the room is told when a subscription lapses. Never a threat about the work. */
 export const LAPSE_PROMISE =
-  'Nothing anybody wrote is affected by this, ever. An unpaid room cannot take another seat; everyone already in it keeps writing, reading and submitting exactly as before.';
+  'Nothing anybody wrote is affected by this, ever. An unpaid room cannot take anyone else in; everyone already in it keeps writing, reading and submitting exactly as before.';

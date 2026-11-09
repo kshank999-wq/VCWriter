@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { currentUser, serverClient } from '@/lib/supabase';
+import { ROOM_INCLUDED_SEATS } from '@vcwriter/domain';
 import { createRoom } from '@/lib/rooms';
 
 export const runtime = 'nodejs';
@@ -18,7 +19,6 @@ export const dynamic = 'force-dynamic';
 const schema = z.object({
   projectId: z.string().uuid(),
   name: z.string().max(120).default(''),
-  includedSeats: z.number().int().min(1).max(200).default(1),
 });
 
 export async function POST(request: Request): Promise<Response> {
@@ -43,7 +43,9 @@ export async function POST(request: Request): Promise<Response> {
     const room = await createRoom({
       projectId: owned.id,
       name: parsed.data.name.trim() || owned.title,
-      includedSeats: parsed.data.includedSeats,
+      // Not the caller's to choose: the room's fee covers the showrunner and one
+      // other person, and everyone after that is an extra seat (§24).
+      includedSeats: ROOM_INCLUDED_SEATS,
     });
     return NextResponse.json({ room });
   } catch (cause) {

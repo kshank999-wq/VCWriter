@@ -71,17 +71,30 @@ export const loadBilling = async (roomId: string): Promise<RoomBilling> => {
   return billingFromRow((data ?? {}) as BillingRow);
 };
 
-/** What a seat costs a month, read from Stripe rather than repeated here. */
-export const seatPriceCents = async (): Promise<number | null> => {
+const priceCents = async (id: () => string): Promise<number | null> => {
   try {
-    const price = await stripe().prices.retrieve(env.stripeSeatPriceId);
+    const price = await stripe().prices.retrieve(id());
     return price.unit_amount ?? null;
   } catch {
-    // A deployment with no seat price configured shows the seat count without
-    // a number beside it, rather than a page that will not render.
+    // A deployment with no price configured shows the room without a number
+    // beside it, rather than a page that will not render.
     return null;
   }
 };
+
+/** What an extra seat costs a month, read from Stripe rather than repeated here. */
+export const seatPriceCents = (): Promise<number | null> => priceCents(() => env.stripeSeatPriceId);
+
+/** What the room itself costs a month (the showrunner and one other person). */
+export const roomPriceCents = (): Promise<number | null> => priceCents(() => env.stripeRoomPriceId);
+
+/**
+ * The subscription's extra-seat line, found by its price rather than by its
+ * position: the room's own fee is a line of the same subscription, and which
+ * one Stripe lists first is not a promise.
+ */
+const seatItem = (subscription: Stripe.Subscription): Stripe.SubscriptionItem | undefined =>
+  subscription.items.data.find((item) => item.price.id === env.stripeSeatPriceId);
 
 /**
  * Start (or resume) a room's subscription: a Stripe Checkout session.
@@ -99,11 +112,16 @@ export const startSubscription = async (input: {
   ownerEmail: string | null;
   customerId: string | null;
 }): Promise<string | null> => {
-  const quantity = Math.max(1, seatsToBill(input.room, input.seats));
+  const extra = seatsToBill(input.room, input.seats);
 
   const session = await stripe().checkout.sessions.create({
     mode: 'subscription',
-    line_items: [{ price: env.stripeSeatPriceId, quantity }],
+    // The room, always one; the extra seats only where there are any, because
+    // Checkout will not take a line of nothing.
+    line_items: [
+      { price: env.stripeRoomPriceId, quantity: 1 },
+      ...(extra > 0 ? [{ price: env.stripeSeatPriceId, quantity: extra }] : []),
+    ],
     success_url: `${env.siteUrl}/rooms/${input.room.id}?seats=1`,
     cancel_url: `${env.siteUrl}/rooms/${input.room.id}`,
     // **`customer_update` goes with `customer` and only with it** — Stripe
@@ -169,21 +187,24 @@ export const setQuantity = async (input: {
 
   try {
     const subscription = await stripe().subscriptions.retrieve(input.billing.subscriptionId);
-    const item = subscription.items.data[0];
-    if (!item) return;
+    const item = seatItem(subscription);
 
-    if (wanted === 0) {
-      // A room that has shrunk back inside its plan owes nothing. Cancelled at
-      // the end of the period rather than immediately, because the month is
-      // already paid for and taking it away would be charging for it twice.
-      await stripe().subscriptions.update(input.billing.subscriptionId, { cancel_at_period_end: true });
-    } else {
-      await stripe().subscriptions.update(input.billing.subscriptionId, {
-        items: [{ id: item.id, quantity: wanted }],
-        // Stripe's default: the change is prorated against the current period,
-        // so a seat added on the 20th costs a third of a month rather than one.
+    // The room's own fee is never touched here: a room that shrinks back to its
+    // showrunner and partner still has its room. Only the extra-seat line
+    // moves, and it is added the first time the room grows past the fee.
+    if (item) {
+      await stripe().subscriptionItems.update(item.id, {
+        quantity: wanted,
+        // Prorated against the current period, so a seat added on the 20th
+        // costs a third of a month rather than one.
         proration_behavior: 'create_prorations',
-        cancel_at_period_end: false,
+      });
+    } else if (wanted > 0) {
+      await stripe().subscriptionItems.create({
+        subscription: input.billing.subscriptionId,
+        price: env.stripeSeatPriceId,
+        quantity: wanted,
+        proration_behavior: 'create_prorations',
       });
     }
 
@@ -225,7 +246,7 @@ export const recordSubscription = async (subscription: Stripe.Subscription): Pro
   const roomId = subscription.metadata?.['room_id'];
   const db = adminClient();
 
-  const item = subscription.items.data[0];
+  const item = seatItem(subscription);
   const patch = {
     stripe_customer_id: typeof subscription.customer === 'string' ? subscription.customer : null,
     stripe_subscription_id: subscription.id,

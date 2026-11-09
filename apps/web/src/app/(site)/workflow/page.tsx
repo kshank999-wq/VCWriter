@@ -245,7 +245,7 @@ export default function WorkflowPage() {
         <div>
           <h2>All of it, in every module</h2>
           <p>
-            Screenplays, series, novels, stage plays, short stories and instructional books. One program, one purchase,
+            Screenplays, series, novels, stage plays, short stories and instructional books. One program, one subscription,
             organized your way.
           </p>
         </div>

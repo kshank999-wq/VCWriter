@@ -102,6 +102,14 @@ export const env = {
   get stripeSeatPriceId(): string {
     return required('STRIPE_PRICE_ID_SEAT');
   },
+  /**
+   * The Writers Room's own monthly fee (addendum 07 §24): the room, covering
+   * the showrunner and one other person. Every room's subscription carries
+   * one of these, and `STRIPE_PRICE_ID_SEAT` for each person after that.
+   */
+  get stripeRoomPriceId(): string {
+    return required('STRIPE_PRICE_ID_ROOM');
+  },
   get resendApiKey(): string {
     return required('RESEND_API_KEY');
   },
