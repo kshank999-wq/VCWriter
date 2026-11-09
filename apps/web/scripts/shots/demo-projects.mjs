@@ -386,13 +386,24 @@ export function demoProjects() {
     ['chapter', 'Revising for Clarity', [['scene', 'Reading aloud'], ['scene', 'Cutting by a third']]],
   ]);
 
-  projects.short_story = withNotes(
+  projects.short_story = withOutline(withNotes(
     buildProjectFromImport(textToProse(STORIES), { format: 'short_story', title: 'Tales of Mystery', author: 'Edgar Allan Poe', stories: 'many' }).file,
     [
       ['The narrator', 'Insists he is not mad. The more calmly he says it, the less we believe him.'],
       ['Montresor', 'Never says what Fortunato\'s insult was.'],
     ],
-  );
+  ), [
+    ['chapter', 'The Tell-Tale Heart', [
+      ['scene', 'Not mad', [['beat', 'The eye of a vulture']]],
+      ['scene', 'Eight nights at the door', [['beat', 'The lantern, the single ray']]],
+      ['scene', 'Beneath the floorboards', [['beat', 'The officers sit and chat'], ['beat', 'The beating of the hideous heart']]],
+    ]],
+    ['chapter', 'The Cask of Amontillado', [
+      ['scene', 'A thousand injuries', [['beat', 'Carnival, and Fortunato in motley']]],
+      ['scene', 'Into the vaults', [['beat', 'The nitre, and the cough'], ['beat', 'The last tier of stone']]],
+    ]],
+    ['chapter', 'The Masque of the Red Death', [['scene', 'The abbey sealed'], ['scene', 'Seven rooms'], ['scene', 'The masked figure']]],
+  ]);
 
   {
     let file = createProjectFile({ title: 'Harbour Bakery — 30s Spot', format: 'short_form', author: 'A. Writer' });

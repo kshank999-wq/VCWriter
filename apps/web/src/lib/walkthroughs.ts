@@ -115,6 +115,49 @@ export const WALKTHROUGHS: ReadonlyArray<Walkthrough> = [
       },
     ],
   },
+  {
+    slug: 'short-stories',
+    label: 'See how a collection comes together',
+    title: 'Short stories in six easy steps',
+    steps: [
+      {
+        title: 'Start a story, or a collection',
+        body: 'Write one short story, or gather several into a collection. Press + Story and the next one starts on its own, in order along the track.',
+        shot: 'modules/short-stories',
+        alt: 'A collection of three stories on the track, beside the manuscript',
+      },
+      {
+        title: 'Plan each story',
+        body: 'List each story and the passages in it, a line apiece. Tab tucks a line under the one above; drag a story or a passage to change the order.',
+        shot: 'help/short-stories-outliner',
+        alt: 'The Outliner: three stories, their passages and beats, each level its own colour',
+      },
+      {
+        title: 'Write each passage',
+        body: 'Open a passage and write it on a clean page, with its notes beside you. Each story keeps its own title and its own sections.',
+        shot: 'help/short-stories-writer',
+        alt: 'A passage of a story open for writing',
+      },
+      {
+        title: 'Bring in stories you have written',
+        body: 'Already have stories finished? Import them, one document per story, and each comes in as a story of its own, in the order you choose.',
+        shot: 'help/import-collection',
+        alt: 'Import, with A collection of short stories: one document per story',
+      },
+      {
+        title: 'Polish it',
+        body: 'The Daily editor flags grammar and style as you go, with a fix you can take or leave, across every story at once. The writing stays yours.',
+        shot: 'help/short-stories-editors',
+        alt: 'The Daily editor’s notes across the collection, each with a fix',
+      },
+      {
+        title: 'Set the collection as a book',
+        body: 'Layout sets the collection as a book: each story opens like a chapter, with a contents page that lists them. Print a ready-to-print PDF, or publish it as an eBook.',
+        shot: 'help/short-stories-layout',
+        alt: 'The collection set as a book, open at the first story',
+      },
+    ],
+  },
 ];
 
 export const walkthroughBySlug = (slug: string): Walkthrough | undefined => WALKTHROUGHS.find((one) => one.slug === slug);

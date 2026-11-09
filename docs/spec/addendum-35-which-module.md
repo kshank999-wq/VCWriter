@@ -474,3 +474,26 @@ so the graph has something to show.
 
 The novel demo now has an outline: the three chapters of Great Expectations,
 with their passages and beats (`withOutline` in `demo-projects.mjs`).
+
+### 14.2 Short stories and collections
+
+**See how a collection comes together**, in six steps:
+
+1. **Start a story, or a collection**: three stories on the track
+   (`modules/short-stories`).
+2. **Plan each story**: the Outliner with three stories, their passages and
+   beats (`short-stories-outliner`, new).
+3. **Write each passage**: a passage open for writing
+   (`short-stories-writer`, new).
+4. **Bring in stories you have written**: the Import box, with *A collection
+   of short stories: one document per story* (`import-collection`, new).
+5. **Polish it**: the Daily editor across the collection
+   (`short-stories-editors`, new).
+6. **Set the collection as a book**: Layout at the first story
+   (`short-stories-layout`).
+
+**Where it appears:** on `/write/short-stories`, and as a third button in the
+`/workflow` band.
+
+The Poe demo now has an outline of its three tales, with their passages and
+beats.
