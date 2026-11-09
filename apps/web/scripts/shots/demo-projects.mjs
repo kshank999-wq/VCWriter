@@ -337,7 +337,7 @@ export function demoProjects() {
     ]);
   }
 
-  projects.novel = withNotes(
+  projects.novel = withOutline(withNotes(
     titled(
       buildProjectFromImport(textToProse(NOVEL), { format: 'novel', title: 'Great Expectations', author: 'Charles Dickens' }).file,
       ['Pip meets the convict in the churchyard', 'The file and the pork pie', 'The second convict in the mist'],
@@ -348,7 +348,20 @@ export function demoProjects() {
       ['Pip', 'Philip Pirrip, an orphan, brought up by hand by his sister, Mrs. Joe Gargery.'],
       ['Setup: the file and the wittles', 'What the convict demands of Pip in the churchyard. Pays off at the forge on Christmas Day.'],
     ],
-  );
+   ), [
+    ['chapter', 'Pip meets the convict', [
+      ['scene', 'The churchyard at dusk', [['beat', 'Pip reads his parents\' names on the stones'], ['beat', 'The convict seizes him']]],
+      ['scene', 'File and wittles', [['beat', 'The convict\'s demand, and the young man who will tear out his heart']]],
+    ]],
+    ['chapter', 'Christmas Eve at the forge', [
+      ['scene', 'Mrs. Joe and the Tickler', [['beat', 'Brought up by hand']]],
+      ['scene', 'Stealing the pie', [['beat', 'The guns from the hulks'], ['beat', 'The file from Joe\'s bench']]],
+    ]],
+    ['chapter', 'The convict in the mist', [
+      ['scene', 'Out on the marshes before dawn', [['beat', 'The second convict, and the bruised face']]],
+      ['scene', 'The pie, eaten like a dog'],
+    ]],
+  ]);
 
   projects.instructional = withOutline(withNotes(
     titled(

@@ -453,3 +453,24 @@ checks every step's picture exists.
 The screenplay demo now marks where each of its seven scenes starts and ends
 (`withPolarity` in `demo-projects.mjs`). The first is left flat on purpose,
 so the graph has something to show.
+
+### 14.1 The novel
+
+**See how a novel comes together**, in six steps:
+
+1. **Plan your chapters**: the Outliner with three chapters, their passages
+   and beats, each level in its own colour (`novel-outliner`, new).
+2. **See the whole book**: chapters and passages on the track
+   (`modules/novel`).
+3. **Write each passage**: a passage open for writing (`novel-writer`, new).
+4. **It becomes a manuscript**: the title page and contents
+   (`novel-preview`, new).
+5. **Polish it**: the Daily editor's notes, and the Final editor's questions
+   (`editors`).
+6. **Set it as a book and publish**: Layout at chapter one (`novel-layout`).
+
+**Where it appears:** on `/write/novel`, beside the screenplay one in the
+`/workflow` band, and on `/layout`, since it ends with publishing.
+
+The novel demo now has an outline: the three chapters of Great Expectations,
+with their passages and beats (`withOutline` in `demo-projects.mjs`).

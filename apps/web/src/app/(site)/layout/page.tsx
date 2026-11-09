@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { WalkthroughButton } from '../walkthrough';
+import { walkthroughBySlug } from '@/lib/walkthroughs';
 
 export const metadata: Metadata = {
   title: 'Layout and publishing',
@@ -66,6 +68,9 @@ export default function LayoutPage() {
         <Link href="/help/layout" className="button secondary">
           Read the Layout guide
         </Link>
+        <div className="walkthrough-offer">
+          <WalkthroughButton walkthrough={walkthroughBySlug('novel')!} className="button secondary" />
+        </div>
       </div>
 
       <Shot src="/help/novel-layout.jpg" alt="The Layout room with a novel set as a book, open at chapter one" />
