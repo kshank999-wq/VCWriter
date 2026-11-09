@@ -124,13 +124,14 @@ export default function WorkflowPage() {
         <div>
           <h2>See it step by step</h2>
           <p>
-            Plan it, write it, and watch it become a screenplay, a novel or a collection. Six short steps each, no jargon.
+            Plan it, write it, and watch it become a screenplay, a series, a novel or a collection. Six short steps each, no jargon.
           </p>
         </div>
         <span className="band-buttons">
           <WalkthroughButton walkthrough={walkthroughBySlug('screenplay')!} />
           <WalkthroughButton walkthrough={walkthroughBySlug('novel')!} className="button secondary" />
           <WalkthroughButton walkthrough={walkthroughBySlug('short-stories')!} className="button secondary" />
+          <WalkthroughButton walkthrough={walkthroughBySlug('series')!} className="button secondary" />
         </span>
       </section>
 

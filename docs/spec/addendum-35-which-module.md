@@ -497,3 +497,25 @@ with their passages and beats (`withOutline` in `demo-projects.mjs`).
 
 The Poe demo now has an outline of its three tales, with their passages and
 beats.
+
+### 14.3 The series
+
+**See how a series comes together**, in six steps:
+
+1. **Plan the season**: the Outliner (`series-outliner`).
+2. **Every episode on one track**: with the timeline showing each character
+   across the season (`modules/series`).
+3. **Write each scene**: a scene open for writing (`series-writer`, new).
+4. **It becomes a script**: the contents page, each episode with its length
+   (`series-preview`, new).
+5. **Keep your cast straight**: the Character Creator with Holmes open
+   (`series-characters`, new).
+6. **Polish every episode**: the Daily editor across the season
+   (`series-editors`, new).
+
+**Read back was tried for step 6 and dropped.** The browser preview the shots
+are taken in shows its "natural voices come with the desktop app" note, and
+an unassigned cast, which read badly in an advertisement.
+
+**Where it appears:** on `/write/series`, and as a fourth button in the
+`/workflow` band.

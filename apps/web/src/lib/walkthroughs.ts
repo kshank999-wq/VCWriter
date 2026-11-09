@@ -158,6 +158,49 @@ export const WALKTHROUGHS: ReadonlyArray<Walkthrough> = [
       },
     ],
   },
+  {
+    slug: 'series',
+    label: 'See how a series comes together',
+    title: 'A series in six easy steps',
+    steps: [
+      {
+        title: 'Plan the season',
+        body: 'List your episodes, and under each one its scenes and beats, a line apiece. Tab tucks a line under the one above; drag to change the order.',
+        shot: 'help/series-outliner',
+        alt: 'The Outliner: a season of episodes with their scenes and beats',
+      },
+      {
+        title: 'Every episode on one track',
+        body: 'The episodes stand in order along the track, beside the script. The timeline underneath shows which characters appear in each, across the whole season.',
+        shot: 'modules/series',
+        alt: 'The season on the track, with the timeline showing each character across the episodes',
+      },
+      {
+        title: 'Write each scene',
+        body: 'Open a scene and write it on a clean page, with its notes beside you. Return and Tab move between heading, action, character and dialogue, as in Final Draft.',
+        shot: 'help/series-writer',
+        alt: 'A scene of an episode open for writing',
+      },
+      {
+        title: 'It becomes a script',
+        body: 'Everything you write is set as a screenplay for you, with a contents page listing every episode and how long it runs. Print it or save it as a PDF.',
+        shot: 'help/series-preview',
+        alt: 'The series contents page: each episode with its length',
+      },
+      {
+        title: 'Keep your cast straight',
+        body: 'Every character has a page of their own: who they are, their part in the story, their arc and their relationships, so a season of episodes stays true to them.',
+        shot: 'help/series-characters',
+        alt: 'The Character Creator with Holmes open',
+      },
+      {
+        title: 'Polish every episode',
+        body: 'The Daily editor flags grammar and style across the whole season, with a fix you can take or leave. The Final editor asks what a story editor would. The writing stays yours.',
+        shot: 'help/series-editors',
+        alt: 'The Daily editor’s notes across the season, each with a fix',
+      },
+    ],
+  },
 ];
 
 export const walkthroughBySlug = (slug: string): Walkthrough | undefined => WALKTHROUGHS.find((one) => one.slug === slug);
