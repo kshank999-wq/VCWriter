@@ -18,6 +18,13 @@ export interface ModulePage {
   readonly strengths: ReadonlyArray<{ readonly title: string; readonly body: string }>;
   /** The rooms and tools this module opens, as a short list. */
   readonly rooms: ReadonlyArray<string>;
+  /**
+   * The house styles this module sets its pages in, listed on its page (from
+   * Ken: *list the formats that you can do a stage play in, all the major
+   * formats*). Each is one the program offers under Page setup, described as
+   * the program describes it.
+   */
+  readonly formats?: ReadonlyArray<{ readonly name: string; readonly body: string }>;
 }
 
 const SHARED_ROOMS = ['Research', 'Story Sculptor', 'Outliner', 'Notes from your phone', 'Read back'];
@@ -135,7 +142,7 @@ export const MODULE_PAGES: ReadonlyArray<ModulePage> = [
       'A stage page rather than a film page. Choose the house style your theatre or publisher uses, and write songs, lyrics and dance alongside the dialogue in a musical.',
     strengths: [
       {
-        title: 'Six stage formats',
+        title: 'Seven stage formats',
         body: 'Pick the formatting your theatre or publisher expects from a list, and the cues, directions and margins follow.',
       },
       {
@@ -152,6 +159,15 @@ export const MODULE_PAGES: ReadonlyArray<ModulePage> = [
       },
     ],
     rooms: [...SHARED_ROOMS, 'Character Creator'],
+    formats: [
+      { name: 'US modern play', body: 'The Dramatists Guild’s modern layout: the character’s name centred over the speech, and stage directions in a narrower column to the right.' },
+      { name: 'US traditional play', body: 'The older American layout: the name centred over a narrower speech, with stage directions set apart as their own indented block.' },
+      { name: 'US publisher reading copy', body: 'A compact reading copy in the Samuel French manner, with the name set in from the left rather than centred.' },
+      { name: 'UK BBC stage', body: 'A4, after the BBC Writersroom stage sample: the name at the left with the speech on the same line, and directions in capitals.' },
+      { name: 'UK contemporary play', body: 'A4, the common British side-by-side layout: the name at the left and the speech in a column beside it.' },
+      { name: 'Continental reading copy', body: 'A4 for European theatres, the role at the left with the speech as a block beside it, and adjustable to the house’s own rules.' },
+      { name: 'US musical', body: 'The modern play with songs: each number’s title centred, and lyrics in capitals in a narrower column so sung words stand apart from spoken.' },
+    ],
   },
   {
     format: 'short_story',

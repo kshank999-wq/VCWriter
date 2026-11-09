@@ -201,6 +201,49 @@ export const WALKTHROUGHS: ReadonlyArray<Walkthrough> = [
       },
     ],
   },
+  {
+    slug: 'stage-play',
+    label: 'See how a play comes together',
+    title: 'A stage play in six easy steps',
+    steps: [
+      {
+        title: 'Plan your acts and scenes',
+        body: 'List your acts, the scenes in each and what happens in them, a line apiece. Tab tucks a line under the one above; drag to change the order.',
+        shot: 'help/stage-outliner',
+        alt: 'The Outliner: Act One’s scenes and beats, and Act Two begun',
+      },
+      {
+        title: 'See the whole play',
+        body: 'Your scenes line up in order along the track, beside the script, and the timeline underneath shows who is on stage in each.',
+        shot: 'modules/stage-play',
+        alt: 'The play’s scenes on the track, with the script and the cast’s timeline',
+      },
+      {
+        title: 'Write each scene',
+        body: 'Open a scene and write. Character names, speeches and stage directions each fall into place as you type: Return for the next line, Tab to change what it is.',
+        shot: 'help/stage-writer',
+        alt: 'A scene of the play open for writing, set as a stage page',
+      },
+      {
+        title: 'Choose your house style',
+        body: 'Pick the format your theatre or publisher expects: US modern, US traditional, a publisher’s reading copy, UK BBC, UK contemporary, Continental or a US musical. The whole script moves at once.',
+        shot: 'help/stage-house-style',
+        alt: 'Page setup: the seven stage house styles, each with a sample page',
+      },
+      {
+        title: 'Add a cast page',
+        body: 'The cast list builds itself from the play. Add a line about each role, a playing age and any doubling, with the time and place, and it prints after the title page.',
+        shot: 'help/stage-cast-page',
+        alt: 'The cast page: each role with a description and playing age, the time and the place',
+      },
+      {
+        title: 'It becomes a script',
+        body: 'Everything you write is set as a stage script for you, on proper pages. Print it or save it as a PDF to send to a theatre.',
+        shot: 'help/stage-preview',
+        alt: 'The play as printed stage pages',
+      },
+    ],
+  },
 ];
 
 export const walkthroughBySlug = (slug: string): Walkthrough | undefined => WALKTHROUGHS.find((one) => one.slug === slug);

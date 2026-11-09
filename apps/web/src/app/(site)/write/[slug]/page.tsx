@@ -80,6 +80,21 @@ export default async function ModulePage({ params }: { params: Params | Promise<
         />
       </figure>
 
+      {page.formats ? (
+        <section>
+          <h2>Every major format</h2>
+          <p className="lede">Choose one under Page setup and the whole script is set in it. Change your mind and it all moves at once.</p>
+          <div className="workflow-boxes">
+            {page.formats.map((one) => (
+              <div key={one.name} className="workflow-box">
+                <strong>{one.name}</strong>
+                <span>{one.body}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <section>
         <h2>Why it works</h2>
         <div className="grid two-up">

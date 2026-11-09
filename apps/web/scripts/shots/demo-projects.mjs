@@ -42,6 +42,8 @@ import {
   updateBeat,
   updateUnit,
   setSceneGrid,
+  addUnit,
+  addBeat,
 } from '@vcwriter/domain';
 
 const classic = (name) => readFileSync(resolve(import.meta.dirname, 'classics', name), 'utf8');
@@ -207,6 +209,42 @@ const withPolarity = (file) => {
   return next;
 };
 
+/**
+ * The rest of Act One, planned and not yet written: each scene titled and
+ * given its beats, so the track and the Outliner show a play rather than one
+ * scene of it. Only the first scene has words, which is the truth about the
+ * demo.
+ */
+const withPlannedScenes = (file, scenes) => {
+  let next = file;
+  const track = next.tracks[0]?.id;
+  if (!track) return next;
+  for (const [title, beats] of scenes) {
+    const made = addUnit(next, { trackId: track, title });
+    next = made.file;
+    for (const beat of beats) next = addBeat(next, { unitId: made.unit.id, title: beat }).file;
+  }
+  return next;
+};
+
+/** Hamlet's cast page: who each of them is, and where and when the play is set. */
+const withCastPage = (file) => {
+  const roles = {
+    BARNARDO: ['an officer of the guard', '30s'],
+    FRANCISCO: ['a soldier', '20s'],
+    HORATIO: ['friend to Hamlet', '20s'],
+    MARCELLUS: ['an officer of the guard', '30s'],
+  };
+  return {
+    ...file,
+    characters: file.characters.map((one) => {
+      const role = roles[one.name.toUpperCase()];
+      return role ? { ...one, casting: { ...(one.casting ?? {}), description: role[0], playingAge: role[1] } } : one;
+    }),
+    settings: { ...file.settings, castPage: { ...(file.settings.castPage ?? {}), time: 'The Middle Ages. Winter.', place: 'Elsinore, the royal castle of Denmark.', notes: 'The play is in five acts.' } },
+  };
+};
+
 /** Setups and payoffs for the screenplay, placed on its beats. */
 const withSetups = (file) => {
   let next = file;
@@ -305,7 +343,7 @@ export function demoProjects() {
     ['Barbra in shock', 'She barely speaks once she is inside. Let her silence carry the scene.'],
   ], 1));
 
-  projects.stage_play = withNotes(
+  projects.stage_play = withCastPage(withOutline(withPlannedScenes(withNotes(
     titled(
       buildProjectFromImport(readFinalDraft(fdx(HAMLET)), { format: 'stage_play', title: 'Hamlet', author: 'William Shakespeare', fileCast: true }).file,
       ['The Ghost on the battlements'],
@@ -314,7 +352,21 @@ export function demoProjects() {
       ['Elsinore', 'A platform before the castle, at midnight. Bitter cold.'],
       ['The Ghost', 'Appears in the armour of the dead King. Will not speak to Horatio.'],
     ],
-  );
+  ), [
+    ['A room of state in the castle', ['The new King speaks of his brother\'s death', 'Hamlet in black, alone', 'Horatio tells Hamlet of the Ghost']],
+    ['Polonius\' house', ['Laertes warns Ophelia', 'Polonius\'s precepts']],
+    ['The platform', ['The Ghost beckons Hamlet away']],
+    ['Another part of the platform', ['The Ghost tells of the murder', 'Swear on my sword']],
+  ]), [
+    ['note', 'Act One'],
+    ['scene', 'The battlements, midnight', [['beat', 'Who\'s there?'], ['beat', 'The Ghost appears, and will not speak']]],
+    ['scene', 'A room of state', [['beat', 'Claudius and Gertrude'], ['beat', 'O, that this too too solid flesh would melt']]],
+    ['scene', 'Polonius\' house', [['beat', 'Laertes and Ophelia'], ['beat', 'To thine own self be true']]],
+    ['scene', 'The platform', [['beat', 'The Ghost beckons']]],
+    ['scene', 'Another part of the platform', [['beat', 'Murder most foul'], ['beat', 'Swear']]],
+    ['note', 'Act Two'],
+    ['scene', 'Polonius sends Reynaldo'],
+  ]));
 
   {
     const [first, ...rest] = SERIES;

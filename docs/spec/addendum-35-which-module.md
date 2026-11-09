@@ -519,3 +519,41 @@ an unassigned cast, which read badly in an advertisement.
 
 **Where it appears:** on `/write/series`, and as a fourth button in the
 `/workflow` band.
+
+### 14.4 The stage play, and its formats listed
+
+**See how a play comes together**, in six steps:
+
+1. **Plan your acts and scenes**: the Outliner (`stage-outliner`, new).
+2. **See the whole play**: scenes on the track, with the cast's timeline
+   (`modules/stage-play`, retaken).
+3. **Write each scene**: a scene open for writing (`stage-writer`, new).
+4. **Choose your house style**: Page setup with the seven stage presets
+   (`stage-house-style`, new).
+5. **Add a cast page**: the cast page dialog (`stage-cast-page`, new).
+6. **It becomes a script**: the printed pages (`stage-preview`, new).
+
+From Ken: *also list the formats that you can do a stage play in, all the
+major formats.* The stage play page now has **Every major format**, listing
+the seven house styles `scriptFormatsFor('stage_play')` offers, described as
+Page setup describes them:
+
+- US modern play
+- US traditional play
+- US publisher reading copy
+- UK BBC stage
+- UK contemporary play
+- Continental reading copy
+- US musical
+
+The list is the module's optional `formats` field. Its *Six stage formats*
+strength was out of date since the musical preset was added, and now says
+seven.
+
+**The Hamlet demo was filled out:**
+
+- the rest of Act One as planned scenes with their beats (`withPlannedScenes`)
+- an outline through the start of Act Two
+- the cast page filled in (`withCastPage`): each role's line and playing age,
+  the time, the place and a note. Without it the shot showed the dialog's
+  placeholder examples (*a kitchen in Duluth*), which read as content.
