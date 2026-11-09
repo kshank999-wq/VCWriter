@@ -616,3 +616,31 @@ which read wrongly.
 
 **Where it appears:** on `/write/short-form`, and as a seventh button in the
 `/workflow` band.
+
+### 14.7 The document, and every module done
+
+**See how a document comes together**, in five steps:
+
+1. **Write as you would in Word**: the Home tab (`modules/document`,
+   retaken).
+2. **Pictures, tables and page numbers**: the Insert tab
+   (`document-insert`, new).
+3. **Your notes beside the page**: a note open with Place on page
+   (`document-place-on-page`).
+4. **Review it, or hear it**: the Review tab, with comments, tracked changes,
+   dictate and read aloud (`document-review`, new).
+5. **Word in, Word out**: the File tab, with Word, PDF, plain text and print
+   (`document-file`, new).
+
+**Every module now has its walkthrough**, all eight in the `/workflow` band:
+
+| Module | Steps |
+| --- | --- |
+| Screenplay | 6 |
+| Novel | 6 |
+| Short stories | 6 |
+| Series | 6 |
+| Stage play | 6 |
+| Instructional | 6 |
+| Short form | 4 |
+| Document | 5 |

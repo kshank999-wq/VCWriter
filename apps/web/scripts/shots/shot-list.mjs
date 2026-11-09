@@ -91,6 +91,9 @@ export const SHOTS = [
   { id: 'short-form-outliner', project: 'short_form', out: 'help', steps: [{ page: 'Outliner', wait: 1200 }], shows: 'The spot planned in the Outliner', uses: ['/write/short-form walkthrough'] },
   { id: 'short-form-board', project: 'short_form', out: 'help', steps: [{ page: 'Preview' }, { select: 'Board', wait: 1500 }], shows: 'The storyboard: a frame for every shot, timed', uses: ['/write/short-form walkthrough'] },
   { id: 'short-form-preview', project: 'short_form', out: 'help', steps: [{ page: 'Preview' }, { wait: 1500 }], shows: 'The AV sheet as it prints', uses: ['help: short form'] },
+  { id: 'document-insert', project: 'document', out: 'help', steps: [{ tab: /^Insert$/, wait: 1000 }], shows: 'The Insert tab: pictures, tables, footnotes, contents, headers and footers', uses: ['/write/document walkthrough'] },
+  { id: 'document-review', project: 'document', out: 'help', steps: [{ tab: /^Review$/, wait: 1000 }], shows: 'The Review tab: comments and tracked changes', uses: ['/write/document walkthrough'] },
+  { id: 'document-file', project: 'document', out: 'help', steps: [{ tab: /^File$/, wait: 1000 }], shows: 'The File tab: open and save Word documents, PDF', uses: ['/write/document walkthrough'] },
   { id: 'document-research', project: 'document', out: 'help', steps: [{ click: 'Research' }], shows: 'Research beside the document', uses: ['help: document'] },
   { id: 'document-place-on-page', project: 'document', out: 'help', steps: [{ click: 'Research' }, { select: 'Ideas' }, { select: 'Window history' }, { click: 'Rewrite and place…' }], shows: 'A note ready to Place on page', uses: ['help: document'] },
 ];

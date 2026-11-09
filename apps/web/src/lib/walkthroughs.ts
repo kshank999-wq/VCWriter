@@ -318,6 +318,43 @@ export const WALKTHROUGHS: ReadonlyArray<Walkthrough> = [
       },
     ],
   },
+  {
+    slug: 'document',
+    label: 'See how a document comes together',
+    title: 'A document in five easy steps',
+    steps: [
+      {
+        title: 'Write as you would in Word',
+        body: 'Fonts, styles, headings, lists and spacing, laid out where you expect them. Letters, reports, proposals and essays, on a real page.',
+        shot: 'modules/document',
+        alt: 'The word processor: a proposal on the page, with the Home tab of the ribbon above it',
+      },
+      {
+        title: 'Pictures, tables and page numbers',
+        body: 'Add pictures, tables and shapes, page breaks, headers and footers and page numbers from the Insert tab.',
+        shot: 'help/document-insert',
+        alt: 'The Insert tab: page break, table, picture, shapes, header and footer, page numbers',
+      },
+      {
+        title: 'Your notes beside the page',
+        body: 'Open a note from your research or your phone beside the document, rewrite it, and Place on page puts it where your cursor is.',
+        shot: 'help/document-place-on-page',
+        alt: 'A research note open with its rewrite and the Place on page button',
+      },
+      {
+        title: 'Review it, or hear it',
+        body: 'Leave comments, track changes and accept or reject them. Dictate a paragraph instead of typing, or have the document read aloud to you.',
+        shot: 'help/document-review',
+        alt: 'The Review tab: comments, track changes, dictate, read aloud and spelling',
+      },
+      {
+        title: 'Word in, Word out',
+        body: 'Open a Word document and save it back as one, with its formatting. Or save a PDF or plain text, print it, or bring another file into the page.',
+        shot: 'help/document-file',
+        alt: 'The File tab: save, print, Word, PDF and plain text',
+      },
+    ],
+  },
 ];
 
 export const walkthroughBySlug = (slug: string): Walkthrough | undefined => WALKTHROUGHS.find((one) => one.slug === slug);
