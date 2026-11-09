@@ -729,3 +729,18 @@ first section, so these shots have notes to show:
 A shot of the Insert citation box was tried and dropped: the capture script
 cannot open the beat's toolbar.
 
+### 14.11 The storyboard, promoted
+
+`/tools/storyboard` covers short form's storyboard: a frame per shot, the
+timing, playing it like an animatic, and printing the board. Every claim is
+the short-form guide's, and the pictures are existing shots.
+
+It has no walkthrough of its own, so the page offers the short-form
+module's (`ToolPage.walkthrough`). The Storyboard box on the short-form page
+links to it.
+
+The *Other rooms* lede used to read *Every room comes with every module*.
+That stopped being true once the citations and the storyboard had pages,
+since each belongs to particular modules. It now says one purchase includes
+every module and the rooms that come with it.
+

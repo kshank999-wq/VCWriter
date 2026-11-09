@@ -30,6 +30,8 @@ export interface ToolPage {
   readonly features: ReadonlyArray<ToolFeature>;
   /** The guide on /help with the steps. */
   readonly guide: string;
+  /** A walkthrough under another slug (the storyboard's is the short-form module's). */
+  readonly walkthrough?: string;
 }
 
 export const TOOL_PAGES: ReadonlyArray<ToolPage> = [
@@ -206,6 +208,40 @@ export const TOOL_PAGES: ReadonlyArray<ToolPage> = [
       },
     ],
     guide: 'citations',
+  },
+  {
+    slug: 'storyboard',
+    name: 'Storyboard',
+    card: 'A frame for every shot, timed, played like an animatic and printed for the wall.',
+    headline: 'The board and the script are one document.',
+    intro:
+      'In a short-form project, such as a commercial, a spot or a web video, every shot on the AV sheet has a frame. Together they are the storyboard: lined up with the words, timed to the second, played back with the voices, and printed for the wall. Change a shot on the sheet and the board follows.',
+    shot: 'help/short-form-board',
+    shotAlt: 'The storyboard: a frame for every shot, with its dialogue, action and time',
+    features: [
+      {
+        title: 'A frame beside every shot',
+        body: 'Each row of the sheet has a plate for its picture. Drop a picture or a clip on it, or click it to choose one, and the audio and visual beside it line up with the frame. Pictures are stored inside the project file, so the board travels with it when you send it.',
+        shot: 'modules/short-form',
+        shotAlt: 'The AV sheet: audio and visual side by side, with a frame and a duration on every row',
+      },
+      {
+        title: 'Timed to the second',
+        body: 'Each shot has the action before the line, the line, and the action after it. The line’s time is estimated from its words until you type your own. A clip brings its own length. Set the length you have to hit, and the sheet tells you when you are over.',
+      },
+      {
+        title: 'Play it like an animatic',
+        body: 'The timeline under the sheet shows the board one frame per shot, each as wide as the time it holds. Press Play and the frames advance at their durations while the audio is read aloud in the voices you have assigned. That is how you find out whether a thirty is really a thirty.',
+      },
+      {
+        title: 'Print the board for the wall',
+        body: 'Preview has two documents: the sheet, portrait, for the client and the producer, and the board, landscape, with frames in strips of four and the dialogue and action under each. Print either, or export it as a PDF.',
+        shot: 'help/short-form-preview',
+        shotAlt: 'A short-form project in Preview, ready to print',
+      },
+    ],
+    guide: 'short-form',
+    walkthrough: 'short-form',
   },
   {
     slug: 'read-back',

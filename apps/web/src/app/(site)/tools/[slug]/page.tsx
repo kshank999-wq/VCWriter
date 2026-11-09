@@ -61,9 +61,9 @@ export default async function ToolPage({ params }: { params: Params | Promise<Pa
         <Link href={`/help/${tool.guide}`} className="button secondary">
           Read the guide
         </Link>
-        {walkthroughBySlug(tool.slug) ? (
+        {walkthroughBySlug(tool.walkthrough ?? tool.slug) ? (
           <div className="walkthrough-offer">
-            <WalkthroughButton walkthrough={walkthroughBySlug(tool.slug)!} className="button secondary" />
+            <WalkthroughButton walkthrough={walkthroughBySlug(tool.walkthrough ?? tool.slug)!} className="button secondary" />
           </div>
         ) : null}
       </div>
@@ -109,7 +109,7 @@ export default async function ToolPage({ params }: { params: Params | Promise<Pa
 
       <section>
         <h2>The other rooms</h2>
-        <p className="lede">Every room comes with every module, in one purchase, on Windows and macOS.</p>
+        <p className="lede">One purchase includes every module and the rooms that come with it, on Windows and macOS.</p>
         <ToolChooser current={tool.slug} />
       </section>
     </>
