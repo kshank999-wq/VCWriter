@@ -244,6 +244,49 @@ export const WALKTHROUGHS: ReadonlyArray<Walkthrough> = [
       },
     ],
   },
+  {
+    slug: 'instructional',
+    label: 'See how a nonfiction book comes together',
+    title: 'An instructional book in six easy steps',
+    steps: [
+      {
+        title: 'Plan the book',
+        body: 'List your chapters, the sections in each and the subsections under them. Each is numbered as it will print, 1, 1.1, 1.1.1, and renumbers itself when you move one.',
+        shot: 'help/instructional-outliner',
+        alt: 'The book’s outline: chapters, sections and subsections, each numbered',
+      },
+      {
+        title: 'Write each section',
+        body: 'Write section by section, with the numbered headings set for you. Beside it, write the section’s summary, what the reader learned and review questions; tick In the book and they print at the end of the section.',
+        shot: 'modules/instructional',
+        alt: 'The book being written, with the section’s summary beside it marked In the book',
+      },
+      {
+        title: 'Cite your sources',
+        body: 'Keep every book, article and website in a references library. Put the cursor where it belongs and press Cite; the notes and bibliography are set in the style you choose.',
+        shot: 'help/instructional-references',
+        alt: 'The references library with three sources',
+      },
+      {
+        title: 'Contents and index, built for you',
+        body: 'The contents page is made from your chapters and sections, with their page numbers, and the index from the terms you mark as you write. Both keep up as the book changes.',
+        shot: 'help/instructional-preview',
+        alt: 'The book’s contents page, chapters and numbered sections with page numbers',
+      },
+      {
+        title: 'Polish it',
+        body: 'The Daily editor flags grammar, readability and style as you go, with a fix you can take or leave. The writing stays yours.',
+        shot: 'help/instructional-editors',
+        alt: 'The Daily editor’s notes on the book, each with a fix',
+      },
+      {
+        title: 'Set it as a book and publish',
+        body: 'Layout turns it into a book at a textbook size, with chapter openings and front and back pages. Print a ready-to-print PDF, or publish it as an eBook.',
+        shot: 'help/instructional-layout',
+        alt: 'The instructional book set as a book, open at chapter one',
+      },
+    ],
+  },
 ];
 
 export const walkthroughBySlug = (slug: string): Walkthrough | undefined => WALKTHROUGHS.find((one) => one.slug === slug);

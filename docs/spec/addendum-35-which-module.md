@@ -557,3 +557,30 @@ seven.
 - the cast page filled in (`withCastPage`): each role's line and playing age,
   the time, the place and a note. Without it the shot showed the dialog's
   placeholder examples (*a kitchen in Duluth*), which read as content.
+
+### 14.5 The instructional book
+
+**See how a nonfiction book comes together**, in six steps:
+
+1. **Plan the book**: the numbered outline (`instructional-outliner`).
+2. **Write each section**: the book with the section's summary beside it,
+   marked In the book (`modules/instructional`, retaken).
+3. **Cite your sources**: the references library (`instructional-references`,
+   new).
+4. **Contents and index, built for you**: the contents page with numbered
+   sections and page numbers (`instructional-preview`, new).
+5. **Polish it**: the Daily editor (`instructional-editors`, new).
+6. **Set it as a book and publish**: Layout at chapter one
+   (`instructional-layout`, new).
+
+**The *Plain and Clear* demo was filled out** (`withSourcesAndAids`):
+
+- three real sources on plain writing in its references library: Strunk and
+  White, Gowers, Flesch
+- a summary and two review questions on its first section, both in the book
+
+Without these, the library read *References 0* and the end-of-section panel
+*Nothing written yet*.
+
+**Where it appears:** on `/write/instructional`, and as a sixth button in the
+`/workflow` band.

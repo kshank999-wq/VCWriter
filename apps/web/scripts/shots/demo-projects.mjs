@@ -44,6 +44,10 @@ import {
   setSceneGrid,
   addUnit,
   addBeat,
+  addReference,
+  aidFor,
+  writeAid,
+  approveAid,
 } from '@vcwriter/domain';
 
 const classic = (name) => readFileSync(resolve(import.meta.dirname, 'classics', name), 'utf8');
@@ -245,6 +249,31 @@ const withCastPage = (file) => {
   };
 };
 
+/**
+ * The instructional book's sources and its first section's learning aids, so
+ * the references library and the end-of-section panel have something in them.
+ * The sources are real, long-standing books on plain writing.
+ */
+const withSourcesAndAids = (file) => {
+  let next = file;
+  const sources = [
+    { type: 'book', authors: ['Strunk, William', 'White, E. B.'], title: 'The Elements of Style', publisher: 'Macmillan', place: 'New York', date: '1959' },
+    { type: 'book', authors: ['Gowers, Ernest'], title: 'The Complete Plain Words', publisher: 'HMSO', place: 'London', date: '1954' },
+    { type: 'book', authors: ['Flesch, Rudolf'], title: 'The Art of Plain Talk', publisher: 'Harper & Brothers', place: 'New York', date: '1946' },
+  ];
+  for (const source of sources) next = addReference(next, source).file;
+  const first = unitsInStoryOrder(next).flatMap((unit) => beatsForUnit(next, unit.id))[0];
+  if (!first) return next;
+  const summary = aidFor(next, first.id, 'summary');
+  next = approveAid(writeAid(summary.file, summary.aid.id, { text: 'A sentence carries one idea. When it carries two, split it; when the action hides in a noun, give it back to the verb.' }), summary.aid.id);
+  const quiz = aidFor(next, first.id, 'quiz');
+  next = approveAid(writeAid(quiz.file, quiz.aid.id, { questions: [
+    { prompt: 'Why does a sentence with two ideas tire the reader?', answer: 'The reader has to hold both at once before either is finished.' },
+    { prompt: 'Rewrite: "The committee made a decision to delay."', answer: 'The committee decided to delay.' },
+  ] }), quiz.aid.id);
+  return next;
+};
+
 /** Setups and payoffs for the screenplay, placed on its beats. */
 const withSetups = (file) => {
   let next = file;
@@ -415,7 +444,7 @@ export function demoProjects() {
     ]],
   ]);
 
-  projects.instructional = withOutline(withNotes(
+  projects.instructional = withSourcesAndAids(withOutline(withNotes(
     titled(
       buildProjectFromImport(textToProse(INSTRUCTIONAL), { format: 'instructional', title: 'Plain and Clear', author: 'A. Writer' }).file,
       ['One idea, one sentence', 'What a paragraph does'],
@@ -436,7 +465,7 @@ export function demoProjects() {
       ['scene', 'Transitions that carry the reader'],
     ]],
     ['chapter', 'Revising for Clarity', [['scene', 'Reading aloud'], ['scene', 'Cutting by a third']]],
-  ]);
+  ]));
 
   projects.short_story = withOutline(withNotes(
     buildProjectFromImport(textToProse(STORIES), { format: 'short_story', title: 'Tales of Mystery', author: 'Edgar Allan Poe', stories: 'many' }).file,
