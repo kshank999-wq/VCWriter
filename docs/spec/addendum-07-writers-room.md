@@ -1737,3 +1737,46 @@ Each screen is a link (`?view=assignments`), so a reload, a shared link or the
 Back button lands on the same screen. Numbers beside a menu item say what is
 waiting there. On a narrow screen the menu becomes a row of buttons above the
 screen.
+
+## 27. Compare and mark up
+
+From Ken, after the first submission went through: *a section for markup and
+comparing … see three versions across the screen at a time, or two, or just
+the one, and mark it up … like how you can mark up a PDF … send that back …
+and then there needs to be a notification that there's been a markup to that
+writer.*
+
+**Compare and mark up** (`?view=compare`) shows one, two or three panes side
+by side. Each pane holds any version the visitor may read, picked from a list
+labelled with its writer and shown in the writer's colour. The version reads
+as the script prints, on white paper in Courier.
+
+**The tools are a PDF reader's:** highlight (four colours), strike through,
+underline, a note, and suggested wording. Select words on one line of a
+version, then pick a tool. A note and a suggestion ask for their words. Marks
+are kept in the browser until they are sent, so a reload loses nothing.
+
+**Send markup to <writer>** sends the marks, with an optional covering note,
+to the version's own writer. The server works out who that is from the version
+the sender is allowed to read; the browser cannot name a recipient. The writer:
+
+- gets an email, unless they have turned room email off (`noticeForMarkup`)
+- sees a count on **Markups** in the menu
+- sees a notice on the Overview
+
+Opening a markup shows the version with every mark drawn on it, and marks the
+markup *seen*.
+
+**A markup is about a version and never inside it** (`packages/domain/src/
+markup.ts`). Versions cannot be changed (§9). Each mark names a manuscript
+element by id, and a span of that element's text by character offset, with
+the words it was made on (`quote`). Element ids are shared by every branch's
+copy of a scene, so a mark can be read against the same line in another pass.
+
+**Storage:** `room_markups` (migration 0079). Who can do what:
+
+- **Read:** the sender, the writer it went to, and whoever runs the room.
+- **Send:** anyone who writes, edits or runs the room. A viewer cannot.
+- **Change afterwards:** only the writer it went to, and only to say they
+  have seen it. A trigger holds every other column.
+- **Delete:** no one (§1).

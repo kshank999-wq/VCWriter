@@ -60,7 +60,7 @@ export const mayEmail = (seat: Pick<Seat, 'state' | 'email' | 'notifyByEmail'>):
 
 // ------------------------------------------------------------ what goes out
 
-export type NoticeKind = 'mention' | 'assigned' | 'decided';
+export type NoticeKind = 'mention' | 'assigned' | 'decided' | 'markup';
 
 export interface Notice {
   kind: NoticeKind;

@@ -31,6 +31,7 @@ import {
   queueOf,
   ROLE_NAMES,
   ASSIGNMENT_STATE_NAMES,
+  unseenMarkups,
   describeAssignment,
   isOverdue,
   type Assignment,
@@ -60,6 +61,8 @@ import { Assist } from './assist';
 import { Spend } from './spend';
 import { NotifyMe } from './notify';
 import { Billing } from './billing';
+import { Compare, MarkupView, type VersionChoice } from './compare';
+import { markupsIn } from '@/lib/markups';
 import { loadBilling, roomPriceCents, seatPriceCents, settleCheckout } from '@/lib/room-billing';
 import { standingFor } from '@/lib/room-spend';
 import { assistRefusalText } from '@vcwriter/domain';
@@ -84,7 +87,7 @@ export default async function RoomPage({
   searchParams,
 }: {
   params: { roomId: string };
-  searchParams?: { checkout?: string; view?: string };
+  searchParams?: { checkout?: string; view?: string; markup?: string };
 }) {
   const user = await currentUser();
   if (!user) {
@@ -110,13 +113,16 @@ export default async function RoomPage({
   // The room's lines and the points recorded on them, read as this visitor —
   // so what comes back is what they may see, and the dashboard says the rest
   // in words (§7).
-  const [branches, versions, submissions, assignments, comments, since] = await Promise.all([
+  const [branches, versions, submissions, assignments, comments, since, markups] = await Promise.all([
     branchesIn(view.room.id),
     versionsFor(view.room.id),
     submissionsIn(view.room.id),
     assignmentsIn(view.room.id),
     commentsIn(view.room.id),
     lastReadAt(view.room.id, user.id),
+    // Not there until the markups migration is (0079): an empty list, not a
+    // broken room.
+    markupsIn(view.room.id).catch(() => []),
   ]);
   const desks = desksIn({ seats: view.seats, branches, versions, viewer: { userId: user.id } });
   const master = masterVersion(versions);
@@ -288,6 +294,22 @@ export default async function RoomPage({
   });
   const open = listed.filter((one) => one.state !== 'done' && one.state !== 'cancelled');
 
+  // Every version the visitor may read, for Compare (§27): newest first, each
+  // labelled with its writer so three panes of the same scene are told apart.
+  const versionChoices: VersionChoice[] = versions.map((version) => {
+    const writer = view.seats.find((seat) => seat.userId === version.authorId);
+    const name = writer ? seatName(writer) : version.authorId === user.id ? 'You' : 'The showrunner';
+    return {
+      id: version.id,
+      label: `${version.kind === 'master' ? 'Master' : name} · ${describeVersion(version)}`,
+      writer: name,
+      colour: writer?.colour || '#c9a45c',
+      authorId: version.authorId,
+    };
+  });
+  const waitingMarkups = unseenMarkups(markups, user.id);
+  const versionLabel = (versionId: string) => versionChoices.find((one) => one.id === versionId)?.label ?? 'A version';
+
   type Screen = { key: string; label: string; count?: number };
   const screens: Screen[] = [
     { key: 'overview', label: 'Overview' },
@@ -295,6 +317,8 @@ export default async function RoomPage({
     { key: 'submissions', label: deciding ? 'Review queue' : 'What you have sent', count: deciding ? waiting : undefined },
     { key: 'ideas', label: 'Ideas', count: boxes.length },
     ...(curating ? [{ key: 'tray', label: 'Curation Tray', count: awaiting.length }] : []),
+    { key: 'compare', label: 'Compare and mark up' },
+    { key: 'markups', label: 'Markups', count: waitingMarkups.length || undefined },
     { key: 'drafts', label: 'Drafts' },
     { key: 'talk', label: 'Talk', count: news.length > 0 ? news.length : undefined },
     { key: 'history', label: 'History' },
@@ -406,6 +430,13 @@ export default async function RoomPage({
                 <h2>Who is in the room</h2>
                 {people}
               </section>
+
+              {waitingMarkups.length > 0 ? (
+                <p className="notice">
+                  {waitingMarkups.length === 1 ? 'A version of yours has' : `${waitingMarkups.length} of your versions have`}{' '}
+                  come back marked up. <a href={hrefFor('markups')}>Read the markups →</a>
+                </p>
+              ) : null}
 
               <WhatIsNew news={news} seats={view.seats} />
 
@@ -537,6 +568,85 @@ export default async function RoomPage({
                 refusal={mergeRefusal}
               />
             </section>
+          ) : null}
+
+          {screen === 'compare' ? (
+            <section className="room-panel">
+              <h2>Compare and mark up</h2>
+              <p className="small">
+                Put one, two or three versions side by side. Select words in a version and pick a tool to highlight,
+                strike, underline, note or suggest new wording, then send the markup back to that version’s writer.
+                They are told by email and it waits for them under Markups.
+              </p>
+              <Compare roomId={view.room.id} versions={versionChoices} canMark={view.role !== 'viewer'} />
+            </section>
+          ) : null}
+
+          {screen === 'markups' ? (
+            (() => {
+              const chosen = markups.find((one) => one.id === searchParams?.markup) ?? null;
+              const received = markups.filter((one) => one.recipientId === user.id);
+              const sentByYou = markups.filter((one) => one.authorId === user.id);
+              const others = markups.filter((one) => one.recipientId !== user.id && one.authorId !== user.id);
+              const row = (one: (typeof markups)[number]) => (
+                <li key={one.id} className={one.state === 'sent' && one.recipientId === user.id ? 'unseen' : undefined}>
+                  <span className="room-dot" style={{ background: colourOf(one.authorId) }} />
+                  <span>
+                    <a href={`${hrefFor('markups')}&markup=${one.id}`}>
+                      <strong>{versionLabel(one.versionId)}</strong>
+                    </a>
+                    <span className="small block muted">
+                      {nameOf(one.authorId)} → {nameOf(one.recipientId)} · {one.marks.length}{' '}
+                      {one.marks.length === 1 ? 'mark' : 'marks'} · {one.sentAt.slice(0, 10)}
+                      {one.state === 'sent' && one.recipientId === user.id ? ' · new' : one.state === 'seen' ? ' · opened' : ''}
+                    </span>
+                  </span>
+                </li>
+              );
+              return (
+                <>
+                  {chosen ? (
+                    <section className="room-panel">
+                      <h2>{versionLabel(chosen.versionId)}</h2>
+                      <p className="small">
+                        Marked up by {nameOf(chosen.authorId)} for {nameOf(chosen.recipientId)} on {chosen.sentAt.slice(0, 10)}.
+                      </p>
+                      {chosen.note ? <p className="notice">{chosen.note}</p> : null}
+                      <MarkupView
+                        roomId={view.room.id}
+                        versionId={chosen.versionId}
+                        marks={chosen.marks}
+                        markupId={chosen.id}
+                        mine={chosen.recipientId === user.id && chosen.state === 'sent'}
+                      />
+                      <p className="small" style={{ marginTop: 12 }}>
+                        <a href={hrefFor('markups')}>← All markups</a>
+                      </p>
+                    </section>
+                  ) : null}
+                  <section className="room-panel">
+                    <h2>Sent to you</h2>
+                    {received.length === 0 ? <p className="small">Nothing has been marked up for you yet.</p> : <ul className="room-due">{received.map(row)}</ul>}
+                  </section>
+                  <section className="room-panel">
+                    <h2>Sent by you</h2>
+                    {sentByYou.length === 0 ? (
+                      <p className="small">
+                        You have not sent a markup yet. Use <a href={hrefFor('compare')}>Compare and mark up</a>.
+                      </p>
+                    ) : (
+                      <ul className="room-due">{sentByYou.map(row)}</ul>
+                    )}
+                  </section>
+                  {others.length > 0 ? (
+                    <section className="room-panel">
+                      <h2>The rest of the room</h2>
+                      <ul className="room-due">{others.map(row)}</ul>
+                    </section>
+                  ) : null}
+                </>
+              );
+            })()
           ) : null}
 
           {screen === 'drafts' ? (

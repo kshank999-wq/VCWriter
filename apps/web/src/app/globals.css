@@ -3208,3 +3208,100 @@ dialog.walkthrough::backdrop { background: rgba(0, 0, 0, 0.72); }
   }
   .room-menu a { padding: 8px 10px; }
 }
+
+/* Compare and mark up (addendum 07 §27): versions side by side on paper,
+   marked the way a PDF is marked. */
+.mk-layout { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.mk-panes { display: grid; gap: 12px; }
+.mk-panes-1 { grid-template-columns: minmax(0, 1fr); }
+.mk-panes-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.mk-panes-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.mk-pane {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-top: 4px solid var(--writer, var(--gold));
+  border-radius: 4px;
+  background: var(--bg);
+}
+.mk-pane-head select { width: 100%; }
+.mk-tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.mk-tool {
+  padding: 4px 9px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg-raised-2);
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+.mk-tool:hover { border-color: var(--gold); }
+.mk-tool-strike { text-decoration: line-through; }
+.mk-tool-underline { text-decoration: underline; }
+.mk-swatches { display: inline-flex; gap: 4px; margin-left: 4px; }
+.mk-swatch { width: 18px; height: 18px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; }
+.mk-swatch.on { border-color: var(--text); }
+.mk-ask { display: grid; gap: 6px; padding: 8px; border: 1px solid var(--gold-deep); border-radius: 3px; }
+.mk-ask-row { display: flex; gap: 6px; justify-content: flex-end; }
+
+/* The page itself: white paper and Courier, as the script prints. */
+.mk-page {
+  max-height: 70vh;
+  overflow: auto;
+  padding: 18px 16px;
+  border-radius: 2px;
+  background: #fdfcf8;
+  color: #1a1a1a;
+  font-family: 'Courier Prime', 'Courier New', Courier, monospace;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.mk-review .mk-page { max-height: none; }
+.mk-line { margin: 0 0 10px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.mk-scene_heading { font-weight: 700; text-transform: uppercase; margin-top: 16px; }
+.mk-character { margin-left: 38%; text-transform: uppercase; margin-bottom: 0; }
+.mk-parenthetical { margin-left: 30%; margin-bottom: 0; }
+.mk-dialogue { margin-left: 20%; margin-right: 15%; }
+.mk-transition { text-align: right; text-transform: uppercase; }
+.mk-highlight { border-radius: 2px; }
+.mk-strike { text-decoration: line-through; text-decoration-color: #c0392b; text-decoration-thickness: 2px; }
+.mk-underline { text-decoration: underline; text-decoration-color: #2563eb; text-decoration-thickness: 2px; }
+.mk-strike.mk-underline { text-decoration-line: line-through underline; }
+.mk-note { border-bottom: 2px dotted #b45309; cursor: help; }
+.mk-suggest { text-decoration: line-through; text-decoration-color: #c0392b; }
+.mk-insert { margin-left: 4px; padding: 0 3px; border-radius: 2px; background: #d9f2df; color: #14532d; text-decoration: none; }
+.mk-pin { margin-left: 4px; color: #b45309; cursor: help; }
+
+.mk-foot { display: grid; gap: 8px; }
+.mk-list { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 13px; }
+.mk-list li { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
+.mk-kind {
+  padding: 0 6px;
+  border-radius: 2px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: #1a1a1a;
+  background: #e5e1d6;
+}
+.mk-said { flex: 1 1 200px; min-width: 0; overflow-wrap: anywhere; }
+.mk-review { display: grid; gap: 12px; }
+.room-due li.unseen strong { color: var(--gold); }
+
+@media (max-width: 860px) {
+  .mk-panes-2,
+  .mk-panes-3 { grid-template-columns: minmax(0, 1fr); }
+}
+.mk-remove {
+  margin-left: auto;
+  padding: 1px 8px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.mk-remove:hover { color: var(--text); border-color: var(--gold-deep); }
