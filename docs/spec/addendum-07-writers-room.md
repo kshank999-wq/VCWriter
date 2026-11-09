@@ -1710,3 +1710,30 @@ Migration **0078** adds `request_is_service_role()` and lets both guards pass a
 service-role request. Tested live in both directions: a service-role update
 passes, and a signed-in member changing their own seat's state is still
 refused. The advisors raise nothing new.
+
+## 26. A menu on the right, one screen at a time
+
+From Ken, after the first assignment went through: *create a right-hand menu
+bar that has all these things, because it's too big along the page … when you
+click on it, it opens that screen.*
+
+The room page is now a menu on the right and one screen beside it. The page
+head keeps the room's name and the button that opens the script.
+
+| Screen | What is on it |
+| --- | --- |
+| **Overview** (the front page) | The project and its numbers: who is in the room, open assignments, waiting for review, ideas in, versions kept, the master. Who is in the room, showrunner first, each in their colour. What's new. The next three assignments due. |
+| **Assignments** | Every assignment **by date**, soonest first; undated ones go after the dated ones. A writer sees their own; the showrunner sees the room's, with who has each. A writer reports progress here, and the showrunner gives out work here. |
+| **Review queue** / **What you have sent** | The queue. |
+| **Ideas** | The brainstorming room. |
+| **Curation Tray** | Shown to whoever curates. |
+| **Drafts** | Desk by desk, and the master. |
+| **Talk** | Threads about the room itself. |
+| **History** | What has happened, and taking the room out. |
+| **Read it with AI** | Where AI is configured. |
+| **People and seats** | Everyone, invitations, seats, the subscription, your stamp and your email setting. |
+
+Each screen is a link (`?view=assignments`), so a reload, a shared link or the
+Back button lands on the same screen. Numbers beside a menu item say what is
+waiting there. On a narrow screen the menu becomes a row of buttons above the
+screen.

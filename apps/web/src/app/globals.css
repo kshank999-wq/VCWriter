@@ -3099,3 +3099,112 @@ dialog.walkthrough::backdrop { background: rgba(0, 0, 0, 0.72); }
   .room-grid { grid-template-columns: minmax(0, 1fr); }
   .room-head { align-items: flex-start; }
 }
+
+/* The room's right-hand menu (addendum 07 §26): one screen at a time beside
+   the menu that chooses it. */
+.room-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  gap: 24px;
+  align-items: start;
+}
+.room-screen {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.room-menu {
+  position: sticky;
+  top: 16px;
+  display: grid;
+  gap: 2px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-raised);
+}
+.room-menu a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 3px;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+}
+.room-menu a:hover,
+.room-menu a:focus-visible { background: var(--bg-raised-2); }
+.room-menu a.on {
+  background: var(--bg-raised-2);
+  color: var(--gold);
+  box-shadow: inset 3px 0 0 var(--gold);
+}
+.room-menu-count {
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--gold-deep);
+  color: var(--text);
+  font-size: 12px;
+  text-align: center;
+}
+
+.room-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  margin: 16px 0 0;
+}
+.room-stats div {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg);
+}
+.room-stats dt {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.room-stats dd {
+  margin: 4px 0 0;
+  font-size: 22px;
+  color: var(--text);
+}
+.room-stats dd a { color: var(--gold); text-decoration: none; }
+
+.room-due {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.room-due li { display: flex; align-items: flex-start; gap: 10px; }
+.room-due li.late strong,
+.room-dashboard tr.late td { color: #e07a73; }
+.room-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-top: 5px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  vertical-align: baseline;
+}
+
+@media (max-width: 860px) {
+  /* On a narrow screen the menu goes above the screen as a row of buttons. */
+  .room-layout { grid-template-columns: minmax(0, 1fr); }
+  .room-menu {
+    position: static;
+    order: -1;
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .room-menu a { padding: 8px 10px; }
+}
