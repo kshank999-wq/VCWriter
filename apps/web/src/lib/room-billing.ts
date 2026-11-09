@@ -9,7 +9,7 @@ import {
   type SubscriptionState,
 } from '@vcwriter/domain';
 import { env } from './env';
-import { stripe } from './stripe';
+import { CHECKOUT_API_VERSION, stripe } from './stripe';
 import { adminClient } from './supabase';
 
 /**
@@ -149,7 +149,7 @@ export const startSubscription = async (input: {
     // a single charge priced off an IP address and is not for one that has to
     // be re-rated every month from what was saved.
     billing_address_collection: 'required',
-  });
+  }, { apiVersion: CHECKOUT_API_VERSION });
 
   return session.url ?? null;
 };

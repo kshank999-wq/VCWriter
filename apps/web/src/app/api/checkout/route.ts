@@ -4,7 +4,7 @@ import { DISCOUNT_REFUSAL, isRedeemable, PLANS, platformSchema } from '@vcwriter
 import { env } from '@/lib/env';
 import { findDiscount } from '@/lib/discounts';
 import { priceIdFor } from '@/lib/pricing';
-import { stripe } from '@/lib/stripe';
+import { CHECKOUT_API_VERSION, stripe } from '@/lib/stripe';
 import { currentUser } from '@/lib/supabase';
 import { RULES, rateLimit } from '@/lib/rate-limit';
 import { OWN_PRODUCT } from '@/lib/checkout-kind';
@@ -116,7 +116,7 @@ export async function POST(request: Request): Promise<Response> {
       // the collected address onto it, and Stripe refuses the field without a
       // `customer`.
       billing_address_collection: 'required',
-    });
+    }, { apiVersion: CHECKOUT_API_VERSION });
 
     if (!session.url) {
       return NextResponse.json({ error: 'Stripe did not return a checkout URL' }, { status: 502 });
