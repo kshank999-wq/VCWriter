@@ -651,3 +651,11 @@ projects. A sheet's audio column names its speaker inside the line and never
 has a cue above it. Tested in `editor-daily-short-form.test.ts`, which fails
 on the old code. The demo sheet now reads *Nothing to flag*. That is honest,
 but an empty screen, so the walkthrough still has no editors step.
+
+**The series demo's first episode (14.3, fixed).** The demo built its first
+script through the project builder and appended the other two, without
+`ensureFirstEpisode`. So *A Scandal in Bohemia* had no episode heading, and
+the contents page listed two episodes, numbered from *The Red-Headed
+League*. It now calls `ensureFirstEpisode`, as the Import dialog does. All
+three episodes are listed and marked on the track and the timeline, and the
+series shots are retaken.

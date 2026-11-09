@@ -17,6 +17,7 @@ import {
   addResearchItem,
   addRow,
   appendImportedEpisode,
+  ensureFirstEpisode,
   buildProjectFromImport,
   createProjectFile,
   mainDocument,
@@ -402,6 +403,9 @@ export function demoProjects() {
   {
     const [first, ...rest] = SERIES;
     let file = buildProjectFromImport(readFinalDraft(first.xml), { format: 'series', title: 'Sherlock Holmes', author: 'after Arthur Conan Doyle', fileCast: true }).file;
+    // The first script is an episode too, as the Import dialog makes it: its
+    // own heading and front page, so the season lists all three.
+    file = ensureFirstEpisode(file, { title: first.title });
     for (const next of rest) {
       const added = appendImportedEpisode(file, readFinalDraft(next.xml), { title: next.title });
       if (added) file = added.file;
