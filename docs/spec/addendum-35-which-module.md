@@ -744,3 +744,17 @@ That stopped being true once the citations and the storyboard had pages,
 since each belongs to particular modules. It now says one purchase includes
 every module and the rooms that come with it.
 
+### 14.12 The Writers Room, promoted
+
+`/writers-room` is a page of its own, not a tool page, because the room has
+no help guide yet. It also has no screenshots: its screens need a real
+signed-in account and a room with people in it.
+
+Every claim on the page is one addendum 07 records as built. **The room is
+not sold here.** Seat billing has never run against a live Stripe price
+(addendum 07 §23), and Ken wants the room finished before it goes on sale.
+So the page says *being finished and not on sale yet*, and its buttons go to
+*your rooms* and to VC Writer itself.
+
+The Writers Room box on the screenplay and series pages links to the page.
+
