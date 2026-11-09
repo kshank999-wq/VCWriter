@@ -659,3 +659,29 @@ the contents page listed two episodes, numbered from *The Red-Headed
 League*. It now calls `ensureFirstEpisode`, as the Import dialog does. All
 three episodes are listed and marked on the track and the timeline, and the
 series shots are retaken.
+
+### 14.8 The tools: Research, the Outliner, the Story Sculptor
+
+From Ken: *we need to do a walk through of the research, notes app, sculptor,
+outliner.* Each tool page (`/tools/<slug>`) shows its walkthrough's button
+beside the guide, and the `/workflow` band has a second row for the tools.
+
+- **Research**, six steps: gather everything, drop notes on the story,
+  rewrite it then use it, notes beside the scene, plant it then pay it off, a
+  page for every character. All are existing shots.
+- **The Outliner**, six steps: type the plan as rows, every level its own
+  colour, move things around, send it to the track, numbered for books,
+  beside the story map. All are existing shots.
+- **The Story Sculptor**, three steps: the whole story on one map, open any
+  card as its own map (`sculptor-card-map`, new), your outline beside the
+  map.
+
+Two Sculptor shots were tried and dropped:
+
+- the Export menu opens half off the screen's left edge;
+- a link's label cannot be clicked from the capture script.
+
+**VC Writer Notes is not done.** Its walkthrough needs pictures of the phone
+app. The browser version at `/notes/app` asks for a real signed-in account,
+so the capture script cannot reach its screens. It waits on screenshots from
+Ken's phone.

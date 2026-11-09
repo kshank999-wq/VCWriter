@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { TOOL_PAGES, toolBySlug } from '@/lib/tools';
 import { ToolChooser } from '../../tool-chooser';
+import { WalkthroughButton } from '../../walkthrough';
+import { walkthroughBySlug } from '@/lib/walkthroughs';
 
 type Params = { slug: string };
 
@@ -59,6 +61,11 @@ export default async function ToolPage({ params }: { params: Params | Promise<Pa
         <Link href={`/help/${tool.guide}`} className="button secondary">
           Read the guide
         </Link>
+        {walkthroughBySlug(tool.slug) ? (
+          <div className="walkthrough-offer">
+            <WalkthroughButton walkthrough={walkthroughBySlug(tool.slug)!} className="button secondary" />
+          </div>
+        ) : null}
       </div>
 
       <Shot src={tool.shot} alt={tool.shotAlt} />

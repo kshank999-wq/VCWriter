@@ -355,6 +355,117 @@ export const WALKTHROUGHS: ReadonlyArray<Walkthrough> = [
       },
     ],
   },
+  {
+    slug: 'research',
+    label: 'See how Research works',
+    title: 'Research in six easy steps',
+    steps: [
+      {
+        title: 'Gather everything in one place',
+        body: 'Notes, clippings, places, characters and ideas, in folders of your own. Notes you dictate on your phone arrive here too.',
+        shot: 'help/research',
+        alt: 'Research: folders of notes, with the story’s outline beside them',
+      },
+      {
+        title: 'Drop notes on the story',
+        body: 'Drag a note onto a scene, chapter or section in the outline beside your folders. Open that part of the story and its notes are waiting for it.',
+        shot: 'help/research-filed',
+        alt: 'A section opened in Research, with the notes dropped on it',
+      },
+      {
+        title: 'Rewrite it, then use it',
+        body: 'Open a note beside a clean page: the original on one side, your rewrite on the other. Then add it to the story as a beat, in the place you filed it.',
+        shot: 'help/research-filed-rewrite',
+        alt: 'A note open to rewrite, with Add as beat',
+      },
+      {
+        title: 'Notes beside the scene',
+        body: 'When you open a scene, its notes are listed down the side: red until you use one, green once you have. Hide the used ones to see what is left.',
+        shot: 'help/scene-notes',
+        alt: 'A scene box with its notes down the right, red until used',
+      },
+      {
+        title: 'Plant it, then pay it off',
+        body: 'Name a payoff and mark the setups that earn it, each placed on a scene. A payoff stays on the list until you deliver it.',
+        shot: 'help/setups-payoffs',
+        alt: 'Setups and payoffs, each setup placed on a scene',
+      },
+      {
+        title: 'A page for every character',
+        body: 'Who each person is, what they want, their arc and their relationships, and every scene they appear in.',
+        shot: 'help/character-creator',
+        alt: 'The Character Creator with a character open',
+      },
+    ],
+  },
+  {
+    slug: 'outliner',
+    label: 'See how the Outliner works',
+    title: 'The Outliner in six easy steps',
+    steps: [
+      {
+        title: 'Type the plan as rows',
+        body: 'Type a row, press Return for the next, and Tab to tuck it under the one above. Your research sits on a shelf at the left, ready to drag in.',
+        shot: 'help/outliner',
+        alt: 'The Outliner: scenes and beats in rows, research on the shelf at the left',
+      },
+      {
+        title: 'Every level its own colour',
+        body: 'Chapters, sections and beats each have a colour, so the shape of the plan is clear at a glance. Fold a branch away when you do not need it.',
+        shot: 'help/novel-outliner',
+        alt: 'A novel’s outline, each level in its own colour',
+      },
+      {
+        title: 'Move things around',
+        body: 'Drag a row onto another to put it inside, or between two to move it. Shift-click to pick several and move them together; whatever is under a row goes with it.',
+        shot: 'help/series-outliner',
+        alt: 'A season of episodes planned as rows',
+      },
+      {
+        title: 'Send it to the track',
+        body: 'When the plan is ready, add a row, or Add all to track, and every scene and beat lands on the track in story order, ready to write.',
+        shot: 'modules/screenplay',
+        alt: 'The plan on the track, scenes and beats in order beside the script',
+      },
+      {
+        title: 'Numbered for books',
+        body: 'An instructional book is planned in chapters, sections and subsections, each numbered as it will print, renumbering itself as you move them.',
+        shot: 'help/instructional-outliner',
+        alt: 'A book outline: chapters, sections and subsections, numbered',
+      },
+      {
+        title: 'Beside the story map',
+        body: 'Open the Outliner next to the Story Sculptor and drag any row onto the map, where it becomes a card.',
+        shot: 'help/sculptor-outliner',
+        alt: 'The Outliner open beside the Story Sculptor',
+      },
+    ],
+  },
+  {
+    slug: 'story-sculptor',
+    label: 'See how the Story Sculptor works',
+    title: 'The Story Sculptor in three easy steps',
+    steps: [
+      {
+        title: 'See the whole story on one map',
+        body: 'Frames for acts, cards for plot points, scenes and beats, and your cast placed where they matter. Link two cards and say how: one causes the other, sets it up, or is in conflict with it.',
+        shot: 'help/sculptor',
+        alt: 'The Story Sculptor: acts, plot points, scenes and the cast, linked',
+      },
+      {
+        title: 'Open any card as its own map',
+        body: 'Double-click a card and it opens as a map of its own, to work out what happens inside it. The path back to the whole story stays at the top.',
+        shot: 'help/sculptor-card-map',
+        alt: 'A plot point opened as its own map, with the way back to the whole story at the top',
+      },
+      {
+        title: 'Your outline beside the map',
+        body: 'Open the Outliner next to the map and drag any act, scene or beat onto it, where it becomes a linked card. Save the map as a picture or a PDF to print or send.',
+        shot: 'help/sculptor-outliner',
+        alt: 'The Story Sculptor with the Outliner open beside it',
+      },
+    ],
+  },
 ];
 
 export const walkthroughBySlug = (slug: string): Walkthrough | undefined => WALKTHROUGHS.find((one) => one.slug === slug);

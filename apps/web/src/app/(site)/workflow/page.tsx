@@ -127,6 +127,7 @@ export default function WorkflowPage() {
             Plan it, write it, and watch it become a screenplay, a series, a play, a novel, a collection, a nonfiction book, a commercial or a document. A few short steps each, no jargon.
           </p>
         </div>
+        <div className="band-groups">
         <span className="band-buttons">
           <WalkthroughButton walkthrough={walkthroughBySlug('screenplay')!} />
           <WalkthroughButton walkthrough={walkthroughBySlug('novel')!} className="button secondary" />
@@ -137,6 +138,13 @@ export default function WorkflowPage() {
           <WalkthroughButton walkthrough={walkthroughBySlug('short-form')!} className="button secondary" />
           <WalkthroughButton walkthrough={walkthroughBySlug('document')!} className="button secondary" />
         </span>
+        <p className="band-note">And the tools that work across every kind of writing:</p>
+        <span className="band-buttons">
+          <WalkthroughButton walkthrough={walkthroughBySlug('research')!} className="button secondary" />
+          <WalkthroughButton walkthrough={walkthroughBySlug('outliner')!} className="button secondary" />
+          <WalkthroughButton walkthrough={walkthroughBySlug('story-sculptor')!} className="button secondary" />
+        </span>
+        </div>
       </section>
 
       <section>
