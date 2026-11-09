@@ -1694,3 +1694,19 @@ in words.
 can be given work. Before anyone has, the menu used to show an empty list and
 a greyed-out button, and Ken took that for broken. It now names who has been
 invited and says they must accept the invitation first.
+
+### 25.1 Accepting an invitation, and the guards that refused the server
+
+The first real acceptance failed with *"Your own seat is yours to be quiet on,
+and nothing else"* (digest 3740873435). Migration 0044's seat guard, like
+0033's assignment guard, limits which columns a seat holder may change on
+their own row. Both claimed the server's changes *"go through untouched"*, but
+a trigger fires for the service role too. The guards' only way through was
+`curates_room()`, which asks `auth.uid()`, and the server has no user. So the
+server's update that turns an invitation into a seat was refused. The same
+would have stopped a showrunner calling off an assignment.
+
+Migration **0078** adds `request_is_service_role()` and lets both guards pass a
+service-role request. Tested live in both directions: a service-role update
+passes, and a signed-in member changing their own seat's state is still
+refused. The advisors raise nothing new.
