@@ -22,7 +22,6 @@ import {
   ideaBoxes,
   ideasIn,
   newsFor,
-  owedBySeat,
   parseProjectFile,
   sequenceOf,
   describeVersion,
@@ -30,16 +29,12 @@ import {
   masterVersion,
   queueOf,
   ROLE_NAMES,
-  ASSIGNMENT_STATE_NAMES,
   unseenMarkups,
   workIn,
-  workOf,
-  workWaitingOn,
-  WORK_KIND_NAMES,
-  WORK_STAGES,
-  WORK_STAGE_MEANINGS,
-  WORK_STAGE_NAMES,
-  type WorkItem,
+  tasksFrom,
+  needsActionFrom,
+  WORKFLOW_SECTIONS,
+  type WorkflowSection,
   describeAssignment,
   isOverdue,
   type Assignment,
@@ -60,9 +55,7 @@ import { masterNow, piecesFor, trayIn } from '@/lib/curation';
 import { commentsIn, lastReadAt, markRead } from '@/lib/comments';
 import { Seats } from './seats';
 import { Desks } from './desks';
-import { Queue } from './queue';
 import { Ideas } from './ideas';
-import { WhoOwesWhat, YourAsks } from './assignments';
 import { Tray } from './tray';
 import { Talk, Trail, WhatIsNew } from './talk';
 import { Assist } from './assist';
@@ -71,6 +64,7 @@ import { NotifyMe } from './notify';
 import { Billing } from './billing';
 import { Compare, MarkupView, type VersionChoice } from './compare';
 import { MarkupActions } from './markup-actions';
+import { Board, TASK_TABS, type TaskTab } from './board';
 import { markupsIn } from '@/lib/markups';
 import { loadBilling, roomPriceCents, seatPriceCents, settleCheckout } from '@/lib/room-billing';
 import { standingFor } from '@/lib/room-spend';
@@ -96,7 +90,19 @@ export default async function RoomPage({
   searchParams,
 }: {
   params: { roomId: string };
-  searchParams?: { checkout?: string; view?: string; markup?: string; person?: string; item?: string; version?: string };
+  searchParams?: {
+    checkout?: string;
+    view?: string;
+    markup?: string;
+    person?: string;
+    item?: string;
+    version?: string;
+    section?: string;
+    writer?: string;
+    q?: string;
+    task?: string;
+    tab?: string;
+  };
 }) {
   const user = await currentUser();
   if (!user) {
@@ -171,7 +177,6 @@ export default async function RoomPage({
   const today = new Date().toISOString().slice(0, 10);
   const giving = canAssign(view.role);
   const yours = assignmentsFor(assignments, user.id);
-  const owed = giving ? owedBySeat({ assignments, seats: view.seats, today }) : [];
   // What there is to point the Assign menu at, read out of the project itself
   // — the room holds people, and the story is the project's.
   const things = giving && project ? assignableThings(project) : [];
@@ -324,11 +329,15 @@ export default async function RoomPage({
   const work = workIn({ assignments, submissions, markups });
   const versionLabel = (versionId: string) => versionChoices.find((one) => one.id === versionId)?.label ?? 'A version';
 
+  // Tasks on a board (§29, workflow spec v1.1): the room's front page.
+  const tasks = tasksFrom(work, today);
+  const viewer = { userId: user.id, showrunner: curating };
+  const acting = tasks.filter((one) => needsActionFrom(one, viewer)).length;
+
   type Screen = { key: string; label: string; count?: number };
   const screens: Screen[] = [
-    { key: 'overview', label: 'Overview' },
-    { key: 'assignments', label: 'Assignments', count: open.length },
-    { key: 'submissions', label: deciding ? 'Review queue' : 'What you have sent', count: deciding ? waiting : undefined },
+    { key: 'tasks', label: 'Tasks', count: acting || undefined },
+    { key: 'overview', label: 'Room overview' },
     { key: 'ideas', label: 'Ideas', count: boxes.length },
     ...(curating ? [{ key: 'tray', label: 'Curation Tray', count: awaiting.length }] : []),
     // The showrunner's, in the room (from Ken: *the markup screen is exclusive
@@ -343,9 +352,23 @@ export default async function RoomPage({
       ? [{ key: 'people', label: landing.sections.includes('invite') ? 'People and seats' : 'People' }]
       : []),
   ];
-  const screen = screens.some((one) => one.key === searchParams?.view) ? searchParams!.view! : 'overview';
+  // The old Assignments and Review queue screens are the board now; their
+  // links (in emails, in the editor) land on the matching place on it.
+  const asked = searchParams?.view;
+  const legacyTask = asked === 'assignments' && searchParams?.item ? searchParams.item : null;
+  const legacySection = asked === 'submissions' ? 'review' : null;
+  const screen =
+    asked === 'assignments' || asked === 'submissions'
+      ? 'tasks'
+      : screens.some((one) => one.key === asked)
+        ? asked!
+        : 'tasks';
+  const section: WorkflowSection = (WORKFLOW_SECTIONS as readonly string[]).includes(searchParams?.section ?? '')
+    ? (searchParams!.section as WorkflowSection)
+    : legacySection ?? 'board';
+  const taskTab: TaskTab = (TASK_TABS as readonly string[]).includes(searchParams?.tab ?? '') ? (searchParams!.tab as TaskTab) : 'overview';
   const here = screens.find((one) => one.key === screen)!;
-  const hrefFor = (key: string) => (key === 'overview' ? `/rooms/${view.room.id}` : `/rooms/${view.room.id}?view=${key}`);
+  const hrefFor = (key: string) => (key === 'tasks' ? `/rooms/${view.room.id}?view=tasks` : `/rooms/${view.room.id}?view=${key}`);
 
   const people = (
     <ul className="room-people-strip" aria-label="Who is in the room">
@@ -412,7 +435,7 @@ export default async function RoomPage({
     // Compare and Markups take the whole width of the window (from Ken: *it
     // needs to take up the whole area, so it's big, looks like the script*);
     // their menu moves to a row along the top.
-    <div className={`room-dashboard${screen === 'compare' || screen === 'markups' || screen === 'assignments' ? ' room-wide' : ''}`}>
+    <div className={`room-dashboard${screen === 'compare' || screen === 'markups' || screen === 'tasks' ? ' room-wide' : ''}`}>
       <header className="room-head">
         <div className="room-head-main">
           <p className="eyebrow">Writers Room · {here.label}</p>
@@ -430,6 +453,25 @@ export default async function RoomPage({
 
       <div className="room-layout">
         <main className="room-screen">
+          {screen === 'tasks' ? (
+            <Board
+              roomId={view.room.id}
+              tasks={tasks}
+              seats={view.seats}
+              viewer={viewer}
+              section={section}
+              writer={curating ? (searchParams?.writer ?? searchParams?.person ?? null) : null}
+              query={searchParams?.q ?? ''}
+              taskKey={searchParams?.task ?? legacyTask}
+              tab={taskTab}
+              today={today}
+              things={things}
+              assignments={assignments}
+              roomName={view.room.name || view.projectTitle || 'The room'}
+              masterVersionId={master?.id ?? null}
+            />
+          ) : null}
+
           {screen === 'overview' ? (
             <>
               <section className="room-panel">
@@ -482,243 +524,6 @@ export default async function RoomPage({
                 </section>
               ) : null}
             </>
-          ) : null}
-
-          {screen === 'assignments'
-            ? (() => {
-                // The people menu (from Ken: *a left-hand menu that has all the
-                // different writers … you select that person, it shows all
-                // their assignments*). The showrunner sees everybody; a writer
-                // sees themselves.
-                const people = giving
-                  ? present.filter((seat) => seat.state === 'active' && seat.userId)
-                  : present.filter((seat) => seat.userId === user.id);
-                const chosenId =
-                  people.find((seat) => seat.userId === searchParams?.person)?.userId ??
-                  (giving ? people[0]?.userId : user.id) ??
-                  user.id;
-                const chosen = people.find((seat) => seat.userId === chosenId) ?? null;
-                const cards = workOf(work, chosenId);
-                const item: WorkItem | null = work.find((one) => one.key === searchParams?.item) ?? null;
-                const base = `${hrefFor('assignments')}&person=${chosenId}`;
-                const STAGE_COLOURS: Record<string, string> = {
-                  assigned: '#9ca3af',
-                  in_progress: '#3b82f6',
-                  sent: '#a855f7',
-                  marked_up: '#ef4444',
-                  done: '#22c55e',
-                  called_off: '#6b7280',
-                };
-                return (
-                  <div className="wk">
-                    <nav className="wk-people" aria-label="People in the room">
-                      {people.length === 0 ? <p className="small">Nobody has joined yet.</p> : null}
-                      {people.map((seat) => (
-                        <a
-                          key={seat.id}
-                          href={`${hrefFor('assignments')}&person=${seat.userId}`}
-                          className={seat.userId === chosenId ? 'on' : undefined}
-                        >
-                          <span className="room-person-mark" style={{ background: seat.colour || '#666666' }}>
-                            {seatInitials(seat)}
-                          </span>
-                          <span>
-                            <strong>{seatName(seat)}</strong>
-                            <span className="small block muted">{seat.title.trim() || ROLE_NAMES[seat.role]}</span>
-                          </span>
-                          {workWaitingOn(work, seat.userId!) > 0 ? (
-                            <span className="room-menu-count">{workWaitingOn(work, seat.userId!)}</span>
-                          ) : null}
-                        </a>
-                      ))}
-                    </nav>
-
-                    <div className="wk-main">
-                      {item ? (
-                        <section className="room-panel wk-detail">
-                          <p className="small">
-                            <a href={base}>← {chosen ? `${seatName(chosen)}’s work` : 'All work'}</a>
-                          </p>
-                          <h2>
-                            <span className={`wk-kind wk-kind-${item.kind}`}>{WORK_KIND_NAMES[item.kind]}</span>
-                            {item.title}
-                          </h2>
-                          <p>
-                            <span className="wk-stage" style={{ background: STAGE_COLOURS[item.stage] }}>
-                              {WORK_STAGE_NAMES[item.stage]}
-                            </span>{' '}
-                            <span className="small muted">
-                              {nameOf(item.ownerId)}
-                              {item.dueOn ? ` · due ${item.dueOn}` : ''}
-                              {item.unseen > 0 ? ` · ${item.unseen} new ${item.unseen === 1 ? 'markup' : 'markups'}` : ''}
-                            </span>
-                          </p>
-                          {item.note.trim() && item.note.trim() !== item.title ? <p className="lede">{item.note}</p> : null}
-
-                          {/* Progress is the person doing the work's to give, not the showrunner's. */}
-                          {item.assignment && item.ownerId === user.id && item.stage !== 'done' && item.stage !== 'called_off' ? (
-                            <div className="wk-block">
-                              <h3>Update your progress</h3>
-                              <YourAsks roomId={view.room.id} assignments={[item.assignment]} today={today} />
-                            </div>
-                          ) : null}
-
-                          <div className="wk-block">
-                            <h3>Sent for review</h3>
-                            {item.submissions.length === 0 ? (
-                              <p className="small">
-                                Nothing sent yet.{' '}
-                                {item.ownerId === user.id
-                                  ? 'Open the room’s script, write it, then press Submit and choose this assignment.'
-                                  : ''}
-                              </p>
-                            ) : (
-                              <ul className="room-due">
-                                {item.submissions.map((one) => (
-                                  <li key={one.id}>
-                                    <span className="room-dot" style={{ background: colourOf(one.authorId) }} />
-                                    <span>
-                                      <strong>{one.note.trim() || 'A pass on the script'}</strong>
-                                      <span className="small block muted">Sent {one.createdAt.slice(0, 10)}</span>
-                                      <span className="wk-acts">
-                                        <a className="button small secondary" href={`/preview?room=${view.room.id}&version=${one.versionId}`}>
-                                          Read it
-                                        </a>
-                                        {curating ? (
-                                          <a className="button small" href={`${hrefFor('compare')}&version=${one.versionId}`}>
-                                            Mark up
-                                          </a>
-                                        ) : null}
-                                      </span>
-                                    </span>
-                                  </li>
-                                ))}
-                              </ul>
-                            )}
-                          </div>
-
-                          <div className="wk-block">
-                            <h3>Markups</h3>
-                            {item.markups.length === 0 ? (
-                              <p className="small">
-                                No markups yet.{' '}
-                                {curating && item.submissions.length > 0 ? 'Press Mark up beside what was sent to start one.' : ''}
-                              </p>
-                            ) : (
-                              <ul className="room-due">
-                                {item.markups.map((one) => (
-                                  <li key={one.id} className={one.state === 'sent' && !one.archivedAt ? 'unseen' : undefined}>
-                                    <span className="room-dot" style={{ background: colourOf(one.authorId) }} />
-                                    <span>
-                                      <a href={`${hrefFor('markups')}&markup=${one.id}`}>
-                                        <strong>
-                                          {one.marks.length} {one.marks.length === 1 ? 'mark' : 'marks'} from {nameOf(one.authorId)}
-                                        </strong>
-                                      </a>
-                                      <span className="small block muted">
-                                        {one.sentAt.slice(0, 10)}
-                                        {one.archivedAt ? ' · archived' : one.state === 'seen' ? ' · opened' : ' · new'}
-                                      </span>
-                                    </span>
-                                  </li>
-                                ))}
-                              </ul>
-                            )}
-                          </div>
-                        </section>
-                      ) : null}
-
-                      {giving && !item ? (
-                        <section className="room-panel">
-                          <h2>Give out an assignment{chosen ? ` to ${seatName(chosen)}` : ''}</h2>
-                          <WhoOwesWhat
-                            key={chosenId}
-                            roomId={view.room.id}
-                            rows={[]}
-                            assignments={assignments}
-                            seats={view.seats}
-                            things={things}
-                            today={today}
-                            defaultAssigneeId={chosenId}
-                          />
-                        </section>
-                      ) : null}
-
-                      {!item ? (
-                        <section className="room-panel">
-                          <h2>{chosen ? `${seatName(chosen)}’s work` : 'Your work'}</h2>
-                          <ul className="wk-legend" aria-label="What the colours mean">
-                            <li>
-                              <span className="wk-kind wk-kind-assignment">Assignment</span> given out by the showrunner
-                            </li>
-                            <li>
-                              <span className="wk-kind wk-kind-own">Own work</span> the writer started on their own
-                            </li>
-                            {WORK_STAGES.map((stage) => (
-                              <li key={stage}>
-                                <span className="wk-stage" style={{ background: STAGE_COLOURS[stage] }}>
-                                  {WORK_STAGE_NAMES[stage]}
-                                </span>{' '}
-                                {WORK_STAGE_MEANINGS[stage]}
-                              </li>
-                            ))}
-                          </ul>
-                          {cards.length === 0 ? (
-                            <p className="small">Nothing yet. Assignments and work sent for review appear here.</p>
-                          ) : (
-                            <ul className="wk-cards">
-                              {cards.map((one) => (
-                                <li key={one.key}>
-                                  <a href={`${base}&item=${encodeURIComponent(one.key)}`} className={`wk-card wk-card-${one.kind}`}>
-                                    <span className="room-person-mark" style={{ background: colourOf(one.ownerId) }}>
-                                      {(() => {
-                                        const seat = view.seats.find((x) => x.userId === one.ownerId);
-                                        return seat ? seatInitials(seat) : '—';
-                                      })()}
-                                    </span>
-                                    <span className="wk-card-text">
-                                      <span className={`wk-kind wk-kind-${one.kind}`}>{WORK_KIND_NAMES[one.kind]}</span>
-                                      <strong>{one.title}</strong>
-                                      <span className="small block muted">
-                                        {one.dueOn ? `Due ${one.dueOn}` : `Since ${one.createdAt.slice(0, 10)}`}
-                                        {one.submissions.length > 0
-                                          ? ` · ${one.submissions.length} sent`
-                                          : ''}
-                                      </span>
-                                    </span>
-                                    <span className="wk-card-end">
-                                      <span className="wk-stage" style={{ background: STAGE_COLOURS[one.stage] }}>
-                                        {WORK_STAGE_NAMES[one.stage]}
-                                      </span>
-                                      {one.unseen > 0 ? <span className="wk-new">{one.unseen} new markup{one.unseen === 1 ? '' : 's'}</span> : null}
-                                    </span>
-                                  </a>
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        </section>
-                      ) : null}
-                    </div>
-                  </div>
-                );
-              })()
-            : null}
-
-          {screen === 'submissions' ? (
-            <section className="room-panel">
-              <h2>
-                {deciding ? 'The review queue' : 'What you have sent'}
-                {deciding && waiting > 0 ? <span className="pill">{waiting} waiting</span> : null}
-              </h2>
-              <Queue roomId={view.room.id} rows={queue} canDecide={deciding} />
-              {deciding ? (
-                <p className="small">
-                  Reading a submission opens the version it came from in its own window. Nothing here deletes
-                  anything, and a writer’s own line is never touched.
-                </p>
-              ) : null}
-            </section>
           ) : null}
 
           {screen === 'ideas' ? (

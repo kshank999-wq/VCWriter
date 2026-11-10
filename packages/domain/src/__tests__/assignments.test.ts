@@ -91,8 +91,8 @@ describe('the states', () => {
   });
 
   it('lets a writer say how their own work is going, and not call it off', () => {
-    expect(ASSIGNEE_STATES).toEqual(['accepted', 'in_progress', 'done']);
-    expect(assigneeMaySet('done')).toBe(true);
+    expect(ASSIGNEE_STATES).toEqual(['accepted', 'in_progress']);
+    expect(assigneeMaySet('done')).toBe(false);
     expect(assigneeMaySet('cancelled')).toBe(false);
   });
 

@@ -103,7 +103,11 @@ export const canAssign = (role: RoomRole | null): boolean => role !== null && ro
  * row-level, so *which fields* is a question the database answers with a
  * trigger and this list is what that trigger enforces.
  */
-export const ASSIGNEE_STATES: readonly AssignmentState[] = ['accepted', 'in_progress', 'done'];
+/**
+ * Closing is the showrunner's too (addendum 07 §29): a writer finishes by
+ * sending the work for review, and Completed means the showrunner closed it.
+ */
+export const ASSIGNEE_STATES: readonly AssignmentState[] = ['accepted', 'in_progress'];
 
 export const assigneeMaySet = (state: AssignmentState): boolean => ASSIGNEE_STATES.includes(state);
 
@@ -199,7 +203,7 @@ export const askedOf = (assignment: Assignment): string => {
     case 'in_progress':
       return 'You are writing it.';
     case 'done':
-      return 'You have called it done. Submit it when you want it read.';
+      return 'Closed by the showrunner. Everything sent for it is kept.';
     case 'cancelled':
       return 'Called off. Anything you wrote for it is still yours and still here.';
   }

@@ -1934,3 +1934,88 @@ workflow and make it simpler.* What he asked for, and what was built:
 
 Assignments takes the whole width of the window, as Compare does, with the
 room menu along the top.
+
+## 29. The task workflow (Workflow Development Specification v1.1)
+
+Ken's v1.1 specification (9 November 2026) reorganizes the room around tasks.
+It is a reorganization of what exists, not a rebuild: assignments, submissions,
+markups, Compare, beat drafts and the Curation Tray all stay. It is being built
+in four phases.
+
+| Phase | What | State |
+| --- | --- | --- |
+| A | Task status model, metrics strip, workflow menu, three-column board, task page with an action menu, closing is the showrunner's, printable task report | Built |
+| B | Permission requests to revisit integrated material; an audit log of every transition | To build |
+| C | Selection-to-selection integration (source passage → master passage; Replace / Insert before / Insert after / Delete; preview; commit as a new beat version through the existing beat-version system; contributor provenance; stale-master check) | To build |
+| D | Desktop: open on the task's beat with the master read-only beside it; Back to Writer's Room never submits; "master has changed since this draft" | To build |
+
+### 29.1 One status per task
+
+`tasks.ts` reads one status from the facts already recorded (the assignment's
+state, the latest submission's state, any open markup), never kept as a copy:
+
+| Status | Board column | Tone | Who acts |
+| --- | --- | --- | --- |
+| Not started (`assigned`) | To Do | red | writer |
+| In progress | In Progress | yellow | writer |
+| Needs revision (returned with notes, an open markup, or not taken) | In Progress | yellow | writer |
+| Awaiting review (`submitted`) | Awaiting Review | blue | showrunner |
+| Approved, not integrated | — | green outline | showrunner |
+| Integrated (`incorporated`) | — | solid green | showrunner may close |
+| Completed (assignment closed) | — | green, "archived" | nobody |
+| Cancelled | — | grey | nobody |
+
+Lifecycle and integration are separate: each task also carries a contribution
+state (not decided, approved, integrated, not used), so a closed task can hold
+approved work that was never used. Every status badge carries its words as
+well as its colour; a writer's colour is the person, never the status.
+
+### 29.2 The board
+
+The room opens on **Tasks** (`?view=tasks`). Across the top, counts that link
+to their filtered view: for the showrunner Assigned, In progress, Awaiting my
+review, Needs revision, Approved not integrated, Completed; for a writer My
+assigned, My in progress, Returned to me, Submitted, Integrated. Down the left,
+the workflow, the same for every role: Board, Assignments, In Progress,
+Awaiting Review, Needs Revision, Approved / Integrated, Completed / Archive,
+My Contributions (Contributions by Writer), with counts; the showrunner also
+filters by writer. The board itself is three columns of compact cards: place
+(Beat · B3 — The letter), the ask, the writer's initials in their colour, the
+status badge, due or overdue, v-number, last updated, and a mark where the
+viewer must act. Actionable first, then overdue, then due date, then newest.
+The archive groups by writer. The old Assignments and Review queue screens
+fold into the board; their links land on the matching place.
+
+### 29.3 The task page
+
+A card opens its page, with a breadcrumb back to where it was opened from, and
+a short menu: Overview, Versions sent (v1, v2 … each kept), Markup & notes,
+History, then Open in VC Writer, Read the master, and (showrunner) Compare &
+mark up. The actions are only the ones this person may take now:
+
+- Writer: Start draft (→ in progress), Open / Revise in VC Writer.
+- Showrunner, on a submission awaiting review: Approve, Return with notes
+  (the notes travel with that exact version, and the writer is emailed), Not
+  taken.
+- Showrunner, on approved work: Integrate into the master (the Curation Tray
+  until phase C).
+- Showrunner: Close task, Cancel task, and Reopen.
+
+**Closing is the showrunner's** (migration 0082): a writer may say only that
+they have taken a task or are writing it, and cannot reopen a closed one. The
+assignment guard enforces this in the database, not only in the buttons.
+
+### 29.4 The printable task report
+
+**Export tasks** on the metrics strip opens `/rooms/<id>/report`, drawn on the
+server from what this person may read: a writer's own tasks, the showrunner's
+whole room. Options: Current view / All active / Include completed and
+archive; Group by writer (showrunner), by status, or by scene / beat; notes on
+or off; US Letter or A4; portrait or landscape. Each group has a grey band with
+the writer's name, initials, colour swatch and counts; table headers repeat on
+every page, a task is never split, and the footer numbers the pages. The total
+is counted from the rows printed. It holds no script text. **Print / Save as
+PDF** uses the browser's own print dialog.
+
+Rooms have no separate episodes yet, so "Group by episode" is offered as group
+by scene / beat.

@@ -3450,3 +3450,145 @@ dialog.walkthrough::backdrop { background: rgba(0, 0, 0, 0.72); }
   .wk { grid-template-columns: minmax(0, 1fr); }
   .wk-people { position: static; display: flex; flex-wrap: wrap; }
 }
+
+/* ------------------------------------------------------------------
+   Tasks on a board (addendum 07 §29; workflow spec v1.1). Compact: a
+   metrics strip, the workflow down the left, three columns of cards. */
+.tk { display: grid; gap: 12px; }
+.tk-metrics { display: flex; flex-wrap: wrap; gap: 6px; }
+.tk-metric {
+  display: flex; align-items: baseline; gap: 6px;
+  padding: 6px 12px; border: 1px solid var(--border); border-radius: 4px;
+  background: var(--bg-raised); color: var(--text); text-decoration: none; font-size: 13px;
+}
+.tk-metric:hover { background: var(--bg-raised-2); }
+.tk-metric-n { font-size: 18px; font-weight: 700; }
+.tk-metric.attn { border-color: #3b82f6; box-shadow: inset 0 -2px 0 #3b82f6; }
+.tk-export { margin-left: auto; }
+.tk-body { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 14px; align-items: start; }
+.tk-nav { border: 1px solid var(--border); border-radius: 4px; background: var(--bg-raised); padding: 6px; position: sticky; top: 12px; }
+.tk-nav > summary { cursor: pointer; padding: 4px 6px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
+.tk-nav ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; }
+.tk-nav a {
+  display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 3px;
+  color: var(--text); text-decoration: none; font-size: 13.5px;
+}
+.tk-nav a:hover { background: var(--bg-raised-2); }
+.tk-nav a.on { background: var(--bg-raised-2); box-shadow: inset 3px 0 0 var(--gold); }
+.tk-nav-head { margin: 10px 6px 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
+.tk-count { margin-left: auto; min-width: 20px; padding: 0 6px; border-radius: 999px; background: var(--bg-raised-2); border: 1px solid var(--border); font-size: 11px; text-align: center; color: var(--text-muted); }
+.tk-main { min-width: 0; display: grid; gap: 12px; }
+.tk-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.tk-toolbar input[type='search'] { flex: 1 1 220px; max-width: 360px; padding: 5px 9px; font-size: 13px; }
+.tk-needs { font-size: 13px; color: #8ec5ff; }
+.tk-new { border: 1px dashed var(--border); border-radius: 4px; padding: 6px 10px; }
+.tk-new > summary { cursor: pointer; font-size: 13.5px; color: var(--gold); }
+.tk-board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.tk-col { border: 1px solid var(--border); border-radius: 4px; background: var(--bg-raised); padding: 8px; min-height: 160px; }
+.tk-col h3 { display: flex; align-items: center; gap: 6px; margin: 2px 4px 8px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; }
+.tk-col-todo { border-top: 3px solid #ef4444; }
+.tk-col-in_progress { border-top: 3px solid #eab308; }
+.tk-col-review { border-top: 3px solid #3b82f6; }
+.tk-cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.tk-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.tk-card {
+  display: grid; gap: 4px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 4px;
+  background: var(--bg); color: var(--text); text-decoration: none; font-size: 13px;
+}
+.tk-card:hover { border-color: var(--gold-deep); }
+.tk-card-own { border-style: dashed; }
+.tk-card.act { box-shadow: inset 3px 0 0 #3b82f6; }
+.tk-card-top { display: flex; gap: 6px; align-items: center; }
+.tk-place { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin: 0; }
+.tk-ver { margin-left: auto; font-size: 11px; padding: 0 5px; border: 1px solid var(--border); border-radius: 3px; color: var(--text-muted); }
+.tk-title { font-size: 14px; line-height: 1.3; }
+.tk-card-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; }
+.tk-updated { font-size: 11px; color: var(--text-muted); }
+.tk-who {
+  display: inline-grid; place-items: center; min-width: 24px; height: 20px; padding: 0 4px;
+  border-radius: 3px; font-size: 10.5px; font-weight: 700; color: #111; letter-spacing: 0.02em;
+}
+.tk-who.sm { min-width: 22px; height: 18px; font-size: 10px; }
+.tk-status {
+  display: inline-flex; align-items: center; gap: 5px; padding: 1px 7px; border-radius: 3px;
+  font-size: 11.5px; font-weight: 600; border: 1px solid transparent; white-space: nowrap;
+}
+.tk-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.tk-tone-red { color: #fca5a5; background: rgba(239, 68, 68, 0.14); border-color: rgba(239, 68, 68, 0.5); }
+.tk-tone-yellow { color: #fde047; background: rgba(234, 179, 8, 0.14); border-color: rgba(234, 179, 8, 0.5); }
+.tk-tone-blue { color: #93c5fd; background: rgba(59, 130, 246, 0.16); border-color: rgba(59, 130, 246, 0.6); }
+.tk-tone-green-outline { color: #86efac; background: transparent; border-color: #22c55e; }
+.tk-tone-green { color: #052e12; background: #22c55e; }
+.tk-tone-green-archived { color: #86efac; background: rgba(34, 197, 94, 0.12); border-color: rgba(34, 197, 94, 0.4); }
+.tk-tone-green-archived::after { content: ' · archived'; font-weight: 400; }
+.tk-tone-grey { color: #d1d5db; background: rgba(107, 114, 128, 0.2); border-color: rgba(107, 114, 128, 0.5); }
+.tk-due { font-size: 11.5px; color: var(--text-muted); }
+.tk-due.late { color: #fca5a5; font-weight: 600; }
+.tk-attn { color: #3b82f6; font-size: 12px; }
+.tk-legend { font-size: 13px; }
+.tk-legend > summary { cursor: pointer; color: var(--text-muted); }
+.tk-legend ul { list-style: none; padding: 8px 0 0; margin: 0; display: grid; gap: 6px; }
+.tk-card-own-key { display: inline-block; padding: 0 8px; border: 1px dashed var(--border); border-radius: 3px; }
+.tk-group h3 { display: flex; gap: 8px; align-items: center; margin: 14px 0 8px; }
+.tk-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tk-table th, .tk-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.tk-table th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
+.tk-room { text-align: right; }
+.tk-page { display: grid; gap: 10px; }
+.tk-crumb { margin: 0; }
+.tk-page-head h2 { margin: 2px 0 6px; }
+.tk-page-body { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 16px; align-items: start; }
+.tk-menu { display: grid; gap: 1px; border-right: 1px solid var(--border); padding-right: 10px; }
+.tk-menu a { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 3px; color: var(--text); text-decoration: none; font-size: 13.5px; }
+.tk-menu a:hover { background: var(--bg-raised-2); }
+.tk-menu a.on { background: var(--bg-raised-2); box-shadow: inset 3px 0 0 var(--gold); }
+.tk-menu hr { width: 100%; border: 0; border-top: 1px solid var(--border); margin: 6px 0; }
+.tk-page-main { min-width: 0; display: grid; gap: 10px; align-content: start; }
+.tk-page-main h3 { margin: 8px 0 0; font-size: 14px; }
+.tk-facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; margin: 0; }
+.tk-facts div { padding: 6px 10px; border: 1px solid var(--border); border-radius: 3px; }
+.tk-facts dt { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
+.tk-facts dd { margin: 2px 0 0; font-size: 13.5px; }
+.tk-actions { display: grid; gap: 8px; }
+.tk-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+.tk-return { display: grid; gap: 6px; max-width: 560px; }
+.tk-return textarea { width: 100%; }
+.tk-history { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 13.5px; }
+@media (max-width: 900px) {
+  .tk-body, .tk-page-body { grid-template-columns: minmax(0, 1fr); }
+  .tk-nav { position: static; }
+  .tk-board { grid-template-columns: minmax(0, 1fr); }
+  .tk-menu { border-right: 0; padding-right: 0; display: flex; flex-wrap: wrap; }
+}
+
+/* The printable task report (spec v1.1 §12.1): black on white, grey bands,
+   header rows repeated on every page, a task never split across pages. */
+.rp { background: #fff; color: #111; padding: 24px; border-radius: 4px; font-size: 12px; }
+.rp a { color: #111; }
+.rp h1 { font-size: 20px; margin: 0 0 4px; color: #111; }
+.rp-meta { color: #444; margin: 0 0 12px; font-size: 11.5px; }
+.rp-options { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: end; margin-bottom: 16px; padding: 12px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-raised); }
+.rp-options label { display: grid; gap: 3px; font-size: 12.5px; }
+.rp-group { margin: 0 0 14px; }
+.rp-band { display: flex; align-items: center; gap: 8px; background: #e9e9e9; padding: 5px 8px; font-weight: 700; break-after: avoid; }
+.rp-swatch { display: inline-block; width: 12px; height: 12px; border: 1px solid #555; }
+.rp-counts { margin-left: auto; font-weight: 400; font-size: 11px; color: #333; }
+.rp table { width: 100%; border-collapse: collapse; }
+.rp th, .rp td { text-align: left; padding: 4px 6px; border-bottom: 1px solid #ccc; vertical-align: top; color: #111; }
+.rp th { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.04em; background: #f5f5f5; }
+.rp thead { display: table-header-group; }
+.rp tr { break-inside: avoid; page-break-inside: avoid; }
+.rp-note { color: #444; font-size: 11px; }
+.rp-total { margin-top: 10px; font-weight: 700; }
+@media print {
+  .site-header, .site-footer, .rp-options, .rp-screen-only { display: none !important; }
+  body, main.shell { background: #fff !important; color: #111 !important; margin: 0 !important; padding: 0 !important; max-width: none !important; }
+  .rp { padding: 0; }
+}
+/* Compact controls on the board: the spec asks for smaller buttons. */
+.tk .button, .tk button.button, .rp-options .button { padding: 5px 12px; font-size: 12px; letter-spacing: 0.04em; min-height: 0; }
+.tk-page-head h2 { font-size: 22px; letter-spacing: 0.01em; text-transform: none; }
+.tk .room-panel > h2 { font-size: 18px; }
+.rp td:nth-last-child(-n + 5) { white-space: nowrap; }
+.rp td:last-child { white-space: normal; }
+.rp h1 { text-transform: none; letter-spacing: 0; }
