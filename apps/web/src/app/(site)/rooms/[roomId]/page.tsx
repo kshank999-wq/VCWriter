@@ -65,6 +65,7 @@ import { Billing } from './billing';
 import { Compare, MarkupView, type VersionChoice } from './compare';
 import { MarkupActions } from './markup-actions';
 import { Board, TASK_TABS, type TaskTab } from './board';
+import { IntegrateScreen } from './integrate-screen';
 import { markupsIn } from '@/lib/markups';
 import { loadBilling, roomPriceCents, seatPriceCents, settleCheckout } from '@/lib/room-billing';
 import { standingFor } from '@/lib/room-spend';
@@ -102,6 +103,9 @@ export default async function RoomPage({
     q?: string;
     task?: string;
     tab?: string;
+    beat?: string;
+    from?: string;
+    pick?: string | string[];
   };
 }) {
   const user = await currentUser();
@@ -343,6 +347,7 @@ export default async function RoomPage({
     // The showrunner's, in the room (from Ken: *the markup screen is exclusive
     // to the showrunner … only exclusive in the writer's room version*).
     ...(curating ? [{ key: 'compare', label: 'Compare and mark up' }] : []),
+    ...(curating ? [{ key: 'integrate', label: 'Integrate into master' }] : []),
     { key: 'markups', label: 'Markups', count: waitingMarkups.length || undefined },
     { key: 'drafts', label: 'Drafts' },
     { key: 'talk', label: 'Talk', count: news.length > 0 ? news.length : undefined },
@@ -435,7 +440,7 @@ export default async function RoomPage({
     // Compare and Markups take the whole width of the window (from Ken: *it
     // needs to take up the whole area, so it's big, looks like the script*);
     // their menu moves to a row along the top.
-    <div className={`room-dashboard${screen === 'compare' || screen === 'markups' || screen === 'tasks' ? ' room-wide' : ''}`}>
+    <div className={`room-dashboard${screen === 'compare' || screen === 'markups' || screen === 'tasks' || screen === 'integrate' ? ' room-wide' : ''}`}>
       <header className="room-head">
         <div className="room-head-main">
           <p className="eyebrow">Writers Room · {here.label}</p>
@@ -550,6 +555,23 @@ export default async function RoomPage({
                 refusal={mergeRefusal}
               />
             </section>
+          ) : null}
+
+          {screen === 'integrate' && curating ? (
+            <IntegrateScreen
+              roomId={view.room.id}
+              master={standing.file}
+              submissions={submissions}
+              seats={view.seats}
+              tasks={tasks}
+              params={{
+                beat: searchParams?.beat,
+                from:
+                  searchParams?.from ??
+                  (Array.isArray(searchParams?.pick) ? searchParams!.pick.join(',') : searchParams?.pick),
+                task: searchParams?.task,
+              }}
+            />
           ) : null}
 
           {screen === 'compare' && curating ? (

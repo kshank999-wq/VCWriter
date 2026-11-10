@@ -3592,3 +3592,50 @@ dialog.walkthrough::backdrop { background: rgba(0, 0, 0, 0.72); }
 .rp td:nth-last-child(-n + 5) { white-space: nowrap; }
 .rp td:last-child { white-space: normal; }
 .rp h1 { text-transform: none; letter-spacing: 0; }
+
+/* Integration workspace (addendum 07 §30): the master beat beside up to three
+   writers' versions, set like the script, the selections highlighted. */
+.ig-screen { display: grid; gap: 10px; }
+.ig-choose { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: end; }
+.ig-choose label { display: grid; gap: 3px; }
+.ig-choose select { max-width: 420px; }
+.ig-choose fieldset { border: 1px solid var(--border); border-radius: 4px; padding: 6px 10px; display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.ig-pick { display: flex !important; gap: 6px; align-items: center; font-size: 12.5px; }
+.ig { display: grid; gap: 8px; }
+.ig-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-raised); position: sticky; top: 0; z-index: 2; }
+.ig-bar .button { padding: 5px 10px; font-size: 12px; letter-spacing: 0.03em; }
+.ig-bar [aria-disabled='true'] { opacity: 0.55; }
+.ig-state { flex-basis: 100%; color: var(--text-muted); }
+.ig-sep { width: 1px; align-self: stretch; background: var(--border); margin: 0 4px; }
+.ig-panes { display: grid; gap: 10px; align-items: start; }
+.ig-panes-1 { grid-template-columns: minmax(0, 1fr); }
+.ig-panes-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ig-panes-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.ig-panes-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.ig-pane { border: 1px solid var(--border); border-top: 4px solid var(--gold); border-radius: 4px; background: var(--bg-raised); min-width: 0; }
+.ig-pane h3 { margin: 0; padding: 8px 10px; font-size: 13px; display: flex; gap: 6px; align-items: center; border-bottom: 1px solid var(--border); }
+.ig-master { border-top-color: #22c55e; }
+.ig-tag { margin-left: auto; font-size: 11px; padding: 1px 6px; border-radius: 3px; background: rgba(234, 179, 8, 0.2); color: #fde047; }
+.ig-page {
+  background: #fbf8f0; color: #1a1a1a; padding: 18px 20px; font-family: 'Courier Prime', 'Courier New', monospace;
+  font-size: 13.5px; line-height: 1.5; max-height: calc(100vh - 320px); min-height: 260px; overflow: auto; user-select: text;
+}
+.ig-line { position: relative; }
+.ig-line p { margin: 0 0 10px; white-space: pre-wrap; }
+.ig-character p { margin-left: 38%; margin-bottom: 0; text-transform: uppercase; }
+.ig-dialogue p { margin-left: 18%; margin-right: 14%; }
+.ig-parenthetical p { margin-left: 28%; margin-bottom: 0; }
+.ig-transition p { text-align: right; text-transform: uppercase; }
+.ig-sceneHeading p, .ig-scene_heading p { text-transform: uppercase; font-weight: 700; }
+.ig-credits { position: absolute; right: -14px; top: -2px; display: flex; gap: 2px; }
+.ig-sel { background: #fde68a; color: inherit; }
+.ig-caret { display: inline-block; width: 2px; height: 1.1em; background: #dc2626; vertical-align: text-bottom; }
+.ig-diff { padding: 12px 14px; background: #fbf8f0; color: #1a1a1a; border-radius: 4px; font-family: 'Courier Prime', 'Courier New', monospace; font-size: 13px; white-space: pre-wrap; }
+.ig-diff ins { background: #bbf7d0; text-decoration: none; }
+.ig-diff del { background: #fecaca; }
+.ig-history { padding: 8px 10px; border: 1px dashed var(--border); border-radius: 4px; }
+@media (max-width: 1000px) { .ig-panes-3, .ig-panes-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 700px) { .ig-panes { grid-template-columns: minmax(0, 1fr) !important; } }
+.ig-pane > h3 { margin: 0 !important; padding: 7px 10px !important; text-transform: none; letter-spacing: 0.01em; font-size: 13px !important; line-height: 1.3; }
+.ig-screen > h2 { font-size: 18px; margin: 0; }
+.ig-pane { padding: 0 !important; margin: 0 !important; }

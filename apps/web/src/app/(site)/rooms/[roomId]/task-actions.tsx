@@ -100,7 +100,7 @@ export function TaskActions({
         </button>,
       );
     }
-    if (status === 'approved') {
+    if (status === 'approved' || reviewable) {
       buttons.push(
         <a key="integrate" className="button small" href={trayHref}>
           Integrate into the master

@@ -469,6 +469,7 @@ function TaskPage({
             </a>
           ) : null}
           {viewer.showrunner && latest ? <a href={`/rooms/${roomId}?view=compare&version=${latest.versionId}`}>Compare & mark up</a> : null}
+          {viewer.showrunner && latest ? <a href={`/rooms/${roomId}?view=integrate&task=${encodeURIComponent(task.key)}`}>Integrate into master</a> : null}
         </nav>
 
         <div className="tk-page-main">
@@ -513,7 +514,7 @@ function TaskPage({
                 submissionState={latest?.state ?? null}
                 hasSubmissions={task.versions > 0}
                 editorHref={editorHref}
-                trayHref={`/rooms/${roomId}?view=tray`}
+                trayHref={`/rooms/${roomId}?view=integrate&task=${encodeURIComponent(task.key)}`}
               />
               {mine && !viewer.showrunner && (task.status === 'in_progress' || task.status === 'needs_revision' || task.status === 'assigned') ? (
                 <p className="small muted">

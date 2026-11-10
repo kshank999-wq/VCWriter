@@ -1946,7 +1946,7 @@ in four phases.
 | --- | --- | --- |
 | A | Task status model, metrics strip, workflow menu, three-column board, task page with an action menu, closing is the showrunner's, printable task report | Built |
 | B | Permission requests to revisit integrated material; an audit log of every transition | To build |
-| C | Selection-to-selection integration (source passage → master passage; Replace / Insert before / Insert after / Delete; preview; commit as a new beat version through the existing beat-version system; contributor provenance; stale-master check) | To build |
+| C | Selection-to-selection integration (source passage → master passage; Replace / Insert before / Insert after / Delete; preview; commit as a new beat version through the existing beat-version system; contributor provenance; stale-master check) | Built (§30) |
 | D | Desktop: open on the task's beat with the master read-only beside it; Back to Writer's Room never submits; "master has changed since this draft" | To build |
 
 ### 29.1 One status per task
@@ -2019,3 +2019,61 @@ PDF** uses the browser's own print dialog.
 
 Rooms have no separate episodes yet, so "Group by episode" is offered as group
 by scene / beat.
+
+## 30. Integrating into the master, selection to selection
+
+From the spec (§6.3): the showrunner works with the **current master beat** on
+one side and one to three writers' submitted versions on the other, and moves
+exact passages across. It extends the beat-version system already in VC
+Writer; it is not a second revision system.
+
+**Where.** *Integrate into master* in the room menu, and *Integrate into the
+master* on a task (awaiting review or approved), which opens on the task's beat
+(or the first beat of its scene) with its latest submission beside it. A
+picker changes the master beat and chooses up to three writers' versions.
+
+**How.** Highlight a passage in a writer's version (it turns yellow), highlight
+or click the place in the master, then:
+
+| Operation | Needs |
+| --- | --- |
+| Replace selection | a writer's passage and master text |
+| Insert before / Insert after | a writer's passage and a master selection or point |
+| Delete master selection | master text only |
+
+Each step goes onto a **working integration draft**, shown in the master pane
+with a "working draft" tag; the published master does not change. Undo last,
+Preview diff (words added in green, removed struck in red, against the master
+as opened), Save draft (kept on this computer for this beat and this master),
+Version history, Cancel, and **Commit new beat version**. An operation that
+cannot be done says why (as its tooltip and in the status line) rather than
+doing something nearby.
+
+Whole paragraphs inserted at a paragraph's edge go in as paragraphs of their
+own, keeping their element types (a cue and its dialogue stay a cue and
+dialogue). A passage inside a paragraph is spliced into it.
+
+**Never guessed.** Every step stores the exact words selected at both ends, the
+source submission and version, the destination beat and range, the kind, who
+did it and when. Replaying a step checks those words are still there; if not,
+it is refused. Passages are within one beat: a selection across two beats is
+two integrations.
+
+**Committing** (`POST /api/rooms/<id>/integrate`, showrunner only). The server
+re-reads the master and refuses if the beat has changed since the draft was
+opened (its text fingerprint differs): the page then offers *Start again from
+the current master*. It re-reads every writer's passage from the version it
+came from, takes the writer from that version (never from the request), checks
+each submission belongs to the room and references that version, and replays
+every step. Then the beat's working version is kept whole among its drafts
+under its own name, the integrated text becomes the **next version** (Draft 4
+→ Draft 5), and a new master version is written beside the old one with the
+room pointed at it (§12). The merge record keeps every step. Submissions drawn
+from become *incorporated* (approved on the way if still waiting), so their
+tasks read Integrated.
+
+**Attribution.** Every paragraph a writer's words land in carries their id in a
+`contributors` attribute, so the credit travels with the text into later
+versions; several writers in one beat keep separate credits. The master pane
+shows each paragraph's contributors as initials in their colours at the right
+edge.

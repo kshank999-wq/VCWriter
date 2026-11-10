@@ -188,6 +188,18 @@ export interface MergeSource {
 export interface MergeRecord {
   at: string;
   sources: MergeSource[];
+  /**
+   * A selection-to-selection integration into one beat (§30): every step with
+   * its exact source and destination passages, the beat version it replaced
+   * and the one it made. Absent on a Curation Tray merge.
+   */
+  integration?: {
+    beatId: string;
+    from: string;
+    to: string;
+    baseHash: string;
+    steps: unknown[];
+  };
 }
 
 /**
