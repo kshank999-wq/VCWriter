@@ -37,7 +37,9 @@ export const dynamic = 'force-dynamic';
  */
 
 const schema = z.object({
-  assigneeId: z.string().uuid(),
+  assigneeId: z.string().uuid().optional(),
+  /** Several writers at once: one task each, linked as a group (§34). */
+  assigneeIds: z.array(z.string().uuid()).min(1).max(8).optional(),
   targetKind: z.enum(ASSIGNMENT_TARGETS).nullable().default(null),
   targetId: z.string().uuid().nullable().default(null),
   note: z.string().max(2000).default(''),
@@ -87,24 +89,28 @@ export async function POST(
   const view = await loadRoomById(params.roomId);
   if (!view) return NextResponse.json({ error: 'No such room.' }, { status: 404 });
 
-  const { assigneeId, targetKind, targetId, note, dueOn } = parsed.data;
+  const { targetKind, targetId, note, dueOn } = parsed.data;
+  const assigneeIds = [...new Set(parsed.data.assigneeIds ?? (parsed.data.assigneeId ? [parsed.data.assigneeId] : []))];
+  if (assigneeIds.length === 0) return NextResponse.json({ error: 'Say who it is for.' }, { status: 400 });
   // Half a target is not a target — the check constraint says so too, and this
   // says it in a sentence rather than as a violation.
   if ((targetKind === null) !== (targetId === null)) {
     return NextResponse.json({ error: 'Point it at something, or at nothing.' }, { status: 400 });
   }
 
-  const allowed = canMakeAssignment({
-    role: view.role,
-    seats: view.seats,
-    assigneeId,
-    targetKind,
-    note,
-  });
-  if (allowed !== true) {
-    return NextResponse.json({ error: assignRefusalText(allowed) }, {
-      status: allowed.reason === 'cannot_assign' ? 403 : 400,
+  for (const assigneeId of assigneeIds) {
+    const allowed = canMakeAssignment({
+      role: view.role,
+      seats: view.seats,
+      assigneeId,
+      targetKind,
+      note,
     });
+    if (allowed !== true) {
+      return NextResponse.json({ error: assignRefusalText(allowed) }, {
+        status: allowed.reason === 'cannot_assign' ? 403 : 400,
+      });
+    }
   }
 
   // What the thing is called, read out of the project rather than taken on the
@@ -120,30 +126,42 @@ export async function POST(
     }
   }
 
-  const made = await makeAssignment({
-    roomId: view.room.id,
-    assigneeId,
-    assignedBy: user.id,
-    targetKind,
-    targetId,
-    targetLabel,
-    note: note.trim(),
-    dueOn,
-  });
-  if ('reason' in made) return NextResponse.json({ error: made.message }, { status: 403 });
+  // Several writers: one task each, every one theirs, linked by a group so
+  // their versions are compared together (§34).
+  const groupId = assigneeIds.length > 1 ? crypto.randomUUID() : null;
+  const roomName = view.room.name || view.projectTitle || 'the room';
+  const made = [];
+  for (const assigneeId of assigneeIds) {
+    const one = await makeAssignment({
+      roomId: view.room.id,
+      assigneeId,
+      assignedBy: user.id,
+      targetKind,
+      targetId,
+      targetLabel,
+      note: note.trim(),
+      dueOn,
+      groupId,
+    });
+    if ('reason' in one) return NextResponse.json({ error: one.message, made }, { status: 403 });
+    made.push(one);
 
-  // Being given work is the clearest case of something addressed to you, and
-  // §14 names it in the same breath as mentions (stage 14). Nobody is mailed
-  // about work they gave themselves, and a send that fails never fails the
-  // assignment — it is already made and already on their page.
-  const notice = noticeForAssignment({
-    assignment: made,
-    seats: view.seats,
-    roomName: view.room.name || view.projectTitle || 'the room',
-  });
-  if (notice) await sendRoomNotice(notice);
+    // Being given work is the clearest case of something addressed to you
+    // (stage 14). Nobody is mailed about work they gave themselves, and a send
+    // that fails never fails the assignment.
+    const notice = noticeForAssignment({ assignment: one, seats: view.seats, roomName });
+    if (notice) await sendRoomNotice(notice);
 
-  await recordAudit({ roomId: view.room.id, actorId: user.id, entityType: 'assignment', entityId: made.id, action: 'assigned', toState: made.state, note: made.targetLabel || made.note.slice(0, 120) });
+    await recordAudit({
+      roomId: view.room.id,
+      actorId: user.id,
+      entityType: 'assignment',
+      entityId: one.id,
+      action: 'assigned',
+      toState: one.state,
+      note: `${one.targetLabel || one.note.slice(0, 120)}${groupId ? ` (one of ${assigneeIds.length} writers)` : ''}`,
+    });
+  }
 
-  return NextResponse.json({ assignment: made });
+  return NextResponse.json({ assignment: made[0], assignments: made, groupId });
 }

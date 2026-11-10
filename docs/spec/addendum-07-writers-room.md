@@ -2170,3 +2170,28 @@ app live as files on the writer's computer and were never offered.
 The account's other projects are no longer listed. `POST /api/rooms` still
 accepts the id of a project already in the account, for anything that starts a
 room that way.
+
+## 34. One task for several writers
+
+Spec v1.1 §5 step 1: *a task targeting multiple writers creates separately
+attributable assignment instances linked under one comparison group.*
+Migration 0084.
+
+**Giving it out.** The Assign form's *To* is now a row of tick boxes, one per
+writer in the room. Tick one for an ordinary task; tick several and the button
+reads *Assign it to 3 writers*. Each writer gets their own task (their own
+card, status, versions, notes and history, and their own email), and the
+tasks share a `group_id` on `assignments`. Only the showrunner sets it: the
+assignment guard now holds `group_id` still for the writer as it does every
+other field of the ask.
+
+**On the board.** Each of the group's cards carries a dashed *Group of 3*
+tag beside its place. Cards stay one per writer, so every count on the strip
+is a count of writers' tasks, and nothing is counted twice.
+
+**On the task page.** *Also given to* lists the other writers in the group
+with their status and version number (links for the showrunner; names only
+for a writer, who sees only their own task pages). For the showrunner,
+**Compare all in Integrate** opens the integration workspace (§30) on the
+task's beat with each writer's latest version side by side, up to three, once
+at least two of them have sent something.

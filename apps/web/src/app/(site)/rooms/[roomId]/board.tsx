@@ -18,6 +18,9 @@ import {
   taskMetrics,
   taskPlace,
   taskHeadline,
+  groupSiblings,
+  groupSize,
+  groupVersions,
   workflowSectionName,
   PERMISSION_STATE_NAMES,
   describeAuditEvent,
@@ -142,6 +145,11 @@ export function Board({
       <a href={link({ task: one.key })} className={`tk-card tk-card-${one.kind}${needsActionFrom(one, viewer) ? ' act' : ''}`}>
         <span className="tk-card-top">
           <span className="tk-place">{taskPlace(one)}</span>
+          {one.assignment?.groupId ? (
+            <span className="tk-group-chip" title="The same task given to several writers">
+              Group of {groupSize(all, one)}
+            </span>
+          ) : null}
           {one.versions > 0 ? <span className="tk-ver">v{one.versions}</span> : null}
         </span>
         <strong className="tk-title">{taskHeadline(one)}</strong>
@@ -237,6 +245,7 @@ export function Board({
               masterVersionId={masterVersionId}
               requests={requests}
               audit={audit}
+              allTasks={all}
             />
           ) : (
             <>
@@ -450,6 +459,7 @@ function TaskPage({
   masterVersionId,
   requests,
   audit,
+  allTasks,
 }: {
   task: Task;
   tab: TaskTab;
@@ -464,7 +474,11 @@ function TaskPage({
   masterVersionId: string | null;
   requests: PermissionRequest[];
   audit: AuditEvent[];
+  /** Every task this person may see, for the task's group (§34). */
+  allTasks: Task[];
 }) {
+  const siblings = groupSiblings(allTasks, task);
+  const compareAll = groupVersions(allTasks, task);
   const latest = task.submissions[0] ?? null;
   const mine = task.ownerId === viewer.userId;
   // Opens on the task's beat (or its scene's first beat), and knows the task,
@@ -556,6 +570,32 @@ function TaskPage({
                   <dd>{task.updatedAt.slice(0, 10)}</dd>
                 </div>
               </dl>
+              {siblings.length > 0 ? (
+                <div className="tk-group">
+                  <h3>Also given to</h3>
+                  <ul className="tk-siblings">
+                    {siblings.map((one) => (
+                      <li key={one.key}>
+                        <span className="tk-who sm" style={{ background: colourOf(one.ownerId) }}>
+                          {initialsOf(one.ownerId)}
+                        </span>
+                        {viewer.showrunner ? <a href={link({ task: one.key })}>{nameOf(one.ownerId)}</a> : <span>{nameOf(one.ownerId)}</span>}
+                        <StatusBadge status={one.status} />
+                        {one.versions > 0 ? <span className="tk-ver">v{one.versions}</span> : null}
+                      </li>
+                    ))}
+                  </ul>
+                  {viewer.showrunner && compareAll.length > 1 ? (
+                    <p className="small">
+                      <a className="button small" href={`/rooms/${roomId}?view=integrate&task=${encodeURIComponent(task.key)}&from=${compareAll.join(',')}`}>
+                        Compare all in Integrate ({compareAll.length})
+                      </a>
+                    </p>
+                  ) : viewer.showrunner ? (
+                    <p className="small muted">Compare all opens once two of them have sent something.</p>
+                  ) : null}
+                </div>
+              ) : null}
               {latest?.reply && latest.state === 'revision_requested' ? (
                 <div className="notice">
                   <strong>Notes from the showrunner on v{task.versions}:</strong> {latest.reply}

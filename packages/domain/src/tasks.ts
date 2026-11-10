@@ -448,3 +448,30 @@ export const taskReport = (input: {
   });
   return { sections, total: rows.length };
 };
+
+// ------------------------------------------------------------ task groups
+
+/**
+ * The other writers' tasks in the same group (addendum 07 §34): the same task
+ * given to several writers, each separately attributable. Empty for a task
+ * given to one writer.
+ */
+export const groupSiblings = (tasks: readonly Task[], task: Pick<Task, 'key' | 'assignment'>): Task[] => {
+  const group = task.assignment?.groupId;
+  if (!group) return [];
+  return tasks.filter((one) => one.key !== task.key && one.assignment?.groupId === group);
+};
+
+/** How many writers a task's group has, itself included; 1 for no group. */
+export const groupSize = (tasks: readonly Task[], task: Pick<Task, 'key' | 'assignment'>): number =>
+  groupSiblings(tasks, task).length + 1;
+
+/**
+ * The versions to compare for a group: each writer's latest submission, the
+ * task's own first, at most three (the compare panes there are).
+ */
+export const groupVersions = (tasks: readonly Task[], task: Task): string[] =>
+  [task, ...groupSiblings(tasks, task)]
+    .map((one) => one.submissions[0]?.versionId)
+    .filter((id): id is string => Boolean(id))
+    .slice(0, 3);

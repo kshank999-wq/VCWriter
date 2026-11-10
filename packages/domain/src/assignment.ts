@@ -84,6 +84,12 @@ export const assignmentSchema = z.object({
   /** When it is wanted, as a plain date — a room works in days, not minutes. */
   dueOn: z.string().nullable().default(null),
   state: assignmentStateSchema.default('assigned'),
+  /**
+   * The group, where the same task was given to several writers at once
+   * (addendum 07 §34): one row per writer, each theirs, linked so their
+   * versions are compared together. Null for a task given to one writer.
+   */
+  groupId: z.string().nullable().default(null),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

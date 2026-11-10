@@ -27,6 +27,7 @@ interface AssignmentRow {
   assigned_by: string | null;
   target_kind: AssignmentTarget | null;
   target_id: string | null;
+  group_id?: string | null;
   target_label: string;
   note: string;
   due_on: string | null;
@@ -36,7 +37,7 @@ interface AssignmentRow {
 }
 
 const COLUMNS =
-  'id, room_id, assignee_id, assigned_by, target_kind, target_id, target_label, note, due_on, state, created_at, updated_at';
+  'id, room_id, assignee_id, assigned_by, target_kind, target_id, target_label, note, due_on, state, group_id, created_at, updated_at';
 
 const fromRow = (row: AssignmentRow): Assignment =>
   assignmentSchema.parse({
@@ -46,6 +47,7 @@ const fromRow = (row: AssignmentRow): Assignment =>
     assignedBy: row.assigned_by,
     targetKind: row.target_kind,
     targetId: row.target_id,
+    groupId: row.group_id ?? null,
     targetLabel: row.target_label,
     note: row.note,
     dueOn: row.due_on,
@@ -89,6 +91,7 @@ export const makeAssignment = async (input: {
   targetLabel: string;
   note: string;
   dueOn: string | null;
+  groupId?: string | null;
 }): Promise<Assignment | AssignFailure> => {
   const { data, error } = await serverClient()
     .from('assignments')
@@ -101,6 +104,7 @@ export const makeAssignment = async (input: {
       target_label: input.targetLabel,
       note: input.note,
       due_on: input.dueOn,
+      group_id: input.groupId ?? null,
     })
     .select(COLUMNS)
     .single();

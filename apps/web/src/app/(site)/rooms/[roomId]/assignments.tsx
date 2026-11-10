@@ -162,7 +162,11 @@ export function WhoOwesWhat({
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [assigneeId, setAssigneeId] = useState(defaultAssigneeId ?? '');
+  // One writer, or several at once (§34): several make one task each, linked.
+  const [assignees, setAssignees] = useState<string[]>(() => {
+    const first = defaultAssigneeId ?? seats.find((seat) => seat.state !== 'deactivated' && seat.userId)?.userId;
+    return first ? [first] : [];
+  });
   const [target, setTarget] = useState('');
   const [note, setNote] = useState('');
   const [dueOn, setDueOn] = useState('');
@@ -195,7 +199,7 @@ export function WhoOwesWhat({
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        assigneeId: assigneeId || askable[0]?.userId,
+        assigneeIds: assignees,
         targetKind: chosen?.kind ?? null,
         targetId: chosen?.id ?? null,
         note,
@@ -269,22 +273,31 @@ export function WhoOwesWhat({
         </p>
       ) : null}
       <div className="assign">
-        <label className="field">
-          <span>To</span>
-          <select
-            value={assigneeId}
-            disabled={askable.length === 0}
-            onChange={(event) => setAssigneeId(event.target.value)}
-          >
-            {askable.length === 0 ? <option value="">Nobody has joined yet</option> : null}
-            {askable.map((seat) => (
-              <option key={seat.id} value={seat.userId ?? ''}>
-                {seatName(seat)}
-                {seat.title ? ` · ${seat.title}` : ''}
-              </option>
-            ))}
-          </select>
-        </label>
+        <fieldset className="field assign-to">
+          <legend>To</legend>
+          {askable.length === 0 ? <span className="small muted">Nobody has joined yet</span> : null}
+          {askable.map((seat) => (
+            <label key={seat.id} className="assign-person">
+              <input
+                type="checkbox"
+                checked={assignees.includes(seat.userId ?? '')}
+                onChange={(event) => {
+                  const id = seat.userId ?? '';
+                  setAssignees((now) => (event.target.checked ? [...new Set([...now, id])] : now.filter((one) => one !== id)));
+                }}
+              />
+              <span className="room-chip" style={{ background: seat.colour || '#666' }} aria-hidden>
+                {seatInitials(seat) || '—'}
+              </span>
+              {seatName(seat)}
+            </label>
+          ))}
+          {assignees.length > 1 ? (
+            <span className="small muted block">
+              {assignees.length} writers: each gets their own task, linked as a group so their versions can be compared together.
+            </span>
+          ) : null}
+        </fieldset>
 
         <label className="field">
           <span>About</span>
@@ -319,8 +332,8 @@ export function WhoOwesWhat({
           <input type="date" value={dueOn} onChange={(event) => setDueOn(event.target.value)} />
         </label>
 
-        <button type="button" className="button" disabled={busy || askable.length === 0} onClick={() => void give()}>
-          {busy ? 'Giving it out…' : 'Assign it'}
+        <button type="button" className="button" disabled={busy || assignees.length === 0} onClick={() => void give()}>
+          {busy ? 'Giving it out…' : assignees.length > 1 ? `Assign it to ${assignees.length} writers` : 'Assign it'}
         </button>
       </div>
 

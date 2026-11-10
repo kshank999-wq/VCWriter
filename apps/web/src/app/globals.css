@@ -3651,3 +3651,14 @@ dialog.walkthrough::backdrop { background: rgba(0, 0, 0, 0.72); }
 .start-room-choice.on { border-color: var(--gold); background: var(--bg-raised-2); }
 .start-room-choice input { margin-top: 4px; }
 .start-room-choice > span { display: grid; gap: 2px; }
+/* Assigning to one writer or several (addendum 07 §34). */
+.assign-to { border: 1px solid var(--border); border-radius: 4px; padding: 6px 10px; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+.assign-to legend { font-size: 12px; padding: 0 4px; }
+.assign-person { display: inline-flex; gap: 6px; align-items: center; font-size: 13.5px; cursor: pointer; }
+.assign-to .block { flex-basis: 100%; }
+.tk-group-chip { font-size: 11px; padding: 0 6px; border-radius: 3px; border: 1px dashed var(--gold-deep, #8a6d2f); color: var(--gold); }
+.tk-siblings { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.tk-siblings li { display: flex; gap: 8px; align-items: center; font-size: 13.5px; }
+.assign .assign-to { grid-column: 1 / -1; flex-basis: 100%; width: 100%; }
+.assign-person { white-space: nowrap; }
+.tk-siblings .tk-ver { margin-left: 0; }

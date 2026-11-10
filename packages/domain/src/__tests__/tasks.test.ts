@@ -113,3 +113,32 @@ describe('the board', () => {
     expect(jo.sections[0]!.initials).toBe('JS');
   });
 });
+
+describe('one task for several writers (§34)', () => {
+  it('links the writers’ tasks, and compares their latest versions', async () => {
+    const { groupSiblings, groupSize, groupVersions } = await import('../index.js');
+    const tasks = tasksFrom(
+      workIn({
+        assignments: [
+          ask({ id: 'g1', assigneeId: 'jo', groupId: 'grp' }),
+          ask({ id: 'g2', assigneeId: 'mara', groupId: 'grp' }),
+          ask({ id: 'g3', assigneeId: 'ab', groupId: 'grp' }),
+          ask({ id: 'solo', assigneeId: 'jo' }),
+        ],
+        submissions: [
+          sent({ id: 's-jo', assignmentId: 'g1', versionId: 'v-jo' }),
+          sent({ id: 's-mara', assignmentId: 'g2', authorId: 'mara', versionId: 'v-mara' }),
+        ],
+        markups: [],
+      }),
+      TODAY,
+    );
+    const jo = tasks.find((one) => one.assignment?.id === 'g1')!;
+    const solo = tasks.find((one) => one.assignment?.id === 'solo')!;
+    expect(groupSiblings(tasks, jo).map((one) => one.ownerId).sort()).toEqual(['ab', 'mara']);
+    expect(groupSize(tasks, jo)).toBe(3);
+    expect(groupVersions(tasks, jo)).toEqual(['v-jo', 'v-mara']);
+    expect(groupSiblings(tasks, solo)).toEqual([]);
+    expect(groupSize(tasks, solo)).toBe(1);
+  });
+});
