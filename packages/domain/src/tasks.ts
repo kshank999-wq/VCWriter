@@ -1,5 +1,5 @@
 import { seatInitials, seatName, type Seat } from './room.js';
-import { PRIORITY_RANK, TARGET_NAMES } from './assignment.js';
+import { PRIORITY_RANK, TARGET_NAMES, type Assignment, type EpisodeTag } from './assignment.js';
 import type { WorkItem } from './work.js';
 
 /**
@@ -183,6 +183,8 @@ export interface Task extends WorkItem {
   updatedAt: string;
   overdue: boolean;
   contribution: ContributionState;
+  /** The episode it is in, in a series room (§36). */
+  episode: EpisodeTag | null;
 }
 
 const latestOf = (item: WorkItem) => item.submissions[0] ?? null;
@@ -218,7 +220,12 @@ const newest = (dates: (string | null | undefined)[]): string =>
   dates.filter((one): one is string => Boolean(one)).sort().pop() ?? '';
 
 /** Every card as a task, with today's date settling what is late. */
-export const tasksFrom = (work: readonly WorkItem[], today: string): Task[] =>
+export const tasksFrom = (
+  work: readonly WorkItem[],
+  today: string,
+  /** Which episode an assignment is about, read from the project (§36). */
+  episodeOf: (assignment: Assignment) => EpisodeTag | null = () => null,
+): Task[] =>
   work.map((item) => {
     const status = taskStatusOf(item);
     const live = columnOf(status) !== null;
@@ -236,6 +243,7 @@ export const tasksFrom = (work: readonly WorkItem[], today: string): Task[] =>
       ]),
       overdue: live && item.dueOn !== null && item.dueOn < today.slice(0, 10),
       contribution: contributionOf(item),
+      episode: item.assignment ? episodeOf(item.assignment) : null,
     };
   });
 
@@ -262,12 +270,15 @@ export const sortTasks = (tasks: readonly Task[], viewer: { userId: string; show
   });
 
 /** Where a task sits in the script, for the card: "Beat — B3". */
-export const taskPlace = (task: Pick<Task, 'assignment' | 'kind'>): string => {
+export const taskPlace = (task: Pick<Task, 'assignment' | 'kind'> & { episode?: EpisodeTag | null }): string => {
   const assignment = task.assignment;
+  // "EP 2 · Scene · The pier" (spec §4); an episode task is its own label.
+  const ep = task.episode && assignment?.targetKind !== 'episode' ? `${task.episode.short} · ` : '';
+  if (assignment?.targetKind === 'episode' && assignment.targetLabel.trim()) return assignment.targetLabel.trim();
   if (assignment?.targetKind && assignment.targetLabel.trim()) {
-    return `${TARGET_NAMES[assignment.targetKind]} · ${assignment.targetLabel.trim()}`;
+    return `${ep}${TARGET_NAMES[assignment.targetKind]} · ${assignment.targetLabel.trim()}`;
   }
-  return task.kind === 'own' ? 'Own work' : 'Task';
+  return task.kind === 'own' ? 'Own work' : `${ep}Task`;
 };
 
 /**
@@ -284,6 +295,8 @@ export const taskHeadline = (task: Pick<Task, 'assignment' | 'title' | 'note'>):
 export interface TaskFilter {
   section?: WorkflowSection;
   writer?: string | null;
+  /** An episode marker's id (§36). */
+  episode?: string | null;
   status?: TaskStatus | null;
   query?: string;
 }
@@ -294,6 +307,7 @@ export const filterTasks = (tasks: readonly Task[], filter: TaskFilter): Task[] 
     (task) =>
       (!filter.section || inSection(task, filter.section)) &&
       (!filter.writer || task.ownerId === filter.writer) &&
+      (!filter.episode || task.episode?.key === filter.episode) &&
       (!filter.status || task.status === filter.status) &&
       (!query || `${task.title} ${task.note} ${taskPlace(task)}`.toLowerCase().includes(query)),
   );
@@ -345,11 +359,12 @@ export const REPORT_SCOPE_NAMES: Record<ReportScope, string> = {
   all: 'Include completed and archive',
 };
 
-export const REPORT_GROUPS = ['writer', 'status', 'place'] as const;
+export const REPORT_GROUPS = ['writer', 'status', 'episode', 'place'] as const;
 export type ReportGroup = (typeof REPORT_GROUPS)[number];
 export const REPORT_GROUP_NAMES: Record<ReportGroup, string> = {
   writer: 'Group by writer',
   status: 'Group by status',
+  episode: 'Group by episode',
   place: 'Group by scene / beat',
 };
 
@@ -426,12 +441,25 @@ export const taskReport = (input: {
   });
   const groups = new Map<string, ReportRow[]>();
   const keyOf = (row: ReportRow) =>
-    input.group === 'writer' ? row.writer : input.group === 'status' ? row.task.status : row.place;
+    input.group === 'writer'
+      ? row.writer
+      : input.group === 'status'
+        ? row.task.status
+        : input.group === 'episode'
+          ? (row.task.episode?.label ?? 'No episode')
+          : row.place;
   for (const row of rows) groups.set(keyOf(row), [...(groups.get(keyOf(row)) ?? []), row]);
   const order =
     input.group === 'status'
       ? [...groups.keys()].sort((a, b) => TASK_STATUSES.indexOf(a as TaskStatus) - TASK_STATUSES.indexOf(b as TaskStatus))
-      : [...groups.keys()].sort((a, b) => (a === 'Unassigned' ? 1 : b === 'Unassigned' ? -1 : a.localeCompare(b)));
+      : input.group === 'episode'
+        ? [...groups.keys()].sort((a, b) => {
+            const at = rows.find((row) => (row.task.episode?.label ?? 'No episode') === a)?.task.episode;
+            const bt = rows.find((row) => (row.task.episode?.label ?? 'No episode') === b)?.task.episode;
+            const n = (tag: EpisodeTag | null | undefined) => (tag ? Number(/\d+/.exec(tag.short)?.[0] ?? 0) : Number.MAX_SAFE_INTEGER);
+            return n(at) - n(bt);
+          })
+        : [...groups.keys()].sort((a, b) => (a === 'Unassigned' ? 1 : b === 'Unassigned' ? -1 : a.localeCompare(b)));
   const sections = order.map((key) => {
     const list = groups.get(key)!;
     const first = list[0]!;

@@ -26,6 +26,7 @@ import {
   PRIORITY_NAMES,
   describeAuditEvent,
   type AuditEvent,
+  type EpisodeTag,
   type PermissionRequest,
   type AssignableThing,
   type Assignment,
@@ -82,6 +83,9 @@ export function Board({
   masterVersionId,
   requests,
   audit,
+  episodes = [],
+  episode = null,
+  archiveBy = 'writer',
 }: {
   roomId: string;
   tasks: Task[];
@@ -101,6 +105,12 @@ export function Board({
   requests: PermissionRequest[];
   /** The audit trail this person may read (§32). */
   audit: AuditEvent[];
+  /** A series room's episodes, in story order (§36); empty otherwise. */
+  episodes?: EpisodeTag[];
+  /** The episode being looked at, by marker id. */
+  episode?: string | null;
+  /** How the archive is grouped. */
+  archiveBy?: 'writer' | 'episode';
 }) {
   const base = `/rooms/${roomId}?view=tasks`;
   const seatOf = (userId: string) => seats.find((one) => one.userId === userId) ?? null;
@@ -114,12 +124,15 @@ export function Board({
     return seat ? seatInitials(seat) : 'SR';
   };
   const colourOf = (userId: string) => seatOf(userId)?.colour || '#c9a45c';
-  const link = (over: { section?: WorkflowSection; writer?: string | null; task?: string; tab?: TaskTab; q?: string }) => {
+  const link = (over: { section?: WorkflowSection; writer?: string | null; episode?: string | null; by?: 'writer' | 'episode'; task?: string; tab?: TaskTab; q?: string }) => {
     const params = new URLSearchParams();
     const s = over.section ?? section;
     if (s !== 'board') params.set('section', s);
     const w = over.writer === undefined ? writer : over.writer;
     if (w) params.set('writer', w);
+    const e = over.episode === undefined ? episode : over.episode;
+    if (e) params.set('ep', e);
+    if ((over.by ?? archiveBy) === 'episode') params.set('by', 'episode');
     const q = over.q ?? query;
     if (q) params.set('q', q);
     if (over.task) params.set('task', over.task);
@@ -137,7 +150,7 @@ export function Board({
     { key: 'permissions', label: 'Permission requests', count: asking.length, section: 'permissions' as WorkflowSection, attention: viewer.showrunner && asking.length > 0 },
   ];
   const writers = seats.filter((seat) => seat.state !== 'deactivated' && seat.userId);
-  const listed = filterTasks(sorted, { section, writer, query });
+  const listed = filterTasks(sorted, { section, writer, episode, query });
   const task = taskKey ? (visible.find((one) => one.key === taskKey) ?? null) : null;
   const attention = visible.filter((one) => needsActionFrom(one, viewer)).length;
 
@@ -171,7 +184,7 @@ export function Board({
   );
 
   const counts: Record<WorkflowSection, number> = Object.fromEntries(
-    WORKFLOW_SECTIONS.map((one) => [one, one === 'permissions' ? asking.length : filterTasks(visible, { section: one, writer }).length]),
+    WORKFLOW_SECTIONS.map((one) => [one, one === 'permissions' ? asking.length : filterTasks(visible, { section: one, writer, episode }).length]),
   ) as Record<WorkflowSection, number>;
 
   return (
@@ -230,6 +243,26 @@ export function Board({
                 </ul>
               </>
             ) : null}
+            {episodes.length > 0 ? (
+              <>
+                <p className="tk-nav-head">Episode</p>
+                <ul>
+                  <li>
+                    <a href={link({ episode: null })} className={!episode ? 'on' : undefined}>
+                      All episodes
+                    </a>
+                  </li>
+                  {episodes.map((one) => (
+                    <li key={one.key}>
+                      <a href={link({ episode: one.key })} className={episode === one.key ? 'on' : undefined} title={one.label}>
+                        <span className="tk-ep">{one.short}</span>
+                        <span>{one.label.replace(/^Episode \d+( — )?/, '') || one.label}</span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
           </nav>
         </details>
 
@@ -257,6 +290,7 @@ export function Board({
                 <input type="hidden" name="view" value="tasks" />
                 {section !== 'board' ? <input type="hidden" name="section" value={section} /> : null}
                 {writer ? <input type="hidden" name="writer" value={writer} /> : null}
+                {episode ? <input type="hidden" name="ep" value={episode} /> : null}
                 <input type="search" name="q" defaultValue={query} placeholder="Search tasks, scenes, beats" aria-label="Search tasks" />
                 <button type="submit" className="button small secondary">
                   Search
@@ -316,7 +350,7 @@ export function Board({
                   requests={requests}
                 />
               ) : section === 'archive' ? (
-                <Archive tasks={listed} card={card} nameOf={nameOf} />
+                <Archive tasks={listed} card={card} nameOf={nameOf} by={episodes.length > 0 ? archiveBy : 'writer'} link={link} episodic={episodes.length > 0} />
               ) : (
                 <section className="room-panel">
                   <h2>{workflowSectionName(section, viewer.showrunner)}</h2>
@@ -352,20 +386,50 @@ export function Board({
   );
 }
 
-function Archive({ tasks, card, nameOf }: { tasks: Task[]; card: (task: Task) => React.ReactNode; nameOf: (id: string) => string }) {
-  const groups = new Map<string, Task[]>();
-  for (const task of tasks) groups.set(task.ownerId, [...(groups.get(task.ownerId) ?? []), task]);
+function Archive({
+  tasks,
+  card,
+  nameOf,
+  by,
+  link,
+  episodic,
+}: {
+  tasks: Task[];
+  card: (task: Task) => React.ReactNode;
+  nameOf: (id: string) => string;
+  by: 'writer' | 'episode';
+  link: (over: { by?: 'writer' | 'episode' }) => string;
+  episodic: boolean;
+}) {
+  // By writer, or in a series by episode (spec §9).
+  const groups = new Map<string, { title: string; list: Task[] }>();
+  for (const task of tasks) {
+    const key = by === 'episode' ? (task.episode?.key ?? '') : task.ownerId;
+    const title = by === 'episode' ? (task.episode?.label ?? 'No episode') : nameOf(task.ownerId);
+    const group = groups.get(key) ?? { title, list: [] };
+    group.list.push(task);
+    groups.set(key, group);
+  }
+  const ordered = [...groups.entries()].sort(([a], [b]) => (by === 'episode' ? (a === '' ? 1 : b === '' ? -1 : 0) : 0));
   return (
     <section className="room-panel">
       <h2>Completed / Archive</h2>
-      <p className="small muted">Closed tasks, by writer. Everything sent for them, every markup and every decision is kept.</p>
+      <p className="small muted">
+        Closed tasks, by {by === 'episode' ? 'episode' : 'writer'}. Everything sent for them, every markup and every decision is kept.
+        {episodic ? (
+          <>
+            {' '}
+            <a href={link({ by: by === 'episode' ? 'writer' : 'episode' })}>{by === 'episode' ? 'Group by writer' : 'Group by episode'}</a>
+          </>
+        ) : null}
+      </p>
       {tasks.length === 0 ? <p className="small muted">Nothing closed yet.</p> : null}
-      {[...groups.entries()].map(([owner, list]) => (
-        <div key={owner} className="tk-group">
+      {ordered.map(([key, group]) => (
+        <div key={key || 'none'} className="tk-group">
           <h3>
-            {nameOf(owner)} <span className="tk-count">{list.length}</span>
+            {group.title} <span className="tk-count">{group.list.length}</span>
           </h3>
-          <ul className="tk-cards tk-grid">{list.map(card)}</ul>
+          <ul className="tk-cards tk-grid">{group.list.map(card)}</ul>
         </div>
       ))}
     </section>

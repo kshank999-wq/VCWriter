@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { roleCan, seatName, type RoomRole, type Seat } from './room.js';
 import { researchCategoriesInOrder, researchItemsIn } from './selectors.js';
 import type { ProjectFile } from './project-file.js';
+import { episodeOfBeat, episodeOfUnit, episodes, type Episode } from './episodes.js';
 
 /**
  * Assignments, and the menu that makes them (addendum 07 §8, stage 8).
@@ -34,7 +35,7 @@ import type { ProjectFile } from './project-file.js';
  * insisting every assignment name an existing record would be insisting the
  * work exist before it is asked for.
  */
-export const ASSIGNMENT_TARGETS = ['scene', 'beat', 'act', 'research'] as const;
+export const ASSIGNMENT_TARGETS = ['scene', 'beat', 'act', 'research', 'episode'] as const;
 export const assignmentTargetSchema = z.enum(ASSIGNMENT_TARGETS);
 export type AssignmentTarget = (typeof ASSIGNMENT_TARGETS)[number];
 
@@ -43,6 +44,7 @@ export const TARGET_NAMES: Record<AssignmentTarget, string> = {
   beat: 'Beat',
   act: 'Act',
   research: 'Research',
+  episode: 'Episode',
 };
 
 export const ASSIGNMENT_STATES = ['assigned', 'accepted', 'in_progress', 'done', 'cancelled'] as const;
@@ -328,6 +330,53 @@ export interface AssignableThing {
   kind: AssignmentTarget;
   id: string;
   label: string;
+  /** The episode it is in, in a series (§36), for grouping the menu. */
+  episode?: string;
+}
+
+/** An episode as a task names it (addendum 07 §36). */
+export interface EpisodeTag {
+  /** The episode marker's id, stable across renames. */
+  key: string;
+  /** "EP 2", for a card. */
+  short: string;
+  /** "Episode 2 — The Lamp", for a heading or a report group. */
+  label: string;
+}
+
+const tagOf = (episode: Episode): EpisodeTag => ({
+  key: episode.marker.id as string,
+  short: `EP ${episode.number}`,
+  label: `Episode ${episode.number}${episode.title.trim() ? ` — ${episode.title.trim()}` : ''}`,
+});
+
+/** Every episode in a series, as tags, in story order. Empty outside a series. */
+export const episodeTags = (file: ProjectFile): EpisodeTag[] => episodes(file).map(tagOf);
+
+/** The episode a task's target is in, where it is in one. */
+export const episodeForTarget = (
+  file: ProjectFile,
+  target: { kind: AssignmentTarget | null; id: string | null },
+): EpisodeTag | null => {
+  if (!target.kind || !target.id) return null;
+  if (target.kind === 'episode') {
+    const found = episodes(file).find((one) => (one.marker.id as string) === target.id);
+    return found ? tagOf(found) : null;
+  }
+  if (target.kind === 'beat') {
+    const found = episodeOfBeat(file, target.id);
+    return found ? tagOf(found) : null;
+  }
+  if (target.kind === 'scene') {
+    const found = episodeOfUnit(file, target.id);
+    return found ? tagOf(found) : null;
+  }
+  if (target.kind === 'act') {
+    const marker = file.markers.find((one) => (one.id as string) === target.id);
+    const found = marker ? episodeOfUnit(file, marker.unitId as string) : undefined;
+    return found ? tagOf(found) : null;
+  }
+  return null;
 }
 
 /**
@@ -364,7 +413,16 @@ export const assignableThings = (file: ProjectFile): AssignableThing[] => {
     })),
   );
 
-  return [...acts, ...scenes, ...beats, ...research];
+  // In a series, whole episodes can be given out, and everything else says
+  // which episode it is in, so the menu can group them (§36).
+  const all = episodes(file);
+  if (all.length === 0) return [...acts, ...scenes, ...beats, ...research];
+  const eps: AssignableThing[] = all.map((one) => ({ kind: 'episode' as const, id: one.marker.id as string, label: tagOf(one).label }));
+  const tagged = [...acts, ...scenes, ...beats].map((thing) => {
+    const tag = episodeForTarget(file, { kind: thing.kind, id: thing.id });
+    return tag ? { ...thing, episode: tag.label } : thing;
+  });
+  return [...eps, ...tagged, ...research];
 };
 
 /** What a target is called now, for putting on a fresh assignment. */

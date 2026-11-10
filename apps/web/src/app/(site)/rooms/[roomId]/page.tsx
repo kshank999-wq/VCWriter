@@ -31,6 +31,8 @@ import {
   ROLE_NAMES,
   unseenMarkups,
   workIn,
+  episodeTags,
+  episodeForTarget,
   tasksFrom,
   needsActionFrom,
   WORKFLOW_SECTIONS,
@@ -108,6 +110,8 @@ export default async function RoomPage({
     beat?: string;
     from?: string;
     pick?: string | string[];
+    ep?: string;
+    by?: string;
   };
 }) {
   const user = await currentUser();
@@ -339,7 +343,11 @@ export default async function RoomPage({
   const versionLabel = (versionId: string) => versionChoices.find((one) => one.id === versionId)?.label ?? 'A version';
 
   // Tasks on a board (§29, workflow spec v1.1): the room's front page.
-  const tasks = tasksFrom(work, today);
+  // In a series, each task says which episode it is in (§36).
+  const seriesEpisodes = project ? episodeTags(project) : [];
+  const tasks = tasksFrom(work, today, (assignment) =>
+    project && seriesEpisodes.length > 0 ? episodeForTarget(project, { kind: assignment.targetKind, id: assignment.targetId }) : null,
+  );
   const viewer = { userId: user.id, showrunner: curating };
   const acting = tasks.filter((one) => needsActionFrom(one, viewer)).length;
 
@@ -479,6 +487,9 @@ export default async function RoomPage({
               assignments={assignments}
               roomName={view.room.name || view.projectTitle || 'The room'}
               masterVersionId={master?.id ?? null}
+              episodes={seriesEpisodes}
+              episode={searchParams?.ep ?? null}
+              archiveBy={searchParams?.by === 'episode' ? 'episode' : 'writer'}
               requests={requests}
               audit={audit}
             />

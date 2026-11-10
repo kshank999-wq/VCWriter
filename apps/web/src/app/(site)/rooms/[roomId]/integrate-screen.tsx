@@ -1,5 +1,6 @@
 import {
   beatHash,
+  episodes,
   parseProjectFile,
   seatInitials,
   seatName,
@@ -54,7 +55,9 @@ export async function IntegrateScreen({
       ? target.targetId
       : target?.targetKind === 'scene'
         ? (ordered.find((beat) => (beat.unitId as string) === target.targetId)?.id as string | undefined)
-        : undefined;
+        : target?.targetKind === 'episode'
+          ? (episodes(master).find((one) => (one.marker.id as string) === target.targetId)?.beats[0]?.id as string | undefined)
+          : undefined;
   const beat = ordered.find((one) => (one.id as string) === (params.beat ?? fromTask)) ?? ordered[0]!;
   const unit = master.units.find((one) => one.id === beat.unitId);
   const beatLabel = `${unit?.title || 'Scene'} › ${beat.title || 'Untitled beat'}`;

@@ -12,6 +12,7 @@ import {
   taskReport,
   tasksFrom,
   workIn,
+  episodeForTarget,
   workflowSectionName,
   type ReportGroup,
   type ReportScope,
@@ -22,6 +23,7 @@ import { loadRoomById } from '@/lib/rooms';
 import { assignmentsIn } from '@/lib/assignments';
 import { submissionsIn } from '@/lib/submissions';
 import { markupsIn } from '@/lib/markups';
+import { projectDocument } from '@/lib/project-document';
 import { PrintButton } from '../task-actions';
 import { ReportArticle } from './report-view';
 
@@ -56,13 +58,17 @@ export default async function TaskReportPage({
   ]);
   const generatedAt = new Date();
   const today = generatedAt.toISOString().slice(0, 10);
-  const tasks = tasksFrom(workIn({ assignments, submissions, markups }), today);
+  const project = await projectDocument(view.room.projectId).catch(() => null);
+  const tasks = tasksFrom(workIn({ assignments, submissions, markups }), today, (assignment) =>
+    project ? episodeForTarget(project, { kind: assignment.targetKind, id: assignment.targetId }) : null,
+  );
   const viewer = { userId: user.id, showrunner };
 
   const scope: ReportScope = (REPORT_SCOPES as readonly string[]).includes(searchParams?.scope ?? '')
     ? (searchParams!.scope as ReportScope)
     : 'active';
-  const groups = showrunner ? REPORT_GROUPS : REPORT_GROUPS.filter((one) => one !== 'writer');
+  const episodic = tasks.some((one) => one.episode);
+  const groups = REPORT_GROUPS.filter((one) => (showrunner || one !== 'writer') && (episodic || one !== 'episode'));
   const group: ReportGroup = (groups as readonly string[]).includes(searchParams?.group ?? '')
     ? (searchParams!.group as ReportGroup)
     : showrunner

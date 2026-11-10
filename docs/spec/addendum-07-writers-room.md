@@ -2216,3 +2216,29 @@ they act, and will not go without an answer; the route refuses them without
 one too. The reason is recorded in the audit trail as *closed*, *cancelled*
 or *reopened*, and the task's overview shows the latest: *Closed by Ken on
 2026-11-09: Cold open is locked for the table read.*
+
+## 36. Episodes in a series room
+
+Spec v1.1 §4 (*EP02 · Scene 14 · Beat B3*), §3.1 (filter by project/episode),
+§9 (archive *By Writer* and *By Episode*) and §12.1 (*Group by episode*).
+Migration 0086. A series project already holds its episodes as episode
+markers (`episodes.ts`); the room now reads them. In any other format nothing
+changes.
+
+- **Every task names its episode.** A task's place reads *EP 2 · Beat · The
+  search*: the episode its beat, scene or act is in. A task about a whole
+  episode reads as the episode, *Episode 1 — Pilot*.
+- **A whole episode can be given out.** `episode` is now a target kind. The
+  Assign form's *About* menu, in a series, lists *Whole episodes* first, then
+  each episode's acts, scenes and beats under the episode's own heading, then
+  anything not in an episode.
+- **Filter by episode.** The board's left menu has an *Episode* list (EP 1
+  Pilot, EP 2 The Wreck …) under *Writer*. Choosing one narrows the board,
+  every stage's count and the search to that episode; it combines with the
+  writer filter.
+- **Archive by episode.** Completed / Archive has *Group by episode* (and back
+  to *Group by writer*).
+- **Report by episode.** The printed report offers *Group by episode* in a
+  series room, the groups in episode order with *No episode* last.
+- *Integrate into the master* on an episode task opens on that episode's
+  first beat.

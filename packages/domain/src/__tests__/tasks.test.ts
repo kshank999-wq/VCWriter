@@ -165,3 +165,46 @@ describe('priority (§35)', () => {
     expect(ask().priority).toBe('normal');
   });
 });
+
+describe('episodes in a series room (§36)', () => {
+  it('names each task’s episode, filters and reports by it, and offers whole episodes to assign', async () => {
+    const d = await import('../index.js');
+    let file = d.createProjectFile({ title: 'Harbour', format: 'series' });
+    file = { ...file, units: [], beats: [], markers: [] };
+    const pilot = d.addEpisode(file, { title: 'Pilot' });
+    file = pilot.file;
+    const wreck = d.addEpisode(file, { title: 'The Wreck' });
+    file = wreck.file;
+    const wreckBeat = wreck.episode.beats[0]!;
+
+    const things = d.assignableThings(file);
+    expect(things.filter((one) => one.kind === 'episode').map((one) => one.label)).toEqual(['Episode 1 — Pilot', 'Episode 2 — The Wreck']);
+    expect(things.find((one) => one.kind === 'beat' && one.id === (wreckBeat.id as string))?.episode).toBe('Episode 2 — The Wreck');
+
+    const tag = d.episodeForTarget(file, { kind: 'beat', id: wreckBeat.id as string })!;
+    expect(tag).toMatchObject({ short: 'EP 2', label: 'Episode 2 — The Wreck' });
+    expect(d.episodeForTarget(file, { kind: 'episode', id: pilot.episode.marker.id as string })!.short).toBe('EP 1');
+
+    const tasks = tasksFrom(
+      workIn({
+        assignments: [
+          ask({ id: 'w', targetKind: 'beat', targetId: wreckBeat.id, targetLabel: 'The search' }),
+          ask({ id: 'p', targetKind: 'episode', targetId: pilot.episode.marker.id, targetLabel: 'Episode 1 — Pilot' }),
+          ask({ id: 'n', note: 'Research tides.' }),
+        ],
+        submissions: [],
+        markups: [],
+      }),
+      TODAY,
+      (assignment) => d.episodeForTarget(file, { kind: assignment.targetKind, id: assignment.targetId }),
+    );
+    const w = tasks.find((one) => one.assignment!.id === 'w')!;
+    expect(d.taskPlace(w)).toBe('EP 2 · Beat · The search');
+    expect(d.taskPlace(tasks.find((one) => one.assignment!.id === 'p')!)).toBe('Episode 1 — Pilot');
+    expect(filterTasks(tasks, { episode: tag.key }).map((one) => one.assignment!.id)).toEqual(['w']);
+
+    const report = taskReport({ tasks, seats: [], viewer: { userId: 'sr', showrunner: true }, scope: 'all', group: 'episode' });
+    expect(report.sections.map((one) => one.title)).toEqual(['Episode 1 — Pilot', 'Episode 2 — The Wreck', 'No episode']);
+    expect(report.total).toBe(3);
+  });
+});

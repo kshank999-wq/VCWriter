@@ -305,17 +305,39 @@ export function WhoOwesWhat({
           <span>About</span>
           <select value={target} onChange={(event) => setTarget(event.target.value)}>
             <option value="">Nothing in particular — a task</option>
-            {things.map((thing) => (
-              <option key={`${thing.kind}:${thing.id}`} value={`${thing.kind}:${thing.id}`}>
-                {thing.kind === 'act'
-                  ? `Act — ${thing.label}`
-                  : thing.kind === 'scene'
-                    ? `Scene — ${thing.label}`
-                    : thing.kind === 'beat'
-                      ? `Beat — ${thing.label}`
-                      : `Research — ${thing.label}`}
-              </option>
-            ))}
+            {(() => {
+              const name = (thing: AssignableThing) =>
+                thing.kind === 'episode'
+                  ? thing.label
+                  : thing.kind === 'act'
+                    ? `Act — ${thing.label}`
+                    : thing.kind === 'scene'
+                      ? `Scene — ${thing.label}`
+                      : thing.kind === 'beat'
+                        ? `Beat — ${thing.label}`
+                        : `Research — ${thing.label}`;
+              const option = (thing: AssignableThing) => (
+                <option key={`${thing.kind}:${thing.id}`} value={`${thing.kind}:${thing.id}`}>
+                  {name(thing)}
+                </option>
+              );
+              // In a series, whole episodes first, then each episode's own
+              // acts, scenes and beats under it (§36).
+              const episodes = things.filter((thing) => thing.kind === 'episode');
+              if (episodes.length === 0) return things.map(option);
+              const loose = things.filter((thing) => thing.kind !== 'episode' && !thing.episode);
+              return (
+                <>
+                  <optgroup label="Whole episodes">{episodes.map(option)}</optgroup>
+                  {episodes.map((one) => (
+                    <optgroup key={one.id} label={one.label}>
+                      {things.filter((thing) => thing.episode === one.label).map(option)}
+                    </optgroup>
+                  ))}
+                  {loose.length > 0 ? <optgroup label="Not in an episode">{loose.map(option)}</optgroup> : null}
+                </>
+              );
+            })()}
           </select>
         </label>
 
