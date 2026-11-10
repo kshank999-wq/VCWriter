@@ -377,13 +377,19 @@ export function Compare({
   roomId,
   versions,
   canMark,
+  startWith,
 }: {
   roomId: string;
   versions: VersionChoice[];
   canMark: boolean;
+  /** A version to open in the first pane: the one an assignment's Mark up pressed (§28). */
+  startWith?: string;
 }) {
-  const [count, setCount] = useState<1 | 2 | 3>(versions.length >= 2 ? 2 : 1);
-  const initial = useMemo(() => versions.slice(0, 3).map((one) => one.id), [versions]);
+  const [count, setCount] = useState<1 | 2 | 3>(startWith ? 1 : versions.length >= 2 ? 2 : 1);
+  const initial = useMemo(
+    () => (startWith ? [startWith, ...versions.filter((one) => one.id !== startWith).map((one) => one.id)] : versions.map((one) => one.id)).slice(0, 3),
+    [versions, startWith],
+  );
   const [picked, setPicked] = useState<string[]>(() => {
     const out = [...initial];
     while (out.length < 3) out.push(versions[0]?.id ?? '');

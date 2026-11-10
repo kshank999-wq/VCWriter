@@ -1884,3 +1884,53 @@ longer applies: these are not the same text. Compared drafts are drawn as
 white pages like the working one. A markup draft is still read, not written
 in: it is the record of what was said, and it keeps its grey page and its
 marks.
+
+## 28. Work, by person: assignments and own work as cards
+
+From Ken, after the first full loop: the Assignments screen *doesn't make
+sense … I marked up, I'm not sure how to send … we need to streamline this
+workflow and make it simpler.* What he asked for, and what was built:
+
+- **A people menu on the left** (*you select that person, it shows all their
+  assignments*). The showrunner sees everyone who has joined; a writer sees
+  themselves. A count beside each name says how many cards are waiting on
+  that person (assigned, in progress or marked up).
+- **Give out an assignment at the top**, for the showrunner, already set to the
+  person picked.
+- **Their work at the bottom, as cards** (`workIn`, `packages/domain/src/
+  work.ts`). Each card shows the owner's initials in their colour, the title,
+  the due date and how much has been sent. There are two kinds, in two
+  colours: an **Assignment** (gold) the showrunner gave out, and **Own work**
+  (teal) a writer sent without being asked (*the writers also need to be able
+  to work on different things*).
+- **Every card says where it stands**, read from what is already recorded
+  rather than kept twice:
+
+  | Stage | Colour |
+  | --- | --- |
+  | Assigned | grey |
+  | In progress | blue |
+  | Sent for review | purple |
+  | **Marked up** | red, with *N new markups* |
+  | Done | green |
+  | Called off | dark grey |
+
+  A **legend** at the top of the list says what each colour means.
+- **A card opens its own page** with everything about it: what was asked, who
+  has it and when it is due. Then three blocks:
+  - **Update your progress**, only for the person doing the work, never the
+    showrunner (*the showrunner wouldn't be giving progress reports*).
+  - **Sent for review**: each pass with **Read it**, and **Mark up** for the
+    showrunner. Mark up opens Compare with that version already in the first
+    pane (`?view=compare&version=…`), so sending a markup back is one path.
+  - **Markups**, each opening the markup itself, with its archive and
+    bring-in buttons.
+- **A return lines up with its assignment.** A submission now records the
+  assignment it answers: `submissions.assignment_id`, migration **0081**, set
+  only by the route, which checks the assignment is the writer's own and not
+  called off. Submit in the script asks **What is it for?**: the writer's open
+  assignments (`myAssignments`), or *My own work*. It starts on the only open
+  one when there is just one.
+
+Assignments takes the whole width of the window, as Compare does, with the
+room menu along the top.

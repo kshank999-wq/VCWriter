@@ -71,6 +71,11 @@ export const submissionSchema = z.object({
   state: submissionStateSchema.default('submitted'),
   /** What the writer said it is. Empty is allowed; most submissions have one. */
   note: z.string().default(''),
+  /**
+   * The assignment this answers (addendum 07 §28), or null for work the writer
+   * started on their own. Set once, on the way in.
+   */
+  assignmentId: z.string().nullable().default(null),
   /** What the showrunner said back, where they have said anything. */
   reply: z.string().default(''),
   decidedBy: z.string().nullable().default(null),

@@ -1,4 +1,5 @@
 import {
+  askTitle,
   assignmentSchema,
   commentSchema,
   describeVersion,
@@ -349,7 +350,7 @@ export const createCloudBridge = (roomId: string, versionId: string | null = nul
       const response = await fetch(`/api/rooms/${roomId}/submissions`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ kind: input.kind, note: input.note }),
+        body: JSON.stringify({ kind: input.kind, note: input.note, assignmentId: input.assignmentId ?? null }),
       });
       if (!response.ok) return fail(await asError(response));
 
@@ -358,6 +359,19 @@ export const createCloudBridge = (roomId: string, versionId: string | null = nul
         label: body.version?.label ?? input.note,
         at: body.version?.createdAt ?? new Date().toISOString(),
       });
+    },
+
+    /** The writer's open assignments, for Submit to say which one a pass answers (§28). */
+    async myAssignments() {
+      await settle();
+      const response = await fetch(`/api/rooms/${roomId}/assignments`, { headers: { accept: 'application/json' } });
+      if (!response.ok) return fail(await asError(response));
+      const body = (await response.json()) as { assignments?: Assignment[] };
+      return ok(
+        (body.assignments ?? [])
+          .filter((one) => one.assigneeId === me && one.state !== 'done' && one.state !== 'cancelled')
+          .map((one) => ({ id: one.id, title: askTitle(one), dueOn: one.dueOn })),
+      );
     },
 
     listProjects: async () => ok([]),

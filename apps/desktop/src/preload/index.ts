@@ -333,7 +333,14 @@ export interface VcWriterApi {
   submitWork?(input: {
     kind: 'script' | 'research';
     note: string;
+    /** The assignment this answers; left out for the writer's own work (addendum 07 §28). */
+    assignmentId?: string | null;
   }): Promise<DesktopApiResult<{ label: string; at: string }>>;
+  /**
+   * The writer's open assignments in this room, for Submit's *What is it for?*
+   * (addendum 07 §28). Absent outside a room.
+   */
+  myAssignments?(): Promise<DesktopApiResult<Array<{ id: string; title: string; dueOn: string | null }>>>;
 
   // Sync is optional: a writer who never signs in has a fully working desktop
   // application whose projects live in files.

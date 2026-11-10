@@ -3350,3 +3350,103 @@ dialog.walkthrough::backdrop { background: rgba(0, 0, 0, 0.72); }
 .mk-actions [role='status'] { flex-basis: 100%; margin: 4px 0 0; }
 .mk-archive { border-left: 5px solid #6b7280; }
 .mk-archive > h2 { color: var(--text-muted); }
+
+/* The room's work (addendum 07 §28): people on the left, their work on the
+   right, each card coloured by what kind of work it is and where it stands. */
+.wk { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 16px; align-items: start; }
+.wk-people {
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-raised);
+  position: sticky;
+  top: 16px;
+}
+.wk-people a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 3px;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 14px;
+  line-height: 1.25;
+}
+.wk-people a:hover { background: var(--bg-raised-2); }
+.wk-people a.on { background: var(--bg-raised-2); box-shadow: inset 3px 0 0 var(--gold); }
+.wk-people .room-menu-count { margin-left: auto; }
+.wk-main { display: grid; gap: 16px; min-width: 0; }
+
+.wk-kind {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  vertical-align: middle;
+  color: #111;
+}
+.wk-kind-assignment { background: #e0b354; }
+.wk-kind-own { background: #5fc4b8; }
+.wk-stage {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+}
+.wk-new {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #fca5a5;
+}
+
+.wk-legend {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  border: 1px dashed var(--border);
+  border-radius: 3px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.wk-cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.wk-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  text-decoration: none;
+}
+.wk-card:hover { border-color: var(--gold-deep); }
+.wk-card-assignment { border-left: 5px solid #e0b354; }
+.wk-card-own { border-left: 5px solid #5fc4b8; }
+.wk-card-text { flex: 1; min-width: 0; }
+.wk-card-text strong { overflow-wrap: anywhere; }
+.wk-card-end { display: grid; justify-items: end; gap: 2px; }
+
+.wk-detail h2 { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; text-transform: none; letter-spacing: 0; font-size: 22px; color: var(--text); }
+.wk-block { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
+.wk-block > h3 { margin: 0 0 10px; font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); }
+.wk-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+
+@media (max-width: 760px) {
+  .wk { grid-template-columns: minmax(0, 1fr); }
+  .wk-people { position: static; display: flex; flex-wrap: wrap; }
+}

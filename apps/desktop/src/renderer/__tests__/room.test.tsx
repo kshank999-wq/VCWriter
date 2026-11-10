@@ -238,7 +238,25 @@ describe('the one button (§10)', () => {
     fireEvent.change(screen.getByLabelText('What to call it'), { target: { value: 'The docks rewrite' } });
     fireEvent.click(screen.getByRole('button', { name: 'Send it' }));
 
-    await waitFor(() => expect(sent).toEqual([{ kind: 'script', note: 'The docks rewrite' }]));
+    // No open assignment: it goes as the writer's own work (§28).
+    await waitFor(() => expect(sent).toEqual([{ kind: 'script', note: 'The docks rewrite', assignmentId: null }]));
+  });
+
+  it('asks which assignment a pass answers, and starts on the only one open', async () => {
+    inARoom();
+    const sent = sending();
+    const vcwriter = (window as unknown as { vcwriter: Record<string, unknown> }).vcwriter;
+    vcwriter['myAssignments'] = vi.fn(async () => ({
+      ok: true,
+      data: [{ id: 'a-docks', title: 'Scene — The docks', dueOn: '2026-11-14' }],
+    }));
+    show(script());
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Submit' }));
+    const forWhat = (await screen.findByLabelText('What is it for?')) as HTMLSelectElement;
+    await waitFor(() => expect(forWhat.value).toBe('a-docks'));
+    fireEvent.click(screen.getByRole('button', { name: 'Send it' }));
+    await waitFor(() => expect(sent[0]).toMatchObject({ kind: 'script', assignmentId: 'a-docks' }));
   });
 
   it('says what it did, because submitting is otherwise invisible', async () => {

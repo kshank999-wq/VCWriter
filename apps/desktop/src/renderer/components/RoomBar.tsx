@@ -150,6 +150,12 @@ function SubmitWork({
   // already right, which is the whole of Ken's mechanism.
   const [kind, setKind] = useState<'script' | 'research'>(looking);
   const [note, setNote] = useState('');
+  /**
+   * What it is for (addendum 07 §28): one of the writer's open assignments, or
+   * their own work. '' is own work.
+   */
+  const [forId, setForId] = useState('');
+  const [mine, setMine] = useState<Array<{ id: string; title: string; dueOn: string | null }>>([]);
   const [busy, setBusy] = useState(false);
   const [said, setSaid] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -162,7 +168,7 @@ function SubmitWork({
   const submit = async () => {
     setBusy(true);
     setError(null);
-    const result = await send.call(window.vcwriter, { kind, note: note.trim() });
+    const result = await send.call(window.vcwriter, { kind, note: note.trim(), assignmentId: forId || null });
     setBusy(false);
 
     if (!result.ok) {
@@ -171,6 +177,7 @@ function SubmitWork({
     }
     setOpen(false);
     setNote('');
+    setForId('');
     setSaid(
       kind === 'research'
         ? 'Sent to the room’s ideas. Your draft is untouched.'
@@ -191,7 +198,21 @@ function SubmitWork({
         className="room-send"
         title="Send this draft for review. Nothing is copied out of it and nothing on your desk changes."
         onClick={() => {
-          if (!open) setKind(looking);
+          if (!open) {
+            setKind(looking);
+            // The writer's open assignments, fresh each time it opens, so a
+            // pass can say which one it answers.
+            const ask = window.vcwriter?.myAssignments;
+            if (ask) {
+              void ask.call(window.vcwriter).then((result) => {
+                if (result.ok && result.data) {
+                  setMine(result.data);
+                  // One open assignment is almost always what is being answered.
+                  setForId(result.data.length === 1 ? result.data[0]!.id : '');
+                }
+              });
+            }
+          }
           setOpen(!open);
         }}
       >
@@ -207,6 +228,20 @@ function SubmitWork({
               <option value="research">Research and ideas — to the room’s ideas</option>
             </select>
           </label>
+          {mine.length > 0 ? (
+            <label className="field">
+              <span>What is it for?</span>
+              <select value={forId} onChange={(event) => setForId(event.target.value)}>
+                {mine.map((one) => (
+                  <option key={one.id} value={one.id}>
+                    Assignment: {one.title}
+                    {one.dueOn ? ` (due ${one.dueOn})` : ''}
+                  </option>
+                ))}
+                <option value="">My own work, not an assignment</option>
+              </select>
+            </label>
+          ) : null}
           <input
             aria-label="What to call it"
             placeholder="What is this pass? (optional)"

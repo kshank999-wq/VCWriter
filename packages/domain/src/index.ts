@@ -197,6 +197,7 @@ export * from './assist.js';
 export * from './spending.js';
 export * from './notify.js';
 export * from './markup.js';
+export * from './work.js';
 export * from './billing.js';
 export * from './character-creator.js';
 export * from './character-glance.js';

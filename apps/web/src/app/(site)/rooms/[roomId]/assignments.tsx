@@ -147,6 +147,7 @@ export function WhoOwesWhat({
   seats,
   things,
   today,
+  defaultAssigneeId,
 }: {
   roomId: string;
   /** Every active seat, including whoever is free — that is the other question. */
@@ -156,10 +157,12 @@ export function WhoOwesWhat({
   /** What there is to point at, read out of the project itself. */
   things: AssignableThing[];
   today: string;
+  /** Who the form starts on: the person picked in the people menu (§28). */
+  defaultAssigneeId?: string;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [assigneeId, setAssigneeId] = useState('');
+  const [assigneeId, setAssigneeId] = useState(defaultAssigneeId ?? '');
   const [target, setTarget] = useState('');
   const [note, setNote] = useState('');
   const [dueOn, setDueOn] = useState('');

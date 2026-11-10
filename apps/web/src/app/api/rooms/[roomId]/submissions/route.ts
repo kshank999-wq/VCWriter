@@ -12,6 +12,7 @@ import { currentUser } from '@/lib/supabase';
 import { loadRoomById } from '@/lib/rooms';
 import { branchesIn, takeSnapshot, versionsFor } from '@/lib/branches';
 import { sendSubmission, submissionsIn } from '@/lib/submissions';
+import { assignmentsIn } from '@/lib/assignments';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -32,6 +33,8 @@ export const dynamic = 'force-dynamic';
 const schema = z.object({
   kind: z.enum(SUBMISSION_KINDS).default('script'),
   note: z.string().max(2000).default(''),
+  /** The assignment this answers; left out for the writer's own work (§28). */
+  assignmentId: z.string().uuid().nullable().optional(),
 });
 
 export async function GET(
@@ -79,6 +82,16 @@ export async function POST(
     );
   }
 
+  // An assignment it answers must be one given to this writer, and still open.
+  let assignmentId: string | null = null;
+  if (parsed.data.assignmentId) {
+    const asked = (await assignmentsIn(view.room.id)).find((one) => one.id === parsed.data.assignmentId);
+    if (!asked || asked.assigneeId !== user.id || asked.state === 'cancelled') {
+      return NextResponse.json({ error: 'That assignment is not yours to answer.' }, { status: 403 });
+    }
+    assignmentId = asked.id;
+  }
+
   const branch = branchFor(await branchesIn(view.room.id), user.id);
   if (!branch) {
     return NextResponse.json({ error: submitRefusalText({ reason: 'nothing_to_submit' }) }, { status: 409 });
@@ -104,6 +117,7 @@ export async function POST(
     authorId: user.id,
     kind: parsed.data.kind,
     note: parsed.data.note.trim(),
+    assignmentId,
   });
   if ('reason' in sent) return NextResponse.json({ error: sent.message }, { status: 403 });
 

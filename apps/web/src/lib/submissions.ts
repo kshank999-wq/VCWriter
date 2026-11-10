@@ -23,6 +23,7 @@ import { serverClient } from './supabase';
 
 interface SubmissionRow {
   id: string;
+  assignment_id?: string | null;
   room_id: string;
   branch_id: string | null;
   version_id: string;
@@ -38,7 +39,7 @@ interface SubmissionRow {
 }
 
 const COLUMNS =
-  'id, room_id, branch_id, version_id, author_id, kind, state, note, reply, decided_by, decided_at, created_at, updated_at';
+  'id, room_id, branch_id, version_id, author_id, kind, state, note, reply, decided_by, decided_at, created_at, updated_at, assignment_id';
 
 const fromRow = (row: SubmissionRow): Submission =>
   submissionSchema.parse({
@@ -50,6 +51,7 @@ const fromRow = (row: SubmissionRow): Submission =>
     kind: row.kind,
     state: row.state,
     note: row.note,
+    assignmentId: row.assignment_id ?? null,
     reply: row.reply,
     decidedBy: row.decided_by,
     decidedAt: row.decided_at,
@@ -90,6 +92,8 @@ export const sendSubmission = async (input: {
   authorId: string;
   kind: SubmissionKind;
   note: string;
+  /** The assignment it answers, already checked to be the writer's own; null for own work. */
+  assignmentId?: string | null;
 }): Promise<Submission | SendRefusal> => {
   const { data, error } = await serverClient()
     .from('submissions')
@@ -100,6 +104,7 @@ export const sendSubmission = async (input: {
       author_id: input.authorId,
       kind: input.kind,
       note: input.note,
+      assignment_id: input.assignmentId ?? null,
     })
     .select(COLUMNS)
     .single();
