@@ -3305,3 +3305,44 @@ dialog.walkthrough::backdrop { background: rgba(0, 0, 0, 0.72); }
   cursor: pointer;
 }
 .mk-remove:hover { color: var(--text); border-color: var(--gold-deep); }
+
+/* Sent to you and sent by you, told apart at a glance (§27). */
+.mk-inbox { border-left: 5px solid #3b82f6; background: linear-gradient(90deg, rgba(59, 130, 246, 0.12), var(--bg-raised) 40%); }
+.mk-inbox > h2 { color: #8ec5ff; }
+.mk-outbox { border-left: 5px solid #22c55e; background: linear-gradient(90deg, rgba(34, 197, 94, 0.12), var(--bg-raised) 40%); }
+.mk-outbox > h2 { color: #86efac; }
+
+/* Compare and Markups use the whole window: the room breaks out of the
+   site's column, the menu becomes a row along the top, and the script is set
+   large on tall pages. */
+.room-dashboard.room-wide {
+  width: calc(100vw - 32px);
+  margin-left: calc(50% - 50vw + 16px);
+}
+.room-wide .room-layout { grid-template-columns: minmax(0, 1fr); }
+.room-wide .room-menu {
+  position: static;
+  order: -1;
+  display: flex;
+  flex-wrap: wrap;
+}
+.room-wide .room-menu a { padding: 8px 12px; }
+.room-wide .mk-page {
+  max-height: calc(100vh - 300px);
+  min-height: 60vh;
+  padding: 28px 32px;
+  font-size: 15px;
+}
+.room-wide .mk-review .mk-page { max-height: none; }
+.mk-full { margin-left: auto; }
+
+/* Truly full screen: nothing but the panes. */
+.mk-compare:fullscreen {
+  overflow: auto;
+  padding: 16px;
+  background: var(--bg);
+}
+.mk-compare:fullscreen .mk-page {
+  max-height: calc(100vh - 230px);
+  font-size: 16px;
+}

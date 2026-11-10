@@ -393,7 +393,10 @@ export default async function RoomPage({
   ];
 
   return (
-    <div className="room-dashboard">
+    // Compare and Markups take the whole width of the window (from Ken: *it
+    // needs to take up the whole area, so it's big, looks like the script*);
+    // their menu moves to a row along the top.
+    <div className={`room-dashboard${screen === 'compare' || screen === 'markups' ? ' room-wide' : ''}`}>
       <header className="room-head">
         <div className="room-head-main">
           <p className="eyebrow">Writers Room · {here.label}</p>
@@ -624,11 +627,11 @@ export default async function RoomPage({
                       </p>
                     </section>
                   ) : null}
-                  <section className="room-panel">
+                  <section className="room-panel mk-inbox">
                     <h2>Sent to you</h2>
                     {received.length === 0 ? <p className="small">Nothing has been marked up for you yet.</p> : <ul className="room-due">{received.map(row)}</ul>}
                   </section>
-                  <section className="room-panel">
+                  <section className="room-panel mk-outbox">
                     <h2>Sent by you</h2>
                     {sentByYou.length === 0 ? (
                       <p className="small">

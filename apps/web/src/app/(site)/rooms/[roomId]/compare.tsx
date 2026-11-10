@@ -399,6 +399,13 @@ export function Compare({
     );
   }
 
+  const goFull = () => {
+    const box = document.querySelector('.mk-compare');
+    if (!box) return;
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void box.requestFullscreen?.();
+  };
+
   return (
     <div className="mk-compare">
       <div className="mk-layout" role="radiogroup" aria-label="How many side by side">
@@ -415,6 +422,9 @@ export function Compare({
             {one}
           </button>
         ))}
+        <button type="button" className="button small secondary mk-full" onClick={goFull}>
+          Full screen
+        </button>
       </div>
       <div className={`mk-panes mk-panes-${count}`}>
         {picked.slice(0, count).map((versionId, index) => (

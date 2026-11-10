@@ -1780,3 +1780,14 @@ copy of a scene, so a mark can be read against the same line in another pass.
 - **Change afterwards:** only the writer it went to, and only to say they
   have seen it. A trigger holds every other column.
 - **Delete:** no one (§1).
+
+### 27.1 Bigger, and easier to read
+
+From Ken, after the first markup arrived:
+
+- **Sent to you** and **Sent by you** are told apart by colour: blue for what
+  came to you, green for what you sent.
+- **Compare** and **Markups** take the whole width of the window. The room
+  breaks out of the site's column, the menu becomes a row along the top, and
+  the script is set larger on tall pages.
+- **Full screen** puts the panes on the whole screen with nothing else.
