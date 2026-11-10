@@ -266,3 +266,57 @@ export const noticeForMarkup = (input: {
     path: `/rooms/${markup.roomId}?view=markups&markup=${markup.id}`,
   };
 };
+
+/** Initials from a name: "Ken Shank" → "KS". At most three letters. */
+export const initialsOf = (name: string): string =>
+  name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word[0]!.toUpperCase())
+    .join('')
+    .slice(0, 3);
+
+/**
+ * Marks made in the beat writing screen, kept as a markup draft of that beat
+ * (addendum 07 §27.3).
+ *
+ * The marks are saved with a copy of the text they were made on, as a draft
+ * of their own ("KS markup"), so the working draft goes on being written while
+ * the marks stay readable beside it. The same draft a room markup becomes when
+ * it is brought in, so both are read, listed and archived the same way.
+ */
+export const addMarkupDraft = (
+  file: ProjectFile,
+  input: { beatId: string; marks: readonly Mark[]; markedBy: string },
+): ProjectFile => {
+  if (input.marks.length === 0) return file;
+  const at = nowIso();
+  const label = markupDraftLabel(initialsOf(input.markedBy) || 'Me');
+  return {
+    ...file,
+    beats: file.beats.map((beat) => {
+      if ((beat.id as string) !== input.beatId) return beat;
+      const taken = new Set([beat.revisionName, ...beat.revisions.map((one) => one.name)]);
+      let name = label;
+      for (let count = 2; taken.has(name); count += 1) name = `${label} ${count}`;
+      return {
+        ...beat,
+        revisions: [
+          ...beat.revisions,
+          {
+            id: newId<BeatRevisionId>(),
+            name,
+            manuscript: beat.manuscript,
+            savedAt: at,
+            marks: [...input.marks],
+            markedBy: input.markedBy.trim(),
+            archived: false,
+          },
+        ],
+        updatedAt: at,
+      };
+    }),
+  };
+};
+

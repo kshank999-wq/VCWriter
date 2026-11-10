@@ -1,6 +1,6 @@
 import { BookHeadingLine } from './BookHeadingLine';
 import { BeatPlanPanel } from './BeatPlanPanel';
-import { useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import {
   countWords,
   draftText,
@@ -32,13 +32,14 @@ import {
   placeNoteText,
   type ResearchItem,
   type ResearchItemId,
+  addMarkupDraft,
   archiveRevision,
   isMarkupDraft,
 } from '@vcwriter/domain';
 import { ElementNotes } from './ElementNotes';
 import { NoteRewrite } from './NoteRewrite';
 import { BeatBody } from './BeatBody';
-import { MarkedDraft } from './MarkedDraft';
+import { MarkedDraft, MarkingPage } from './MarkedDraft';
 import { ManuscriptDataLists } from './ManuscriptDataLists';
 import { usePreference } from '../use-split';
 
@@ -124,6 +125,18 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
   const [fromCopy, setFromCopy] = useState(false);
   const [name, setName] = useState('');
   const [zoom, setZoom] = usePreference('writerZoom', 1);
+  /** Marking up the working draft (addendum 07 §27.3); off is writing as usual. */
+  const [marking, setMarking] = useState(false);
+  /** Whoever marks up on this computer, so their marks carry their name. */
+  const [markerName, setMarkerName] = usePreference('markupName', '');
+  /** Set on saving a markup: open it beside the draft as soon as it is there. */
+  const [openNewMarkup, setOpenNewMarkup] = useState<number | null>(null);
+  useEffect(() => {
+    if (openNewMarkup === null || beat.revisions.length <= openNewMarkup) return;
+    const made = beat.revisions[beat.revisions.length - 1];
+    if (made) setComparing(made.id as string);
+    setOpenNewMarkup(null);
+  }, [openNewMarkup, beat.revisions]);
 
   // Where the printed pages break, from the one paginator the exports use.
   // Only this beat's elements are in it; the rest of the map costs nothing.
@@ -236,6 +249,18 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
             onClick={() => setPlanOpen(!planOpen)}
           >
             Notes{planCount > 0 ? ` (${planCount})` : ''}
+          </button>
+          {/* Mark up this draft (from Ken: *a markup ability … so you can mark
+              up your own work, or someone that opens it can*). The page turns
+              into a copy that can be marked and not typed in. */}
+          <button
+            type="button"
+            className={marking ? 'ghost small active' : 'ghost small'}
+            aria-pressed={marking}
+            title={marking ? 'Back to writing' : 'Mark up this draft: highlight, strike, underline, note or suggest'}
+            onClick={() => setMarking(!marking)}
+          >
+            Mark up
           </button>
           <label className="revision-picker">
             <span className="muted">Draft</span>
@@ -407,7 +432,22 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
               onToggle={(shown) => onUpdate((current) => updateBeat(current, beat.id, { headingShown: shown }))}
             />
           ) : null}
-          <BeatBody
+          {marking ? (
+            <MarkingPage
+              manuscript={beat.manuscript}
+              name={markerName}
+              onName={setMarkerName}
+              onCancel={() => setMarking(false)}
+              onSave={(marks) => {
+                onUpdate((current) => addMarkupDraft(current, { beatId: beat.id as string, marks, markedBy: markerName }));
+                setMarking(false);
+                // Open the new markup beside the draft once it exists, so the
+                // marks are in view while the writing goes on.
+                setOpenNewMarkup(beat.revisions.length);
+              }}
+            />
+          ) : null}
+          {marking ? null : <BeatBody
             file={file}
             beat={beat}
             breaks={breaks}
@@ -424,7 +464,7 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
             toolbar
             movable
             placedBlock={placed}
-          />
+          />}
         </div>
 
         {/* The draft being read against it. Read-only on purpose: two live

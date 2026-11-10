@@ -23951,3 +23951,18 @@ input.note-rewrite-title:focus { border-color: var(--gold); outline: none; }
   color: #1a1a1a;
   background: #e5e1d6;
 }
+
+/* Marking up in the beat writing screen (addendum 07 §27.3). */
+.marking { display: grid; gap: 10px; }
+.marking-tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.marking-tool-strike { text-decoration: line-through; }
+.marking-tool-underline { text-decoration: underline; }
+.marking-swatches { display: inline-flex; gap: 4px; margin-left: 6px; }
+.marking-swatch { width: 16px; height: 16px; padding: 0; border-radius: 50%; border: 2px solid transparent; cursor: pointer; }
+.marking-swatch.on { border-color: var(--text, #222); }
+.marking-ask { display: grid; gap: 6px; padding: 8px; border: 1px solid var(--border); border-radius: 3px; }
+.marking-ask textarea,
+.marking-name input { width: 100%; }
+.marking-row { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+.marking-page { cursor: text; user-select: text; }
+.marking-name { display: grid; gap: 4px; margin: 8px 0; }

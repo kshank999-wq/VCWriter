@@ -146,3 +146,22 @@ describe('bringing a markup into the script', () => {
     expect(kept.marks).toHaveLength(1);
   });
 });
+
+describe('marking up in the beat writing screen', () => {
+  it('keeps the marks as a draft named for whoever made them, with a copy of the text', async () => {
+    const { addMarkupDraft, initialsOf, createProjectFile, addUnit, addBeat, updateBeat } = await import('../index.js');
+    expect(initialsOf('Ken  Shank')).toBe('KS');
+    const empty = createProjectFile({ title: 'Mine', format: 'screenplay' });
+    const scene = addUnit({ ...empty, units: [], beats: [] }, { trackId: empty.tracks[0]!.id, title: 'EXT. ROAD - DAY' });
+    const made = addBeat(scene.file, { unitId: scene.unit.id, title: 'Road' });
+    const file = updateBeat(made.file, made.beat.id, {
+      manuscript: { elements: [{ id: 'e1', type: 'action', text: 'She opens the door.', characterId: null, attributes: {} }] },
+    } as never);
+    const marks = [mark({ elementId: 'e1', start: 4, end: 9 })];
+    const next = addMarkupDraft(file, { beatId: made.beat.id as string, marks, markedBy: 'Ken Shank' });
+    const beat = next.beats.find((one) => one.id === made.beat.id)!;
+    expect(beat.revisions.at(-1)).toMatchObject({ name: 'KS markup', markedBy: 'Ken Shank', archived: false });
+    expect(beat.revisions.at(-1)!.manuscript).toEqual(beat.manuscript);
+    expect(addMarkupDraft(file, { beatId: made.beat.id as string, marks: [], markedBy: 'Ken' })).toBe(file);
+  });
+});

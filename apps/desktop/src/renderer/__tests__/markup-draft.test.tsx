@@ -88,3 +88,31 @@ describe('a markup draft in the beat', () => {
     expect(menu.querySelector('optgroup[label="Archive"] option')?.textContent).toContain('MA markup');
   });
 });
+
+describe('the Mark up switch', () => {
+  it('turns the page into a markable copy, and saves the marks as a draft named for whoever made them', () => {
+    const { file, beatId } = marked();
+    render(<Writer start={file} beatId={beatId} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Mark up' }));
+
+    // Select words on the page the way a reader would, then highlight them.
+    const line = document.querySelector('.marking-page [data-line]') as HTMLElement;
+    const text = line.firstChild!.firstChild as Text;
+    const range = document.createRange();
+    range.setStart(text, 4);
+    range.setEnd(text, 9);
+    window.getSelection()!.removeAllRanges();
+    window.getSelection()!.addRange(range);
+    fireEvent.click(screen.getByRole('button', { name: 'Highlight' }));
+    expect(screen.getByText(/Highlight “opens”/)).toBeTruthy();
+
+    fireEvent.change(screen.getByPlaceholderText('Your name'), { target: { value: 'Ken Shank' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save as markup draft' }));
+
+    // Back to writing, with the new markup read beside it and listed as one.
+    expect(screen.getByText('KS markup — markup')).toBeTruthy();
+    expect(screen.getByText(/One mark by Ken Shank/)).toBeTruthy();
+    const menu = screen.getByLabelText('Draft') as HTMLSelectElement;
+    expect(Array.from(menu.querySelectorAll('optgroup[label="Markups"] option')).map((one) => one.textContent)).toContain('KS markup ✎');
+  });
+});

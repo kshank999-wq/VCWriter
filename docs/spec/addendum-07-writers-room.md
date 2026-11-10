@@ -1838,3 +1838,28 @@ Still to come, from the same conversation:
 - a **Mark up** switch in the beat writing screen, so anyone can mark their
   own or someone else's work outside a room
 - editing in the compared drafts, and three across
+
+### 27.3 Mark up, in the beat writing screen
+
+From Ken: *a markup ability … so you can mark up your own work, or someone
+that opens it can mark up the work. Even if they're not in writer's room.*
+
+The beat writing screen's top bar has a **Mark up** switch, beside Notes. It
+is open to anyone, room or not. While it is on:
+
+- The page becomes a copy of the working draft that can be marked but not
+  typed in (`MarkingPage`).
+- The tools are the room's five: highlight in four colours, strike,
+  underline, note, suggest.
+- A list shows the marks made so far, each one removable.
+- The marker's name is asked once and remembered on that computer
+  (`markupName`).
+
+**Save as markup draft** (`addMarkupDraft`) keeps the marks, with a copy of the
+text they were made on, as a draft named for whoever made them ("KS markup").
+That is the same kind of draft a room markup becomes when it is brought in, so
+it is listed under **Markups** in the Draft menu, read beside the working draft
+with its marks drawn, and archived the same way. Saving opens it beside the
+working draft at once.
+
+Shipped in the installer after 1.0.25.
