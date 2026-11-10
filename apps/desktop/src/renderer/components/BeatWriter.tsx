@@ -34,6 +34,7 @@ import {
   type ResearchItemId,
   addMarkupDraft,
   archiveRevision,
+  editDraft,
   isMarkupDraft,
 } from '@vcwriter/domain';
 import { ElementNotes } from './ElementNotes';
@@ -119,7 +120,14 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
   const [planOpen, setPlanOpen] = usePreference('beatPlanOpen', false);
   const planCount = useMemo(() => beatPlan(file, beat.id).lines.length, [file, beat.id]);
   /** Which draft is being read beside the one being written; null for none. */
-  const [comparing, setComparing] = useState<string | null>(null);
+  /**
+   * The drafts read beside the working one, up to two (from Ken: *see, like,
+   * three versions across the screen at a time, or two, or just the one*).
+   * Empty is writing alone.
+   */
+  const [comparing, setComparingList] = useState<string[]>([]);
+  /** Show one draft beside the working one, replacing what was there. */
+  const setComparing = (id: string | null) => setComparingList(id ? [id] : []);
   /** Where the writing screen's own tools go — see the slot below. */
   const [tools, setTools] = useState<HTMLDivElement | null>(null);
   const [fromCopy, setFromCopy] = useState(false);
@@ -187,12 +195,15 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
   };
 
   /** The draft being read alongside, resolved to its text. */
-  const against = useMemo(() => {
-    if (comparing === null) return null;
-    const revision = beat.revisions.find((candidate) => (candidate.id as string) === comparing);
-    const manuscript = draftText(beat, comparing);
-    return revision && manuscript ? { name: revision.name, manuscript, revision } : null;
-  }, [beat, comparing]);
+  const against = useMemo(
+    () =>
+      comparing.flatMap((id) => {
+        const revision = beat.revisions.find((candidate) => (candidate.id as string) === id);
+        const manuscript = draftText(beat, id);
+        return revision && manuscript ? [{ name: revision.name, manuscript, revision }] : [];
+      }),
+    [beat, comparing],
+  );
 
   const chooseVersion = (value: string) => {
     if (value === NEW_REVISION) {
@@ -308,7 +319,7 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
               <input
                 type="checkbox"
                 aria-label="Compare"
-                checked={comparing !== null}
+                checked={comparing.length > 0}
                 onChange={(event) => {
                   const on = event.target.checked;
                   setComparing(on ? (beat.revisions[0]?.id as string) : null);
@@ -321,21 +332,42 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
             </label>
           ) : null}
 
-          {comparing !== null ? (
-            <label className="revision-picker">
-              <span className="muted">Against</span>
+          {comparing.map((id, index) => (
+            <label key={index} className="revision-picker">
+              <span className="muted">{index === 0 ? 'Against' : 'And'}</span>
               <select
-                aria-label="Draft to compare"
-                value={comparing}
-                onChange={(event) => setComparing(event.target.value)}
+                aria-label={index === 0 ? 'Draft to compare' : 'Third draft to compare'}
+                value={id}
+                onChange={(event) =>
+                  setComparingList((now) =>
+                    event.target.value === '' ? now.filter((_, at) => at !== index) : now.map((one, at) => (at === index ? event.target.value : one)),
+                  )
+                }
               >
+                {index > 0 ? <option value="">— none —</option> : null}
                 {beat.revisions.map((revision) => (
                   <option key={revision.id} value={revision.id}>
                     {revision.name}
+                    {isMarkupDraft(revision) ? ' ✎' : ''}
                   </option>
                 ))}
               </select>
             </label>
+          ))}
+          {/* Three across: the working draft and two others. */}
+          {comparing.length === 1 && beat.revisions.length > 1 ? (
+            <button
+              type="button"
+              className="ghost small"
+              title="Put a third draft across the page"
+              onClick={() => {
+                const next = beat.revisions.find((revision) => !comparing.includes(revision.id as string));
+                if (next) setComparingList((now) => [...now, next.id as string]);
+                if (zoom > 0.6) setZoom(0.55);
+              }}
+            >
+              + Third
+            </button>
           ) : null}
           <label className="check" title={`Off: the ${nouns.sub.toLowerCase()} keeps its text and leaves the ${nouns.manuscript.toLowerCase()}`}>
             <input
@@ -406,7 +438,15 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
           strip collapses to nothing. */}
       <div className="writer-tools" ref={setTools} />
 
-      <div className={[comparing !== null ? 'writer-body comparing' : 'writer-body', planOpen ? 'with-plan' : ''].filter(Boolean).join(' ')}>
+      <div
+        className={[
+          comparing.length > 0 ? 'writer-body comparing' : 'writer-body',
+          comparing.length > 1 ? 'three-across' : '',
+          planOpen ? 'with-plan' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      >
         {/* The page itself, at the size it prints, scaled by the zoom. */}
         <div
           className="writer-sheet"
@@ -417,7 +457,7 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
             if (line) cursorLine.current = line.getAttribute('data-element-id') as ManuscriptElementId;
           }}
         >
-          {comparing !== null ? <p className="writer-column-name muted">{beat.revisionName} — writing</p> : null}
+          {comparing.length > 0 ? <p className="writer-column-name muted">{beat.revisionName} — writing</p> : null}
           {headed && unit && firstInUnit ? (
             <BookHeadingLine
               heading={sectionHeading(file, unit)}
@@ -467,32 +507,37 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
           />}
         </div>
 
-        {/* The draft being read against it. Read-only on purpose: two live
-            editors of the same scene is a way to lose an afternoon's work. */}
-        {against ? (
-          <div className="writer-sheet reading" style={{ '--page-zoom': zoom } as React.CSSProperties}>
+        {/* The drafts beside the working one. Each is a draft of its own, so
+            typing in one never touches another (from Ken: *we need to have
+            editing ability right in there*). A markup draft is the record of
+            what was said and is read, not written in. */}
+        {against.map((one) => (
+          <div
+            key={one.revision.id}
+            // A markup is read; a draft beside the working one is written in,
+            // and looks it.
+            className={isMarkupDraft(one.revision) ? 'writer-sheet reading' : 'writer-sheet compared'}
+            style={{ '--page-zoom': zoom } as React.CSSProperties}
+          >
             <p className="writer-column-name muted">
-              {against.name} — {isMarkupDraft(against.revision) ? 'markup' : 'reading'}
+              {one.name} — {isMarkupDraft(one.revision) ? 'markup' : 'editing'}
             </p>
-            {isMarkupDraft(against.revision) ? (
+            {isMarkupDraft(one.revision) ? (
               <MarkedDraft
-                revision={against.revision}
-                onArchive={(archived) =>
-                  onUpdate((current) => archiveRevision(current, beat.id, against.revision.id, archived))
-                }
+                revision={one.revision}
+                onArchive={(archived) => onUpdate((current) => archiveRevision(current, beat.id, one.revision.id, archived))}
               />
             ) : (
               <BeatBody
                 file={file}
-                beat={{ ...beat, manuscript: against.manuscript, revisions: [] }}
-                onUpdate={() => undefined}
-                readOnly
+                beat={{ ...beat, manuscript: one.manuscript, revisions: [] }}
+                onUpdate={(change) => onUpdate((current) => editDraft(current, beat.id, one.revision.id, change))}
               />
             )}
           </div>
-        ) : null}
+        ))}
         {planOpen ? <BeatPlanPanel file={file} beatId={beat.id} onClose={() => setPlanOpen(false)} /> : null}
-        {comparing === null ? (
+        {comparing.length === 0 ? (
           <ElementNotes
             file={file}
             notes={beatNotes}

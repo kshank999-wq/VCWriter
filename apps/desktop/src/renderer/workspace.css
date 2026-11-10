@@ -23966,3 +23966,9 @@ input.note-rewrite-title:focus { border-color: var(--gold); outline: none; }
 .marking-row { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
 .marking-page { cursor: text; user-select: text; }
 .marking-name { display: grid; gap: 4px; margin: 8px 0; }
+
+/* Three across: the working draft and two others, each its own page. */
+.writer-body.comparing.three-across {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}

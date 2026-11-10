@@ -1863,3 +1863,24 @@ with its marks drawn, and archived the same way. Saving opens it beside the
 working draft at once.
 
 Shipped in the installer after 1.0.25.
+
+### 27.4 Drafts side by side, written in, three across
+
+From Ken: *since the beats and subsections have the ability to do multiple
+versions, we need to have editing ability right in there, and then be able to
+see them side by side so you can work on them.*
+
+The beat writing screen's **Compare** shows the working draft and up to two
+others across the page. **+ Third** adds the second one, and each compared
+draft has its own picker (**Against**, **And**). On three across, the page
+comes down to fit, and the writer can set it back.
+
+**A compared draft is written in, not only read.** `editDraft` lends the
+beat's editing that draft's text for one change and takes the result back into
+the draft, leaving the working text exactly as it was. Each pane is a separate
+draft, so typing in one never touches another. That is why the old rule (*two
+live editors of the same scene is a way to lose an afternoon's work*) no
+longer applies: these are not the same text. Compared drafts are drawn as
+white pages like the working one. A markup draft is still read, not written
+in: it is the record of what was said, and it keeps its grey page and its
+marks.

@@ -512,6 +512,45 @@ export const switchRevision = (file: ProjectFile, beatId: BeatId, revisionId: Be
     };
   });
 
+/**
+ * Write into a kept draft, not the working one (from Ken: *we need to have
+ * editing ability right in there … see them side by side so you can work on
+ * them*).
+ *
+ * The beat's own editing works on its working text, so this lends it the
+ * draft's text for one change and takes the result back into the draft,
+ * leaving the working text exactly as it was. Anything else the change does to
+ * the project (a new character, a cue learned) is kept.
+ */
+export const editDraft = (
+  file: ProjectFile,
+  beatId: BeatId,
+  revisionId: BeatRevisionId,
+  change: (file: ProjectFile) => ProjectFile,
+): ProjectFile => {
+  const beat = file.beats.find((one) => one.id === beatId);
+  const draft = beat?.revisions.find((revision) => revision.id === revisionId);
+  if (!beat || !draft) return file;
+  const lent = { ...file, beats: file.beats.map((one) => (one.id === beatId ? { ...one, manuscript: draft.manuscript } : one)) };
+  const changed = change(lent);
+  const after = changed.beats.find((one) => one.id === beatId);
+  if (!after) return changed;
+  return {
+    ...changed,
+    beats: changed.beats.map((one) =>
+      one.id === beatId
+        ? {
+            ...one,
+            manuscript: beat.manuscript,
+            revisions: one.revisions.map((revision) =>
+              revision.id === revisionId ? { ...revision, manuscript: after.manuscript, savedAt: nowIso() } : revision,
+            ),
+          }
+        : one,
+    ),
+  };
+};
+
 /** Send a draft to the archive, or bring it back. Nothing is erased (addendum 07 §27.2). */
 export const archiveRevision = (
   file: ProjectFile,

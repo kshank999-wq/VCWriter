@@ -116,3 +116,61 @@ describe('the Mark up switch', () => {
     expect(Array.from(menu.querySelectorAll('optgroup[label="Markups"] option')).map((one) => one.textContent)).toContain('KS markup ✎');
   });
 });
+
+describe('drafts side by side', () => {
+  /** A beat with its working draft and two kept drafts, all different. */
+  const threeDrafts = (): { file: ProjectFile; beatId: BeatId } => {
+    const empty = createProjectFile({ title: 'Drafts', format: 'screenplay' });
+    const scene = addUnit({ ...empty, units: [], beats: [] }, { trackId: empty.tracks[0]!.id, title: 'INT. ROOM - DAY' });
+    const made = addBeat(scene.file, { unitId: scene.unit.id, title: 'One' });
+    const beat = made.file.beats.find((one) => one.id === made.beat.id)!;
+    const revision = (id: string, name: string, text: string) => ({
+      id,
+      name,
+      manuscript: { elements: [line(`${id}-e`, text)] },
+      savedAt: '2026-11-10T00:00:00.000Z',
+      marks: [],
+      markedBy: '',
+      archived: false,
+    });
+    const file = updateBeat(made.file, made.beat.id, {
+      manuscript: { elements: [line('w-e', 'Working words.')] },
+      revisions: [...beat.revisions, revision('d1', 'Draft 1', 'First words.'), revision('d2', 'Draft 2', 'Second words.')],
+    } as never);
+    return { file, beatId: made.beat.id };
+  };
+
+  it('puts a third draft across the page, and both compared drafts can be typed in', () => {
+    const { file, beatId } = threeDrafts();
+    render(<Writer start={file} beatId={beatId} />);
+    fireEvent.click(screen.getByLabelText('Compare'));
+    fireEvent.click(screen.getByRole('button', { name: '+ Third' }));
+    expect(document.querySelector('.writer-body.three-across')).toBeTruthy();
+    expect(screen.getByText('Draft 1 — editing')).toBeTruthy();
+    expect(screen.getByText('Draft 2 — editing')).toBeTruthy();
+    // No compared page is read-only any more.
+    const pages = Array.from(document.querySelectorAll('.writer-sheet.compared textarea'));
+    expect(pages.length).toBeGreaterThan(0);
+  });
+
+  it('saves typing in a compared draft into that draft, and leaves the working draft alone', () => {
+    const { file, beatId } = threeDrafts();
+    let latest = file;
+    function Watch() {
+      const [now, setNow] = useState(file);
+      latest = now;
+      const beat = now.beats.find((one) => one.id === beatId) as Beat;
+      return <BeatWriter file={now} beat={beat} onUpdate={(change) => setNow((current) => change(current))} onSelect={() => undefined} />;
+    }
+    render(<Watch />);
+    fireEvent.click(screen.getByLabelText('Compare'));
+    const box = Array.from(document.querySelectorAll('.writer-sheet.compared textarea')).find(
+      (one) => (one as HTMLTextAreaElement).value === 'First words.',
+    ) as HTMLTextAreaElement;
+    expect(box).toBeTruthy();
+    fireEvent.change(box, { target: { value: 'First words, rewritten.' } });
+    const beat = latest.beats.find((one) => one.id === beatId)!;
+    expect(beat.revisions.find((one) => one.id === 'd1')!.manuscript.elements[0]!.text).toBe('First words, rewritten.');
+    expect(beat.manuscript.elements[0]!.text).toBe('Working words.');
+  });
+});
