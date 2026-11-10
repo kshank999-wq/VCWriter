@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { markSchema } from './mark.js';
 import { id, orderKey, timestamps } from './common.js';
 import { manuscriptSegmentSchema } from './manuscript.js';
 import { MAX_BLANK_PAGES } from './book.js';
@@ -296,6 +297,20 @@ export const beatRevisionSchema = z.object({
   name: z.string().min(1),
   manuscript: manuscriptSegmentSchema,
   savedAt: z.string().datetime({ offset: true }),
+  /**
+   * Marks on this draft (addendum 07 §27.2): a markup brought into the script
+   * arrives as a draft of its own, its marks with it. Empty on every ordinary
+   * draft, and on every draft saved before marks existed.
+   */
+  marks: z.array(markSchema).default([]),
+  /** Who made the marks, by name, for the draft's label and its tooltip. */
+  markedBy: z.string().default(''),
+  /**
+   * Put away once it has been dealt with (from Ken: *it doesn't get erased …
+   * you can send them to archive*). An archived draft leaves the Draft menu's
+   * main list and is kept, and opens from the archive.
+   */
+  archived: z.boolean().default(false),
 });
 export type BeatRevision = z.infer<typeof beatRevisionSchema>;
 

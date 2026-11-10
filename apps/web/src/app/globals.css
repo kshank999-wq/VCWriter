@@ -3346,3 +3346,7 @@ dialog.walkthrough::backdrop { background: rgba(0, 0, 0, 0.72); }
   max-height: calc(100vh - 230px);
   font-size: 16px;
 }
+.mk-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+.mk-actions [role='status'] { flex-basis: 100%; margin: 4px 0 0; }
+.mk-archive { border-left: 5px solid #6b7280; }
+.mk-archive > h2 { color: var(--text-muted); }

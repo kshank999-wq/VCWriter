@@ -32,10 +32,13 @@ import {
   placeNoteText,
   type ResearchItem,
   type ResearchItemId,
+  archiveRevision,
+  isMarkupDraft,
 } from '@vcwriter/domain';
 import { ElementNotes } from './ElementNotes';
 import { NoteRewrite } from './NoteRewrite';
 import { BeatBody } from './BeatBody';
+import { MarkedDraft } from './MarkedDraft';
 import { ManuscriptDataLists } from './ManuscriptDataLists';
 import { usePreference } from '../use-split';
 
@@ -175,7 +178,7 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
     if (comparing === null) return null;
     const revision = beat.revisions.find((candidate) => (candidate.id as string) === comparing);
     const manuscript = draftText(beat, comparing);
-    return revision && manuscript ? { name: revision.name, manuscript } : null;
+    return revision && manuscript ? { name: revision.name, manuscript, revision } : null;
   }, [beat, comparing]);
 
   const chooseVersion = (value: string) => {
@@ -186,6 +189,15 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
       return;
     }
     if (value === WORKING) return;
+    // A markup draft, or anything in the archive, is read beside the working
+    // draft rather than swapped in (addendum 07 §27.2): it is the record of
+    // what was said, and the writing goes on in the working draft.
+    const picked = beat.revisions.find((revision) => (revision.id as string) === value);
+    if (picked && (isMarkupDraft(picked) || picked.archived)) {
+      setComparing(value);
+      if (zoom > 0.85) setZoom(0.75);
+      return;
+    }
     onUpdate((current) => switchRevision(current, beat.id, value as BeatRevisionId));
   };
 
@@ -229,11 +241,37 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
             <span className="muted">Draft</span>
             <select aria-label="Draft" value={WORKING} onChange={(event) => chooseVersion(event.target.value)}>
               <option value={WORKING}>{beat.revisionName}</option>
-              {beat.revisions.map((revision) => (
-                <option key={revision.id} value={revision.id}>
-                  {revision.name}
-                </option>
-              ))}
+              {beat.revisions
+                .filter((revision) => !revision.archived && !isMarkupDraft(revision))
+                .map((revision) => (
+                  <option key={revision.id} value={revision.id}>
+                    {revision.name}
+                  </option>
+                ))}
+              {/* Markups brought in from the room, named for the writer ("MA
+                  markup"); choosing one reads it beside this draft. */}
+              {beat.revisions.some((revision) => !revision.archived && isMarkupDraft(revision)) ? (
+                <optgroup label="Markups">
+                  {beat.revisions
+                    .filter((revision) => !revision.archived && isMarkupDraft(revision))
+                    .map((revision) => (
+                      <option key={revision.id} value={revision.id}>
+                        {revision.name} ✎
+                      </option>
+                    ))}
+                </optgroup>
+              ) : null}
+              {beat.revisions.some((revision) => revision.archived) ? (
+                <optgroup label="Archive">
+                  {beat.revisions
+                    .filter((revision) => revision.archived)
+                    .map((revision) => (
+                      <option key={revision.id} value={revision.id}>
+                        {revision.name}
+                      </option>
+                    ))}
+                </optgroup>
+              ) : null}
               <option value={NEW_REVISION}>New draft…</option>
             </select>
           </label>
@@ -393,13 +431,24 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
             editors of the same scene is a way to lose an afternoon's work. */}
         {against ? (
           <div className="writer-sheet reading" style={{ '--page-zoom': zoom } as React.CSSProperties}>
-            <p className="writer-column-name muted">{against.name} — reading</p>
-            <BeatBody
-              file={file}
-              beat={{ ...beat, manuscript: against.manuscript, revisions: [] }}
-              onUpdate={() => undefined}
-              readOnly
-            />
+            <p className="writer-column-name muted">
+              {against.name} — {isMarkupDraft(against.revision) ? 'markup' : 'reading'}
+            </p>
+            {isMarkupDraft(against.revision) ? (
+              <MarkedDraft
+                revision={against.revision}
+                onArchive={(archived) =>
+                  onUpdate((current) => archiveRevision(current, beat.id, against.revision.id, archived))
+                }
+              />
+            ) : (
+              <BeatBody
+                file={file}
+                beat={{ ...beat, manuscript: against.manuscript, revisions: [] }}
+                onUpdate={() => undefined}
+                readOnly
+              />
+            )}
           </div>
         ) : null}
         {planOpen ? <BeatPlanPanel file={file} beatId={beat.id} onClose={() => setPlanOpen(false)} /> : null}

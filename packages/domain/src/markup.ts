@@ -1,5 +1,10 @@
 import { z } from 'zod';
 import { seatName, type Seat } from './room.js';
+import { newId } from './ids.js';
+import { nowIso } from './entities/common.js';
+import type { ProjectFile } from './project-file.js';
+import type { BeatRevision } from './entities/structure.js';
+import type { BeatRevisionId } from './ids.js';
 import { mayEmail, type Notice } from './notify.js';
 
 /**
@@ -22,38 +27,16 @@ import { mayEmail, type Notice } from './notify.js';
  * (`quote`), so a mark can still be read where the text around it has moved.
  */
 
-export const MARK_KINDS = ['highlight', 'strike', 'underline', 'note', 'suggest'] as const;
-export const markKindSchema = z.enum(MARK_KINDS);
-export type MarkKind = (typeof MARK_KINDS)[number];
-
-export const MARK_KIND_NAMES: Record<MarkKind, string> = {
-  highlight: 'Highlight',
-  strike: 'Strike through',
-  underline: 'Underline',
-  note: 'Note',
-  suggest: 'Suggest wording',
-};
-
-/** The highlighter's colours: few, and readable on the page in either theme. */
-export const MARK_COLOURS = ['#f5d547', '#7ed492', '#f29bb6', '#8ec5ff'] as const;
-
-export const markSchema = z
-  .object({
-    id: z.string().min(1).max(64),
-    elementId: z.string().min(1).max(64),
-    start: z.number().int().min(0),
-    end: z.number().int().min(0),
-    kind: markKindSchema,
-    colour: z.string().max(16).default(MARK_COLOURS[0]),
-    /** What the marker said about it. A note's whole point; optional on the rest. */
-    note: z.string().max(2000).default(''),
-    /** The wording suggested in place of the span. Only a `suggest` mark has one. */
-    replacement: z.string().max(2000).default(''),
-    /** The words the mark was made on, as they read when it was made. */
-    quote: z.string().max(2000).default(''),
-  })
-  .refine((mark) => mark.end >= mark.start, { message: 'A mark ends after it starts.' });
-export type Mark = z.infer<typeof markSchema>;
+export {
+  MARK_KINDS,
+  markKindSchema,
+  MARK_KIND_NAMES,
+  MARK_COLOURS,
+  markSchema,
+  type MarkKind,
+  type Mark,
+} from './entities/mark.js';
+import { MARK_COLOURS, MARK_KIND_NAMES, markSchema, type Mark, type MarkKind } from './entities/mark.js';
 
 export const MARKUP_STATES = ['sent', 'seen'] as const;
 export const markupStateSchema = z.enum(MARKUP_STATES);
@@ -73,6 +56,12 @@ export const markupSchema = z.object({
   state: markupStateSchema.default('sent'),
   sentAt: z.string(),
   seenAt: z.string().nullable().default(null),
+  /**
+   * Put away once it has been dealt with (from Ken: *it doesn't get erased …
+   * once they get fixed, you can send them to archive*). Archived is a place,
+   * not an ending: an archived markup still opens.
+   */
+  archivedAt: z.string().nullable().default(null),
   createdAt: z.string(),
 });
 export type Markup = z.infer<typeof markupSchema>;
@@ -171,9 +160,81 @@ export const describeMark = (mark: Mark): string => {
   }
 };
 
-/** Markups waiting for this person: sent to them and not yet opened. */
+/** Markups waiting for this person: sent to them, not yet opened, not archived. */
 export const unseenMarkups = (markups: readonly Markup[], userId: string): Markup[] =>
-  markups.filter((markup) => markup.recipientId === userId && markup.state === 'sent');
+  markups.filter((markup) => markup.recipientId === userId && markup.state === 'sent' && !markup.archivedAt);
+
+// ------------------------------------------------------ into the script
+
+/**
+ * A markup brought into the script as drafts (addendum 07 §27.2).
+ *
+ * From Ken: *if you want to bring it into the script, then you can bring it in
+ * as a markup and then in the version it'll have the initials of the writer
+ * plus markup in the drop-down menu.* Each beat the marks touch gains a draft
+ * named that way, holding the marked version's text for that beat and the
+ * marks on it. Nothing already in the beat changes: the working draft stays
+ * the working draft, and the markup is read beside it.
+ *
+ * Beats are matched by id, which every branch of a room shares. A marked beat
+ * this script does not have is counted rather than invented.
+ */
+export const bringInMarkup = (
+  file: ProjectFile,
+  input: {
+    /** The version that was marked up. */
+    source: ProjectFile;
+    marks: readonly Mark[];
+    /** "MA markup": the marked text's writer's initials, then the word. */
+    label: string;
+    /** Who made the marks, by name. */
+    markedBy: string;
+  },
+): { file: ProjectFile; beats: number; missing: number } => {
+  const markedElements = new Set(input.marks.map((mark) => mark.elementId));
+  const marked = input.source.beats.filter((beat) =>
+    beat.manuscript.elements.some((element) => markedElements.has(element.id as string)),
+  );
+  const here = new Set(file.beats.map((beat) => beat.id as string));
+  const at = nowIso();
+  let beats = 0;
+  const next = {
+    ...file,
+    beats: file.beats.map((beat) => {
+      const from = marked.find((one) => one.id === beat.id);
+      if (!from) return beat;
+      beats += 1;
+      const ids = new Set(from.manuscript.elements.map((element) => element.id as string));
+      const taken = new Set([beat.revisionName, ...beat.revisions.map((one) => one.name)]);
+      let name = input.label;
+      for (let count = 2; taken.has(name); count += 1) name = `${input.label} ${count}`;
+      return {
+        ...beat,
+        revisions: [
+          ...beat.revisions,
+          {
+            id: newId<BeatRevisionId>(),
+            name,
+            manuscript: from.manuscript,
+            savedAt: at,
+            marks: input.marks.filter((mark) => ids.has(mark.elementId)),
+            markedBy: input.markedBy,
+            archived: false,
+          },
+        ],
+        updatedAt: at,
+      };
+    }),
+  };
+  return { file: next, beats, missing: marked.filter((beat) => !here.has(beat.id as string)).length };
+};
+
+/** The label a brought-in markup's drafts carry: the writer's initials, then "markup". */
+export const markupDraftLabel = (writerInitials: string): string =>
+  `${writerInitials.trim() || 'Writer'} markup`;
+
+/** Whether a beat draft is a markup brought in, rather than a draft written. */
+export const isMarkupDraft = (revision: Pick<BeatRevision, 'marks'>): boolean => revision.marks.length > 0;
 
 // -------------------------------------------------------------- telling them
 

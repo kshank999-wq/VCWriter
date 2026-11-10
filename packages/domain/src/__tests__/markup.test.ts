@@ -107,3 +107,42 @@ describe('sending it back', () => {
     expect(unseenMarkups([markup], 'showrunner')).toHaveLength(0);
   });
 });
+
+describe('bringing a markup into the script', () => {
+  it('adds a draft named for the writer to each marked beat, and leaves the rest alone', async () => {
+    const { bringInMarkup, markupDraftLabel, isMarkupDraft, archiveRevision, createProjectFile, addUnit, addBeat, updateBeat } =
+      await import('../index.js');
+    const empty = createProjectFile({ title: 'Room', format: 'screenplay' });
+    const scene = addUnit({ ...empty, units: [], beats: [] }, { trackId: empty.tracks[0]!.id, title: 'INT. HOUSE - NIGHT' });
+    const one = addBeat(scene.file, { unitId: scene.unit.id, title: 'One' });
+    const two = addBeat(one.file, { unitId: scene.unit.id, title: 'Two' });
+    const line = (id: string, text: string) => ({ id, type: 'action', text, characterId: null, attributes: {} });
+    let base = updateBeat(two.file, one.beat.id, { manuscript: { elements: [line('e1', 'She opens the door.')] } } as never);
+    base = updateBeat(base, two.beat.id, { manuscript: { elements: [line('e2', 'Nobody is there.')] } } as never);
+    // The writer's version reworded the first beat.
+    const source = updateBeat(base, one.beat.id, { manuscript: { elements: [line('e1', 'She kicks the door open.')] } } as never);
+
+    const marks = [mark({ elementId: 'e1', start: 4, end: 9 })];
+    const result = bringInMarkup(base, { source, marks, label: markupDraftLabel('MA'), markedBy: 'Ken' });
+    expect(result).toMatchObject({ beats: 1, missing: 0 });
+
+    const first = result.file.beats.find((beat) => beat.id === one.beat.id)!;
+    const added = first.revisions.at(-1)!;
+    expect(added.name).toBe('MA markup');
+    expect(added.markedBy).toBe('Ken');
+    expect(isMarkupDraft(added)).toBe(true);
+    // The marked draft holds the writer's words; the working draft is untouched.
+    expect(added.manuscript.elements[0]!.text).toBe('She kicks the door open.');
+    expect(first.manuscript.elements[0]!.text).toBe('She opens the door.');
+    // The beat the marks did not touch gains nothing.
+    expect(result.file.beats.find((beat) => beat.id === two.beat.id)!.revisions).toHaveLength(0);
+
+    const again = bringInMarkup(result.file, { source, marks, label: 'MA markup', markedBy: 'Ken' });
+    expect(again.file.beats.find((beat) => beat.id === one.beat.id)!.revisions.at(-1)!.name).toBe('MA markup 2');
+
+    const archived = archiveRevision(result.file, one.beat.id, added.id, true);
+    const kept = archived.beats.find((beat) => beat.id === one.beat.id)!.revisions.at(-1)!;
+    expect(kept.archived).toBe(true);
+    expect(kept.marks).toHaveLength(1);
+  });
+});

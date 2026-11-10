@@ -473,7 +473,7 @@ export const startRevision = (
     ...beat,
     revisions: [
       ...beat.revisions,
-      { id: newId<BeatRevisionId>(), name: beat.revisionName, manuscript: beat.manuscript, savedAt: nowIso() },
+      { id: newId<BeatRevisionId>(), name: beat.revisionName, manuscript: beat.manuscript, savedAt: nowIso(), marks: [], markedBy: '', archived: false },
     ],
     manuscript: options.from === 'copy' ? beat.manuscript : { elements: [] },
     revisionName: name.trim() || `Draft ${beat.revisions.length + 2}`,
@@ -507,10 +507,22 @@ export const switchRevision = (file: ProjectFile, beatId: BeatId, revisionId: Be
       revisionName: chosen.name,
       revisions: [
         ...beat.revisions.filter((revision) => revision.id !== revisionId),
-        { id: chosen.id, name: beat.revisionName, manuscript: beat.manuscript, savedAt: nowIso() },
+        { id: chosen.id, name: beat.revisionName, manuscript: beat.manuscript, savedAt: nowIso(), marks: [], markedBy: '', archived: false },
       ],
     };
   });
+
+/** Send a draft to the archive, or bring it back. Nothing is erased (addendum 07 §27.2). */
+export const archiveRevision = (
+  file: ProjectFile,
+  beatId: BeatId,
+  revisionId: BeatRevisionId,
+  archived: boolean,
+): ProjectFile =>
+  withBeat(file, beatId, (beat) => ({
+    ...beat,
+    revisions: beat.revisions.map((revision) => (revision.id === revisionId ? { ...revision, archived } : revision)),
+  }));
 
 export const removeRevision = (file: ProjectFile, beatId: BeatId, revisionId: BeatRevisionId): ProjectFile =>
   withBeat(file, beatId, (beat) => ({

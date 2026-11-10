@@ -62,6 +62,7 @@ import { Spend } from './spend';
 import { NotifyMe } from './notify';
 import { Billing } from './billing';
 import { Compare, MarkupView, type VersionChoice } from './compare';
+import { MarkupActions } from './markup-actions';
 import { markupsIn } from '@/lib/markups';
 import { loadBilling, roomPriceCents, seatPriceCents, settleCheckout } from '@/lib/room-billing';
 import { standingFor } from '@/lib/room-spend';
@@ -317,7 +318,9 @@ export default async function RoomPage({
     { key: 'submissions', label: deciding ? 'Review queue' : 'What you have sent', count: deciding ? waiting : undefined },
     { key: 'ideas', label: 'Ideas', count: boxes.length },
     ...(curating ? [{ key: 'tray', label: 'Curation Tray', count: awaiting.length }] : []),
-    { key: 'compare', label: 'Compare and mark up' },
+    // The showrunner's, in the room (from Ken: *the markup screen is exclusive
+    // to the showrunner … only exclusive in the writer's room version*).
+    ...(curating ? [{ key: 'compare', label: 'Compare and mark up' }] : []),
     { key: 'markups', label: 'Markups', count: waitingMarkups.length || undefined },
     { key: 'drafts', label: 'Drafts' },
     { key: 'talk', label: 'Talk', count: news.length > 0 ? news.length : undefined },
@@ -573,7 +576,7 @@ export default async function RoomPage({
             </section>
           ) : null}
 
-          {screen === 'compare' ? (
+          {screen === 'compare' && curating ? (
             <section className="room-panel">
               <h2>Compare and mark up</h2>
               <p className="small">
@@ -588,9 +591,11 @@ export default async function RoomPage({
           {screen === 'markups' ? (
             (() => {
               const chosen = markups.find((one) => one.id === searchParams?.markup) ?? null;
-              const received = markups.filter((one) => one.recipientId === user.id);
-              const sentByYou = markups.filter((one) => one.authorId === user.id);
-              const others = markups.filter((one) => one.recipientId !== user.id && one.authorId !== user.id);
+              const live = markups.filter((one) => !one.archivedAt);
+              const archive = markups.filter((one) => one.archivedAt);
+              const received = live.filter((one) => one.recipientId === user.id);
+              const sentByYou = live.filter((one) => one.authorId === user.id);
+              const others = live.filter((one) => one.recipientId !== user.id && one.authorId !== user.id);
               const row = (one: (typeof markups)[number]) => (
                 <li key={one.id} className={one.state === 'sent' && one.recipientId === user.id ? 'unseen' : undefined}>
                   <span className="room-dot" style={{ background: colourOf(one.authorId) }} />
@@ -622,6 +627,12 @@ export default async function RoomPage({
                         markupId={chosen.id}
                         mine={chosen.recipientId === user.id && chosen.state === 'sent'}
                       />
+                      <MarkupActions
+                        roomId={view.room.id}
+                        markupId={chosen.id}
+                        archived={Boolean(chosen.archivedAt)}
+                        canBringIn={view.role !== 'viewer'}
+                      />
                       <p className="small" style={{ marginTop: 12 }}>
                         <a href={hrefFor('markups')}>← All markups</a>
                       </p>
@@ -635,7 +646,13 @@ export default async function RoomPage({
                     <h2>Sent by you</h2>
                     {sentByYou.length === 0 ? (
                       <p className="small">
-                        You have not sent a markup yet. Use <a href={hrefFor('compare')}>Compare and mark up</a>.
+                        You have not sent a markup yet.
+                        {curating ? (
+                          <>
+                            {' '}
+                            Use <a href={hrefFor('compare')}>Compare and mark up</a>.
+                          </>
+                        ) : null}
                       </p>
                     ) : (
                       <ul className="room-due">{sentByYou.map(row)}</ul>
@@ -647,6 +664,17 @@ export default async function RoomPage({
                       <ul className="room-due">{others.map(row)}</ul>
                     </section>
                   ) : null}
+                  <section className="room-panel mk-archive">
+                    <h2>Archive</h2>
+                    {archive.length === 0 ? (
+                      <p className="small">
+                        Nothing archived yet. Once a markup has been dealt with, send it here. It is kept, and it still
+                        opens.
+                      </p>
+                    ) : (
+                      <ul className="room-due">{archive.map(row)}</ul>
+                    )}
+                  </section>
                 </>
               );
             })()

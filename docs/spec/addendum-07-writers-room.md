@@ -1791,3 +1791,50 @@ From Ken, after the first markup arrived:
   breaks out of the site's column, the menu becomes a row along the top, and
   the script is set larger on tall pages.
 - **Full screen** puts the panes on the whole screen with nothing else.
+
+### 27.2 The showrunner marks up; the writer brings it in; nothing is erased
+
+From Ken, after the first markup arrived:
+
+- *The markup screen is exclusive to the showrunner … only exclusive in the
+  writer's room version.* **Compare and mark up** is in the room menu for
+  whoever runs the room, and only there. In the writing program, marking up is
+  open to everyone. **The flow:** writers submit versions, and the showrunner
+  sends markups.
+- *In the online dashboard, you should be able to open it up quickly so you
+  don't have to bring it in.* A markup opens and reads in the room as before.
+  Three buttons sit under it:
+  - **Open in VC Writer**
+  - **Bring into the script**
+  - **Send to archive**
+- *If you want to bring it into the script … in the version it'll have the
+  initials of the writer plus markup in the drop-down menu.* **Bring into the
+  script** (`POST …/markups/<id>/bring-in`, `bringInMarkup`) works on the
+  caller's own draft in the room. Each beat the marks touch gains a draft named
+  `<writer's initials> markup` ("MA markup", then "MA markup 2"). It holds the
+  marked version's text for that beat, the marks on it, and who made them.
+  Beats are matched by id, which every branch shares. Nothing already in the
+  beat changes.
+- In the beat's **Draft** menu, markup drafts sit under **Markups** with a ✎.
+  Choosing one **reads it beside the working draft** rather than swapping it in
+  (`MarkedDraft`): the marked text drawn as the room drew it, and the marks
+  listed with who made them. The writing goes on in the working draft, and
+  **New draft…** starts version 2 as before.
+- *It doesn't get erased … once they get fixed, you can send them to archive.*
+  A room markup gets `archived_at` (migration **0080**). The writer it was sent
+  to or whoever sent it may set it, and it moves from the lists to **Archive**.
+  A markup draft in a beat gets `archived` (`archiveRevision`), and moves to
+  the Draft menu's **Archive** group. Either way it is kept and still opens.
+  There is no delete.
+
+Beat drafts gained `marks`, `markedBy` and `archived`, all defaulting empty.
+A draft saved before them reads as it always did. They live in the beat's
+`revisions`, which already sync as a whole, so no sync change was needed. The
+mark itself moved to `entities/mark.ts`, so a beat's drafts can carry marks
+without the beat depending on the room.
+
+Still to come, from the same conversation:
+
+- a **Mark up** switch in the beat writing screen, so anyone can mark their
+  own or someone else's work outside a room
+- editing in the compared drafts, and three across

@@ -23913,3 +23913,41 @@ input.note-rewrite-title:focus { border-color: var(--gold); outline: none; }
 .ebook-cover p {
   margin: 6px 0 0;
 }
+
+/* ------------------------------------------------- a markup draft (addendum 07 §27.2)
+   A markup brought in from the room, read beside the working draft: the
+   marked text as the room showed it, and the marks listed with who made them. */
+.marked-draft { display: grid; gap: 12px; }
+.marked-draft-page {
+  font-family: var(--script-font, 'Courier Prime', 'Courier New', Courier, monospace);
+  font-size: 12pt;
+  line-height: 1.4;
+}
+.marked-line { margin: 0 0 1em; white-space: pre-wrap; }
+.marked-scene_heading { font-weight: 700; text-transform: uppercase; }
+.marked-character { margin-left: 2.2in; margin-bottom: 0; text-transform: uppercase; }
+.marked-parenthetical { margin-left: 1.6in; margin-bottom: 0; }
+.marked-dialogue { margin-left: 1in; margin-right: 1.5in; }
+.marked-transition { text-align: right; text-transform: uppercase; }
+.marked-highlight { border-radius: 2px; color: #1a1a1a; }
+.marked-strike { text-decoration: line-through; text-decoration-color: #c0392b; text-decoration-thickness: 2px; }
+.marked-underline { text-decoration: underline; text-decoration-color: #2563eb; text-decoration-thickness: 2px; }
+.marked-strike.marked-underline { text-decoration-line: line-through underline; }
+.marked-note { border-bottom: 2px dotted #b45309; cursor: help; }
+.marked-suggest { text-decoration: line-through; text-decoration-color: #c0392b; }
+.marked-insert { margin-left: 4px; padding: 0 3px; border-radius: 2px; background: #d9f2df; color: #14532d; text-decoration: none; }
+.marked-pin { margin-left: 4px; color: #b45309; cursor: help; }
+.marked-draft-list {
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  font-family: var(--ui-font, system-ui, sans-serif);
+  font-size: var(--ui, 13px);
+}
+.marked-draft-list ol { margin: 6px 0 10px; padding-left: 18px; display: grid; gap: 4px; }
+.marked-kind {
+  padding: 0 6px;
+  border-radius: 2px;
+  font-size: 11px;
+  color: #1a1a1a;
+  background: #e5e1d6;
+}

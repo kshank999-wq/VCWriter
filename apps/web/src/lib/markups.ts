@@ -20,10 +20,12 @@ interface MarkupRow {
   state: string;
   sent_at: string;
   seen_at: string | null;
+  archived_at?: string | null;
   created_at: string;
 }
 
-const COLUMNS = 'id, room_id, version_id, author_id, recipient_id, marks, note, state, sent_at, seen_at, created_at';
+const COLUMNS =
+  'id, room_id, version_id, author_id, recipient_id, marks, note, state, sent_at, seen_at, archived_at, created_at';
 
 const markupFromRow = (row: MarkupRow): Markup =>
   markupSchema.parse({
@@ -37,6 +39,7 @@ const markupFromRow = (row: MarkupRow): Markup =>
     state: row.state === 'seen' ? 'seen' : 'sent',
     sentAt: row.sent_at,
     seenAt: row.seen_at,
+    archivedAt: row.archived_at ?? null,
     createdAt: row.created_at,
   });
 
@@ -82,3 +85,19 @@ export const markMarkupSeen = async (markupId: string): Promise<void> => {
     .eq('id', markupId)
     .eq('state', 'sent');
 };
+
+/** Send a markup to the archive, or bring it back (§27.2). Kept either way. */
+export const archiveMarkup = async (markupId: string, archived: boolean): Promise<void> => {
+  const { error } = await serverClient()
+    .from('room_markups')
+    .update({ archived_at: archived ? new Date().toISOString() : null })
+    .eq('id', markupId);
+  if (error) throw new Error(error.message);
+};
+
+/** One markup, as the visitor may see it. */
+export const markupById = async (markupId: string): Promise<Markup | null> => {
+  const { data } = await serverClient().from('room_markups').select(COLUMNS).eq('id', markupId).maybeSingle();
+  return data ? markupFromRow(data as MarkupRow) : null;
+};
+
