@@ -23988,3 +23988,8 @@ input.note-rewrite-title:focus { border-color: var(--gold); outline: none; }
 .room-moved a { color: inherit; text-decoration: underline; }
 /* The master beside a beat: read, never written in. */
 .writer-sheet.master-beside { border-top: 3px solid #22c55e; }
+/* Set at the same size as the page beside it, whatever the zoom. */
+.writer-sheet.master-beside .marked-draft-page { font-size: calc(12pt * var(--page-zoom)); }
+.writer-sheet.master-beside .marked-character { margin-left: calc(2.2in * var(--page-zoom)); }
+.writer-sheet.master-beside .marked-dialogue { margin-left: calc(1in * var(--page-zoom)); margin-right: calc(1.5in * var(--page-zoom)); }
+.writer-sheet.master-beside .marked-parenthetical { margin-left: calc(1.6in * var(--page-zoom)); }
