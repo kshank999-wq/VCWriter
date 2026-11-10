@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ROLE_NAMES } from '@vcwriter/domain';
 import { currentUser } from '@/lib/supabase';
-import { loadMyRooms, roomlessProjects } from '@/lib/rooms';
+import { loadMyRooms } from '@/lib/rooms';
 import { StartRoom } from './start-room';
 
 export const metadata: Metadata = { title: 'Writers Room' };
@@ -32,7 +32,7 @@ export default async function RoomsPage() {
     );
   }
 
-  const [rooms, startable] = await Promise.all([loadMyRooms(), roomlessProjects()]);
+  const rooms = await loadMyRooms();
 
   return (
     <>
@@ -45,8 +45,7 @@ export default async function RoomsPage() {
         <h2>Your rooms</h2>
         {rooms.length === 0 ? (
           <p className="lede">
-            You are not in a room yet. Start one over a project you own, or wait to be asked into
-            somebody else’s.
+            You are not in a room yet. Start one below, or wait to be asked into somebody else’s.
           </p>
         ) : (
           <div className="grid">
@@ -68,16 +67,14 @@ export default async function RoomsPage() {
         )}
       </section>
 
-      {startable.length > 0 ? (
-        <section>
-          <h2>Start a room</h2>
-          <p className="lede">
-            A room is attached to a project you already have. The project stays yours; the room is
-            who else is allowed near it.
-          </p>
-          <StartRoom projects={startable} />
-        </section>
-      ) : null}
+      <section>
+        <h2>Start a room</h2>
+        <p className="lede">
+          Start a new project for the room, or bring one you already have in VC Writer. The project stays yours; the room is who else is
+          allowed near it.
+        </p>
+        <StartRoom />
+      </section>
     </>
   );
 }

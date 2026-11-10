@@ -1,16 +1,14 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import {
-  SYNC_TABLES,
   createProjectFile,
   isCollection,
   projectFormatSchema,
   storyChoices,
-  toRows,
   withStories,
-  type Row,
 } from '@vcwriter/domain';
 import { currentUser, serverClient } from '@/lib/supabase';
+import { insertProjectFile } from '@/lib/project-rows';
 import { requireNotesCapture } from '@/lib/notes-subscription';
 
 export const runtime = 'nodejs';
@@ -77,25 +75,8 @@ export async function POST(request: Request): Promise<Response> {
     ownerId: user.id as never,
   });
   const file = isCollection(made.project.format) ? withStories(made, parsed.data.stories) : made;
-  const rows = toRows(file);
-  const db = serverClient();
-
-  const { error: projectError } = await db.from('projects').insert(rows.project);
-  if (projectError) return NextResponse.json({ error: projectError.message }, { status: 400 });
-
-  for (const [key, table] of Object.entries(SYNC_TABLES)) {
-    const collection = rows[key as keyof typeof SYNC_TABLES] as Row[];
-    if (collection.length === 0) continue;
-
-    const { error } = await db.from(table).insert(collection);
-    if (error) {
-      // Half a project is worse than none: a writer would open it on the
-      // desktop and find a scene with no track to sit in. The project row goes
-      // and its children with it, on the cascades migration 0001 set up.
-      await db.from('projects').delete().eq('id', rows.project['id'] as string);
-      return NextResponse.json({ error: error.message }, { status: 400 });
-    }
-  }
+  const stored = await insertProjectFile(file);
+  if (!stored.ok) return NextResponse.json({ error: stored.error }, { status: 400 });
 
   return NextResponse.json({
     project: {

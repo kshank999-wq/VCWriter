@@ -201,21 +201,6 @@ export const loadMyRooms = async (): Promise<RoomCard[]> => {
   });
 };
 
-/** Projects this person owns that have no room yet, to start one from. */
-export const roomlessProjects = async (): Promise<{ id: string; title: string }[]> => {
-  const db = serverClient();
-  const { data: auth } = await db.auth.getUser();
-  if (!auth.user) return [];
-
-  const [{ data: projects }, { data: rooms }] = await Promise.all([
-    db.from('projects').select('id, title').eq('owner_id', auth.user.id).order('updated_at', { ascending: false }),
-    db.from('rooms').select('project_id'),
-  ]);
-
-  const taken = new Set(((rooms ?? []) as { project_id: string }[]).map((row) => row.project_id));
-  return ((projects ?? []) as { id: string; title: string }[]).filter((project) => !taken.has(project.id));
-};
-
 /** A room over a project its owner already has. One per project. */
 export const createRoom = async (input: {
   projectId: string;

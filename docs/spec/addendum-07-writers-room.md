@@ -2146,3 +2146,27 @@ nobody can add, change or remove a row. The showrunner reads the room's
 trail; a writer reads what they did and what was done to their own tasks and
 submissions. Each task's History tab shows its trail above the summary drawn
 from the records themselves.
+
+## 33. Choosing the room's project
+
+From Ken: the Start a room list should not be the Notes list. Every project in
+an account so far was made by the Notes app; scripts written in the desktop
+app live as files on the writer's computer and were never offered.
+
+**Start a room** now asks which project, deliberately, in one of two ways:
+
+- **Start a new project for the room**: a title and a format (screenplay,
+  series, stage play, short form, novel, short stories, instructional). An
+  empty project is made in the showrunner's account and the room is put over
+  it.
+- **Bring a project from VC Writer**: the project's file (.vcw, saved from the
+  desktop with File → Save as…). The server reads it the way the desktop does
+  (migrated and validated), makes the showrunner its owner, and stores it in
+  the account; the file on the computer is not touched. A file over about
+  4 MB is refused with a sentence saying so. A project already in the account
+  under the same id (synced or brought before) is used as it is; one belonging
+  to another account is refused; one that already has a room says so.
+
+The account's other projects are no longer listed. `POST /api/rooms` still
+accepts the id of a project already in the account, for anything that starts a
+room that way.

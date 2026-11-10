@@ -3644,3 +3644,10 @@ dialog.walkthrough::backdrop { background: rgba(0, 0, 0, 0.72); }
 .tk-request { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); }
 .tk-request p { margin: 4px 0; }
 .tk-request input:not([type='date']) { min-width: 240px; padding: 4px 8px; font-size: 12.5px; }
+/* Starting a room: two ways to choose its project (addendum 07 §33). */
+.start-room { max-width: 640px; }
+.start-room-choices { display: grid; gap: 8px; }
+.start-room-choice { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--border); border-radius: 4px; cursor: pointer; }
+.start-room-choice.on { border-color: var(--gold); background: var(--bg-raised-2); }
+.start-room-choice input { margin-top: 4px; }
+.start-room-choice > span { display: grid; gap: 2px; }
