@@ -341,6 +341,14 @@ export interface VcWriterApi {
    * (addendum 07 §28). Absent outside a room.
    */
   myAssignments?(): Promise<DesktopApiResult<Array<{ id: string; title: string; dueOn: string | null }>>>;
+  /**
+   * The room's master, read only (addendum 07 §31): its version, the master
+   * version this draft was made from, and its document when asked. Absent
+   * outside a room.
+   */
+  roomMaster?(input?: { withText?: boolean }): Promise<
+    DesktopApiResult<{ versionId: string | null; label: string; baseVersionId: string | null; file: unknown | null }>
+  >;
 
   // Sync is optional: a writer who never signs in has a fully working desktop
   // application whose projects live in files.

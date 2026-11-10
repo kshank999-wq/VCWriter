@@ -26,6 +26,7 @@ import {
   type BeatRevisionId,
   type ManuscriptElementId,
   type ProjectFile,
+  type ManuscriptSegment,
   notesForBeat,
   notesForSection,
   rowsBeneathBeat,
@@ -40,7 +41,7 @@ import {
 import { ElementNotes } from './ElementNotes';
 import { NoteRewrite } from './NoteRewrite';
 import { BeatBody } from './BeatBody';
-import { MarkedDraft, MarkingPage } from './MarkedDraft';
+import { MarkedDraft, MarkedLine, MarkingPage } from './MarkedDraft';
 import { ManuscriptDataLists } from './ManuscriptDataLists';
 import { usePreference } from '../use-split';
 
@@ -128,6 +129,33 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
   const [comparing, setComparingList] = useState<string[]>([]);
   /** Show one draft beside the working one, replacing what was there. */
   const setComparing = (id: string | null) => setComparingList(id ? [id] : []);
+  /**
+   * The room's master beside the draft, read only (addendum 07 §31; spec v1.1
+   * §6.1). Offered only in a Writers Room window, where the bridge can read the
+   * master; nothing here can write to it.
+   */
+  const readMaster = typeof window !== 'undefined' ? window.vcwriter?.roomMaster : undefined;
+  const [masterOn, setMasterOn] = useState(false);
+  const [masterBeat, setMasterBeat] = useState<{ label: string; manuscript: ManuscriptSegment | null; error: string | null } | null>(null);
+  useEffect(() => {
+    if (!masterOn || !readMaster) return;
+    let live = true;
+    setMasterBeat(null);
+    void readMaster.call(window.vcwriter, { withText: true }).then((result) => {
+      if (!live) return;
+      if (!result.ok || !result.data) {
+        setMasterBeat({ label: '', manuscript: null, error: result.error ?? 'The master could not be read.' });
+        return;
+      }
+      const theirs = (result.data.file as ProjectFile | null)?.beats.find((one) => one.id === beat.id) ?? null;
+      setMasterBeat({ label: result.data.label, manuscript: theirs?.manuscript ?? null, error: null });
+    });
+    return () => {
+      live = false;
+    };
+  }, [masterOn, readMaster, beat.id]);
+  /** How many pages stand beside the one being written. */
+  const beside = comparing.length + (masterOn ? 1 : 0);
   /** Where the writing screen's own tools go — see the slot below. */
   const [tools, setTools] = useState<HTMLDivElement | null>(null);
   const [fromCopy, setFromCopy] = useState(false);
@@ -369,6 +397,20 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
               + Third
             </button>
           ) : null}
+          {readMaster ? (
+            <label className="check" title="Read the room’s master of this beat beside your draft. The master cannot be changed from here.">
+              <input
+                type="checkbox"
+                aria-label="View master"
+                checked={masterOn}
+                onChange={(event) => {
+                  setMasterOn(event.target.checked);
+                  if (event.target.checked && zoom > 0.85) setZoom(0.75);
+                }}
+              />
+              <span>View master</span>
+            </label>
+          ) : null}
           <label className="check" title={`Off: the ${nouns.sub.toLowerCase()} keeps its text and leaves the ${nouns.manuscript.toLowerCase()}`}>
             <input
               type="checkbox"
@@ -440,8 +482,8 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
 
       <div
         className={[
-          comparing.length > 0 ? 'writer-body comparing' : 'writer-body',
-          comparing.length > 1 ? 'three-across' : '',
+          beside > 0 ? 'writer-body comparing' : 'writer-body',
+          beside > 1 ? 'three-across' : '',
           planOpen ? 'with-plan' : '',
         ]
           .filter(Boolean)
@@ -457,7 +499,7 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
             if (line) cursorLine.current = line.getAttribute('data-element-id') as ManuscriptElementId;
           }}
         >
-          {comparing.length > 0 ? <p className="writer-column-name muted">{beat.revisionName} — writing</p> : null}
+          {beside > 0 ? <p className="writer-column-name muted">{beat.revisionName} — writing</p> : null}
           {headed && unit && firstInUnit ? (
             <BookHeadingLine
               heading={sectionHeading(file, unit)}
@@ -536,8 +578,28 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
             )}
           </div>
         ))}
+        {masterOn ? (
+          <div className="writer-sheet reading master-beside" style={{ '--page-zoom': zoom } as React.CSSProperties}>
+            <p className="writer-column-name muted">
+              Master{masterBeat?.label ? ` — ${masterBeat.label}` : ''} — read only
+            </p>
+            {masterBeat === null ? (
+              <p className="muted small">Reading the master…</p>
+            ) : masterBeat.error ? (
+              <p className="error small">{masterBeat.error}</p>
+            ) : masterBeat.manuscript ? (
+              <div className="marked-draft-page">
+                {masterBeat.manuscript.elements.map((element) => (
+                  <MarkedLine key={element.id as string} id={element.id as string} type={element.type} text={element.text} marks={[]} />
+                ))}
+              </div>
+            ) : (
+              <p className="muted small">The master has no {nouns.sub.toLowerCase()} by this name yet: this one is new in your draft.</p>
+            )}
+          </div>
+        ) : null}
         {planOpen ? <BeatPlanPanel file={file} beatId={beat.id} onClose={() => setPlanOpen(false)} /> : null}
-        {comparing.length === 0 ? (
+        {beside === 0 ? (
           <ElementNotes
             file={file}
             notes={beatNotes}

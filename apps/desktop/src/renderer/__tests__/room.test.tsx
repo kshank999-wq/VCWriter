@@ -305,3 +305,68 @@ describe('the way back to the room', () => {
     expect(roomIdFrom('')).toBeNull();
   });
 });
+
+describe('opened from a task (addendum 07 §31)', () => {
+  const ROOM = 'b2412c98-cde9-485a-a867-bbac4f2a6f32';
+  const TASK = 'a:11111111-2222-3333-4444-555555555555';
+
+  afterEach(() => window.history.replaceState(null, '', '/'));
+
+  it('reads the task from the address, and nothing that is not one', async () => {
+    const { taskFrom } = await import('../components/RoomBar');
+    expect(taskFrom(`?room=${ROOM}&task=${TASK}`)).toBe(TASK);
+    expect(taskFrom('?task=javascript:alert(1)')).toBeNull();
+  });
+
+  it('goes back to the task without submitting, and Submit answers that task', async () => {
+    window.history.replaceState(null, '', `/preview?room=${ROOM}&task=${TASK}`);
+    inARoom();
+    const sent = sending();
+    const vcwriter = (window as unknown as { vcwriter: Record<string, unknown> }).vcwriter;
+    vcwriter['myAssignments'] = vi.fn(async () => ({
+      ok: true,
+      data: [
+        { id: 'other', title: 'Scene — The pier', dueOn: null },
+        { id: TASK.slice(2), title: 'Beat — The letter', dueOn: null },
+      ],
+    }));
+    show(script());
+
+    const back = (await screen.findByText('Back to Writer’s Room')) as HTMLAnchorElement;
+    expect(back.getAttribute('href')).toBe(`/rooms/${ROOM}?view=tasks&task=${encodeURIComponent(TASK)}`);
+    expect(sent).toHaveLength(0);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    const forWhat = (await screen.findByLabelText('What is it for?')) as HTMLSelectElement;
+    await waitFor(() => expect(forWhat.value).toBe(TASK.slice(2)));
+  });
+
+  it('says when the master has moved on since the draft was made, until told', async () => {
+    window.history.replaceState(null, '', `/preview?room=${ROOM}`);
+    inARoom();
+    const vcwriter = (window as unknown as { vcwriter: Record<string, unknown> }).vcwriter;
+    vcwriter['roomMaster'] = vi.fn(async () => ({
+      ok: true,
+      data: { versionId: 'v-new', label: 'Master 3', baseVersionId: 'v-old', file: null },
+    }));
+    show(script());
+
+    expect(await screen.findByText(/Master has changed since this draft/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Got it' }));
+    await waitFor(() => expect(screen.queryByText(/Master has changed/)).toBeNull());
+  });
+
+  it('says nothing when the draft is on the current master', async () => {
+    window.history.replaceState(null, '', `/preview?room=${ROOM}`);
+    inARoom();
+    const vcwriter = (window as unknown as { vcwriter: Record<string, unknown> }).vcwriter;
+    vcwriter['roomMaster'] = vi.fn(async () => ({
+      ok: true,
+      data: { versionId: 'v-same', label: '', baseVersionId: 'v-same', file: null },
+    }));
+    show(script());
+    await screen.findByText('Back to Writer’s Room');
+    await waitFor(() => expect(vcwriter['roomMaster']).toHaveBeenCalled());
+    expect(screen.queryByText(/Master has changed/)).toBeNull();
+  });
+});

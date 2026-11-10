@@ -61,7 +61,7 @@ export const versionFromLocation = (search: string): string | null => {
 };
 
 interface OpenedBranch {
-  branch: { id: string; name: string };
+  branch: { id: string; name: string; baseVersionId?: string | null };
   file: unknown;
   contentHash: string;
 }
@@ -77,6 +77,8 @@ export const createCloudBridge = (roomId: string, versionId: string | null = nul
 
   /** The branch this window is working on, once it has been opened. */
   let branchId: string | null = null;
+  /** The master version the draft was made from, to tell when the master has moved on (§31). */
+  let baseVersionId: string | null = null;
   let current: { path: string; file: unknown } | null = null;
 
   /**
@@ -228,6 +230,7 @@ export const createCloudBridge = (roomId: string, versionId: string | null = nul
     // file holds, and it goes through the same migration and the same schema.
     const file = parseProjectFile(body.file);
     branchId = body.branch.id;
+    baseVersionId = body.branch.baseVersionId ?? null;
     known = knownRecords(file);
     current = { path: body.branch.id, file };
     return ok({ path: body.branch.id, file: file as never, contentHash: body.contentHash });
@@ -358,6 +361,26 @@ export const createCloudBridge = (roomId: string, versionId: string | null = nul
       return ok({
         label: body.version?.label ?? input.note,
         at: body.version?.createdAt ?? new Date().toISOString(),
+      });
+    },
+
+    /**
+     * The room's master, read only (addendum 07 §31): which version it is, the
+     * version this draft was made from, and, when asked, its text, so the
+     * writer can read the master beside their draft without ever writing in it.
+     */
+    async roomMaster(input) {
+      await settle();
+      const response = await fetch(`/api/rooms/${roomId}/master${input?.withText ? '?with=document' : ''}`, {
+        headers: { accept: 'application/json' },
+      });
+      if (!response.ok) return fail(await asError(response));
+      const body = (await response.json()) as { versionId: string | null; label?: string; document?: unknown };
+      return ok({
+        versionId: body.versionId ?? null,
+        label: body.label ?? '',
+        baseVersionId: versionId ? null : baseVersionId,
+        file: body.document ? parseProjectFile(body.document) : null,
       });
     },
 

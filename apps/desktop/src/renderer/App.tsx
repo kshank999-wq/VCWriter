@@ -363,6 +363,28 @@ export default function App() {
   const room = useRoom();
   const beats = useMemo(() => (file ? beatsInStoryOrder(file) : []), [file]);
   const selectedBeat = beats.find((beat) => beat.id === selectedBeatId) ?? beats[0] ?? null;
+
+  // Opened from a task in the Writers Room (addendum 07 §31): the beat it is
+  // about opens straight away, once. `?beat=` names it, or `?scene=` its scene
+  // (the first beat in it). Anything not in this draft is left alone.
+  const taskLinked = useRef(false);
+  useEffect(() => {
+    if (taskLinked.current || !file || typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (!params.get('room')) return;
+    taskLinked.current = true;
+    const beatParam = params.get('beat');
+    const sceneParam = params.get('scene');
+    const target = beatParam
+      ? beats.find((beat) => (beat.id as string) === beatParam)
+      : sceneParam
+        ? beats.find((beat) => (beat.unitId as string) === sceneParam)
+        : undefined;
+    if (target) {
+      setSelectedBeatId(target.id);
+      setOpenBeatId(target.id);
+    }
+  }, [file, beats]);
   const stats = file ? projectStats(file) : null;
   // The story's geometry, paginated once per document rather than once per
   // pane: the timeline, the viewport and the script all draw from these.

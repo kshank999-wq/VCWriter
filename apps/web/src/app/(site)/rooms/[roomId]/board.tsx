@@ -414,7 +414,12 @@ function TaskPage({
 }) {
   const latest = task.submissions[0] ?? null;
   const mine = task.ownerId === viewer.userId;
-  const editorHref = `/preview?room=${roomId}`;
+  // Opens on the task's beat (or its scene's first beat), and knows the task,
+  // so the way back and Submit both point at it (§31).
+  const target = task.assignment?.targetKind === 'beat' || task.assignment?.targetKind === 'scene' ? task.assignment : null;
+  const editorHref = `/preview?room=${roomId}&task=${encodeURIComponent(task.key)}${
+    target?.targetId ? `&${target.targetKind}=${encodeURIComponent(target.targetId)}` : ''
+  }`;
   const numbered = [...task.submissions].reverse().map((one, index) => ({ one, n: index + 1 }));
   const history = [
     { at: task.createdAt, what: task.kind === 'assignment' ? `Assigned to ${nameOf(task.ownerId)}` : `Started by ${nameOf(task.ownerId)}` },

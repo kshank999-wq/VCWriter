@@ -23972,3 +23972,19 @@ input.note-rewrite-title:focus { border-color: var(--gold); outline: none; }
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
+
+/* The master has moved on since this draft (addendum 07 §31). */
+.room-moved {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border: 1px solid #d97706;
+  border-radius: 3px;
+  background: rgba(217, 119, 6, 0.14);
+  color: #fcd34d;
+  font-size: 12px;
+}
+.room-moved a { color: inherit; text-decoration: underline; }
+/* The master beside a beat: read, never written in. */
+.writer-sheet.master-beside { border-top: 3px solid #22c55e; }

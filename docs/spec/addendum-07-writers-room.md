@@ -1947,7 +1947,7 @@ in four phases.
 | A | Task status model, metrics strip, workflow menu, three-column board, task page with an action menu, closing is the showrunner's, printable task report | Built |
 | B | Permission requests to revisit integrated material; an audit log of every transition | To build |
 | C | Selection-to-selection integration (source passage → master passage; Replace / Insert before / Insert after / Delete; preview; commit as a new beat version through the existing beat-version system; contributor provenance; stale-master check) | Built (§30) |
-| D | Desktop: open on the task's beat with the master read-only beside it; Back to Writer's Room never submits; "master has changed since this draft" | To build |
+| D | Desktop: open on the task's beat with the master read-only beside it; Back to Writer's Room never submits; "master has changed since this draft" | Built (§31) |
 
 ### 29.1 One status per task
 
@@ -2077,3 +2077,36 @@ tasks read Integrated.
 versions; several writers in one beat keep separate credits. The master pane
 shows each paragraph's contributors as initials in their colours at the right
 edge.
+
+## 31. The editor, opened from a task
+
+Spec v1.1 §6.1 and §11 flow A, in the room's editor (the VC Writer renderer
+opened at `/preview?room=…`).
+
+**Opening on the task.** *Open in VC Writer* on a task carries the task and
+where it points: `/preview?room=<id>&task=<key>&beat=<id>` (or `&scene=<id>`,
+which opens the scene's first beat). The writer's own draft opens as before,
+and the beat writing screen opens on that beat straight away. A beat that is
+not in the draft is left alone.
+
+**The master beside the draft, read only.** In a room the beat writing screen
+has a **View master** switch beside Compare. It reads the room's current
+master (`GET /api/rooms/<id>/master?with=document`) and sets that beat's text
+in a page of its own beside the draft, headed "Master — <version> — read
+only", with a green edge. It is drawn as text, never as an editable line, so
+nothing typed can reach it; it works alongside compared drafts (three across
+at most). A beat that is new in the draft says so.
+
+**Back to Writer's Room.** The room bar's dashboard link is now *Back to
+Writer's Room* and returns to the board on the task the window was opened from
+(`?view=tasks&task=<key>`). It is navigation only; nothing is submitted, and
+the draft is saved as it goes. Submit, when the window came from a task,
+starts on that task's assignment.
+
+**Master has changed since this draft.** A writer's branch records the master
+version it was made from. When the room's master has moved on, the room bar
+says so in amber, with *Read it* (the current master, read only, in a new
+window) and *Got it*, which hides it until the master changes again (on this
+computer). Nothing is merged, rebased or overwritten: the writer reads the new
+master beside any beat with View master and carries on, and the showrunner's
+integration (§30) re-checks the master itself before anything is committed.

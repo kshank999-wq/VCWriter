@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { useState } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import {
   addBeat,
@@ -172,5 +172,29 @@ describe('drafts side by side', () => {
     const beat = latest.beats.find((one) => one.id === beatId)!;
     expect(beat.revisions.find((one) => one.id === 'd1')!.manuscript.elements[0]!.text).toBe('First words, rewritten.');
     expect(beat.manuscript.elements[0]!.text).toBe('Working words.');
+  });
+});
+
+describe('the master beside the beat, in a room (addendum 07 §31)', () => {
+  afterEach(() => {
+    delete (window as unknown as { vcwriter?: unknown }).vcwriter;
+  });
+
+  it('is offered only in a room, and reads the master’s text of this beat, read only', async () => {
+    const { file, beatId } = marked();
+    render(<Writer start={file} beatId={beatId} />);
+    expect(screen.queryByLabelText('View master')).toBeNull();
+    cleanup();
+
+    const master = updateBeat(file, beatId, { manuscript: { elements: [line('e1', 'The master says she waits.')] } } as never);
+    (window as unknown as { vcwriter: unknown }).vcwriter = {
+      roomMaster: vi.fn(async () => ({ ok: true, data: { versionId: 'v2', label: 'Master 2', baseVersionId: 'v1', file: master } })),
+    };
+    render(<Writer start={file} beatId={beatId} />);
+    fireEvent.click(screen.getByLabelText('View master'));
+    expect(await screen.findByText('The master says she waits.')).toBeTruthy();
+    expect(screen.getByText(/Master — Master 2 — read only/)).toBeTruthy();
+    // Read, not written in: the master's text is not in an editable line.
+    expect(screen.getByText('The master says she waits.').closest('[contenteditable="true"]')).toBeNull();
   });
 });

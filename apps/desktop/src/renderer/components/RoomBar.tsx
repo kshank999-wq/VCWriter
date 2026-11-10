@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { contributorsIn, type ProjectFile } from '@vcwriter/domain';
 import { useRoom } from '../room';
 
@@ -49,6 +49,9 @@ export const RoomBar = ({
   // Which room this window belongs to, from the address the room's dashboard
   // opened it with (`/preview?room=<id>`), so the way back goes to that room.
   const roomId = roomIdFrom(typeof window === 'undefined' ? '' : window.location.search);
+  // The task it was opened from (addendum 07 §31), so the way back and Submit
+  // both know it.
+  const task = taskFrom(typeof window === 'undefined' ? '' : window.location.search);
 
   return (
     <div
@@ -63,8 +66,14 @@ export const RoomBar = ({
           Writers Room
         </span>
         {roomId ? (
-          <a className="room-link" href={`/rooms/${encodeURIComponent(roomId)}`}>
-            Room dashboard
+          // Navigation, never submission (spec v1.1 §6.1): back to the task this
+          // window was opened from, or the board. The draft is saved as it goes.
+          <a
+            className="room-link"
+            href={`/rooms/${encodeURIComponent(roomId)}?view=tasks${task ? `&task=${encodeURIComponent(task)}` : ''}`}
+            title="Back to the room. This does not submit anything; your draft is saved as you go."
+          >
+            Back to Writer’s Room
           </a>
         ) : null}
         <a className="room-link" href="/rooms" title="Your work in the room is saved as you go">
@@ -107,7 +116,9 @@ export const RoomBar = ({
         </span>
       ) : null}
 
-      <SubmitWork readOnly={readOnly} looking={looking} />
+      <SubmitWork readOnly={readOnly} looking={looking} task={task} />
+
+      {!readOnly && !master && roomId ? <MasterMoved roomId={roomId} /> : null}
 
       <label className="room-clean">
         <input type="checkbox" checked={cleanReading} onChange={(event) => setCleanReading(event.target.checked)} />
@@ -125,6 +136,64 @@ export const roomIdFrom = (search: string): string | null => {
   return id && /^[0-9a-f-]{36}$/i.test(id) ? id : null;
 };
 
+/** The task a window was opened from (`?task=a:<id>`), or null. */
+export const taskFrom = (search: string): string | null => {
+  const task = new URLSearchParams(search).get('task');
+  return task && /^[as]:[0-9a-f-]{36}$/i.test(task) ? task : null;
+};
+
+/**
+ * Says when the master has moved on since this draft was made from it
+ * (addendum 07 §31; spec v1.1 §6.1). Nothing is merged or overwritten: the
+ * writer can read the master beside any beat (View master) and carry on.
+ * Dismissed per master version, on this computer.
+ */
+function MasterMoved({ roomId }: { roomId: string }): React.ReactElement | null {
+  const [moved, setMoved] = useState<{ versionId: string; label: string } | null>(null);
+  useEffect(() => {
+    const read = window.vcwriter?.roomMaster;
+    if (!read) return;
+    let live = true;
+    void read.call(window.vcwriter).then((result) => {
+      if (!live || !result.ok || !result.data) return;
+      const { versionId, baseVersionId, label } = result.data;
+      if (!versionId || versionId === baseVersionId) return;
+      try {
+        if (window.localStorage.getItem(`vcw-master-seen:${roomId}`) === versionId) return;
+      } catch {
+        // Storage off: say it every time rather than never.
+      }
+      setMoved({ versionId, label });
+    });
+    return () => {
+      live = false;
+    };
+  }, [roomId]);
+  if (!moved) return null;
+  return (
+    <span className="room-moved" role="status">
+      Master has changed since this draft{moved.label ? ` (now ${moved.label})` : ''}.{' '}
+      <a href={`/preview?room=${encodeURIComponent(roomId)}&version=${encodeURIComponent(moved.versionId)}`} target="_blank" rel="noreferrer">
+        Read it
+      </a>{' '}
+      <button
+        type="button"
+        className="ghost small"
+        onClick={() => {
+          try {
+            window.localStorage.setItem(`vcw-master-seen:${roomId}`, moved.versionId);
+          } catch {
+            // Nothing to remember it in.
+          }
+          setMoved(null);
+        }}
+      >
+        Got it
+      </button>
+    </span>
+  );
+}
+
 /**
  * The one button (addendum 07 §10).
  *
@@ -140,9 +209,12 @@ export const roomIdFrom = (search: string): string | null => {
 function SubmitWork({
   readOnly,
   looking,
+  task,
 }: {
   readOnly: boolean;
   looking: 'script' | 'research';
+  /** The task this window was opened from, which Submit answers by default. */
+  task: string | null;
 }): React.ReactElement | null {
   const [open, setOpen] = useState(false);
   // What is open decides it. Still a control rather than a silent choice,
@@ -208,7 +280,14 @@ function SubmitWork({
                 if (result.ok && result.data) {
                   setMine(result.data);
                   // One open assignment is almost always what is being answered.
-                  setForId(result.data.length === 1 ? result.data[0]!.id : '');
+                  const fromTask = task?.startsWith('a:') ? task.slice(2) : null;
+                  setForId(
+                    fromTask && result.data.some((one) => one.id === fromTask)
+                      ? fromTask
+                      : result.data.length === 1
+                        ? result.data[0]!.id
+                        : '',
+                  );
                 }
               });
             }
