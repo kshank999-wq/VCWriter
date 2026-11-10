@@ -17,6 +17,8 @@ import { projectDocument } from '@/lib/project-document';
 import { noticeForAssignment } from '@vcwriter/domain';
 import { sendRoomNotice } from '@/lib/email';
 
+import { recordAudit } from '@/lib/audit';
+
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -140,6 +142,8 @@ export async function POST(
     roomName: view.room.name || view.projectTitle || 'the room',
   });
   if (notice) await sendRoomNotice(notice);
+
+  await recordAudit({ roomId: view.room.id, actorId: user.id, entityType: 'assignment', entityId: made.id, action: 'assigned', toState: made.state, note: made.targetLabel || made.note.slice(0, 120) });
 
   return NextResponse.json({ assignment: made });
 }

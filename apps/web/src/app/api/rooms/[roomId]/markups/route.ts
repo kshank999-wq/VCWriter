@@ -7,6 +7,8 @@ import { versionWithDocument } from '@/lib/branches';
 import { sendMarkup } from '@/lib/markups';
 import { sendRoomNotice } from '@/lib/email';
 
+import { recordAudit } from '@/lib/audit';
+
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -59,6 +61,8 @@ export async function POST(request: Request, { params }: { params: { roomId: str
     const versionLabel = writer ? `${seatName(writer)}’s ${describeVersion(found.version)}` : describeVersion(found.version);
     const notice = noticeForMarkup({ markup, seats: view.seats, roomName: view.room.name || view.projectTitle, versionLabel });
     if (notice) await sendRoomNotice(notice);
+
+    await recordAudit({ roomId: view.room.id, actorId: user.id, entityType: 'markup', entityId: markup.id, action: 'marked_up', note: `${markup.marks.length} marks` });
 
     return NextResponse.json({ markup });
   } catch (cause) {

@@ -112,6 +112,7 @@ export const WORKFLOW_SECTIONS = [
   'approved',
   'archive',
   'contributions',
+  'permissions',
 ] as const;
 export type WorkflowSection = (typeof WORKFLOW_SECTIONS)[number];
 
@@ -133,6 +134,8 @@ export const workflowSectionName = (section: WorkflowSection, showrunner: boolea
       return 'Completed / Archive';
     case 'contributions':
       return showrunner ? 'Contributions by Writer' : 'My Contributions';
+    case 'permissions':
+      return 'Permission Requests';
   }
 };
 
@@ -154,6 +157,9 @@ export const inSection = (task: Pick<Task, 'status' | 'kind'>, section: Workflow
       return task.status === 'completed' || task.status === 'cancelled';
     case 'contributions':
       return true;
+    // Requests, not tasks: drawn from their own list.
+    case 'permissions':
+      return false;
   }
 };
 

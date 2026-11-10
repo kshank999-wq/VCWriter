@@ -1945,7 +1945,7 @@ in four phases.
 | Phase | What | State |
 | --- | --- | --- |
 | A | Task status model, metrics strip, workflow menu, three-column board, task page with an action menu, closing is the showrunner's, printable task report | Built |
-| B | Permission requests to revisit integrated material; an audit log of every transition | To build |
+| B | Permission requests to revisit integrated material; an audit log of every transition | Built (§32) |
 | C | Selection-to-selection integration (source passage → master passage; Replace / Insert before / Insert after / Delete; preview; commit as a new beat version through the existing beat-version system; contributor provenance; stale-master check) | Built (§30) |
 | D | Desktop: open on the task's beat with the master read-only beside it; Back to Writer's Room never submits; "master has changed since this draft" | Built (§31) |
 
@@ -2110,3 +2110,39 @@ window) and *Got it*, which hides it until the master changes again (on this
 computer). Nothing is merged, rebased or overwritten: the writer reads the new
 master beside any beat with View master and carries on, and the showrunner's
 integration (§30) re-checks the master itself before anything is committed.
+
+## 32. Permission requests and the audit trail
+
+Spec v1.1 §7, §11 flow C and §13. Migration 0083.
+
+**Asking.** Material in the master is the showrunner's to change, even where a
+writer wrote it. Beside each of a writer's integrated contributions (My
+Contributions, and the task's overview) there is **Request permission to
+revise** in place of editing: what they want to change and why (required),
+and a proposed change (optional). It can be asked only about the writer's own
+task, only once that work is in the master, and once at a time per task. The
+showrunner is emailed. The writer may withdraw it while it waits.
+
+**Answering.** The showrunner's **Permission Requests** section (in the
+workflow menu, with a count, and on the metrics strip) lists what is waiting,
+oldest first, then what was answered. **Grant — make a revision task**
+creates a new task for the writer on the same beat, its note carrying the
+reason and the proposal, with an optional due date, and links it from the
+request. **Deny** changes nothing. Either way the writer is emailed, with the
+showrunner's note. A grant never opens the master: what the writer sends for
+the new task is reviewed and integrated like any other (§30).
+
+The database holds this: who asked, what and why can never change after
+asking; only the showrunner can grant or deny, only while it waits; the writer
+can only withdraw their own; nothing is deleted.
+
+**The audit trail.** `room_audit_events` records every transition, written by
+the server only after it has checked the person may act: assigned, moved
+(start, close, cancel, reopen, with from → to), version sent, decided
+(approve, return with notes, not taken, with the note), marked up, integrated
+(by integration or the Curation Tray, with the beat versions), permission
+asked, granted, denied, withdrawn. There is no insert, update or delete policy:
+nobody can add, change or remove a row. The showrunner reads the room's
+trail; a writer reads what they did and what was done to their own tasks and
+submissions. Each task's History tab shows its trail above the summary drawn
+from the records themselves.

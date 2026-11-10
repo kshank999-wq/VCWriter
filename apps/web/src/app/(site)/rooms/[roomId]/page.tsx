@@ -67,6 +67,8 @@ import { MarkupActions } from './markup-actions';
 import { Board, TASK_TABS, type TaskTab } from './board';
 import { IntegrateScreen } from './integrate-screen';
 import { markupsIn } from '@/lib/markups';
+import { requestsIn } from '@/lib/permissions';
+import { auditIn } from '@/lib/audit';
 import { loadBilling, roomPriceCents, seatPriceCents, settleCheckout } from '@/lib/room-billing';
 import { standingFor } from '@/lib/room-spend';
 import { assistRefusalText } from '@vcwriter/domain';
@@ -132,7 +134,7 @@ export default async function RoomPage({
   // The room's lines and the points recorded on them, read as this visitor —
   // so what comes back is what they may see, and the dashboard says the rest
   // in words (§7).
-  const [branches, versions, submissions, assignments, comments, since, markups] = await Promise.all([
+  const [branches, versions, submissions, assignments, comments, since, markups, requests, audit] = await Promise.all([
     branchesIn(view.room.id),
     versionsFor(view.room.id),
     submissionsIn(view.room.id),
@@ -142,6 +144,9 @@ export default async function RoomPage({
     // Not there until the markups migration is (0079): an empty list, not a
     // broken room.
     markupsIn(view.room.id).catch(() => []),
+    // Not there until migration 0083 is: empty lists, not a broken room.
+    requestsIn(view.room.id).catch(() => []),
+    auditIn(view.room.id).catch(() => []),
   ]);
   const desks = desksIn({ seats: view.seats, branches, versions, viewer: { userId: user.id } });
   const master = masterVersion(versions);
@@ -474,6 +479,8 @@ export default async function RoomPage({
               assignments={assignments}
               roomName={view.room.name || view.projectTitle || 'The room'}
               masterVersionId={master?.id ?? null}
+              requests={requests}
+              audit={audit}
             />
           ) : null}
 

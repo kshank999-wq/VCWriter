@@ -14,6 +14,8 @@ import { branchesIn, takeSnapshot, versionsFor } from '@/lib/branches';
 import { sendSubmission, submissionsIn } from '@/lib/submissions';
 import { assignmentsIn } from '@/lib/assignments';
 
+import { recordAudit } from '@/lib/audit';
+
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -120,6 +122,8 @@ export async function POST(
     assignmentId,
   });
   if ('reason' in sent) return NextResponse.json({ error: sent.message }, { status: 403 });
+
+  await recordAudit({ roomId: view.room.id, actorId: user.id, entityType: 'submission', entityId: sent.id, action: 'submitted', toState: sent.state, note: sent.note });
 
   return NextResponse.json({ submission: sent, version });
 }

@@ -19,6 +19,10 @@ import {
   taskPlace,
   taskHeadline,
   workflowSectionName,
+  PERMISSION_STATE_NAMES,
+  describeAuditEvent,
+  type AuditEvent,
+  type PermissionRequest,
   type AssignableThing,
   type Assignment,
   type Seat,
@@ -28,6 +32,7 @@ import {
 } from '@vcwriter/domain';
 import { WhoOwesWhat } from './assignments';
 import { TaskActions } from './task-actions';
+import { AnswerRequest, RequestPermission } from './permission-actions';
 
 /**
  * The room's work as a board (addendum 07 §29; workflow spec v1.1 §3–§4).
@@ -71,6 +76,8 @@ export function Board({
   assignments,
   roomName,
   masterVersionId,
+  requests,
+  audit,
 }: {
   roomId: string;
   tasks: Task[];
@@ -86,6 +93,10 @@ export function Board({
   assignments: Assignment[];
   roomName: string;
   masterVersionId: string | null;
+  /** Permission requests this person may see (§32). */
+  requests: PermissionRequest[];
+  /** The audit trail this person may read (§32). */
+  audit: AuditEvent[];
 }) {
   const base = `/rooms/${roomId}?view=tasks`;
   const seatOf = (userId: string) => seats.find((one) => one.userId === userId) ?? null;
@@ -116,7 +127,11 @@ export function Board({
   // A writer reads their own tasks; the showrunner the room's (§2).
   const visible = viewer.showrunner ? all : all.filter((task) => task.ownerId === viewer.userId);
   const sorted = sortTasks(visible, viewer);
-  const metrics = taskMetrics(visible, viewer);
+  const asking = viewer.showrunner ? requests.filter((one) => one.state === 'pending') : requests.filter((one) => one.requesterId === viewer.userId && one.state === 'pending');
+  const metrics = [
+    ...taskMetrics(visible, viewer),
+    { key: 'permissions', label: 'Permission requests', count: asking.length, section: 'permissions' as WorkflowSection, attention: viewer.showrunner && asking.length > 0 },
+  ];
   const writers = seats.filter((seat) => seat.state !== 'deactivated' && seat.userId);
   const listed = filterTasks(sorted, { section, writer, query });
   const task = taskKey ? (visible.find((one) => one.key === taskKey) ?? null) : null;
@@ -144,7 +159,7 @@ export function Board({
   );
 
   const counts: Record<WorkflowSection, number> = Object.fromEntries(
-    WORKFLOW_SECTIONS.map((one) => [one, filterTasks(visible, { section: one, writer }).length]),
+    WORKFLOW_SECTIONS.map((one) => [one, one === 'permissions' ? asking.length : filterTasks(visible, { section: one, writer }).length]),
   ) as Record<WorkflowSection, number>;
 
   return (
@@ -220,6 +235,8 @@ export function Board({
               colourOf={colourOf}
               initialsOf={initialsOf}
               masterVersionId={masterVersionId}
+              requests={requests}
+              audit={audit}
             />
           ) : (
             <>
@@ -263,8 +280,28 @@ export function Board({
                     );
                   })}
                 </div>
+              ) : section === 'permissions' ? (
+                <Permissions
+                  roomId={roomId}
+                  requests={viewer.showrunner ? requests : requests.filter((one) => one.requesterId === viewer.userId)}
+                  viewer={viewer}
+                  nameOf={nameOf}
+                  colourOf={colourOf}
+                  initialsOf={initialsOf}
+                  taskLink={(assignmentId) => link({ task: `a:${assignmentId}`, section: 'board' })}
+                />
               ) : section === 'contributions' ? (
-                <Contributions tasks={listed} link={link} nameOf={nameOf} colourOf={colourOf} initialsOf={initialsOf} showrunner={viewer.showrunner} />
+                <Contributions
+                  tasks={listed}
+                  link={link}
+                  nameOf={nameOf}
+                  colourOf={colourOf}
+                  initialsOf={initialsOf}
+                  showrunner={viewer.showrunner}
+                  roomId={roomId}
+                  viewerId={viewer.userId}
+                  requests={requests}
+                />
               ) : section === 'archive' ? (
                 <Archive tasks={listed} card={card} nameOf={nameOf} />
               ) : (
@@ -329,6 +366,9 @@ function Contributions({
   colourOf,
   initialsOf,
   showrunner,
+  roomId,
+  viewerId,
+  requests,
 }: {
   tasks: Task[];
   link: (over: { task?: string }) => string;
@@ -336,6 +376,9 @@ function Contributions({
   colourOf: (id: string) => string;
   initialsOf: (id: string) => string;
   showrunner: boolean;
+  roomId: string;
+  viewerId: string;
+  requests: PermissionRequest[];
 }) {
   const sent = tasks.filter((task) => task.versions > 0);
   return (
@@ -356,6 +399,7 @@ function Contributions({
               <th>Versions</th>
               <th>Status</th>
               <th>In the master</th>
+              {showrunner ? null : <th>Revise</th>}
             </tr>
           </thead>
           <tbody>
@@ -378,6 +422,11 @@ function Contributions({
                   <StatusBadge status={task.status} />
                 </td>
                 <td>{CONTRIBUTION_STATE_NAMES[task.contribution]}</td>
+                {showrunner ? null : (
+                  <td>
+                    <ReviseCell task={task} roomId={roomId} viewerId={viewerId} requests={requests} />
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -399,6 +448,8 @@ function TaskPage({
   colourOf,
   initialsOf,
   masterVersionId,
+  requests,
+  audit,
 }: {
   task: Task;
   tab: TaskTab;
@@ -411,6 +462,8 @@ function TaskPage({
   colourOf: (id: string) => string;
   initialsOf: (id: string) => string;
   masterVersionId: string | null;
+  requests: PermissionRequest[];
+  audit: AuditEvent[];
 }) {
   const latest = task.submissions[0] ?? null;
   const mine = task.ownerId === viewer.userId;
@@ -521,6 +574,12 @@ function TaskPage({
                 editorHref={editorHref}
                 trayHref={`/rooms/${roomId}?view=integrate&task=${encodeURIComponent(task.key)}`}
               />
+              {mine && !viewer.showrunner && task.contribution === 'integrated' && task.assignment ? (
+                <div>
+                  <p className="small muted">This is in the master, which only the showrunner changes. To revise it, ask.</p>
+                  <ReviseCell task={task} roomId={roomId} viewerId={viewer.userId} requests={requests} />
+                </div>
+              ) : null}
               {mine && !viewer.showrunner && (task.status === 'in_progress' || task.status === 'needs_revision' || task.status === 'assigned') ? (
                 <p className="small muted">
                   Write it in VC Writer, then press <strong>Submit</strong> in the Writers Room bar and choose this task. Going back to the room
@@ -590,6 +649,24 @@ function TaskPage({
           ) : null}
 
           {tab === 'history' ? (
+            <>
+            <h3>Audit trail</h3>
+            {(() => {
+              const ids = new Set([task.assignment?.id, ...task.submissions.map((one) => one.id), ...requests.filter((one) => one.assignmentId === task.assignment?.id).map((one) => one.id)].filter(Boolean));
+              const trail = audit.filter((one) => one.entityId && ids.has(one.entityId));
+              return trail.length === 0 ? (
+                <p className="small muted">Nothing recorded yet. Every change from now on is recorded here, and nobody can edit or remove it.</p>
+              ) : (
+                <ol className="tk-history">
+                  {trail.map((one) => (
+                    <li key={one.id}>
+                      <span className="small muted">{one.createdAt.slice(0, 16).replace('T', ' ')}</span> {describeAuditEvent(one, nameOf)}
+                    </li>
+                  ))}
+                </ol>
+              );
+            })()}
+            <h3>Summary</h3>
             <ol className="tk-history">
               {history.map((one, index) => (
                 <li key={index}>
@@ -597,9 +674,94 @@ function TaskPage({
                 </li>
               ))}
             </ol>
+            </>
           ) : null}
         </div>
       </div>
+    </section>
+  );
+}
+
+/** For a writer's integrated work: ask, or say where the asking stands. */
+function ReviseCell({ task, roomId, viewerId, requests }: { task: Task; roomId: string; viewerId: string; requests: PermissionRequest[] }) {
+  if (task.contribution !== 'integrated' || !task.assignment || task.ownerId !== viewerId) return <span className="small muted">—</span>;
+  const latest = requests
+    .filter((one) => one.assignmentId === task.assignment!.id && one.requesterId === viewerId)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+  if (latest?.state === 'pending') return <span className="small">Asked — waiting for the showrunner</span>;
+  const beatId = task.assignment.targetKind === 'beat' ? task.assignment.targetId : null;
+  return (
+    <>
+      {latest ? <span className="small muted block">Last asked: {PERMISSION_STATE_NAMES[latest.state]}</span> : null}
+      <RequestPermission roomId={roomId} assignmentId={task.assignment.id} beatId={beatId} targetLabel={taskPlace(task).replace(' · ', ' — ')} />
+    </>
+  );
+}
+
+function Permissions({
+  roomId,
+  requests,
+  viewer,
+  nameOf,
+  colourOf,
+  initialsOf,
+  taskLink,
+}: {
+  roomId: string;
+  requests: PermissionRequest[];
+  viewer: { userId: string; showrunner: boolean };
+  nameOf: (id: string | null) => string;
+  colourOf: (id: string) => string;
+  initialsOf: (id: string) => string;
+  taskLink: (assignmentId: string) => string;
+}) {
+  const waiting = requests.filter((one) => one.state === 'pending').sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const answered = requests.filter((one) => one.state !== 'pending');
+  const row = (one: PermissionRequest) => (
+    <li key={one.id} className="tk-request">
+      <span className="tk-who" style={{ background: colourOf(one.requesterId) }} title={nameOf(one.requesterId)}>
+        {initialsOf(one.requesterId)}
+      </span>
+      <div>
+        <strong>{one.targetLabel || 'Integrated material'}</strong>{' '}
+        <span className="small muted">
+          {nameOf(one.requesterId)} · {one.createdAt.slice(0, 10)} · {PERMISSION_STATE_NAMES[one.state]}
+        </span>
+        <p className="small">{one.reason}</p>
+        {one.proposed ? <p className="small muted">Proposed: {one.proposed}</p> : null}
+        {one.decisionNote ? <p className="small">Showrunner: {one.decisionNote}</p> : null}
+        {one.grantedAssignmentId ? (
+          <p className="small">
+            <a href={taskLink(one.grantedAssignmentId)}>Open the revision task →</a>
+          </p>
+        ) : null}
+        {one.assignmentId ? (
+          <p className="small">
+            <a href={taskLink(one.assignmentId)}>The original task</a>
+          </p>
+        ) : null}
+        {one.state === 'pending' ? (
+          <AnswerRequest roomId={roomId} requestId={one.id} showrunner={viewer.showrunner} mine={one.requesterId === viewer.userId} />
+        ) : null}
+      </div>
+    </li>
+  );
+  return (
+    <section className="room-panel">
+      <h2>Permission requests</h2>
+      <p className="small muted">
+        Asking to revise material already in the master. A grant makes a new task for the writer; the master itself changes only when the
+        showrunner integrates what comes back. A denial changes nothing.
+        {viewer.showrunner ? '' : ' To ask, open My Contributions and choose Request permission beside integrated work.'}
+      </p>
+      <h3>Waiting {waiting.length > 0 ? <span className="tk-count">{waiting.length}</span> : null}</h3>
+      {waiting.length === 0 ? <p className="small muted">Nothing waiting.</p> : <ul className="tk-requests">{waiting.map(row)}</ul>}
+      {answered.length > 0 ? (
+        <>
+          <h3>Answered</h3>
+          <ul className="tk-requests">{answered.map(row)}</ul>
+        </>
+      ) : null}
     </section>
   );
 }

@@ -3,7 +3,9 @@ import { z } from 'zod';
 import { ASSIGNMENT_STATES } from '@vcwriter/domain';
 import { currentUser } from '@/lib/supabase';
 import { loadRoomById } from '@/lib/rooms';
-import { moveAssignment } from '@/lib/assignments';
+import { assignmentsIn, moveAssignment } from '@/lib/assignments';
+
+import { recordAudit } from '@/lib/audit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -36,6 +38,7 @@ export async function PATCH(
   const view = await loadRoomById(params.roomId);
   if (!view || !view.role) return NextResponse.json({ error: 'No such room.' }, { status: 404 });
 
+  const before = (await assignmentsIn(view.room.id)).find((one) => one.id === params.assignmentId)?.state ?? null;
   const moved = await moveAssignment({ assignmentId: params.assignmentId, to: parsed.data.to });
   if ('reason' in moved) {
     if (moved.reason === 'no_such_assignment') {
@@ -46,6 +49,8 @@ export async function PATCH(
     }
     return NextResponse.json({ error: moved.message }, { status: 403 });
   }
+
+  await recordAudit({ roomId: view.room.id, actorId: user.id, entityType: 'assignment', entityId: moved.id, action: 'moved', fromState: before, toState: moved.state });
 
   return NextResponse.json({ assignment: moved });
 }

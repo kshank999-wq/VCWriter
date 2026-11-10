@@ -13,6 +13,8 @@ import { loadRoomById } from '@/lib/rooms';
 import { clearTray, commitMerge, masterNow, piecesFor, trayIn } from '@/lib/curation';
 import { decideSubmission, submissionsIn } from '@/lib/submissions';
 
+import { recordAudit } from '@/lib/audit';
+
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -102,6 +104,11 @@ export async function POST(
 
   // And the workbench is cleared, because what was on it is now in the script.
   await clearTray(view.room.id);
+
+  await recordAudit({ roomId: view.room.id, actorId: user.id, entityType: 'master', entityId: made.id, action: 'integrated', note: made.summary });
+  for (const id of behind) {
+    await recordAudit({ roomId: view.room.id, actorId: user.id, entityType: 'submission', entityId: id, action: 'integrated', toState: 'incorporated', note: made.summary });
+  }
 
   return NextResponse.json({ version: made, sources: merged.record.sources.length });
 }

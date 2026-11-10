@@ -3,8 +3,10 @@ import { z } from 'zod';
 import { SUBMISSION_STATES, STATE_NAMES, canReview, noticeForDecision } from '@vcwriter/domain';
 import { currentUser } from '@/lib/supabase';
 import { loadRoomById } from '@/lib/rooms';
-import { decideSubmission } from '@/lib/submissions';
+import { decideSubmission, submissionsIn } from '@/lib/submissions';
 import { sendRoomNotice } from '@/lib/email';
+
+import { recordAudit } from '@/lib/audit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -44,6 +46,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'Deciding what the room takes is the showrunner’s.' }, { status: 403 });
   }
 
+  const before = (await submissionsIn(view.room.id)).find((one) => one.id === params.submissionId)?.state ?? null;
   const decided = await decideSubmission({
     submissionId: params.submissionId,
     to: parsed.data.state,
@@ -74,6 +77,8 @@ export async function PATCH(
     roomName: view.room.name || view.projectTitle || 'the room',
   });
   if (notice) await sendRoomNotice(notice);
+
+  await recordAudit({ roomId: view.room.id, actorId: user.id, entityType: 'submission', entityId: decided.id, action: 'decided', fromState: before, toState: decided.state, note: decided.reply });
 
   return NextResponse.json({ submission: decided });
 }

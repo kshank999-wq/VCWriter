@@ -20,6 +20,8 @@ import { commitMerge, masterNow } from '@/lib/curation';
 import { versionWithDocument } from '@/lib/branches';
 import { decideSubmission, submissionsIn } from '@/lib/submissions';
 
+import { recordAudit } from '@/lib/audit';
+
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -181,6 +183,11 @@ export async function POST(request: Request, { params }: { params: { roomId: str
           ? ['approved', 'incorporated']
           : [];
     for (const to of road) await decideSubmission({ submissionId: one.id, to, reply: one.reply, decidedBy: user.id });
+  }
+
+  await recordAudit({ roomId: view.room.id, actorId: user.id, entityType: 'master', entityId: made.id, action: 'integrated', fromState: committed.from, toState: committed.to, note: summary });
+  for (const id of behind) {
+    await recordAudit({ roomId: view.room.id, actorId: user.id, entityType: 'submission', entityId: id, action: 'integrated', toState: 'incorporated', note: summary });
   }
 
   return NextResponse.json({ version: made, from: committed.from, to: committed.to });

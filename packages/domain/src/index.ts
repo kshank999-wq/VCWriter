@@ -200,6 +200,7 @@ export * from './markup.js';
 export * from './work.js';
 export * from './tasks.js';
 export * from './integration.js';
+export * from './permissions.js';
 export * from './billing.js';
 export * from './character-creator.js';
 export * from './character-glance.js';
