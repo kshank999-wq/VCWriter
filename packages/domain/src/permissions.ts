@@ -133,6 +133,10 @@ export type AuditEvent = z.infer<typeof auditEventSchema>;
 const ACTION_WORDS: Record<string, string> = {
   assigned: 'assigned it',
   moved: 'moved it',
+  closed: 'closed it',
+  cancelled: 'cancelled it',
+  reopened: 'reopened it',
+  prioritised: 'changed its priority',
   submitted: 'sent a version',
   decided: 'decided on a version',
   integrated: 'integrated it into the master',

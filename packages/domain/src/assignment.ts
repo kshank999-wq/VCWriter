@@ -57,6 +57,19 @@ export const ASSIGNMENT_STATE_NAMES: Record<AssignmentState, string> = {
   cancelled: 'Called off',
 };
 
+/** How pressing a task is (addendum 07 §35). Normal unless the showrunner says otherwise. */
+export const ASSIGNMENT_PRIORITIES = ['low', 'normal', 'high', 'urgent'] as const;
+export const assignmentPrioritySchema = z.enum(ASSIGNMENT_PRIORITIES);
+export type AssignmentPriority = (typeof ASSIGNMENT_PRIORITIES)[number];
+export const PRIORITY_NAMES: Record<AssignmentPriority, string> = {
+  low: 'Low',
+  normal: 'Normal',
+  high: 'High',
+  urgent: 'Urgent',
+};
+/** Higher sorts first. */
+export const PRIORITY_RANK: Record<AssignmentPriority, number> = { urgent: 3, high: 2, normal: 1, low: 0 };
+
 export const assignmentSchema = z.object({
   id: z.string(),
   roomId: z.string(),
@@ -90,6 +103,8 @@ export const assignmentSchema = z.object({
    * versions are compared together. Null for a task given to one writer.
    */
   groupId: z.string().nullable().default(null),
+  /** How pressing it is (§35). */
+  priority: assignmentPrioritySchema.default('normal'),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

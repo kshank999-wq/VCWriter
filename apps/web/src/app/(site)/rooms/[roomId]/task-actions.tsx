@@ -39,6 +39,9 @@ export function TaskActions({
   const [error, setError] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
   const [returning, setReturning] = useState(false);
+  /** Close, cancel or reopen, waiting on its reason (§35). */
+  const [why, setWhy] = useState<null | { to: AssignmentState; label: string }>(null);
+  const [reason, setReason] = useState('');
 
   const call = async (url: string, body: unknown): Promise<boolean> => {
     setBusy(true);
@@ -60,8 +63,8 @@ export function TaskActions({
       setBusy(false);
     }
   };
-  const moveTask = (to: AssignmentState) =>
-    assignmentId ? call(`/api/rooms/${roomId}/assignments/${assignmentId}`, { to }) : Promise.resolve(false);
+  const moveTask = (to: AssignmentState, note = '') =>
+    assignmentId ? call(`/api/rooms/${roomId}/assignments/${assignmentId}`, { to, note }) : Promise.resolve(false);
   const decide = (state: SubmissionState, reply = '') =>
     submissionId ? call(`/api/rooms/${roomId}/submissions/${submissionId}`, { state, reply }) : Promise.resolve(false);
 
@@ -109,10 +112,10 @@ export function TaskActions({
     }
     if (assignmentId && !closed) {
       buttons.push(
-        <button key="close" type="button" className="button small secondary" disabled={busy} onClick={() => void moveTask('done')}>
+        <button key="close" type="button" className="button small secondary" disabled={busy} onClick={() => setWhy({ to: 'done', label: 'Close task' })}>
           Close task
         </button>,
-        <button key="cancel" type="button" className="button small secondary" disabled={busy} onClick={() => void moveTask('cancelled')}>
+        <button key="cancel" type="button" className="button small secondary" disabled={busy} onClick={() => setWhy({ to: 'cancelled', label: 'Cancel task' })}>
           Cancel task
         </button>,
       );
@@ -124,7 +127,7 @@ export function TaskActions({
           type="button"
           className="button small"
           disabled={busy}
-          onClick={() => void moveTask(hasSubmissions ? 'in_progress' : 'assigned')}
+          onClick={() => setWhy({ to: hasSubmissions ? 'in_progress' : 'assigned', label: 'Reopen' })}
         >
           Reopen
         </button>,
@@ -135,6 +138,35 @@ export function TaskActions({
   return (
     <div className="tk-actions">
       {buttons.length > 0 ? <div className="tk-buttons">{buttons}</div> : <p className="small muted">Nothing for you to do on this task right now.</p>}
+      {why ? (
+        <div className="tk-return">
+          <label>
+            <span className="small">Why? ({why.label})</span>
+            <textarea rows={2} value={reason} onChange={(event) => setReason(event.target.value)} autoFocus />
+          </label>
+          <span className="tk-buttons">
+            <button type="button" className="button small secondary" onClick={() => setWhy(null)}>
+              Never mind
+            </button>
+            <button
+              type="button"
+              className="button small"
+              disabled={busy || !reason.trim()}
+              onClick={() =>
+                void moveTask(why.to, reason.trim()).then((ok) => {
+                  if (ok) {
+                    setWhy(null);
+                    setReason('');
+                  }
+                })
+              }
+            >
+              {why.label}
+            </button>
+          </span>
+          <p className="small muted">The reason is kept in the task’s history. Nothing sent for it is deleted.</p>
+        </div>
+      ) : null}
       {returning ? (
         <div className="tk-return">
           <label>
@@ -179,5 +211,43 @@ export function PrintButton() {
     <button type="button" className="button small" onClick={() => window.print()}>
       Print / Save as PDF
     </button>
+  );
+}
+
+/** The showrunner sets how pressing a task is (§35). */
+export function PrioritySelect({ roomId, assignmentId, value }: { roomId: string; assignmentId: string; value: string }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <span>
+      <select
+        aria-label="Priority"
+        value={value}
+        disabled={busy}
+        onChange={async (event) => {
+          setBusy(true);
+          setError(null);
+          const response = await fetch(`/api/rooms/${roomId}/assignments/${assignmentId}`, {
+            method: 'PATCH',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ priority: event.target.value }),
+          });
+          setBusy(false);
+          if (!response.ok) {
+            const said = (await response.json().catch(() => ({}))) as { error?: string };
+            setError(said.error ?? 'That did not go through.');
+            return;
+          }
+          router.refresh();
+        }}
+      >
+        <option value="urgent">Urgent</option>
+        <option value="high">High</option>
+        <option value="normal">Normal</option>
+        <option value="low">Low</option>
+      </select>
+      {error ? <span className="error small"> {error}</span> : null}
+    </span>
   );
 }

@@ -142,3 +142,26 @@ describe('one task for several writers (§34)', () => {
     expect(groupSize(tasks, solo)).toBe(1);
   });
 });
+
+describe('priority (§35)', () => {
+  it('puts urgent and high work ahead of normal and low, after what needs action and what is late', () => {
+    const tasks = tasksFrom(
+      workIn({
+        assignments: [
+          ask({ id: 'low', assigneeId: 'mara', priority: 'low' }),
+          ask({ id: 'urgent', assigneeId: 'mara', priority: 'urgent' }),
+          ask({ id: 'normal', assigneeId: 'mara' }),
+          ask({ id: 'high', assigneeId: 'mara', priority: 'high' }),
+        ],
+        submissions: [],
+        markups: [],
+      }),
+      TODAY,
+    );
+    expect(sortTasks(tasks, { userId: 'sr', showrunner: true }).map((one) => one.assignment!.id)).toEqual(['urgent', 'high', 'normal', 'low']);
+  });
+
+  it('reads an assignment saved before priorities as normal', () => {
+    expect(ask().priority).toBe('normal');
+  });
+});

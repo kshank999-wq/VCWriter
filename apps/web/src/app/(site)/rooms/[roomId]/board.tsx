@@ -23,6 +23,7 @@ import {
   groupVersions,
   workflowSectionName,
   PERMISSION_STATE_NAMES,
+  PRIORITY_NAMES,
   describeAuditEvent,
   type AuditEvent,
   type PermissionRequest,
@@ -34,7 +35,7 @@ import {
   type WorkflowSection,
 } from '@vcwriter/domain';
 import { WhoOwesWhat } from './assignments';
-import { TaskActions } from './task-actions';
+import { PrioritySelect, TaskActions } from './task-actions';
 import { AnswerRequest, RequestPermission } from './permission-actions';
 
 /**
@@ -158,6 +159,9 @@ export function Board({
             {initialsOf(one.ownerId)}
           </span>
           <StatusBadge status={one.status} />
+          {one.assignment && (one.assignment.priority === 'high' || one.assignment.priority === 'urgent') ? (
+            <span className={`tk-priority tk-priority-${one.assignment.priority}`}>{PRIORITY_NAMES[one.assignment.priority]}</span>
+          ) : null}
           {one.dueOn ? <span className={one.overdue ? 'tk-due late' : 'tk-due'}>{one.overdue ? 'Overdue ' : 'Due '}{one.dueOn}</span> : null}
           {needsActionFrom(one, viewer) ? <span className="tk-attn" title="Needs your action">●</span> : null}
         </span>
@@ -561,6 +565,18 @@ function TaskPage({
                   <dt>In the master</dt>
                   <dd>{CONTRIBUTION_STATE_NAMES[task.contribution]}</dd>
                 </div>
+                {task.assignment ? (
+                  <div>
+                    <dt>Priority</dt>
+                    <dd>
+                      {viewer.showrunner ? (
+                        <PrioritySelect roomId={roomId} assignmentId={task.assignment.id} value={task.assignment.priority} />
+                      ) : (
+                        PRIORITY_NAMES[task.assignment.priority]
+                      )}
+                    </dd>
+                  </div>
+                ) : null}
                 <div>
                   <dt>Asked by</dt>
                   <dd>{task.assignment ? nameOf(task.assignment.assignedBy) : '—'}</dd>
@@ -570,6 +586,18 @@ function TaskPage({
                   <dd>{task.updatedAt.slice(0, 10)}</dd>
                 </div>
               </dl>
+              {(() => {
+                // Why it was last closed, cancelled or reopened (§35).
+                const last = audit.find(
+                  (one) => one.entityId === task.assignment?.id && (one.action === 'closed' || one.action === 'cancelled' || one.action === 'reopened') && one.note,
+                );
+                return last ? (
+                  <p className="notice small">
+                    {last.action === 'reopened' ? 'Reopened' : last.action === 'closed' ? 'Closed' : 'Cancelled'} by {nameOf(last.actorId)} on{' '}
+                    {last.createdAt.slice(0, 10)}: {last.note}
+                  </p>
+                ) : null;
+              })()}
               {siblings.length > 0 ? (
                 <div className="tk-group">
                   <h3>Also given to</h3>

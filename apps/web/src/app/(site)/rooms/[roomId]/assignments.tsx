@@ -170,6 +170,7 @@ export function WhoOwesWhat({
   const [target, setTarget] = useState('');
   const [note, setNote] = useState('');
   const [dueOn, setDueOn] = useState('');
+  const [priority, setPriority] = useState('normal');
 
   const askable = useMemo(
     () => seats.filter((seat) => seat.state !== 'deactivated' && seat.userId),
@@ -204,6 +205,7 @@ export function WhoOwesWhat({
         targetId: chosen?.id ?? null,
         note,
         dueOn: dueOn || null,
+        priority,
       }),
     });
     setBusy(false);
@@ -325,6 +327,16 @@ export function WhoOwesWhat({
             placeholder="Shorter, and colder."
             onChange={(event) => setNote(event.target.value)}
           />
+        </label>
+
+        <label className="field">
+          <span>Priority</span>
+          <select value={priority} onChange={(event) => setPriority(event.target.value)}>
+            <option value="urgent">Urgent</option>
+            <option value="high">High</option>
+            <option value="normal">Normal</option>
+            <option value="low">Low</option>
+          </select>
         </label>
 
         <label className="field">

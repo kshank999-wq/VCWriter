@@ -1,5 +1,5 @@
 import { seatInitials, seatName, type Seat } from './room.js';
-import { TARGET_NAMES } from './assignment.js';
+import { PRIORITY_RANK, TARGET_NAMES } from './assignment.js';
 import type { WorkItem } from './work.js';
 
 /**
@@ -243,13 +243,18 @@ export const tasksFrom = (work: readonly WorkItem[], today: string): Task[] =>
 export const needsActionFrom = (task: Task, viewer: { userId: string; showrunner: boolean }): boolean =>
   (task.actor === 'writer' && task.ownerId === viewer.userId) || (task.actor === 'showrunner' && viewer.showrunner);
 
-/** Actionable first, then overdue, then by date due, then newest activity (spec §12). */
+/** A task's priority rank; own work and older tasks are normal. */
+export const priorityRank = (task: Pick<Task, 'assignment'>): number => PRIORITY_RANK[task.assignment?.priority ?? 'normal'];
+
+/** Actionable first, then overdue, then priority, then by date due, then newest activity (spec §12). */
 export const sortTasks = (tasks: readonly Task[], viewer: { userId: string; showrunner: boolean }): Task[] =>
   [...tasks].sort((a, b) => {
     const act = Number(needsActionFrom(b, viewer)) - Number(needsActionFrom(a, viewer));
     if (act !== 0) return act;
     const late = Number(b.overdue) - Number(a.overdue);
     if (late !== 0) return late;
+    const urgency = priorityRank(b) - priorityRank(a);
+    if (urgency !== 0) return urgency;
     if (a.dueOn && b.dueOn && a.dueOn !== b.dueOn) return a.dueOn.localeCompare(b.dueOn);
     if (a.dueOn && !b.dueOn) return -1;
     if (b.dueOn && !a.dueOn) return 1;

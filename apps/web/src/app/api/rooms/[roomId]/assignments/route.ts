@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import {
+  ASSIGNMENT_PRIORITIES,
   ASSIGNMENT_TARGETS,
   assignRefusalText,
   canMakeAssignment,
@@ -43,6 +44,7 @@ const schema = z.object({
   targetKind: z.enum(ASSIGNMENT_TARGETS).nullable().default(null),
   targetId: z.string().uuid().nullable().default(null),
   note: z.string().max(2000).default(''),
+  priority: z.enum(ASSIGNMENT_PRIORITIES).default('normal'),
   /** A plain date. A room works in days, not minutes. */
   dueOn: z
     .string()
@@ -89,7 +91,7 @@ export async function POST(
   const view = await loadRoomById(params.roomId);
   if (!view) return NextResponse.json({ error: 'No such room.' }, { status: 404 });
 
-  const { targetKind, targetId, note, dueOn } = parsed.data;
+  const { targetKind, targetId, note, dueOn, priority } = parsed.data;
   const assigneeIds = [...new Set(parsed.data.assigneeIds ?? (parsed.data.assigneeId ? [parsed.data.assigneeId] : []))];
   if (assigneeIds.length === 0) return NextResponse.json({ error: 'Say who it is for.' }, { status: 400 });
   // Half a target is not a target — the check constraint says so too, and this
@@ -142,6 +144,7 @@ export async function POST(
       note: note.trim(),
       dueOn,
       groupId,
+      priority,
     });
     if ('reason' in one) return NextResponse.json({ error: one.message, made }, { status: 403 });
     made.push(one);

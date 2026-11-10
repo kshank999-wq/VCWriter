@@ -1,4 +1,4 @@
-import { TASK_STATUS_NAMES, taskHeadline, type ReportGroup, type ReportSection } from '@vcwriter/domain';
+import { PRIORITY_NAMES, TASK_STATUS_NAMES, taskHeadline, type ReportGroup, type ReportSection } from '@vcwriter/domain';
 
 /** The report itself, as printed (spec v1.1 §12.1). */
 export function ReportArticle({
@@ -49,6 +49,7 @@ export function ReportArticle({
                   {group !== 'writer' && showrunner ? <th>Writer</th> : null}
                   <th>Where</th>
                   <th>Status</th>
+                  <th>Priority</th>
                   <th>Due</th>
                   <th>Versions</th>
                   <th>Updated</th>
@@ -74,6 +75,7 @@ export function ReportArticle({
                       {TASK_STATUS_NAMES[row.task.status]}
                       {row.task.overdue ? ' · overdue' : ''}
                     </td>
+                    <td>{row.task.assignment ? PRIORITY_NAMES[row.task.assignment.priority] : '—'}</td>
                     <td>{row.task.dueOn ?? '—'}</td>
                     <td>{row.task.versions}</td>
                     <td>{row.task.updatedAt.slice(0, 10)}</td>

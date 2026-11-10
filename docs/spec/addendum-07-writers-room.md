@@ -2195,3 +2195,24 @@ for a writer, who sees only their own task pages). For the showrunner,
 **Compare all in Integrate** opens the integration workspace (§30) on the
 task's beat with each writer's latest version side by side, up to three, once
 at least two of them have sent something.
+
+## 35. Priority, and saying why a task closes
+
+Spec v1.1 §4.1 (*Close / Archive / Reopen: controlled lifecycle, with reason
+and audit record*), §5 step 1 and §12.1. Migration 0085.
+
+**Priority.** Every task has one: Urgent, High, Normal (the default, and what
+every earlier task reads as) or Low. The showrunner sets it when giving the
+task out (the Assign form's *Priority*) and changes it from the task page,
+where it is a menu for them and words for the writer. The guard holds it
+still for the writer. On the board, High and Urgent wear a tag on the card
+(Low and Normal say nothing, so the tag means something); sorting puts what
+needs the viewer's action first, then what is late, then priority, then the
+due date. The printed report has a Priority column. A change of priority is
+in the task's audit trail, from and to.
+
+**Reasons.** Close task, Cancel task and Reopen now each ask *Why?* before
+they act, and will not go without an answer; the route refuses them without
+one too. The reason is recorded in the audit trail as *closed*, *cancelled*
+or *reopened*, and the task's overview shows the latest: *Closed by Ken on
+2026-11-09: Cold open is locked for the table read.*

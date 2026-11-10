@@ -3662,3 +3662,7 @@ dialog.walkthrough::backdrop { background: rgba(0, 0, 0, 0.72); }
 .assign .assign-to { grid-column: 1 / -1; flex-basis: 100%; width: 100%; }
 .assign-person { white-space: nowrap; }
 .tk-siblings .tk-ver { margin-left: 0; }
+/* Priority on a card (addendum 07 §35): only what needs saying. */
+.tk-priority { font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.04em; }
+.tk-priority-high { color: #fdba74; border: 1px solid #f97316; }
+.tk-priority-urgent { color: #111; background: #f97316; }

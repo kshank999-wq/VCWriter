@@ -2,6 +2,7 @@ import {
   assignmentSchema,
   canMoveAssignment,
   type Assignment,
+  type AssignmentPriority,
   type AssignmentState,
   type AssignmentTarget,
 } from '@vcwriter/domain';
@@ -28,6 +29,7 @@ interface AssignmentRow {
   target_kind: AssignmentTarget | null;
   target_id: string | null;
   group_id?: string | null;
+  priority?: string | null;
   target_label: string;
   note: string;
   due_on: string | null;
@@ -37,7 +39,7 @@ interface AssignmentRow {
 }
 
 const COLUMNS =
-  'id, room_id, assignee_id, assigned_by, target_kind, target_id, target_label, note, due_on, state, group_id, created_at, updated_at';
+  'id, room_id, assignee_id, assigned_by, target_kind, target_id, target_label, note, due_on, state, group_id, priority, created_at, updated_at';
 
 const fromRow = (row: AssignmentRow): Assignment =>
   assignmentSchema.parse({
@@ -48,6 +50,7 @@ const fromRow = (row: AssignmentRow): Assignment =>
     targetKind: row.target_kind,
     targetId: row.target_id,
     groupId: row.group_id ?? null,
+    priority: row.priority ?? 'normal',
     targetLabel: row.target_label,
     note: row.note,
     dueOn: row.due_on,
@@ -92,6 +95,7 @@ export const makeAssignment = async (input: {
   note: string;
   dueOn: string | null;
   groupId?: string | null;
+  priority?: AssignmentPriority;
 }): Promise<Assignment | AssignFailure> => {
   const { data, error } = await serverClient()
     .from('assignments')
@@ -105,6 +109,7 @@ export const makeAssignment = async (input: {
       note: input.note,
       due_on: input.dueOn,
       group_id: input.groupId ?? null,
+      priority: input.priority ?? 'normal',
     })
     .select(COLUMNS)
     .single();
@@ -150,5 +155,20 @@ export const moveAssignment = async (input: {
 
   if (error) return { reason: 'refused', message: error.message };
   if (!data) return { reason: 'refused', message: 'That is not yours to change.' };
+  return fromRow(data as AssignmentRow);
+};
+
+/** Change how pressing a task is. The showrunner's: the guard refuses anyone else. */
+export const setPriority = async (input: {
+  assignmentId: string;
+  priority: AssignmentPriority;
+}): Promise<Assignment | { reason: 'refused' }> => {
+  const { data, error } = await serverClient()
+    .from('assignments')
+    .update({ priority: input.priority })
+    .eq('id', input.assignmentId)
+    .select(COLUMNS)
+    .maybeSingle();
+  if (error || !data) return { reason: 'refused' };
   return fromRow(data as AssignmentRow);
 };
