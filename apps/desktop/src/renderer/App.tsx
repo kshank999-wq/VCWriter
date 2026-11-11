@@ -506,7 +506,9 @@ export default function App() {
       if (chord && event.key.toLowerCase() === 'f') {
         event.preventDefault();
         setFocusMode((current) => !current);
-      } else if (chord && event.key.toLowerCase() === 'p') {
+      } else if ((event.metaKey || event.ctrlKey) && event.altKey && !event.shiftKey && event.code === 'KeyI') {
+        // Ctrl/Cmd+Alt+I: the Inspector. Ctrl/Cmd+Shift+P is Export PDF in
+        // the File menu, and one key for two things did whichever won.
         event.preventDefault();
         setInspectorOpen(!inspectorOpen);
       } else if (chord && event.key.toLowerCase() === 'l') {

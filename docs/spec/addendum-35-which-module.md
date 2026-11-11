@@ -311,9 +311,10 @@ Part C of the plan: tutorials and in-app help.
   is its own piece of work.
 - **Found while writing the guides.** The import dialog still pointed at
   *File ▸ Add stories to the collection…*, which became *File ▸ Import… ▸
-  More stories*; it is corrected. Ctrl/Cmd+Shift+P is two things at once: the
-  Inspector's own key, and *Export PDF…* on the File menu. It is left for Ken
-  to choose which keeps it.
+  More stories*; it is corrected. Ctrl/Cmd+Shift+P was two things at once: the
+  Inspector's own key, and *Export PDF…* on the File menu. Export PDF keeps it
+  (the File menu's own place for it); the Inspector moved to Ctrl/Cmd+Alt+I
+  (November 2026).
 
 ## 10. The classics in the samples
 

@@ -705,7 +705,7 @@ export function MasterTimeline({
             type="button"
             className={inspectorOpen ? 'tool active' : 'tool'}
             aria-pressed={inspectorOpen}
-            title="Inspector (Ctrl/Cmd+Shift+P)"
+            title="Inspector (Ctrl/Cmd+Alt+I)"
             onClick={onToggleInspector}
           >
             Inspector
