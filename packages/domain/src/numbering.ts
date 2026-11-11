@@ -98,6 +98,27 @@ export const structureNumbers = (file: ProjectFile): StructureNumbers => {
   const units = new Map<string, string>();
   const subs = new Map<string, string>();
 
+  /**
+   * **The outline's numbers, wherever a division came from it** (from Ken,
+   * 11 November: *the numbers don't correspond at all … the chapter shown
+   * should be chapter 7 for craft*). The outline is the plan, and it counts
+   * every chapter in it — those still to be written too — so a chapter, a
+   * section or a subsection that came from a row carries that row's number on
+   * the track and in the book. Only what was made on the track itself, with no
+   * row, is counted here, carrying on from the number before it.
+   */
+  const fromOutline = new Map<string, string>();
+  for (const outline of file.outlines ?? []) {
+    const numbers = outlineNumbers(file, outline);
+    for (const item of outline.items) {
+      const number = numbers.get(item.id as string);
+      if (!number) continue;
+      const bound = (item.boundMarkerId ?? item.boundUnitId ?? item.boundBeatId) as string | null;
+      if (bound && !fromOutline.has(bound)) fromOutline.set(bound, number);
+    }
+  }
+  const lastPart = (number: string): number => Number(number.split('.').pop()) || 0;
+
   const starts = new Map(
     file.markers.filter((marker) => marker.kind === 'chapter').map((marker) => [marker.unitId as string, marker]),
   );
@@ -106,11 +127,13 @@ export const structureNumbers = (file: ProjectFile): StructureNumbers => {
   /** The chapter's number, or `''` at the top level; how many sections it has so far. */
   let prefix = '';
   let within = 0;
+  let topLevel = 0;
 
-  unitsInStoryOrder(file).forEach((unit, at) => {
+  unitsInStoryOrder(file).forEach((unit) => {
     const opens = starts.get(unit.id as string);
     if (opens) {
-      prefix = String(chapters.size + 1);
+      const planned = fromOutline.get(opens.id as string);
+      prefix = planned ?? String((Number(prefix) || chapters.size) + 1);
       chapters.set(opens.id as string, prefix);
       within = 0;
     }
@@ -118,11 +141,30 @@ export const structureNumbers = (file: ProjectFile): StructureNumbers => {
     // under it numbered either.
     if (chaptered && prefix === '') return;
 
-    within += 1;
-    const number = chaptered ? `${prefix}.${within}` : String(at + 1);
+    const planned = fromOutline.get(unit.id as string);
+    let number: string;
+    if (planned) {
+      number = planned;
+      within = lastPart(planned);
+      topLevel = lastPart(planned);
+    } else if (chaptered) {
+      within += 1;
+      number = `${prefix}.${within}`;
+    } else {
+      topLevel += 1;
+      number = String(topLevel);
+    }
     units.set(unit.id as string, number);
-    beatsForUnit(file, unit.id).forEach((beat, under) => {
-      subs.set(beat.id as string, `${number}.${under + 1}`);
+    let under = 0;
+    beatsForUnit(file, unit.id).forEach((beat) => {
+      const plannedSub = fromOutline.get(beat.id as string);
+      if (plannedSub) {
+        under = lastPart(plannedSub);
+        subs.set(beat.id as string, plannedSub);
+        return;
+      }
+      under += 1;
+      subs.set(beat.id as string, `${number}.${under}`);
     });
   });
 

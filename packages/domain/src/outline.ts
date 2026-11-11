@@ -92,11 +92,58 @@ export const outlineChildren = (outline: Outline, parentId: OutlineItemId | null
     // Ties break on the id, so two rows that share a key still have one order.
     .sort((a, b) => byOrder(a, b) || ((a.id as string) < (b.id as string) ? -1 : (a.id as string) > (b.id as string) ? 1 : 0));
 
-/** The section row a row stands in: the nearest `scene` above it. */
+/**
+ * **Where a row lands on the track, read from its depth** (from Ken,
+ * 11 November: *you have a scene or chapter that's the overall scene or
+ * section box. Then you have a subsection or a beat. Anything else below that
+ * is within that beat or subsection in a right-hand menu list that needs to be
+ * dropped into the main manuscript or script*).
+ *
+ * - a **chapter** row is the chapter band;
+ * - the first structural level under it (or at the top, without chapters) is a
+ *   **section** — a box on the track — whether its row says Scene or Beat;
+ * - the level under that is a **subsection**, a beat in the box;
+ * - anything deeper is **beneath** its subsection: not on the track, but in
+ *   that subsection's list beside the page, to be worked into the writing.
+ *
+ * A structural row hanging under a note or an idea is planning, and has no
+ * level (`null`), as before.
+ */
+export type TrackLevel = 'chapter' | 'unit' | 'beat' | 'beneath';
+
+const STRUCTURAL = new Set(['scene', 'beat']);
+
+export const trackLevelOf = (outline: Outline, item: OutlineItem): TrackLevel | null => {
+  if (item.kind === 'chapter') return 'chapter';
+  if (!STRUCTURAL.has(item.kind)) return null;
+  let depth = 0;
+  let at = item.parentId ? outline.items.find((one) => one.id === item.parentId) : undefined;
+  for (let step = 0; at && step <= outline.items.length; step += 1) {
+    if (at.kind === 'chapter') break;
+    if (!STRUCTURAL.has(at.kind)) return null;
+    depth += 1;
+    const parentId: OutlineItemId | null = at.parentId;
+    at = parentId ? outline.items.find((one) => one.id === parentId) : undefined;
+  }
+  return depth === 0 ? 'unit' : depth === 1 ? 'beat' : 'beneath';
+};
+
+/** The section row a row stands in: the nearest row above it at the section level. */
 export const sectionRowOf = (outline: Outline, item: OutlineItem): OutlineItem | null => {
   let at = item.parentId ? outline.items.find((one) => one.id === item.parentId) : undefined;
   for (let step = 0; at && step <= outline.items.length; step += 1) {
-    if (at.kind === 'scene') return at;
+    if (trackLevelOf(outline, at) === 'unit') return at;
+    const parentId: OutlineItemId | null = at.parentId;
+    at = parentId ? outline.items.find((one) => one.id === parentId) : undefined;
+  }
+  return null;
+};
+
+/** The subsection row a row deeper than a subsection stands in, for its list beside the page. */
+export const subsectionRowOf = (outline: Outline, item: OutlineItem): OutlineItem | null => {
+  let at = item.parentId ? outline.items.find((one) => one.id === item.parentId) : undefined;
+  for (let step = 0; at && step <= outline.items.length; step += 1) {
+    if (trackLevelOf(outline, at) === 'beat') return at;
     const parentId: OutlineItemId | null = at.parentId;
     at = parentId ? outline.items.find((one) => one.id === parentId) : undefined;
   }

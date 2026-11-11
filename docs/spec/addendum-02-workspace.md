@@ -3173,3 +3173,15 @@ colors and dark black text, not light, shaded or grey.*
   keep their own greys on white paper.
 - Cobalt and Graphite were already removed (above); a copy of VC Writer that
   still lists them predates 7 November and is cured by updating.
+
+## The script scrolls to its ends (November 2026)
+
+From Ken, 11 November: *if you are farther down in the story, the manuscript
+scroll bar doesn't go all the way to the top of the script.* The continuous
+script and the page view are scaled sheets inside a frame that clips them.
+With `overflow: hidden`, bringing a beat into view (choosing it on the track)
+also scrolled that frame inside itself — 4,925 pixels in a 30-section test
+book — where the scroll bar could not reach, so the top of the book was lost
+until the window was reopened. Both frames are `overflow: clip`, which draws
+the same and cannot be scrolled; measured again, the frame stays at 0 and the
+scroll bar alone moves.

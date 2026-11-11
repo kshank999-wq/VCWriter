@@ -6,7 +6,7 @@ import { orderKeyBetween } from './ordering.js';
 import { holdsWholeWorks, isCollection, isInstructional, nounsFor } from './formats.js';
 import { defaultMarkerKind } from './markers.js';
 import { nowIso } from './entities/common.js';
-import { findOutline, findOutlineItem, outlineChildren, outlineParent, outlinesOf, sectionRowOf } from './outline.js';
+import { findOutline, findOutlineItem, outlineChildren, outlineParent, outlinesOf, sectionRowOf, trackLevelOf } from './outline.js';
 import { claimedInScript, retitleScript } from './planning.js';
 import { alignScriptToOutline } from './outline-link.js';
 import type { Outline, OutlineItem } from './entities/outline.js';
@@ -43,6 +43,17 @@ export type PromoteKind = 'unit' | 'beat' | 'chapter' | null;
 export const promoteKindOf = (item: OutlineItem): PromoteKind =>
   item.kind === 'scene' ? 'unit' : item.kind === 'beat' ? 'beat' : item.kind === 'chapter' ? 'chapter' : null;
 
+/**
+ * What a row becomes, **read from where it sits** rather than from its kind
+ * alone (from Ken, 11 November, `trackLevelOf`): a chapter, a section, a
+ * subsection — or nothing on the track, for a row deeper than a subsection,
+ * which stays in its subsection's list beside the page.
+ */
+export const promoteKindIn = (outline: Outline, item: OutlineItem): PromoteKind => {
+  const level = trackLevelOf(outline, item);
+  return level === 'chapter' ? 'chapter' : level === 'unit' ? 'unit' : level === 'beat' ? 'beat' : null;
+};
+
 export const isPromoted = (item: OutlineItem): boolean =>
   item.boundUnitId !== null || item.boundBeatId !== null || item.boundMarkerId !== null;
 
@@ -72,11 +83,12 @@ export type Refusal =
   | 'already in the script'
   | 'its scene is still a plan'
   | 'there is no track to put a scene in'
-  | 'a chapter starts on a section, and this one has none yet';
+  | 'a chapter starts on a section, and this one has none yet'
+  | 'it belongs in its subsection, not on the track';
 
 /** The Scene rows directly under a row, in their order — what a chapter is made of. */
 const sectionsUnder = (outline: Outline, item: OutlineItem): OutlineItem[] =>
-  outlineChildren(outline, item.id).filter((child) => child.kind === 'scene');
+  outlineChildren(outline, item.id).filter((child) => trackLevelOf(outline, child) === 'unit');
 
 /**
  * Whether this row can be sent to the script, and what to say when it cannot.
@@ -90,8 +102,10 @@ const sectionsUnder = (outline: Outline, item: OutlineItem): OutlineItem[] =>
  * unit, and making one up would be inventing writing.
  */
 export const canPromote = (file: ProjectFile, outline: Outline, item: OutlineItem): Refusal | null => {
-  const kind = promoteKindOf(item);
-  if (kind === null) return 'nothing to promote';
+  const kind = promoteKindIn(outline, item);
+  if (kind === null) {
+    return trackLevelOf(outline, item) === 'beneath' ? 'it belongs in its subsection, not on the track' : 'nothing to promote';
+  }
   if (isPromoted(item)) return 'already in the script';
   if (kind === 'unit') return tracksInOrder(file).length === 0 ? 'there is no track to put a scene in' : null;
   if (kind === 'chapter') {
@@ -190,9 +204,10 @@ const beatRowsIn = (outline: Outline, sectionId: OutlineItemId): OutlineItem[] =
   const out: OutlineItem[] = [];
   const walk = (parentId: OutlineItemId): void => {
     for (const child of outlineChildren(outline, parentId)) {
-      if (child.kind === 'scene') continue;
-      if (child.kind === 'beat') out.push(child);
-      walk(child.id);
+      const level = trackLevelOf(outline, child);
+      if (level === 'unit' || level === 'beneath') continue;
+      if (level === 'beat') out.push(child);
+      else walk(child.id);
     }
   };
   walk(sectionId);
@@ -208,14 +223,14 @@ const promoteOne = (
   const outline = findOutline(file, outlineId);
   const item = outline ? findOutlineItem(outline, itemId) : null;
   // A chapter is `promoteChapter`'s, being its sections and then a marker.
-  if (!outline || !item || promoteKindOf(item) === 'chapter' || canPromote(file, outline, item) !== null) {
+  if (!outline || !item || promoteKindIn(outline, item) === 'chapter' || canPromote(file, outline, item) !== null) {
     return { file, unitId: null, beatId: null };
   }
 
   const title = item.title.trim();
   const siblings = outlineChildren(outline, item.parentId);
 
-  if (promoteKindOf(item) === 'unit') {
+  if (promoteKindIn(outline, item) === 'unit') {
     const track = tracksInOrder(file)[0] as { id: Parameters<typeof addUnit>[1]['trackId'] };
     const made = addUnit(file, {
       trackId: track.id,
@@ -287,7 +302,7 @@ export const promoteRow = (
 ): { file: ProjectFile; unitId: StructuralUnitId | null; beats: BeatId[]; markerId: StoryMarkerId | null } => {
   const outline = findOutline(file, outlineId);
   const item = outline ? findOutlineItem(outline, itemId) : null;
-  if (outline && item && item.kind === 'chapter') return promoteChapter(file, outline, item);
+  if (outline && item && promoteKindIn(outline, item) === 'chapter') return promoteChapter(file, outline, item);
 
   const first = promoteOne(file, outlineId, itemId);
   if (first.unitId === null && first.beatId === null) return { file, unitId: null, beats: [], markerId: null };
@@ -381,7 +396,7 @@ export const promoteAll = (file: ProjectFile, outlineId: OutlineId): { file: Pro
     for (const row of outlineRowsInOrder(outline)) {
       const live = findOutline(current, outlineId);
       const item = live ? findOutlineItem(live, row.id) : null;
-      if (!live || !item || promoteKindOf(item) === null || isPromoted(item)) continue;
+      if (!live || !item || promoteKindIn(live, item) === null || isPromoted(item)) continue;
       if (canPromote(current, live, item) !== null) continue;
       const before = current;
       current = promoteRow(current, outlineId, item.id).file;
@@ -397,7 +412,7 @@ export const promoteAll = (file: ProjectFile, outlineId: OutlineId): { file: Pro
   // where the outline now has it — *where it's supposed to be*.
   current = alignScriptToOutline(current);
   const final = findOutline(current, outlineId);
-  const left = final ? final.items.filter((one) => promoteKindOf(one) !== null && !isPromoted(one)).length : 0;
+  const left = final ? final.items.filter((one) => promoteKindIn(final, one) !== null && !isPromoted(one)).length : 0;
   return { file: current, added, left };
 };
 
@@ -419,7 +434,7 @@ export const refusedRows = (
     'there is no track to put a scene in': 'there is no track to put it on',
   };
   return outlineRowsInOrder(outline)
-    .filter((item) => promoteKindOf(item) !== null && !isPromoted(item))
+    .filter((item) => promoteKindIn(outline, item) !== null && !isPromoted(item))
     .map((item) => {
       const why = canPromote(file, outline, item) ?? 'it could not be placed';
       return { item, why: PLAIN[why] ?? why };
@@ -786,7 +801,7 @@ export const bindRow = (
   const item = outline ? findOutlineItem(outline, itemId) : null;
   const unit = file.units.find((candidate) => candidate.id === unitId);
   if (!outline || !item || !unit) return file;
-  if (promoteKindOf(item) !== 'unit') return file;
+  if (promoteKindIn(outline, item) !== 'unit') return file;
   if (claimedInScript(file, itemId as string).units.has(unitId as string)) return file;
 
   const title = item.title.trim() || unit.title;

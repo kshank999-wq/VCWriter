@@ -264,9 +264,11 @@ describe('the Outliner toolbar', () => {
     fireEvent.pointerDown(rowOf('Lenses'), { metaKey: true });
     fireEvent.click(toolbar(/^Add to track$/));
 
-    // Both sections real, and Light's subsections with it — the subsection
-    // inside Reflection too, a subsection at any depth being one of Light's.
-    expect(screen.getAllByLabelText('In the track')).toHaveLength(5);
+    // Both sections real, and Light's subsections with it. The row inside
+    // Reflection is below a subsection, so it stays off the track, listed
+    // beside the page when Reflection is open (from Ken, 11 November).
+    expect(screen.getAllByLabelText('In the track')).toHaveLength(4);
+    expect(screen.getAllByLabelText("In its subsection's list")).toHaveLength(1);
   });
 });
 

@@ -56,11 +56,29 @@ const outlineOrder = (file: ProjectFile, id: ReturnType<typeof book>['id']) =>
     ({ item, depth }) => `${'  '.repeat(depth)}${item.title}`,
   );
 
-describe('Add all to track takes subsections inside subsections', () => {
-  it('puts every one in the track, in reading order in its section', () => {
+describe('rows deeper than a subsection stay off the track (from Ken, 11 November)', () => {
+  it('puts the chapter, sections and subsections in the track, and keeps deeper rows in their subsection’s list', async () => {
+    const { rowsBeneathBeat, trackLevelOf } = await import('../index.js');
     const made = book();
-    expect(findOutline(made.file, made.id)!.items.every((row) => isPromoted(row))).toBe(true);
-    expect(titlesOfUnit(made.file, 'Publishers')).toEqual(['Big boys', 'Major houses', 'Major studios', 'Independents']);
+    const outline = findOutline(made.file, made.id)!;
+    const row = (key: string) => outline.items.find((one) => one.id === made.rows[key])!;
+    expect(['c1', 's1', 'b1', 'bb1'].map((key) => trackLevelOf(outline, row(key)))).toEqual(['chapter', 'unit', 'beat', 'beneath']);
+    expect(titlesOfUnit(made.file, 'Publishers')).toEqual(['Big boys', 'Independents']);
+    expect(isPromoted(row('bb1'))).toBe(false);
+    const bigBoys = made.file.beats.find((beat) => beat.title === 'Big boys')!;
+    expect(rowsBeneathBeat(made.file, bigBoys.id as string).map((one) => one.title)).toEqual(['Major houses', 'Major studios']);
+  });
+
+  it('makes a subsection-kind row at the section level a section on the track', async () => {
+    const { trackLevelOf, promoteKindIn } = await import('../index.js');
+    const made = book();
+    const outline = findOutline(made.file, made.id)!;
+    const added = addItem(made.file, made.id, { kind: 'beat', title: 'Know what sucks', parentId: made.rows['c1']! });
+    const grown = findOutline(added.file, made.id)!;
+    const row = grown.items.find((one) => one.id === added.itemId)!;
+    expect(trackLevelOf(grown, row)).toBe('unit');
+    expect(promoteKindIn(grown, row)).toBe('unit');
+    void outline;
   });
 });
 
@@ -177,5 +195,33 @@ describe('a change made in the Outliner keeps the outline as arranged (from Ken:
     // The track follows the outline.
     const units = unitsInStoryOrder(file).map((unit) => unit.title).filter((title) => title !== 'Chapter One');
     expect(units).toEqual(['Publishers', 'Agents', 'Money']);
+  });
+});
+
+describe('the track takes the outline’s numbers (from Ken, 11 November)', () => {
+  it('numbers a chapter on the track as the outline does, counting the chapters still planned', async () => {
+    const d = await import('../index.js');
+    let file = d.createProjectFile({ title: 'Guide', format: 'instructional' });
+    file = { ...file, units: [], beats: [], markers: [] };
+    const made = d.createOutline(file, { name: 'Outline' });
+    file = made.file;
+    const add = (kind: string, title: string, parentId?: string) => {
+      const r = d.addItem(file, made.outline.id, { kind, title, ...(parentId ? { parentId: parentId as never } : {}) });
+      file = r.file;
+      return r.itemId as string;
+    };
+    add('chapter', 'Prologue');
+    add('chapter', 'What is a true artist');
+    const craft = add('chapter', 'Craft');
+    const story = add('scene', 'What is a story', craft);
+    add('beat', 'A situation', story);
+    file = d.promoteRow(file, made.outline.id, craft as never).file;
+
+    const marker = file.markers.find((one) => one.kind === 'chapter')!;
+    expect(d.numberOfChapter(file, marker.id)).toBe('3');
+    const unit = file.units.find((one) => one.title === 'What is a story')!;
+    expect(d.numberOfUnit(file, unit.id)).toBe('3.1');
+    const beat = file.beats.find((one) => one.title === 'A situation')!;
+    expect(d.numberOfSub(file, beat.id)).toBe('3.1.1');
   });
 });

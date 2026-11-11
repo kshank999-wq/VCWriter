@@ -50,6 +50,8 @@ import {
   outlinesOf,
   promotableUnits,
   promoteKindOf,
+  promoteKindIn,
+  trackLevelOf,
   promoteRow,
   promoteAll,
   refusedRows,
@@ -436,7 +438,7 @@ export function OutlinerWindow({
     return [...ids] as OutlineItemId[];
   }, [alsoPicked, selected]);
   /** How many chapters, sections and subsections are not in the track yet: the red dots. */
-  const missing = outline ? outline.items.filter((one) => promoteKindOf(one) !== null && promotedOf(file, one) === null).length : 0;
+  const missing = outline ? outline.items.filter((one) => promoteKindIn(outline, one) !== null && promotedOf(file, one) === null).length : 0;
   /** And how many in the track stand somewhere other than where the outline now has them. */
   const outOfStep = outline ? outline.items.filter((one) => promotedOf(file, one) !== null && rowOutOfStep(file, outline, one.id) !== null).length : 0;
   /** Whether Add to track has anything to do: one chosen row the rules would take. */
@@ -1167,6 +1169,7 @@ export function OutlinerWindow({
               title={rowTitle(file, row.item)}
               linked={row.item.source?.type === 'research_item'}
               promoted={promotedOf(file, row.item) !== null}
+              level={outline ? trackLevelOf(outline, row.item) : null}
               wordsOut={wordsNotInBook(file, row.item)}
               selected={selected === row.item.id}
               picked={alsoPicked.has(row.item.id as string)}
@@ -1577,13 +1580,23 @@ function Promotion({
   item: OutlineItem;
   onWrite(mutate: (current: ProjectFile, id: Outline['id']) => ProjectFile): void;
 }) {
-  const kind = promoteKindOf(item);
+  const kind = promoteKindIn(outline, item);
   const promoted = promotedOf(file, item);
   const refusal = canPromote(file, outline, item);
   const step = useMemo(
     () => (isPromoted(item) ? rowOutOfStep(file, outline, item.id) : null),
     [file, outline, item],
   );
+
+  if (kind === null && trackLevelOf(outline, item) === 'beneath') {
+    const nouns = nounsFor(file.project.format);
+    return (
+      <p className="muted small outline-promotion">
+        Below a {nouns.sub.toLowerCase()}, so it is not a box on the track: it is listed beside the page when its{' '}
+        {nouns.sub.toLowerCase()} is open, ready to be written into the {nouns.manuscript.toLowerCase()}.
+      </p>
+    );
+  }
 
   if (kind === null) {
     return (
@@ -1774,6 +1787,7 @@ const chainOf = (outline: Outline, item: OutlineItem): OutlineItem[] => {
 function Row({
   format,
   row,
+  level,
   lineage = [],
   number,
   title,
@@ -1805,6 +1819,8 @@ function Row({
   /** So a row names its own kind the way this format names it (§14). */
   format: ProjectFormat;
   row: OutlineRow;
+  /** Where the row lands on the track by its depth (from Ken, 11 November); `beneath` is its subsection's list. */
+  level?: 'chapter' | 'unit' | 'beat' | 'beneath' | null;
   /** The kinds of the rows above this one, outermost first, for the coloured guides. */
   lineage?: ReadonlyArray<string>;
   /** `1.2` where this book numbers its divisions, `''` everywhere else. */
@@ -1855,7 +1871,8 @@ function Row({
 }) {
   const { item, depth, childCount } = row;
   /** Whether this kind of row can go on the track at all, and so carries a dot. */
-  const canGo = promoteKindOf(item) !== null;
+  const canGo = level === undefined ? promoteKindOf(item) !== null : level !== null && level !== 'beneath';
+  const beneath = level === 'beneath';
   /** A row folds where it has rows under it, or words of its own. */
   const foldable = childCount > 0 || item.body.trim().length > 0;
   const input = useRef<HTMLTextAreaElement | null>(null);
@@ -1993,7 +2010,15 @@ function Row({
           it's in the track, it turns green*). Every row that can go on the
           track carries a dot: red while it is a plan, green once it is in.
           Notes and ideas cannot go, and carry none. */}
-      {canGo && !promoted ? (
+      {beneath && !promoted ? (
+        <span
+          className="outline-real beneath"
+          title="Below a subsection: not on the track, but listed beside the page when its subsection is open"
+          aria-label="In its subsection's list"
+        >
+          ↳
+        </span>
+      ) : canGo && !promoted ? (
         <span className="outline-real out" title="Not in the track yet — Add to track, or Add all to track" aria-label="Not in the track yet" />
       ) : wordsOut ? (
         // **Yellow: its words are not in the manuscript yet** (addendum 28

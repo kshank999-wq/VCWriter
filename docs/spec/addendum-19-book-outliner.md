@@ -911,3 +911,38 @@ highlight*.
   select*). The selected row and every picked row take a pale blue band and
   a blue ring round the box. Blue is no tier's colour, so a chosen row can
   never be read as a chapter, section or subsection.
+
+## The outline and the track, one structure (November 2026)
+
+From Ken, 11 November: *a major error in the functionality is the outline and
+the track view. The numbers don't correspond at all, and things don't show
+up. So the chapter shown should be chapter 7 for craft … the way the outliner
+corresponds to the track view is you have a scene or chapter that's the
+overall scene or section box. Then you have a subsection or a beat. Anything
+else below that is within that beat or subsection in a right-hand menu list
+that needs to be dropped into the main manuscript or script.*
+
+**What a row becomes is read from its depth, not its kind**
+(`trackLevelOf`, `promoteKindIn`):
+
+- a **chapter** row is the chapter band;
+- the first structural level under a chapter (or at the top, without
+  chapters) is a **section**, a box on the track — whether its row says Scene
+  or Beat. A subsection-kind row sitting at the section level, which could
+  never go on the track before, now goes as a section;
+- the level under that is a **subsection**, a beat in the box;
+- anything deeper is **beneath** its subsection: not sent to the track (*it
+  belongs in its subsection, not on the track*), marked ↳ in the Outliner,
+  and listed beside the page when the subsection is open (`rowsBeneathBeat`),
+  ready to be written in.
+
+This replaces the November rule that sent a subsection inside a subsection to
+the track as a subsection of the same section. Rows already sent that way stay
+where they are, and their writing with them; nothing is deleted.
+
+**The track takes the outline's numbers** (`structureNumbers`). The outline
+counts every chapter in it, those still planned too, so a chapter, section or
+subsection that came from a row carries that row's number on the track, in
+the book and in the Outliner alike: CRAFT is chapter 7 everywhere, its first
+section 7.1. What was made on the track with no row is counted on from the
+number before it.

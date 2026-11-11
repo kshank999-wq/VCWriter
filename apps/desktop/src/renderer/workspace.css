@@ -2731,10 +2731,11 @@ input[type='color'].swatch {
   background: var(--ink);
 }
 
-/* The room the scaled stack takes up, which is not the room it lays out in. */
+/* The room the scaled stack takes up, which is not the room it lays out in.
+   Clipped, never scrolled: see `.sheet-frame`. */
 .page-frame {
   margin: 0 auto;
-  overflow: hidden;
+  overflow: clip;
 }
 
 .page-stack {
@@ -23234,9 +23235,14 @@ input.note-rewrite-title:focus { border-color: var(--gold); outline: none; }
   color-scheme: dark;
 }
 
+/* **Clipped, never scrolled** (from Ken, 11 November: *if you are farther down
+   in the story, the manuscript scroll bar doesn't go all the way to the top*).
+   With overflow hidden, bringing a beat into view also scrolled this frame
+   inside itself, out of the scroll bar's reach, so the top of the book could
+   not be got back to. `clip` draws the same and cannot be scrolled. */
 .sheet-frame {
   margin: 0 auto;
-  overflow: hidden;
+  overflow: clip;
 }
 
 .sheet-paper {
@@ -24137,3 +24143,6 @@ input.note-rewrite-title:focus { border-color: var(--gold); outline: none; }
 /* The template menu floats over the categories rather than squeezing them. */
 .ns-room .ns-stacks { position: relative; }
 .ns-room .ns-templates { position: absolute; z-index: 30; top: 44px; left: 10px; right: 10px; margin: 0; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5); }
+
+/* A row below a subsection: in its subsection's list, not on the track (from Ken, 11 November). */
+.outline-real.beneath { width: auto; height: auto; font-size: 13px; line-height: 1; color: var(--muted); background: none; box-shadow: none; }
