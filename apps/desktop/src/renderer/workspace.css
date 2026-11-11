@@ -24074,3 +24074,36 @@ input.note-rewrite-title:focus { border-color: var(--gold); outline: none; }
 .ns-src-bar { height: 6px; border-radius: 3px; background: var(--panel-2); border: 1px solid var(--border); overflow: hidden; }
 .ns-src-bar > span { display: block; height: 100%; background: var(--gold); }
 .ns-src-none { padding: 8px 10px; }
+
+/* **Where a passage will land, lit** (from Ken, 11 November: *when you drag
+   text across to the outliner categories, I want wherever you're dragging it
+   to highlight, so you know you're putting it in the right place*). */
+.ns-room .ns-folder.over,
+.ns-room .ns-outline-row.over {
+  position: relative;
+  border: 2px solid var(--gold-bright);
+  background: color-mix(in srgb, var(--gold) 32%, var(--panel));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold) 45%, transparent), 0 4px 14px rgba(0, 0, 0, 0.35);
+  color: var(--text);
+}
+.ns-room .ns-folder.over > *,
+.ns-room .ns-outline-row.over > * {
+  pointer-events: none;
+}
+.ns-room .ns-folder.over::after,
+.ns-room .ns-outline-row.over::after {
+  content: 'Drop here';
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  padding: 1px 7px;
+  border-radius: 3px;
+  background: var(--gold-bright);
+  color: var(--ink);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.ns-room .ns-folder.over.open::after { top: 14px; transform: none; }

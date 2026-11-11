@@ -1462,7 +1462,12 @@ function SortTab({
                       event.preventDefault();
                       setOver(one.id as string);
                     }}
-                    onDragLeave={() => setOver(null)}
+                    onDragLeave={(event) => {
+                      // Only when the pointer has left the whole category, not
+                      // crossed onto its name or count inside it (from Ken: *wherever
+                      // you're dragging it to highlight*).
+                      if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOver(null);
+                    }}
                     onDrop={(event) => {
                       setOver(null);
                       const raw = event.dataTransfer.getData(PASSAGE);
@@ -1580,7 +1585,9 @@ function SortTab({
                       event.preventDefault();
                       setOverRow(key);
                     }}
-                    onDragLeave={() => setOverRow(null)}
+                    onDragLeave={(event) => {
+                      if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOverRow(null);
+                    }}
                     onDrop={(event) => {
                       setOverRow(null);
                       const raw = event.dataTransfer.getData(PASSAGE);

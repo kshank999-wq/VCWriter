@@ -532,3 +532,26 @@ describe('the sources as a drop-down (from Ken, 11 November)', () => {
     expect(screen.getByRole('button', { name: /^Source: Notebook 12/ })).toBeTruthy();
   });
 });
+
+describe('where a dragged passage will land (from Ken, 11 November)', () => {
+  it('lights the category under the pointer, and keeps it lit over the words inside it', async () => {
+    render(<Harness initial={sorting()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Sort' }));
+    const folder = [...document.querySelectorAll('.ns-folder')].find((one) => one.textContent?.includes('Character'))!;
+    const { createEvent } = await import('@testing-library/react');
+    const over = createEvent.dragOver(folder);
+    Object.defineProperty(over, 'dataTransfer', { value: { types: ['application/x-vcwriter-passage'], getData: () => '' } });
+    fireEvent(folder, over);
+    expect(folder.className).toContain('over');
+    const inside = folder.querySelector('button') ?? folder.firstElementChild!;
+    const leaveTo = (to: Element) => {
+      const leave = createEvent.dragLeave(folder);
+      Object.defineProperty(leave, 'relatedTarget', { value: to });
+      fireEvent(folder, leave);
+    };
+    leaveTo(inside);
+    expect(folder.className).toContain('over');
+    leaveTo(document.body);
+    expect(folder.className).not.toContain('over');
+  });
+});
