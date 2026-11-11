@@ -275,6 +275,18 @@ export const GUIDES_START: Guide[] = [
         shot: 'help/research-note',
         shotAlt: 'A phone note opened in Research, with its title ready to retype.',
       },
+      {
+        heading: 'Recently deleted',
+        body: [
+          'A note you delete — on the phone, on the desktop or on the website — is kept in **Recently deleted** for 30 days before it is gone for good.',
+        ],
+        steps: [
+          'On the phone, tap **Account**, then **Recently deleted notes**.',
+          'Tap **Restore** under a note to put it back where it was, or **Restore all**.',
+          'Tap **Delete now** to remove one sooner, or **Empty Recently deleted** to remove them all.',
+          'On the desktop, open **Research**, click **Mobile App** and choose the **Recently deleted** tab to do the same.',
+        ],
+      },
     ],
     related: ['research', 'getting-started', 'saving-and-recovery'],
   },
