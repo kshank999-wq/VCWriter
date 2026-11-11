@@ -555,3 +555,37 @@ describe('where a dragged passage will land (from Ken, 11 November)', () => {
     expect(folder.className).not.toContain('over');
   });
 });
+
+describe('Shift and drag carries a passage (from Ken, 11 November)', () => {
+  it('keeps the highlight, lights the category under the pointer, and files it on letting go', () => {
+    render(<Harness initial={sorting()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Sort' }));
+    const page = document.querySelector('.ns-page') as HTMLElement;
+    const piece = page.querySelector('[data-from]') as HTMLElement;
+    const range = document.createRange();
+    range.setStart(piece.firstChild!, 0);
+    range.setEnd(piece.firstChild!, FIRST.length);
+    window.getSelection()!.removeAllRanges();
+    window.getSelection()!.addRange(range);
+    fireEvent.mouseUp(page);
+    expect(screen.getByText(/hold/).textContent).toContain('Shift');
+
+    const folder = [...document.querySelectorAll('.ns-folder')].find((one) => one.textContent?.includes('Character')) as HTMLElement;
+    const before = document.elementFromPoint;
+    document.elementFromPoint = () => folder;
+    try {
+      const press = fireEvent.mouseDown(page, { shiftKey: true, button: 0, clientX: 10, clientY: 10 });
+      expect(press).toBe(false);
+      expect(document.querySelector('.ns-carry')?.textContent).toContain('Rule one');
+      fireEvent.mouseMove(window, { clientX: 400, clientY: 200 });
+      expect(folder.className).toContain('over');
+      fireEvent.mouseUp(window, { clientX: 400, clientY: 200 });
+    } finally {
+      document.elementFromPoint = before;
+    }
+    expect(document.querySelector('.ns-carry')).toBeNull();
+    const session = sortingSessions(latest!)[0]!;
+    const character = sortCategories(latest!, session.id).find((one) => one.name === 'Character')!;
+    expect(cardsIn(latest!, character.id).map((one) => one.body)).toEqual([FIRST]);
+  });
+});

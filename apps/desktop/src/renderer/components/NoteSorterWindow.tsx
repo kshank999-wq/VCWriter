@@ -1170,6 +1170,71 @@ function SortTab({
     window.getSelection?.()?.removeAllRanges();
   };
 
+  /**
+   * **Shift and drag carries the highlighted passage** (from Ken, 11 November:
+   * *when you're trying to drag across, sometimes it just unhighlights
+   * everything. So let's do a shift drag with the left mouse button*). A
+   * plain press on highlighted text is the browser's to read as starting a
+   * new highlight, which is what lost the passage; holding Shift tells this
+   * room the press is a carry instead. The passage stays highlighted, a chip
+   * follows the pointer, the category or outline row under it is lit, and
+   * letting go files it there. Escape, or letting go anywhere else, puts it
+   * down. The browser's own drag of a selection still works as before.
+   */
+  const [carry, setCarry] = useState<{ range: { from: number; to: number }; x: number; y: number } | null>(null);
+  const carryTarget = (x: number, y: number): string | null =>
+    (document.elementFromPoint?.(x, y)?.closest('[data-ns-drop]') as HTMLElement | null)?.dataset['nsDrop'] ?? null;
+  const startCarry = (event: React.MouseEvent) => {
+    if (!event.shiftKey || event.button !== 0) return;
+    const held = range ?? liveRange(page.current);
+    if (!held || held.to <= held.from) return;
+    // Not the browser's: a Shift-press would otherwise stretch or drop the highlight.
+    event.preventDefault();
+    setRange(held);
+    setCarry({ range: held, x: event.clientX, y: event.clientY });
+  };
+  useEffect(() => {
+    if (!carry) return undefined;
+    const lightUnder = (x: number, y: number) => {
+      const target = carryTarget(x, y);
+      setOver(target?.startsWith('cat:') ? target.slice(4) : null);
+      setOverRow(target?.startsWith('row:') ? target.slice(4) : null);
+    };
+    const move = (event: MouseEvent) => {
+      setCarry((was) => (was ? { ...was, x: event.clientX, y: event.clientY } : was));
+      lightUnder(event.clientX, event.clientY);
+    };
+    const finish = (event: MouseEvent) => {
+      const target = carryTarget(event.clientX, event.clientY);
+      const held = carry.range;
+      setCarry(null);
+      setOver(null);
+      setOverRow(null);
+      if (target?.startsWith('cat:')) {
+        const into = categories.find((one) => (one.id as string) === target.slice(4));
+        if (into) file_(into.id, held);
+      } else if (target?.startsWith('row:')) {
+        const row = outline.find((one) => placeKey(one.place) === target.slice(4));
+        if (row) intoOutline(row, held);
+      }
+    };
+    const cancel = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setCarry(null);
+      setOver(null);
+      setOverRow(null);
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', finish);
+    window.addEventListener('keydown', cancel);
+    return () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', finish);
+      window.removeEventListener('keydown', cancel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [carry?.range.from, carry?.range.to, carry !== null]);
+
   /** What the highlighted passage looks like, where anything does (§15). */
   const looksLike = (() => {
     if (!range || !session) return null;
@@ -1221,7 +1286,10 @@ function SortTab({
         <div
           className={`ns-page ns-page-${display}`}
           ref={page}
-          onMouseUp={() => setRange(liveRange(page.current))}
+          onMouseDown={startCarry}
+          onMouseUp={() => {
+            if (!carry) setRange(liveRange(page.current));
+          }}
           onKeyUp={() => setRange(liveRange(page.current))}
           onDragStart={(event) => {
             const where = liveRange(page.current);
@@ -1259,6 +1327,12 @@ function SortTab({
           )}
         </div>
 
+        {carry ? (
+          <div className="ns-carry" style={{ left: carry.x + 14, top: carry.y + 10 }} aria-hidden="true">
+            {source.text.slice(carry.range.from, Math.min(carry.range.to, carry.range.from + 60)).trim()}
+            {carry.range.to - carry.range.from > 60 ? '…' : ''}
+          </div>
+        ) : null}
         <p className="ns-foot muted small">
           {/* The mockup's *p. 3 of 20*, said in the unit this room actually
               has. A source is a string rather than a paginated document, so
@@ -1276,7 +1350,8 @@ function SortTab({
           <span className="ns-foot-rule" aria-hidden="true" />
           {range ? (
             <>
-              {range.to - range.from} characters highlighted — drop them on a category, or press one.
+              {range.to - range.from} characters highlighted — hold <kbd>Shift</kbd> and drag them onto a category or an
+              outline row, or press one.
               {/* §15's **Suggest Destination**, which is `scoreCategories`
                   pointed at the live selection: the same engine as the panel
                   below, said where the writer's hands already are. */}
@@ -1295,7 +1370,10 @@ function SortTab({
               ) : null}
             </>
           ) : (
-            'Highlight a passage, then drag it across or press a category. Nothing is ever cut from this page.'
+            <>
+              Highlight a passage, then hold <kbd>Shift</kbd> and drag it with the left mouse button onto a category or an
+              outline row — or press one. Nothing is ever cut from this page.
+            </>
           )}
           {/* The handoff puts this in the Sort footer as well as on Gather: a
               writer looking at a greyed page is exactly who wants to see what
@@ -1457,6 +1535,7 @@ function SortTab({
                       (over === (one.id as string) ? 'ns-folder over' : 'ns-folder') + (open ? ' open' : '')
                     }
                     style={one.color ? ({ '--ns-tint': one.color } as React.CSSProperties) : undefined}
+                    data-ns-drop={`cat:${one.id as string}`}
                     onDragOver={(event) => {
                       if (!event.dataTransfer.types.includes(PASSAGE)) return;
                       event.preventDefault();
@@ -1579,6 +1658,7 @@ function SortTab({
                       ` d${row.depth}`
                     }
                     title={says}
+                    data-ns-drop={`row:${key}`}
                     onClick={() => intoOutline(row, null)}
                     onDragOver={(event) => {
                       if (!event.dataTransfer.types.includes(PASSAGE)) return;

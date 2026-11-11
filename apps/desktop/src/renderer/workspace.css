@@ -24107,3 +24107,7 @@ input.note-rewrite-title:focus { border-color: var(--gold); outline: none; }
   text-transform: uppercase;
 }
 .ns-room .ns-folder.over.open::after { top: 14px; transform: none; }
+
+/* The passage being carried with Shift and drag (from Ken, 11 November). */
+.ns-carry { position: fixed; z-index: 1000; max-width: 280px; padding: 5px 9px; border: 1.5px solid var(--gold-bright); border-radius: 5px; background: var(--panel); color: var(--text); font-size: 12px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45); pointer-events: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ns-foot kbd { padding: 0 4px; border: 1px solid var(--border); border-radius: 3px; background: var(--panel-2); font-size: 11px; color: var(--text); }

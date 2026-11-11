@@ -864,3 +864,26 @@ The row of source buttons on **Sort** is one drop-down (`SourcePicker` in
 - **open**, it lists every source, each with its share and a bar, scrolling
   within the window when there are many; past six, a **Find a source** box
   narrows the list by name. Escape or a click elsewhere closes it.
+
+## Shift and drag, and the landing lit (November 2026)
+
+From Ken, 11 November: *when you drag text across to the outliner
+categories, I want wherever you're dragging it to highlight* — and then:
+*when you're trying to drag across, sometimes it just unhighlights
+everything. So let's do a shift drag with the left mouse button. And change
+the instruction at the bottom of the page.*
+
+- **The landing is lit.** A category or an outline row under a carried
+  passage fills gold with a glow and a *Drop here* label, and stays lit while
+  the pointer crosses the words inside it (a leave that only reaches a child
+  is ignored).
+- **Shift and drag carries the highlight.** A plain press on highlighted text
+  is the browser's to read as a new highlight, which is how a passage was
+  lost. With Shift held, the press is the room's: the highlight stays, a chip
+  with the passage's first words follows the pointer, the category or row
+  under it is lit, and letting go files it there (`file_` or `intoOutline`).
+  Letting go anywhere else, or Escape, puts it down. The browser's own drag
+  of a selection still works.
+- **The footer says so:** *Highlight a passage, then hold Shift and drag it
+  with the left mouse button onto a category or an outline row — or press
+  one.*
