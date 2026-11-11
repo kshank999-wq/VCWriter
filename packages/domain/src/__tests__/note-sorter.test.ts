@@ -349,3 +349,29 @@ describe('the note sorter', () => {
     expect(offered[0]!.because).toContain('Dialogue is named for');
   });
 });
+
+describe('the notes archive (from Ken, 11 November)', () => {
+  it('keeps a source, whole and once, in Research’s Notes archive when every word of it is sorted', async () => {
+    const d = await import('../index.js');
+    let file = d.createProjectFile({ title: 'Villains', format: 'instructional' });
+    const begun = d.beginSession(file, 'Villains');
+    file = begun.file;
+    const text = 'The villain thinks he is the hero.';
+    const made = d.addSource(file, { sessionId: begun.session.id, name: 'Notebook 1', text, kind: 'paste' });
+    file = made.file;
+    const source = d.sourcesOf(file, begun.session.id)[0]!;
+    const into = d.addSortCategory(file, { sessionId: begun.session.id, name: 'Character' });
+    file = into.file;
+
+    expect(d.archiveSortedSources(file)).toBe(file);
+    file = d.extractToCategory(file, { sourceId: source.id, from: 0, to: text.length, categoryId: into.category.id }).file;
+    expect(d.sourceFullySorted(file, d.sourcesOf(file, begun.session.id)[0]!)).toBe(true);
+
+    const archived = d.archiveSortedSources(file);
+    const folder = d.notesArchiveFolder(archived)!;
+    expect(folder.name).toBe('Notes archive');
+    const kept = archived.researchItems.filter((item) => item.categoryId === folder.id);
+    expect(kept.map((item) => [item.title, item.body])).toEqual([['Notebook 1', text]]);
+    expect(d.archiveSortedSources(archived)).toBe(archived);
+  });
+});

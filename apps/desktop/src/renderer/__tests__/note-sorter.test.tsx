@@ -589,3 +589,26 @@ describe('Shift and drag carries a passage (from Ken, 11 November)', () => {
     expect(cardsIn(latest!, character.id).map((one) => one.body)).toEqual([FIRST]);
   });
 });
+
+describe('a source sorted to its last word (from Ken, 11 November)', () => {
+  it('moves to the Archive in the list, greyed, and is kept whole in Research’s Notes archive', async () => {
+    const d = await import('@vcwriter/domain');
+    let file = sorting();
+    const session = sortingSessions(file)[0]!;
+    file = addSource(file, { sessionId: session.id, name: 'Short note', text: 'Shorter, and colder.', kind: 'paste' }).file;
+    const short = sourcesOf(file, session.id).find((one) => one.name === 'Short note')!;
+    const into = sortCategories(file, session.id).find((one) => one.name === 'Character')!;
+    file = d.archiveSortedSources(d.extractToCategory(file, { sourceId: short.id, from: 0, to: short.text.length, categoryId: into.id }).file);
+    expect(d.notesArchiveFolder(file)).not.toBeNull();
+
+    render(<Harness initial={file} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Sort' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Source: / }));
+    const list = screen.getByRole('listbox', { name: 'Sources' });
+    expect(within(list).queryByRole('option', { name: /Short note/ })).toBeNull();
+    fireEvent.click(within(list).getByRole('button', { name: /Archive — fully sorted/ }));
+    const done = within(list).getByRole('option', { name: /Short note/ });
+    expect(done.className).toContain('archived');
+    expect(done.textContent).toContain('Archived');
+  });
+});

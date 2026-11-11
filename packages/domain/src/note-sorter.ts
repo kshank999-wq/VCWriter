@@ -4,7 +4,7 @@ import { nowIso } from './entities/common.js';
 import { isInstructional, nounsFor } from './formats.js';
 import { onlyLiving } from './graveyard.js';
 import { newId } from './ids.js';
-import { orderKeyBetween, orderKeyForIndex } from './ordering.js';
+import { orderKeyBetween, orderKeyForIndex, sortByOrderKey } from './ordering.js';
 import { freeName } from './saving.js';
 import { fileNoteUnder } from './chapter-notes.js';
 import type { NotePlace } from './chapter-notes.js';
@@ -1038,4 +1038,69 @@ export const searchSession = (
     });
   }
   return hits;
+};
+
+// ------------------------------------------------------- the notes archive
+
+const ARCHIVE_TAG = 'notes-archive';
+const archivedTag = (sourceId: string): string => `sorted-source:${sourceId}`;
+
+/** Whether every word of a source has been sorted, so it belongs in the archive. */
+export const sourceFullySorted = (file: ProjectFile, source: NoteSource): boolean =>
+  source.text.trim().length > 0 && progressOf(file, source).share >= 1;
+
+/** The Research folder the finished sources are kept in, if it exists yet. */
+export const notesArchiveFolder = (file: ProjectFile): ResearchCategory | null =>
+  file.researchCategories.find((one) => one.systemKey === 'notes_archive') ?? null;
+
+/**
+ * Keep every fully sorted source, whole, in Research's **Notes archive**
+ * (from Ken, 11 November). The folder is made the first time it is needed;
+ * each source goes in once, as a note named after it carrying its words, and
+ * is not put in again. Nothing else changes: the source stays in the sitting,
+ * greyed in its list as archived.
+ */
+export const archiveSortedSources = (file: ProjectFile): ProjectFile => {
+  const finished = sortingSessions(file)
+    .flatMap((session) => sourcesOf(file, session.id))
+    .filter((source) => sourceFullySorted(file, source))
+    .filter((source) => !file.researchItems.some((item) => item.tags.includes(archivedTag(source.id as string))));
+  if (finished.length === 0) return file;
+  let current = file;
+  let folder = notesArchiveFolder(current);
+  if (!folder) {
+    const timestamp = nowIso();
+    const top = current.researchCategories.filter((one) => (one.parentId ?? null) === null && one.sessionId === null);
+    folder = researchCategorySchema.parse({
+      id: newId<ResearchCategoryId>(),
+      projectId: current.project.id,
+      name: 'Notes archive',
+      systemKey: 'notes_archive',
+      description: 'Note Sorter sources, kept whole once every word of them is sorted.',
+      orderKey: orderKeyForIndex(sortByOrderKey(top), top.length),
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    });
+    current = { ...current, researchCategories: [...current.researchCategories, folder] };
+  }
+  const timestamp = nowIso();
+  const items: ResearchItem[] = [];
+  for (const source of finished) {
+    const siblings = sortByOrderKey([...current.researchItems, ...items].filter((item) => item.categoryId === folder!.id));
+    items.push(
+      researchItemSchema.parse({
+        id: newId<ResearchItemId>(),
+        projectId: current.project.id,
+        categoryId: folder!.id,
+        title: source.name,
+        body: source.text,
+        tags: [ARCHIVE_TAG, archivedTag(source.id as string)],
+        source: 'Note Sorter',
+        orderKey: orderKeyForIndex(siblings, siblings.length),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      }),
+    );
+  }
+  return { ...current, researchItems: [...current.researchItems, ...items] };
 };

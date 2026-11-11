@@ -16,6 +16,8 @@ import {
   passageOf,
   piecesOf,
   progressOf,
+  archiveSortedSources,
+  sourceFullySorted,
   referenceCard,
   removeSortCategory,
   researchCategoriesInOrder,
@@ -1133,7 +1135,8 @@ function SortTab({
       onSay(offer.says);
       return;
     }
-    onUpdate((current) => extractToCategory(current, { sourceId: source.id, ...where, categoryId: into }).file);
+    // A source sorted to its last word goes to Research's Notes archive (from Ken, 11 November).
+    onUpdate((current) => archiveSortedSources(extractToCategory(current, { sourceId: source.id, ...where, categoryId: into }).file));
     onSay(offer.says);
     setRange(null);
     window.getSelection?.()?.removeAllRanges();
@@ -1158,12 +1161,12 @@ function SortTab({
     }
     onUpdate(
       (current) =>
-        extractToOutline(current, {
+        archiveSortedSources(extractToOutline(current, {
           sessionId: session.id,
           sourceId: source.id,
           ...where,
           place: row.place,
-        }).file,
+        }).file),
     );
     onSay(offer.says);
     setRange(null);
@@ -2819,8 +2822,43 @@ function SourcePicker({
   }, [open]);
   const shares = useMemo(() => new Map(sources.map((one) => [one.id as string, progressOf(file, one).share])), [file, sources]);
   const wanted = query.trim().toLowerCase();
-  const listed = wanted ? sources.filter((one) => one.name.toLowerCase().includes(wanted)) : sources;
+  const matching = wanted ? sources.filter((one) => one.name.toLowerCase().includes(wanted)) : sources;
+  /**
+   * **Sorted to the last word, archived** (from Ken, 11 November): a source
+   * that is 100% sorted greys out and moves to the Archive at the foot of the
+   * list, and is kept whole in Research's Notes archive.
+   */
+  const archived = (one: NoteSource) => sourceFullySorted(file, one);
+  const working = matching.filter((one) => !archived(one));
+  const finished = matching.filter(archived);
+  const [showArchive, setShowArchive] = useState(false);
   const done = sources.filter((one) => (shares.get(one.id as string) ?? 0) >= 1).length;
+  const option = (one: NoteSource, done: boolean) => {
+    const share = shares.get(one.id as string) ?? 0;
+    const on = (one.id as string) === (chosen.id as string);
+    return (
+      <li key={one.id as string}>
+        <button
+          type="button"
+          role="option"
+          aria-selected={on}
+          className={['ns-src-option', on ? 'on' : '', done ? 'archived' : ''].filter(Boolean).join(' ')}
+          title={done ? 'Every word sorted — kept whole in Research, Notes archive' : undefined}
+          onClick={() => {
+            onSource(one.id);
+            setOpen(false);
+            setQuery('');
+          }}
+        >
+          <span className="ns-src-name">{one.name}</span>
+          <span className="ns-src-share">{done ? 'Archived' : sorted(share)}</span>
+          <span className="ns-src-bar" aria-hidden="true">
+            <span style={{ width: `${Math.round(share * 100)}%` }} />
+          </span>
+        </button>
+      </li>
+    );
+  };
   return (
     <div className="ns-src-picker" ref={box}>
       <button
@@ -2855,32 +2893,16 @@ function SourcePicker({
             />
           ) : null}
           <ul role="listbox" aria-label="Sources">
-            {listed.map((one) => {
-              const share = shares.get(one.id as string) ?? 0;
-              const on = (one.id as string) === (chosen.id as string);
-              return (
-                <li key={one.id as string}>
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={on}
-                    className={on ? 'ns-src-option on' : 'ns-src-option'}
-                    onClick={() => {
-                      onSource(one.id);
-                      setOpen(false);
-                      setQuery('');
-                    }}
-                  >
-                    <span className="ns-src-name">{one.name}</span>
-                    <span className="ns-src-share">{sorted(share)}</span>
-                    <span className="ns-src-bar" aria-hidden="true">
-                      <span style={{ width: `${Math.round(share * 100)}%` }} />
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-            {listed.length === 0 ? <li className="muted small ns-src-none">No source by that name.</li> : null}
+            {working.map((one) => option(one, false))}
+            {finished.length > 0 ? (
+              <li className="ns-src-archive-head">
+                <button type="button" className="ns-src-archive-toggle" aria-expanded={showArchive || Boolean(wanted)} onClick={() => setShowArchive(!showArchive)}>
+                  {showArchive || wanted ? '▾' : '▸'} Archive — fully sorted <span className="muted">{finished.length}</span>
+                </button>
+              </li>
+            ) : null}
+            {showArchive || wanted ? finished.map((one) => option(one, true)) : null}
+            {matching.length === 0 ? <li className="muted small ns-src-none">No source by that name.</li> : null}
           </ul>
         </div>
       ) : null}

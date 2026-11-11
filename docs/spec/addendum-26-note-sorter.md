@@ -887,3 +887,21 @@ the instruction at the bottom of the page.*
 - **The footer says so:** *Highlight a passage, then hold Shift and drag it
   with the left mouse button onto a category or an outline row — or press
   one.*
+
+## Sorted to the last word: the archive (November 2026)
+
+From Ken, 11 November: *when a note is 100% sorted, it grays out and moves to
+an archive. And then the research section, there needs to be one category
+that says notes archive, everything gets dropped into there once it's done
+and sorted.*
+
+- **Research's Notes archive.** A research folder with its own system key
+  (`notes_archive`, so it is found by key, not by name) is made the first
+  time a source is sorted to its last word. `archiveSortedSources` puts each
+  finished source in it once, whole, as a note named after the source and
+  tagged `notes-archive`. It runs after every passage filed in Sort, into a
+  category or onto the outline.
+- **In the source list**, a fully sorted source moves out of the working list
+  into **Archive — fully sorted** at its foot, folded by default, greyed and
+  struck through, reading *Archived*. It can still be opened. A search shows
+  matching archived sources too.

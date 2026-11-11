@@ -56,6 +56,14 @@ export const systemCategoryKeySchema = z.enum([
    * somebody else called that.
    */
   'note_unsorted',
+  /**
+   * **Notes archive** (from Ken, 11 November: *when a note is 100% sorted, it
+   * grays out and moves to an archive, and in the research section there
+   * needs to be one category that says notes archive*). Each Note Sorter
+   * source, once every word of it is sorted, is kept here whole as a note of
+   * its own (`archiveSortedSources`).
+   */
+  'notes_archive',
 ]);
 export type SystemCategoryKey = z.infer<typeof systemCategoryKeySchema>;
 
