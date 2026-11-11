@@ -1,6 +1,7 @@
 import type Stripe from 'stripe';
 import { licenseStatusForSubscription } from '@vcwriter/domain';
 import { adminClient } from './supabase';
+import { subscriptionPeriodEnd } from './stripe';
 
 /**
  * Carrying Stripe's word about a desktop subscription onto the licence
@@ -20,9 +21,12 @@ import { adminClient } from './supabase';
 export const recordDesktopSubscription = async (subscription: Stripe.Subscription): Promise<void> => {
   const db = adminClient();
 
+  // A period end Stripe did not give is left as it was, never cleared: an
+  // empty expiry on a licence would read as one that never ends.
+  const end = subscriptionPeriodEnd(subscription);
   const patch = {
     status: licenseStatusForSubscription(subscription.status),
-    expires_at: new Date(subscription.current_period_end * 1000).toISOString(),
+    ...(end ? { expires_at: end } : {}),
   };
 
   // No row is not a failure. **The first event can beat the checkout** —

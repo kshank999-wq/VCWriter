@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type Stripe from 'stripe';
 import { purchaseSettled } from '@vcwriter/domain';
 import { env } from '@/lib/env';
-import { stripe } from '@/lib/stripe';
+import { stripe, subscriptionPeriodEnd } from '@/lib/stripe';
 import { adminClient } from '@/lib/supabase';
 import { fulfillCheckout, parsePlatform } from '@/lib/fulfillment';
 import { sendPurchaseEmail } from '@/lib/email';
@@ -22,7 +22,7 @@ import { checkoutKind } from '@/lib/checkout-kind';
 const periodEnd = async (subscriptionId: string): Promise<string | null> => {
   try {
     const subscription = await stripe().subscriptions.retrieve(subscriptionId);
-    return new Date(subscription.current_period_end * 1000).toISOString();
+    return subscriptionPeriodEnd(subscription);
   } catch {
     return null;
   }

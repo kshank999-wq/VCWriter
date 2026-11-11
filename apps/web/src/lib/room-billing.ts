@@ -9,7 +9,7 @@ import {
   type SubscriptionState,
 } from '@vcwriter/domain';
 import { env } from './env';
-import { CHECKOUT_API_VERSION, stripe } from './stripe';
+import { CHECKOUT_API_VERSION, stripe, subscriptionPeriodEnd } from './stripe';
 import { adminClient } from './supabase';
 
 /**
@@ -254,7 +254,7 @@ export const recordSubscription = async (subscription: Stripe.Subscription): Pro
     stripe_subscription_id: subscription.id,
     subscription_state: subscription.status,
     billed_seats: item?.quantity ?? 0,
-    current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+    ...(subscriptionPeriodEnd(subscription) ? { current_period_end: subscriptionPeriodEnd(subscription) } : {}),
   };
 
   const existing = await db
