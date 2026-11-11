@@ -170,7 +170,7 @@ export async function POST(request: Request): Promise<Response> {
 
     await client
       .from('stripe_webhook_events')
-      .update({ processed_at: new Date().toISOString() })
+      .update({ processed_at: new Date().toISOString(), error: null })
       .eq('id', event.id);
 
     return NextResponse.json({ received: true });
