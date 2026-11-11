@@ -1190,19 +1190,7 @@ function SortTab({
     <div className="ns-sort">
       <section className="ns-panel ns-raw" style={{ flexBasis: `${split.size}px` }}>
         <div className="ns-src-tabs">
-          {sources.map((one) => (
-            <button
-              key={one.id as string}
-              type="button"
-              className={(one.id as string) === (source.id as string) ? 'ns-src-tab on' : 'ns-src-tab'}
-              onClick={() => onSource(one.id)}
-            >
-              {one.name}{' '}
-              <span className="muted small" title={COVERAGE_IS}>
-                {sorted(progressOf(file, one).share)}
-              </span>
-            </button>
-          ))}
+          <SourcePicker file={file} sources={sources} chosen={source} onSource={onSource} />
           <button type="button" className="ns-src-tab add" onClick={onGather}>
             + Add source
           </button>
@@ -2700,6 +2688,115 @@ function SendTab({
           The cards stay in the sorter. A row reads its card, so renaming one here renames the row too.
         </p>
       </section>
+    </div>
+  );
+}
+
+/**
+ * **The sources as a drop-down** (from Ken, 11 November: *for the source of
+ * the notes, this needs to be a drop-down list, so you can pick which one,
+ * and you can still see all the information of how much it's sorted … it
+ * will expand for as many sources as there are, because there could be
+ * hundreds*). Closed, it names the source being sorted and how much of it is
+ * sorted; open, it lists every source with its share and a bar, scrolls when
+ * there are many, and finds one by name.
+ */
+function SourcePicker({
+  file,
+  sources,
+  chosen,
+  onSource,
+}: {
+  file: ProjectFile;
+  sources: readonly NoteSource[];
+  chosen: NoteSource;
+  onSource(id: NoteSource['id']): void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const box = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const away = (event: MouseEvent) => {
+      if (box.current && !box.current.contains(event.target as Node)) setOpen(false);
+    };
+    const key = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+    window.addEventListener('mousedown', away);
+    window.addEventListener('keydown', key);
+    return () => {
+      window.removeEventListener('mousedown', away);
+      window.removeEventListener('keydown', key);
+    };
+  }, [open]);
+  const shares = useMemo(() => new Map(sources.map((one) => [one.id as string, progressOf(file, one).share])), [file, sources]);
+  const wanted = query.trim().toLowerCase();
+  const listed = wanted ? sources.filter((one) => one.name.toLowerCase().includes(wanted)) : sources;
+  const done = sources.filter((one) => (shares.get(one.id as string) ?? 0) >= 1).length;
+  return (
+    <div className="ns-src-picker" ref={box}>
+      <button
+        type="button"
+        className="ns-src-current"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={`Source: ${chosen.name}, ${sorted(shares.get(chosen.id as string) ?? 0)}. ${sources.length} sources`}
+        onClick={() => setOpen(!open)}
+      >
+        <span className="ns-src-name">{chosen.name}</span>
+        <span className="ns-src-share" title={COVERAGE_IS}>
+          {sorted(shares.get(chosen.id as string) ?? 0)}
+        </span>
+        <span className="muted small">
+          {sources.length} {sources.length === 1 ? 'source' : 'sources'}
+          {done > 0 ? ` · ${done} fully sorted` : ''}
+        </span>
+        <span aria-hidden="true">{open ? '▴' : '▾'}</span>
+      </button>
+      {open ? (
+        <div className="ns-src-menu">
+          {sources.length > 6 ? (
+            <input
+              type="search"
+              className="ns-src-find"
+              placeholder="Find a source"
+              aria-label="Find a source"
+              autoFocus
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          ) : null}
+          <ul role="listbox" aria-label="Sources">
+            {listed.map((one) => {
+              const share = shares.get(one.id as string) ?? 0;
+              const on = (one.id as string) === (chosen.id as string);
+              return (
+                <li key={one.id as string}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={on}
+                    className={on ? 'ns-src-option on' : 'ns-src-option'}
+                    onClick={() => {
+                      onSource(one.id);
+                      setOpen(false);
+                      setQuery('');
+                    }}
+                  >
+                    <span className="ns-src-name">{one.name}</span>
+                    <span className="ns-src-share">{sorted(share)}</span>
+                    <span className="ns-src-bar" aria-hidden="true">
+                      <span style={{ width: `${Math.round(share * 100)}%` }} />
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+            {listed.length === 0 ? <li className="muted small ns-src-none">No source by that name.</li> : null}
+          </ul>
+        </div>
+      ) : null}
     </div>
   );
 }

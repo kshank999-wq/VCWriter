@@ -847,3 +847,20 @@ shelf lists until somebody decides a beat is a thing research is aimed at.
 
 **Two assertions pinned the behaviour this replaces** — the cards drawn on every
 closed stack, and the chip — and are **rewritten rather than worked around**.
+
+## The sources as a drop-down (November 2026)
+
+From Ken, 11 November: *for the source of the notes, this needs to be a
+drop-down list, so you can pick which one, and you can still see all the
+information of how much it's sorted … the drop-down menu will expand for as
+many sources as there are, because there could be hundreds, depending on how
+prolific a person is at writing notes.*
+
+The row of source buttons on **Sort** is one drop-down (`SourcePicker` in
+`NoteSorterWindow.tsx`) with **+ Add source** beside it:
+
+- **closed**, it names the source being sorted, its share (*40% sorted*), and
+  how many sources there are and how many are fully sorted;
+- **open**, it lists every source, each with its share and a bar, scrolling
+  within the window when there are many; past six, a **Find a source** box
+  narrows the list by name. Escape or a click elsewhere closes it.

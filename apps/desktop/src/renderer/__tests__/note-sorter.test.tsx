@@ -509,3 +509,26 @@ describe('the sitting, the folders and the outline', () => {
     expect(screen.queryByRole('tab', { name: 'Outline' })).toBeNull();
   });
 });
+
+describe('the sources as a drop-down (from Ken, 11 November)', () => {
+  it('names the source and its share, lists every source when opened, and finds one by name', () => {
+    let file = sorting();
+    const sessionId = file.noteSessions[0]!.id;
+    for (let n = 1; n <= 12; n += 1) {
+      file = addSource(file, { sessionId: sessionId as never, name: `Notebook ${n}`, text: `Page ${n} of notes.`, kind: 'paste' }).file;
+    }
+    render(<Harness initial={file} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Sort' }));
+    const current = screen.getByRole('button', { name: /^Source: / });
+    expect(current.textContent).toContain('% sorted');
+    expect(current.textContent).toContain('13 sources');
+    fireEvent.click(current);
+    const list = screen.getByRole('listbox', { name: 'Sources' });
+    expect(within(list).getAllByRole('option')).toHaveLength(13);
+    fireEvent.change(screen.getByLabelText('Find a source'), { target: { value: 'Notebook 12' } });
+    const left = within(list).getAllByRole('option');
+    expect(left).toHaveLength(1);
+    fireEvent.click(left[0]!);
+    expect(screen.getByRole('button', { name: /^Source: Notebook 12/ })).toBeTruthy();
+  });
+});
