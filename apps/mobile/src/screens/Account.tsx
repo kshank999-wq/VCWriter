@@ -25,7 +25,7 @@ import { styles } from '../theme';
  * `host/api` for that same reason — it had a copy here, which is the address
  * the link is built from being written down twice.
  */
-export function Account({ onBack }: { onBack(): void }) {
+export function Account({ onBack, onDeleted }: { onBack(): void; onDeleted?(): void }) {
   const [email, setEmail] = useState<string | null>(null);
   const [asking, setAsking] = useState(false);
   const [typed, setTyped] = useState('');
@@ -68,6 +68,12 @@ export function Account({ onBack }: { onBack(): void }) {
       >
         <Text style={[styles.buttonText, styles.secondaryText]}>Privacy policy</Text>
       </Pressable>
+
+      {onDeleted ? (
+        <Pressable style={[styles.button, styles.secondary]} onPress={onDeleted}>
+          <Text style={[styles.buttonText, styles.secondaryText]}>Recently deleted notes</Text>
+        </Pressable>
+      ) : null}
 
       <Pressable style={[styles.button, styles.secondary]} onPress={() => void signOut()}>
         <Text style={[styles.buttonText, styles.secondaryText]}>Sign out</Text>

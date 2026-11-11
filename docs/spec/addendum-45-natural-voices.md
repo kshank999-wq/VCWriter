@@ -101,6 +101,18 @@ needs either a legal opinion that this use is acceptable, or a replacement:
 The interface (`phonemesOf` in the engine) is one function, so the swap
 touches nothing else.
 
+**Decision (Ken, 11 November): keep eSpeak NG for now, and take legal advice
+before VC Writer is sold.** The voices themselves are not the question:
+Kokoro's model and voice files are Apache 2.0, free for commercial use with
+no licence to buy. The question is only the eSpeak NG code inside
+`phonemizer`. Under the GPL, distributing a program that includes GPL code
+can oblige you to offer that program's own source under the GPL too; whether
+that reaches VC Writer depends on how closely the two are combined (here it
+runs in its own worker process, which may count as a separate program, or may
+not). That is a judgement for a lawyer, not a setting, so it is settled before
+paid release: either an opinion that this use is acceptable as it stands, or
+the lexicon replacement above.
+
 ## 5. More voices from elsewhere
 
 From Ken: *giving customers the option to get more voices somewhere else for

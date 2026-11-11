@@ -10,6 +10,7 @@ import {
   type ProjectFile,
   type ProjectFormat,
 } from '@vcwriter/domain';
+import type { DeletedNoteSummary } from '../../preload/index';
 
 /**
  * **The phone's notes by hand, and the archive** (addendum 27 §25, from Ken:
@@ -200,7 +201,7 @@ export function NoteArchive({ file, refresh = 0 }: { file: ProjectFile; refresh?
       <header className="mobile-inbox-head">
         <p className="muted small">
           Notes from the phone that have been transferred, in a folder for each day and project. Their words are
-          in the project already; this is the backup. Deleting a folder or a note removes it from your account.
+          in the project already; this is the backup. A deleted folder or note goes to Recently deleted for 30 days.
         </p>
         <button type="button" className="ghost small" onClick={() => void load()} disabled={loading}>
           {loading ? 'Looking…' : 'Refresh'}
@@ -279,6 +280,112 @@ export function NoteArchive({ file, refresh = 0 }: { file: ProjectFile; refresh?
                   ))}
                 </ul>
               ) : null}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Recently deleted (addendum 27 §34): every note deleted anywhere, kept 30
+ * days. Restore puts it back exactly as it was; Delete now removes it sooner.
+ */
+export function RecentlyDeletedNotes({ refresh = 0 }: { refresh?: number }) {
+  const [notes, setNotes] = useState<DeletedNoteSummary[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [said, setSaid] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    if (typeof window.vcwriter?.listDeletedNotes !== 'function') return;
+    setLoading(true);
+    const answer = await window.vcwriter.listDeletedNotes();
+    setLoading(false);
+    if (!answer.ok || !answer.data) {
+      setError(answer.error ?? 'Recently deleted could not be read');
+      return;
+    }
+    setError(null);
+    setNotes(answer.data);
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load, refresh]);
+
+  const restore = async (ids: string[]) => {
+    const answer = await window.vcwriter?.restoreDeletedNotes?.(ids);
+    if (answer && !answer.ok) {
+      setError(answer.error ?? 'Those notes could not be restored');
+      return;
+    }
+    const count = answer?.data ?? 0;
+    setSaid(count === 1 ? 'Restored.' : `${count} notes restored.`);
+    await load();
+  };
+
+  const remove = async (ids: string[], question: string) => {
+    if (ids.length === 0 || !window.confirm(question)) return;
+    const answer = await window.vcwriter?.removeDeletedNotes?.(ids);
+    if (answer && !answer.ok) {
+      setError(answer.error ?? 'Those notes could not be removed');
+      return;
+    }
+    setNotes((now) => now.filter((one) => !ids.includes(one.id)));
+  };
+
+  const all = notes.map((one) => one.id);
+  return (
+    <div className="mobile-inbox recently-deleted">
+      <header className="mobile-inbox-head">
+        <p className="muted small">
+          Notes deleted on the phone, here or on the website stay here for 30 days. Restore puts a note back where it was.
+        </p>
+        <button type="button" className="ghost small" onClick={() => void load()} disabled={loading}>
+          {loading ? 'Looking…' : 'Refresh'}
+        </button>
+        {notes.length > 1 ? (
+          <>
+            <button type="button" className="ghost small" onClick={() => void restore(all)}>
+              Restore all
+            </button>
+            <button
+              type="button"
+              className="ghost small danger-text"
+              onClick={() => void remove(all, `Remove all ${notes.length} notes for good? They cannot be restored after this.`)}
+            >
+              Empty
+            </button>
+          </>
+        ) : null}
+      </header>
+      {error ? <p className="muted small mobile-inbox-error">{error}</p> : null}
+      {said ? <p className="notice small" role="status">{said}</p> : null}
+      {notes.length === 0 ? (
+        <p className="muted empty-state">{loading ? 'Looking…' : 'Nothing has been deleted.'}</p>
+      ) : (
+        <ul className="mobile-list">
+          {notes.map((note) => (
+            <li key={note.id} className="mobile-note">
+              <div className="mobile-note-head">
+                <strong className="mobile-subject">{note.filedInto ?? 'Phone note'}</strong>
+                <span className="muted small">
+                  {when(note.capturedAt)} · {note.daysLeft === 1 ? '1 day left' : `${note.daysLeft} days left`}
+                </span>
+                <button type="button" className="ghost small" onClick={() => void restore([note.id])}>
+                  Restore
+                </button>
+                <button
+                  type="button"
+                  className="ghost small danger-text"
+                  onClick={() => void remove([note.id], 'Remove this note for good? It cannot be restored after this.')}
+                >
+                  Delete now
+                </button>
+              </div>
+              <p className="mobile-text">{note.text || '(no text)'}</p>
             </li>
           ))}
         </ul>

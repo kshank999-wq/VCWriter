@@ -124,7 +124,7 @@ export function Review({
   };
 
   const remove = (note: CaptureItem) => {
-    Alert.alert('Delete this note?', 'It goes from the phone and from your account.', [
+    Alert.alert('Delete this note?', 'It goes to Recently deleted (in Account) for 30 days, where you can restore it.', [
       { text: 'Keep it', style: 'cancel' },
       {
         text: 'Delete',

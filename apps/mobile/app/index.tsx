@@ -8,6 +8,7 @@ import { Capture } from '../src/screens/Capture';
 import { Review } from '../src/screens/Review';
 import { Account } from '../src/screens/Account';
 import { Subscribe } from '../src/screens/Subscribe';
+import { RecentlyDeleted } from '../src/screens/RecentlyDeleted';
 import { notesStanding, type NotesStanding, type ProjectSummary } from '../src/host/api';
 import type { ProjectFormat } from '@vcwriter/domain';
 import { styles } from '../src/theme';
@@ -20,7 +21,7 @@ import { styles } from '../src/theme';
  * open last. The screens are one stack rather than routes because there are
  * four of them and a walk must never be more than one press from stopping.
  */
-type Where = 'projects' | 'capture' | 'review' | 'account' | 'subscribe';
+type Where = 'projects' | 'capture' | 'review' | 'account' | 'subscribe' | 'deleted';
 
 export default function Index() {
   const [ready, setReady] = useState(false);
@@ -101,10 +102,18 @@ export default function Index() {
     );
   }
 
+  if (where === 'deleted') {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <RecentlyDeleted onBack={() => setWhere('account')} />
+      </SafeAreaView>
+    );
+  }
+
   if (where === 'account') {
     return (
       <SafeAreaView style={styles.screen}>
-        <Account onBack={() => setWhere('projects')} />
+        <Account onBack={() => setWhere('projects')} onDeleted={() => setWhere('deleted')} />
       </SafeAreaView>
     );
   }

@@ -1220,3 +1220,27 @@ scroll down within the box.*
 - **Deleted notes.** *Delete* on the phone, or in the desktop's archive,
   removes the note from the cloud for good. *Clear transferred notes* only
   hides notes already brought in; those stay in the project's Research.
+
+## 34. Recently deleted
+
+From Ken, 11 November: deleting a note was permanent and immediate. Deleted
+notes now go to **Recently deleted** for 30 days, restorable from the phone
+and the desktop, before they are removed for good. Migration 0087.
+
+- **Kept by the database.** A trigger on `capture_items` copies a note into
+  `deleted_capture_items` (the whole row, as JSON) the moment it is deleted,
+  by whatever deletes it: the phone, the desk's Archive, the website, or an
+  installer already in the field. Nothing that reads notes changed.
+- **Not when an account is deleted.** Notes removed because their account is
+  being deleted arrive as a cascade and are not kept: deleting an account
+  still takes everything, as its page says.
+- **Restore** (`restore_deleted_captures`, the caller's own notes only) puts
+  the row back exactly as it was, with its id, project and status. A project
+  deleted meanwhile leaves the note unfiled rather than refusing it; a note
+  whose phone copy has been sent again since is skipped.
+- **After 30 days** a note is removed for good. There is no scheduler, so the
+  purge runs whenever a note is deleted or the bin is listed (server only).
+- **Where:** on the phone, Account ▸ *Recently deleted notes* (Restore, Delete
+  now, Restore all, Empty); on the desk, Research ▸ Mobile App ▸ *Recently
+  deleted*; `GET/POST/DELETE /api/notes/deleted` on the website. The phone's
+  delete question and the desk's Archive now say where a deleted note goes.

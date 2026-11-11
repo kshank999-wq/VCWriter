@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { captureItemSchema, createProjectFile, type CaptureItem, type ProjectFile } from '@vcwriter/domain';
-import { NoteArchive, PhoneGroups } from '../components/PhoneTransfer';
+import { NoteArchive, PhoneGroups, RecentlyDeletedNotes } from '../components/PhoneTransfer';
 
 /**
  * The phone's notes by hand, and the archive (addendum 27 §25, from Ken: *you
@@ -78,5 +78,28 @@ describe('the archive', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Delete the folder/ }));
     await waitFor(() => expect(deleteCaptures).toHaveBeenLastCalledWith([also.id]));
     await waitFor(() => expect(screen.getByText('The archive is empty.')).toBeTruthy());
+  });
+});
+
+describe('Recently deleted (addendum 27 §34)', () => {
+  afterEach(() => {
+    delete (window as unknown as { vcwriter?: unknown }).vcwriter;
+  });
+
+  it('lists deleted notes with the days left, and restores one', async () => {
+    const restoreDeletedNotes = vi.fn(async () => ({ ok: true, data: 1 }));
+    (window as unknown as { vcwriter: unknown }).vcwriter = {
+      listDeletedNotes: vi.fn(async () => ({
+        ok: true,
+        data: [{ id: 'n1', text: 'The lighthouse keeper lies.', capturedAt: null, filedInto: 'Harbour', deletedAt: '2026-11-10T00:00:00.000Z', daysLeft: 29 }],
+      })),
+      restoreDeletedNotes,
+    };
+    render(<RecentlyDeletedNotes />);
+    expect(await screen.findByText('The lighthouse keeper lies.')).toBeTruthy();
+    expect(screen.getByText(/29 days left/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Restore' }));
+    await waitFor(() => expect(restoreDeletedNotes).toHaveBeenCalledWith(['n1']));
+    expect(await screen.findByText('Restored.')).toBeTruthy();
   });
 });

@@ -30,6 +30,16 @@ import type {
  * list and no more.
  */
 
+/** A note in Recently deleted (addendum 27 §34). */
+export interface DeletedNoteSummary {
+  id: string;
+  text: string;
+  capturedAt: string | null;
+  filedInto: string | null;
+  deletedAt: string;
+  daysLeft: number;
+}
+
 export interface DesktopApiResult<T> {
   ok: boolean;
   data?: T;
@@ -386,8 +396,12 @@ export interface VcWriterApi {
   listPhoneNotes(): Promise<DesktopApiResult<{ notes: CaptureItem[]; projects: PhoneProjectName[] }>>;
   /** The archive: notes filed or set aside (addendum 27 §25). */
   listArchivedNotes(): Promise<DesktopApiResult<CaptureItem[]>>;
-  /** Delete notes for good (addendum 27 §25). */
+  /** Delete notes: they go to Recently deleted for 30 days (addendum 27 §25, §34). */
   deleteCaptures(ids: string[]): Promise<DesktopApiResult<number>>;
+  /** Recently deleted notes, restore and remove for good (addendum 27 §34). */
+  listDeletedNotes?(): Promise<DesktopApiResult<DeletedNoteSummary[]>>;
+  restoreDeletedNotes?(ids: string[]): Promise<DesktopApiResult<number>>;
+  removeDeletedNotes?(ids: string[]): Promise<DesktopApiResult<number>>;
   reviewScene(input: {
     sceneText: string;
     position?: string;
@@ -590,6 +604,9 @@ const api: VcWriterApi = {
   listPhoneNotes: () => ipcRenderer.invoke('cloud:phoneNotes'),
   listArchivedNotes: () => ipcRenderer.invoke('cloud:archivedNotes'),
   deleteCaptures: (ids) => ipcRenderer.invoke('cloud:deleteCaptures', ids),
+  listDeletedNotes: () => ipcRenderer.invoke('cloud:deletedNotes'),
+  restoreDeletedNotes: (ids) => ipcRenderer.invoke('cloud:restoreDeletedNotes', ids),
+  removeDeletedNotes: (ids) => ipcRenderer.invoke('cloud:removeDeletedNotes', ids),
   reviewScene: (input) => ipcRenderer.invoke('cloud:reviewScene', input),
   sceneReviewStatus: () => ipcRenderer.invoke('cloud:sceneReviewStatus'),
   suggestLearningAid: (input) => ipcRenderer.invoke('cloud:suggestLearningAid', input),

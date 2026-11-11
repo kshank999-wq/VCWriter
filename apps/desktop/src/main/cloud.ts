@@ -674,7 +674,66 @@ export const listArchivedNotes = async (): Promise<CaptureItem[]> => {
   return (data ?? []).map((row) => captureFromRow(row as Row));
 };
 
-/** Delete notes for good — from the archive, or ones thrown away (§25). */
+/** A note in Recently deleted (addendum 27 §34). */
+export interface DeletedNote {
+  id: string;
+  text: string;
+  capturedAt: string | null;
+  filedInto: string | null;
+  deletedAt: string;
+  daysLeft: number;
+}
+
+/**
+ * Recently deleted (addendum 27 §34): a note deleted anywhere is kept by the
+ * database for 30 days. Older ones are left out here and removed by the server.
+ */
+export const listDeletedNotes = async (): Promise<DeletedNote[]> => {
+  const userId = await requireUserId();
+  const { data, error } = await supabase()
+    .from('deleted_capture_items')
+    .select('id, row, deleted_at')
+    .eq('user_id', userId)
+    .order('deleted_at', { ascending: false })
+    .limit(500);
+  if (error) throw new CloudError(error.message);
+  const now = Date.now();
+  return ((data ?? []) as { id: string; row: Row; deleted_at: string }[])
+    .map((one) => ({
+      id: one.id,
+      text: String(one.row['raw_text'] ?? '').trim(),
+      capturedAt: (one.row['captured_at'] as string | null) ?? null,
+      filedInto: (one.row['filed_into'] as string | null) ?? null,
+      deletedAt: one.deleted_at,
+      daysLeft: 30 - Math.floor((now - new Date(one.deleted_at).getTime()) / 86_400_000),
+    }))
+    .filter((one) => one.daysLeft > 0);
+};
+
+/** Put notes back exactly as they were. */
+export const restoreDeletedNotes = async (ids: readonly string[]): Promise<number> => {
+  if (ids.length === 0) return 0;
+  await requireUserId();
+  const { data, error } = await supabase().rpc('restore_deleted_captures', { ids: [...ids] });
+  if (error) throw new CloudError(error.message);
+  return (data as number | null) ?? 0;
+};
+
+/** Remove notes from Recently deleted for good. */
+export const removeDeletedNotes = async (ids: readonly string[]): Promise<number> => {
+  if (ids.length === 0) return 0;
+  const userId = await requireUserId();
+  const { data, error } = await supabase()
+    .from('deleted_capture_items')
+    .delete()
+    .eq('user_id', userId)
+    .in('id', [...ids])
+    .select('id');
+  if (error) throw new CloudError(error.message);
+  return (data ?? []).length;
+};
+
+/** Delete notes: they go to Recently deleted for 30 days (§25, §34). */
 export const deleteCaptures = async (ids: readonly string[]): Promise<number> => {
   if (ids.length === 0) return 0;
   const userId = await requireUserId();

@@ -31,6 +31,9 @@ import {
   listPhoneNotes,
   listArchivedNotes,
   deleteCaptures,
+  listDeletedNotes,
+  restoreDeletedNotes,
+  removeDeletedNotes,
   requestLearningAid,
   requestSceneReview,
   sendOneSheet,
@@ -50,6 +53,7 @@ import {
   type ActivationResult,
   type SceneReviewAvailability,
   type SyncOutcome,
+  type DeletedNote,
 } from './cloud';
 import { deviceFingerprint, deviceName, devicePlatform } from './device';
 import { licenseStanding, noteActivated, thisComputerActivated } from './license-check';
@@ -910,6 +914,30 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
   ipcMain.handle('cloud:deleteCaptures', async (_event, ids: string[]): Promise<DesktopApiResult<number>> => {
     try {
       return ok(await deleteCaptures(ids));
+    } catch (cause) {
+      return fail(cause);
+    }
+  });
+
+  ipcMain.handle('cloud:deletedNotes', async (): Promise<DesktopApiResult<DeletedNote[]>> => {
+    try {
+      return ok(await listDeletedNotes());
+    } catch (cause) {
+      return fail(cause);
+    }
+  });
+
+  ipcMain.handle('cloud:restoreDeletedNotes', async (_event, ids: string[]): Promise<DesktopApiResult<number>> => {
+    try {
+      return ok(await restoreDeletedNotes(ids));
+    } catch (cause) {
+      return fail(cause);
+    }
+  });
+
+  ipcMain.handle('cloud:removeDeletedNotes', async (_event, ids: string[]): Promise<DesktopApiResult<number>> => {
+    try {
+      return ok(await removeDeletedNotes(ids));
     } catch (cause) {
       return fail(cause);
     }

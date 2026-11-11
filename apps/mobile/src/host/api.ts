@@ -211,3 +211,26 @@ export const recordPurchase = async (input: {
   receiptId: string;
 }): Promise<Answer<{ said: string; mayCapture: boolean }>> =>
   ask('/api/notes/purchase', { method: 'POST', body: JSON.stringify(input) });
+
+/** A note in Recently deleted (addendum 27 §34): kept 30 days, then gone. */
+export interface DeletedNote {
+  id: string;
+  text: string;
+  capturedAt: string | null;
+  category: string | null;
+  subject: string | null;
+  filedInto: string | null;
+  deletedAt: string;
+  daysLeft: number;
+}
+
+export const listDeleted = async (): Promise<Answer<DeletedNote[]>> => {
+  const said = await ask<{ notes?: DeletedNote[] }>('/api/notes/deleted');
+  return said.ok ? { ok: true, data: said.data.notes ?? [] } : said;
+};
+
+export const restoreDeleted = async (ids: string[]): Promise<Answer<{ restored: number }>> =>
+  ask('/api/notes/deleted', { method: 'POST', body: JSON.stringify({ ids }) });
+
+export const removeDeleted = async (ids: string[] | 'all'): Promise<Answer<{ removed: number }>> =>
+  ask('/api/notes/deleted', { method: 'DELETE', body: JSON.stringify(ids === 'all' ? { all: true } : { ids }) });

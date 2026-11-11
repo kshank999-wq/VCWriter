@@ -97,7 +97,7 @@ import { CharacterCreator, type CreatorTab } from './CharacterCreator';
 import { CharacterMap } from './CharacterMap';
 import { MobileInbox } from './MobileInbox';
 import { usePhoneNotes } from '../phone-notes';
-import { NoteArchive, PhoneGroups } from './PhoneTransfer';
+import { NoteArchive, PhoneGroups, RecentlyDeletedNotes } from './PhoneTransfer';
 import { CharacterReview, type ReviewMode } from './CharacterReview';
 import { useModal } from '../use-modal';
 
@@ -438,7 +438,7 @@ export function ResearchBody({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   /** Which view of the phone's notes is open in Mobile App (addendum 27 §25). */
-  const [mobileTab, setMobileTab] = useState<'inbox' | 'phone' | 'archive'>('inbox');
+  const [mobileTab, setMobileTab] = useState<'inbox' | 'phone' | 'archive' | 'deleted'>('inbox');
   const [archiveRead, setArchiveRead] = useState(0);
   const captures = phone.notes;
 
@@ -1433,6 +1433,7 @@ export function ResearchBody({
                     ['inbox', 'This project'],
                     ['phone', 'On the phone'],
                     ['archive', 'Archive'],
+                    ['deleted', 'Recently deleted'],
                   ] as const
                 ).map(([key, label]) => (
                   <button
@@ -1458,6 +1459,8 @@ export function ResearchBody({
                 />
               ) : mobileTab === 'archive' ? (
                 <NoteArchive file={file} refresh={archiveRead} />
+              ) : mobileTab === 'deleted' ? (
+                <RecentlyDeletedNotes refresh={archiveRead} />
               ) : (
             <MobileInbox
               file={file}
