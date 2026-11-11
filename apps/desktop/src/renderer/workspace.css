@@ -23858,6 +23858,7 @@ input.note-rewrite-title:focus { border-color: var(--gold); outline: none; }
    enough to read on white and cream rather than washed out. */
 :root[data-scheme='finaldraft'],
 :root[data-scheme='windows'],
+:root[data-scheme='blue'],
 :root[data-scheme='parchment'],
 :root[data-scheme='green'] {
   --tier-chapter: #8a5a00;

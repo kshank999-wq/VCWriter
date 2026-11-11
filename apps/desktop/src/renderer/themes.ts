@@ -19,7 +19,7 @@
  * names literally would print its most important words at its lowest contrast.
  */
 
-export type SchemeId = 'gold' | 'finaldraft' | 'windows' | 'slate' | 'parchment' | 'green';
+export type SchemeId = 'gold' | 'finaldraft' | 'windows' | 'blue' | 'slate' | 'parchment' | 'green';
 
 export interface Scheme {
   id: SchemeId;
@@ -55,6 +55,14 @@ export interface Scheme {
  * saved choice of either falls back to Gold. Final Draft–style and
  * Windows-style are new, for writers who want the room they are used to; the
  * word processor already looks like Word.
+ *
+ * **Blue Standard, and black type on the light schemes** (from Ken,
+ * 11 November: *add a color scheme that matches MS Word and call it blue
+ * standard … make the existing parchment and green with bold non-faded
+ * colors and dark black text, not light, shaded or grey*). Blue Standard is
+ * Word's own room: its grey canvas, white panes, Word blue. On it, on
+ * Parchment and on Green, the type is black and the secondary type is black
+ * too rather than a grey, and the surfaces carry their colour boldly.
  */
 export const SCHEMES: readonly Scheme[] = [
   {
@@ -115,6 +123,25 @@ export const SCHEMES: readonly Scheme[] = [
     },
   },
   {
+    id: 'blue',
+    name: 'Blue Standard',
+    description: 'The Microsoft Word look: a light grey canvas, white panes, Word blue, black type.',
+    appearance: 'light',
+    tokens: {
+      ink: '#f3f2f1',
+      panel: '#ffffff',
+      panel2: '#dce6f4',
+      border: '#8aa4c8',
+      gold: '#185abd',
+      goldBright: '#103f91',
+      goldDeep: '#2b7cd3',
+      red: '#a4262c',
+      redDeep: '#f1bbbc',
+      text: '#000000',
+      muted: '#1a1a1a',
+    },
+  },
+  {
     id: 'slate',
     name: 'Slate',
     description: 'Deep blue-black with a vivid sky accent.',
@@ -136,39 +163,39 @@ export const SCHEMES: readonly Scheme[] = [
   {
     id: 'parchment',
     name: 'Parchment',
-    description: 'A light interface: cream surfaces, near-black type, a strong bronze accent.',
+    description: 'A light interface: rich cream and tan surfaces, black type, a strong bronze accent.',
     appearance: 'light',
     tokens: {
-      ink: '#fbf6e9',
-      panel: '#f1e7d1',
-      panel2: '#e5d7b9',
-      border: '#a8936a',
-      gold: '#6a4a0e',
-      goldBright: '#452f03',
-      goldDeep: '#b8862b',
-      red: '#9e1414',
-      redDeep: '#d97a7a',
-      text: '#0d0a04',
-      muted: '#4a3f2b',
+      ink: '#f6e7c1',
+      panel: '#fbf1d6',
+      panel2: '#ecd49c',
+      border: '#8f6a24',
+      gold: '#6b3f00',
+      goldBright: '#4a2a00',
+      goldDeep: '#c4860f',
+      red: '#a10f0f',
+      redDeep: '#e58d8d',
+      text: '#000000',
+      muted: '#1a1a1a',
     },
   },
   {
     id: 'green',
     name: 'Green',
-    description: 'A bright light interface: white cards on grey, black type, a bold green.',
+    description: 'A bright light interface: white cards on a green ground, black type, a bold green.',
     appearance: 'light',
     tokens: {
-      ink: '#edf0f3',
+      ink: '#d9efdc',
       panel: '#ffffff',
-      panel2: '#e1e5ea',
-      border: '#b3bcc8',
-      gold: '#0e6a2a',
-      goldBright: '#074d1c',
-      goldDeep: '#2ea043',
+      panel2: '#bfe3c6',
+      border: '#2f8a45',
+      gold: '#0a6424',
+      goldBright: '#044a17',
+      goldDeep: '#1fa040',
       red: '#b42318',
-      redDeep: '#e08a82',
-      text: '#06090d',
-      muted: '#3b4452',
+      redDeep: '#f0a39b',
+      text: '#000000',
+      muted: '#1a1a1a',
     },
   },
 ];

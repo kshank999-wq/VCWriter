@@ -3154,3 +3154,22 @@ The schemes (`themes.ts`), in the order Preferences lists them:
 - **The outline's tier colours** take deeper variants on the four light
   schemes, so chapters, sections and subsections read on white and cream.
 - The word processor keeps its own Word-style look whatever the scheme.
+
+### Blue Standard, and black type on the light schemes
+
+From Ken, 11 November: *add a color scheme that matches MS Word and call it
+blue standard … make the existing parchment and green with bold non-faded
+colors and dark black text, not light, shaded or grey.*
+
+| Scheme | Look |
+| --- | --- |
+| **Blue Standard** (new, after Windows style) | Word's room: grey canvas `#f3f2f1`, white panes, light blue selection, Word blue `#185abd`, black type |
+| **Parchment** | rich cream and tan surfaces, a deeper bronze, black type |
+| **Green** | white cards on a green ground with green panels and edges, a bold green, black type |
+
+- On all three, body text is `#000000` and the secondary text is `#1a1a1a`
+  rather than a grey; the test asks it of them.
+- Disabled buttons still dim, so they read as unavailable, and printed sheets
+  keep their own greys on white paper.
+- Cobalt and Graphite were already removed (above); a copy of VC Writer that
+  still lists them predates 7 November and is cured by updating.

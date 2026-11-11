@@ -24,6 +24,7 @@ describe('colour schemes', () => {
       'gold',
       'finaldraft',
       'windows',
+      'blue',
       'slate',
       'parchment',
       'green',
@@ -31,6 +32,16 @@ describe('colour schemes', () => {
     // A saved choice of a scheme that has gone falls back to Gold.
     expect(schemeById('cobalt').id).toBe('gold');
     expect(schemeById('graphite').id).toBe('gold');
+  });
+
+  it('gives Blue Standard, Parchment and Green black type, secondary type included', () => {
+    for (const id of ['blue', 'parchment', 'green']) {
+      const { text, muted } = schemeById(id).tokens;
+      expect(text).toBe('#000000');
+      // Not a grey: every channel of the secondary type below 0x30.
+      expect([1, 3, 5].every((at) => parseInt(muted.slice(at, at + 2), 16) < 0x30)).toBe(true);
+    }
+    expect(schemeById('blue').name).toBe('Blue Standard');
   });
 
   /**
