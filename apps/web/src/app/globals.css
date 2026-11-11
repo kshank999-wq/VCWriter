@@ -3672,3 +3672,46 @@ dialog.walkthrough::backdrop { background: rgba(0, 0, 0, 0.72); }
 /* Open-source credits (addendum 45 §4). */
 .credits-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
 .credits-table th, .credits-table td { text-align: left; padding: 0.3rem 0.6rem 0.3rem 0; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
+
+/* Giving out a task (addendum 07 §37): what it is on the left, the writers down the right. */
+.af { display: grid; grid-template-columns: minmax(0, 1fr) 230px; gap: 16px; align-items: start; margin: 10px 0 16px; }
+.af-main { display: grid; gap: 12px; min-width: 0; }
+.af-main textarea, .af-kind select { width: 100%; min-width: 0; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 16px; font-family: inherit; }
+.af-kind-one input[type='radio'] { width: auto; flex: none; }
+.af-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.af-kind { border: 1px solid var(--border); border-radius: 4px; padding: 8px 10px 10px; display: grid; gap: 6px; margin: 0; }
+.af-kind legend { font-size: 12px; padding: 0 4px; }
+.af-kind-one { display: flex; gap: 10px; align-items: flex-start; padding: 6px 8px; border: 1px solid transparent; border-radius: 4px; cursor: pointer; }
+.af-kind-one.on { border-color: var(--gold); background: var(--bg-raised-2); }
+.af-kind-one input { margin-top: 4px; }
+.af-kind-one > span { display: grid; gap: 1px; }
+.af-fixed { border: 1px solid var(--gold); border-radius: 4px; padding: 8px 10px; background: var(--bg-raised-2); }
+.af-fixed-head { margin: 0 0 4px; display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
+.af-fixed-head .linkish { margin-left: auto; }
+.af-quote { margin: 0; padding: 4px 10px; border-left: 3px solid var(--gold); font-family: 'Courier Prime', 'Courier New', monospace; font-size: 13px; white-space: pre-wrap; max-height: 12em; overflow: auto; }
+.af-writers { border: 1px solid var(--border); border-radius: 4px; padding: 8px 10px; display: grid; gap: 6px; position: sticky; top: 12px; }
+.af-writers-head { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
+.af-writer { display: flex; gap: 8px; align-items: center; font-size: 13.5px; cursor: pointer; padding: 3px 0; }
+.af-writer-name { display: grid; line-height: 1.2; }
+.af-everyone { border-bottom: 1px solid var(--border); padding-bottom: 6px; font-weight: 600; }
+.af-go { width: 100%; margin-top: 4px; }
+@media (max-width: 720px) { .af { grid-template-columns: 1fr; } .af-writers { position: static; } }
+.linkish { background: none; border: 0; padding: 0; color: var(--gold); text-decoration: underline; cursor: pointer; font: inherit; }
+.tk-passage { margin: 0 0 12px; }
+.tk-card-quote { display: block; font-size: 12px; font-style: italic; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* The script, read in the room and given out from (§37). */
+.sv { display: grid; gap: 16px; }
+.sv-giving { grid-template-columns: minmax(0, 1fr) minmax(300px, 420px); align-items: start; }
+.sv-script { display: grid; gap: 18px; min-width: 0; }
+.sv-episode { margin: 8px 0 0; font-size: 15px; color: var(--gold); }
+.sv-scene-head { display: flex; gap: 10px; align-items: center; justify-content: space-between; font-weight: 700; text-transform: uppercase; font-family: 'Courier Prime', 'Courier New', monospace; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+.sv-beat { margin-top: 8px; border-left: 3px solid transparent; padding-left: 8px; }
+.sv-beat.on { border-left-color: var(--gold); }
+.sv-beat-head { display: flex; gap: 10px; align-items: baseline; justify-content: space-between; }
+.sv-page { cursor: text; }
+.sv-panel { position: sticky; top: 12px; border: 1px solid var(--border); border-radius: 4px; padding: 10px 12px; max-height: calc(100vh - 24px); overflow: auto; }
+.sv-panel h3 { margin-top: 0; }
+.sv-panel .af { grid-template-columns: 1fr; }
+.sv-panel .af-writers { position: static; }
+@media (max-width: 900px) { .sv-giving { grid-template-columns: 1fr; } .sv-panel { position: static; max-height: none; } }

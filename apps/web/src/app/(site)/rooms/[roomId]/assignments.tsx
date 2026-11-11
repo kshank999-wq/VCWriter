@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
+import { AssignForm } from './assign-form';
 import {
   ASSIGNMENT_STATE_NAMES,
   ASSIGNEE_STATES,
@@ -162,23 +163,7 @@ export function WhoOwesWhat({
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // One writer, or several at once (§34): several make one task each, linked.
-  const [assignees, setAssignees] = useState<string[]>(() => {
-    const first = defaultAssigneeId ?? seats.find((seat) => seat.state !== 'deactivated' && seat.userId)?.userId;
-    return first ? [first] : [];
-  });
-  const [target, setTarget] = useState('');
-  const [note, setNote] = useState('');
-  const [dueOn, setDueOn] = useState('');
-  const [priority, setPriority] = useState('normal');
-
-  const askable = useMemo(
-    () => seats.filter((seat) => seat.state !== 'deactivated' && seat.userId),
-    [seats],
-  );
-  // Asked in and not yet answered: they cannot be given work until they have
-  // an account in the room, and the menu says so rather than going quiet.
-  const waitingOn = useMemo(() => seats.filter((seat) => seat.state === 'invited'), [seats]);
+  const askableFirst = seats.find((seat) => seat.state !== 'deactivated' && seat.userId)?.userId ?? undefined;
 
   const callOff = async (assignment: Assignment) => {
     setBusy(true);
@@ -187,32 +172,6 @@ export function WhoOwesWhat({
     setBusy(false);
     if (failed) {
       setError(failed);
-      return;
-    }
-    window.location.reload();
-  };
-
-  const give = async () => {
-    setBusy(true);
-    setError(null);
-    const chosen = things.find((thing) => `${thing.kind}:${thing.id}` === target) ?? null;
-    const response = await fetch(`/api/rooms/${roomId}/assignments`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        assigneeIds: assignees,
-        targetKind: chosen?.kind ?? null,
-        targetId: chosen?.id ?? null,
-        note,
-        dueOn: dueOn || null,
-        priority,
-      }),
-    });
-    setBusy(false);
-
-    if (!response.ok) {
-      const body = (await response.json().catch(() => ({}))) as { error?: string };
-      setError(body.error ?? 'That could not be given out.');
       return;
     }
     window.location.reload();
@@ -259,117 +218,15 @@ export function WhoOwesWhat({
         ))}
       </div>
 
-      {/* The Assign menu Ken asked for: the room's seats by name, title and
-          colour, and what there is to point at — or nothing, which makes it a
-          plain task. */}
+      {/* Giving out work (§37): what it is on the left, the writers down the right. */}
       <h3>Assign</h3>
-      {askable.length === 0 ? (
-        <p className="notice small">
-          {waitingOn.length > 0
-            ? `Nobody can be given work until they join the room. ${waitingOn
-                .map((seat) => seatName(seat))
-                .join(', ')} ${waitingOn.length === 1 ? 'has' : 'have'} been invited and ${
-                waitingOn.length === 1 ? 'needs' : 'need'
-              } to accept the invitation in their email first.`
-            : 'Nobody is in the room to give work to yet. Invite someone from People and seats below.'}
-        </p>
-      ) : null}
-      <div className="assign">
-        <fieldset className="field assign-to">
-          <legend>To</legend>
-          {askable.length === 0 ? <span className="small muted">Nobody has joined yet</span> : null}
-          {askable.map((seat) => (
-            <label key={seat.id} className="assign-person">
-              <input
-                type="checkbox"
-                checked={assignees.includes(seat.userId ?? '')}
-                onChange={(event) => {
-                  const id = seat.userId ?? '';
-                  setAssignees((now) => (event.target.checked ? [...new Set([...now, id])] : now.filter((one) => one !== id)));
-                }}
-              />
-              <span className="room-chip" style={{ background: seat.colour || '#666' }} aria-hidden>
-                {seatInitials(seat) || '—'}
-              </span>
-              {seatName(seat)}
-            </label>
-          ))}
-          {assignees.length > 1 ? (
-            <span className="small muted block">
-              {assignees.length} writers: each gets their own task, linked as a group so their versions can be compared together.
-            </span>
-          ) : null}
-        </fieldset>
-
-        <label className="field">
-          <span>About</span>
-          <select value={target} onChange={(event) => setTarget(event.target.value)}>
-            <option value="">Nothing in particular — a task</option>
-            {(() => {
-              const name = (thing: AssignableThing) =>
-                thing.kind === 'episode'
-                  ? thing.label
-                  : thing.kind === 'act'
-                    ? `Act — ${thing.label}`
-                    : thing.kind === 'scene'
-                      ? `Scene — ${thing.label}`
-                      : thing.kind === 'beat'
-                        ? `Beat — ${thing.label}`
-                        : `Research — ${thing.label}`;
-              const option = (thing: AssignableThing) => (
-                <option key={`${thing.kind}:${thing.id}`} value={`${thing.kind}:${thing.id}`}>
-                  {name(thing)}
-                </option>
-              );
-              // In a series, whole episodes first, then each episode's own
-              // acts, scenes and beats under it (§36).
-              const episodes = things.filter((thing) => thing.kind === 'episode');
-              if (episodes.length === 0) return things.map(option);
-              const loose = things.filter((thing) => thing.kind !== 'episode' && !thing.episode);
-              return (
-                <>
-                  <optgroup label="Whole episodes">{episodes.map(option)}</optgroup>
-                  {episodes.map((one) => (
-                    <optgroup key={one.id} label={one.label}>
-                      {things.filter((thing) => thing.episode === one.label).map(option)}
-                    </optgroup>
-                  ))}
-                  {loose.length > 0 ? <optgroup label="Not in an episode">{loose.map(option)}</optgroup> : null}
-                </>
-              );
-            })()}
-          </select>
-        </label>
-
-        <label className="field wide">
-          <span>What is being asked</span>
-          <input
-            type="text"
-            value={note}
-            placeholder="Shorter, and colder."
-            onChange={(event) => setNote(event.target.value)}
-          />
-        </label>
-
-        <label className="field">
-          <span>Priority</span>
-          <select value={priority} onChange={(event) => setPriority(event.target.value)}>
-            <option value="urgent">Urgent</option>
-            <option value="high">High</option>
-            <option value="normal">Normal</option>
-            <option value="low">Low</option>
-          </select>
-        </label>
-
-        <label className="field">
-          <span>Wanted by</span>
-          <input type="date" value={dueOn} onChange={(event) => setDueOn(event.target.value)} />
-        </label>
-
-        <button type="button" className="button" disabled={busy || assignees.length === 0} onClick={() => void give()}>
-          {busy ? 'Giving it out…' : assignees.length > 1 ? `Assign it to ${assignees.length} writers` : 'Assign it'}
-        </button>
-      </div>
+      <AssignForm
+        roomId={roomId}
+        seats={seats}
+        things={things}
+        defaultAssigneeId={defaultAssigneeId ?? askableFirst}
+        scriptHref={`/rooms/${roomId}?view=script`}
+      />
 
       <p className="small">
         An assignment says who is expected to write something. It does not stop anybody else writing

@@ -167,6 +167,7 @@ export function Board({
           {one.versions > 0 ? <span className="tk-ver">v{one.versions}</span> : null}
         </span>
         <strong className="tk-title">{taskHeadline(one)}</strong>
+        {one.assignment?.passage ? <span className="tk-card-quote">“{one.assignment.passage.quote}”</span> : null}
         <span className="tk-card-foot">
           <span className="tk-who" style={{ background: colourOf(one.ownerId) }} title={nameOf(one.ownerId)}>
             {initialsOf(one.ownerId)}
@@ -616,6 +617,12 @@ function TaskPage({
           {tab === 'overview' ? (
             <>
               {task.note.trim() && task.note.trim().replace(/[.!?]+$/, '') !== taskHeadline(task) ? <p className="lede">{task.note}</p> : null}
+              {task.assignment?.passage ? (
+                <figure className="tk-passage">
+                  <figcaption className="small muted">The passage, as it read when this was assigned</figcaption>
+                  <blockquote className="af-quote">{task.assignment.passage.quote}</blockquote>
+                </figure>
+              ) : null}
               <dl className="tk-facts">
                 <div>
                   <dt>Status</dt>

@@ -2242,3 +2242,47 @@ changes.
   series room, the groups in episode order with *No episode* last.
 - *Integrate into the master* on an episode task opens on that episode's
   first beat.
+
+## 37. Assigning from the script
+
+From Ken, 11 November: *when they're assigning tasks, there's nothing to
+point it to any point at the script … the script can be opened and tasks
+assigned from the writer's room by highlighting a section.* And: the long
+bar of writers becomes *a menu on the right … that lists all the writers in
+the room, and you can just check mark them and then assign it*; and the
+*About · Nothing in particular* box is rethought.
+
+**The Script screen.** A new item in the room's menu, for everyone in the
+room. It reads the room's script (the project the room holds) in story
+order, scene by scene and beat by beat (`scriptForAssigning`; scenes kept out
+of the script are left out). For the showrunner, highlighting words in a beat
+fills an **Assign** panel on the right with the passage; **Assign this scene**
+and **Assign this beat** give out the whole of either. Writers read the script
+without the panel.
+
+**A task can carry a passage.** `assignments.passage` (jsonb, migration 0088):
+where the passage starts and ends, by element id and character offset, and
+its words as they read when it was assigned. A passage belongs to a beat
+target only (a check constraint says so). The route reads the words out of
+the project with `passageText` rather than taking them from the client, and
+refuses with *Highlight it again* when the passage is no longer there. The
+assignment guard holds it still for the writer, as it does every other part
+of what was asked. The task page shows the passage under the request, and a
+card shows its first words.
+
+**The assign form** (`assign-form.tsx`, used by *+ New task* and the Script
+screen):
+
+- **What is it?** replaces *About*: **A task** (not tied to the script — the
+  old *Nothing in particular*), **Part of the script** (episode, act, scene or
+  beat, with a link to highlight it in the script instead), or **A research
+  note** where the shelf has any.
+- **Writers** is a panel down the right: every writer in the room with a tick
+  box and their title, **Everyone** to tick them all, and the **Assign**
+  button under them. Invited writers who have not joined are named but cannot
+  be ticked.
+- What is being asked is a text box, with priority and date beside each
+  other under it.
+
+Not done here: the desktop editor does not yet highlight the passage when a
+writer opens the task; it opens on the beat, as before (§31).

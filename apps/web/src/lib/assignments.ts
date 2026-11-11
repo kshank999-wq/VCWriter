@@ -2,6 +2,7 @@ import {
   assignmentSchema,
   canMoveAssignment,
   type Assignment,
+  type AssignmentPassage,
   type AssignmentPriority,
   type AssignmentState,
   type AssignmentTarget,
@@ -30,6 +31,7 @@ interface AssignmentRow {
   target_id: string | null;
   group_id?: string | null;
   priority?: string | null;
+  passage?: unknown;
   target_label: string;
   note: string;
   due_on: string | null;
@@ -39,7 +41,7 @@ interface AssignmentRow {
 }
 
 const COLUMNS =
-  'id, room_id, assignee_id, assigned_by, target_kind, target_id, target_label, note, due_on, state, group_id, priority, created_at, updated_at';
+  'id, room_id, assignee_id, assigned_by, target_kind, target_id, target_label, note, due_on, state, group_id, priority, passage, created_at, updated_at';
 
 const fromRow = (row: AssignmentRow): Assignment =>
   assignmentSchema.parse({
@@ -51,6 +53,7 @@ const fromRow = (row: AssignmentRow): Assignment =>
     targetId: row.target_id,
     groupId: row.group_id ?? null,
     priority: row.priority ?? 'normal',
+    passage: row.passage ?? null,
     targetLabel: row.target_label,
     note: row.note,
     dueOn: row.due_on,
@@ -96,6 +99,7 @@ export const makeAssignment = async (input: {
   dueOn: string | null;
   groupId?: string | null;
   priority?: AssignmentPriority;
+  passage?: AssignmentPassage | null;
 }): Promise<Assignment | AssignFailure> => {
   const { data, error } = await serverClient()
     .from('assignments')
@@ -110,6 +114,7 @@ export const makeAssignment = async (input: {
       due_on: input.dueOn,
       group_id: input.groupId ?? null,
       priority: input.priority ?? 'normal',
+      passage: input.passage ?? null,
     })
     .select(COLUMNS)
     .single();

@@ -208,3 +208,19 @@ describe('episodes in a series room (§36)', () => {
     expect(report.total).toBe(3);
   });
 });
+
+describe('assigning from the script (§37)', () => {
+  it('lays the script out scene by scene, and keeps a highlighted passage on the task', async () => {
+    const d = await import('../index.js');
+    const file = d.createProjectFile({ title: 'Harbour', format: 'screenplay' });
+    const script = d.scriptForAssigning(file);
+    expect(script.length).toBe(file.units.filter((unit) => unit.inScript).length);
+    expect(script.flatMap((scene) => scene.beats.map((beat) => beat.id)).sort()).toEqual(
+      file.beats.filter((beat) => file.units.some((unit) => unit.id === beat.unitId && unit.inScript)).map((beat) => beat.id as string).sort(),
+    );
+
+    const passage = { startElementId: 'e1', startOffset: 0, endElementId: 'e1', endOffset: 5, quote: 'Hello' };
+    expect(ask({ targetKind: 'beat', targetId: 'b', passage }).passage).toEqual(passage);
+    expect(ask().passage).toBeNull();
+  });
+});

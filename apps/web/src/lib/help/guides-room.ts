@@ -43,11 +43,22 @@ export const GUIDES_ROOM: ReadonlyArray<Guide> = [
         heading: 'Hand out a task',
         steps: [
           'On the **Tasks** board, open **+ New task**.',
-          'Tick one writer, or several — several writers get the same task as a linked group, and each writes their own version.',
-          'Under **About**, choose the beat, scene or episode the task is for, or leave it as a plain task.',
+          'Under **What is it?**, choose **A task** for work not tied to the script, or **Part of the script** and pick the episode, act, scene or beat.',
           'Say **What is being asked**, choose a **Priority**, and optionally a **Wanted by** date.',
-          'Press **Assign it** (or **Assign it to 2 writers**). The task appears in **To Do**.',
+          'In **Writers** on the right, tick one writer, several, or **Everyone**. Several writers each get their own task, linked as a group.',
+          'Press **Assign** (or **Assign to 2 writers**). The task appears in **To Do**.',
         ],
+      },
+      {
+        heading: 'Assign from the script',
+        steps: [
+          'In the room’s menu, open **Script**. The script reads down the left.',
+          'Highlight the words you want rewritten. The **Assign** panel on the right shows the passage.',
+          'Or press **Assign this scene** or **Assign this beat** to give out the whole of it.',
+          'Say what is being asked, tick the writers, and press **Assign**.',
+          'Open the task on the board: it shows the passage as it read when you assigned it.',
+        ],
+        tip: 'Writers can read the script here too; only the showrunner sees the Assign panel.',
       },
       {
         heading: 'Write it (the writer)',

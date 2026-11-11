@@ -50,7 +50,7 @@ interface Selected {
 }
 
 /** Where the selection sits in a pane, by element id and character offset. */
-const selectionIn = (pane: HTMLElement): Selected | null => {
+export const selectionIn = (pane: HTMLElement): Selected | null => {
   const selection = window.getSelection();
   if (!selection || selection.rangeCount === 0) return null;
   const range = selection.getRangeAt(0);

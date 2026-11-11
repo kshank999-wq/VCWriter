@@ -7,6 +7,7 @@ import {
   canMakeAssignment,
   labelFor,
   parseProjectFile,
+  passageText,
   seatInitials,
   seatName,
   type AssignmentTarget,
@@ -45,6 +46,19 @@ const schema = z.object({
   targetId: z.string().uuid().nullable().default(null),
   note: z.string().max(2000).default(''),
   priority: z.enum(ASSIGNMENT_PRIORITIES).default('normal'),
+  /**
+   * A passage highlighted in the script (§37). Its words are read here, out of
+   * the master, rather than taken from the client.
+   */
+  passage: z
+    .object({
+      startElementId: z.string().min(1).max(64),
+      startOffset: z.number().int().min(0),
+      endElementId: z.string().min(1).max(64),
+      endOffset: z.number().int().min(0),
+    })
+    .nullable()
+    .default(null),
   /** A plain date. A room works in days, not minutes. */
   dueOn: z
     .string()
@@ -115,9 +129,14 @@ export async function POST(
     }
   }
 
+  if (parsed.data.passage && targetKind !== 'beat') {
+    return NextResponse.json({ error: 'A highlighted passage belongs to a beat.' }, { status: 400 });
+  }
+
   // What the thing is called, read out of the project rather than taken on the
   // client's word, and copied onto the row so it still reads after a rename.
   let targetLabel = '';
+  let passage: { startElementId: string; startOffset: number; endElementId: string; endOffset: number; quote: string } | null = null;
   if (targetKind && targetId) {
     const project = await projectDocument(view.room.projectId);
     if (!project) return NextResponse.json({ error: 'The project could not be read.' }, { status: 404 });
@@ -125,6 +144,14 @@ export async function POST(
     targetLabel = labelFor(file, { kind: targetKind as AssignmentTarget, id: targetId });
     if (targetLabel === '') {
       return NextResponse.json({ error: 'That is not in this project.' }, { status: 404 });
+    }
+    if (parsed.data.passage) {
+      const beat = file.beats.find((one) => (one.id as string) === targetId);
+      const quote = beat ? (passageText(beat.manuscript, parsed.data.passage) ?? '').trim() : '';
+      if (quote === '') {
+        return NextResponse.json({ error: 'That passage is not in the script any more. Highlight it again.' }, { status: 409 });
+      }
+      passage = { ...parsed.data.passage, quote: quote.slice(0, 4000) };
     }
   }
 
@@ -145,6 +172,7 @@ export async function POST(
       dueOn,
       groupId,
       priority,
+      passage,
     });
     if ('reason' in one) return NextResponse.json({ error: one.message, made }, { status: 403 });
     made.push(one);
@@ -162,7 +190,7 @@ export async function POST(
       entityId: one.id,
       action: 'assigned',
       toState: one.state,
-      note: `${one.targetLabel || one.note.slice(0, 120)}${groupId ? ` (one of ${assigneeIds.length} writers)` : ''}`,
+      note: `${one.targetLabel || one.note.slice(0, 120)}${passage ? ` — “${passage.quote.slice(0, 80)}”` : ''}${groupId ? ` (one of ${assigneeIds.length} writers)` : ''}`,
     });
   }
 

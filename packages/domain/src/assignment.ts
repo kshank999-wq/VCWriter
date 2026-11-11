@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { roleCan, seatName, type RoomRole, type Seat } from './room.js';
-import { researchCategoriesInOrder, researchItemsIn } from './selectors.js';
+import { beatsForUnit, researchCategoriesInOrder, researchItemsIn, unitsInStoryOrder } from './selectors.js';
+import type { ManuscriptSegment } from './entities/manuscript.js';
 import type { ProjectFile } from './project-file.js';
 import { episodeOfBeat, episodeOfUnit, episodes, type Episode } from './episodes.js';
 
@@ -72,6 +73,21 @@ export const PRIORITY_NAMES: Record<AssignmentPriority, string> = {
 /** Higher sorts first. */
 export const PRIORITY_RANK: Record<AssignmentPriority, number> = { urgent: 3, high: 2, normal: 1, low: 0 };
 
+/**
+ * A passage of a beat the task is about (addendum 07 §37): where it starts
+ * and ends, by element id and character offset, and the words as they read
+ * when it was assigned, so the task still says what was meant after the beat
+ * is rewritten.
+ */
+export const assignmentPassageSchema = z.object({
+  startElementId: z.string(),
+  startOffset: z.number().int().min(0),
+  endElementId: z.string(),
+  endOffset: z.number().int().min(0),
+  quote: z.string().min(1).max(4000),
+});
+export type AssignmentPassage = z.infer<typeof assignmentPassageSchema>;
+
 export const assignmentSchema = z.object({
   id: z.string(),
   roomId: z.string(),
@@ -107,6 +123,8 @@ export const assignmentSchema = z.object({
   groupId: z.string().nullable().default(null),
   /** How pressing it is (§35). */
   priority: assignmentPrioritySchema.default('normal'),
+  /** The passage highlighted in the script, where it was assigned that way (§37). Beats only. */
+  passage: assignmentPassageSchema.nullable().default(null),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -431,3 +449,41 @@ export const labelFor = (
   target: { kind: AssignmentTarget; id: string },
 ): string =>
   assignableThings(file).find((one) => one.kind === target.kind && one.id === target.id)?.label ?? '';
+
+// ------------------------------------------------------- the script to assign
+
+/** A scene of the script as the room reads it to assign work (addendum 07 §37). */
+export interface ScriptScene {
+  id: string;
+  title: string;
+  /** The episode it is in, in a series, where a new one starts with this scene. */
+  episode: string | null;
+  beats: Array<{ id: string; title: string; manuscript: ManuscriptSegment }>;
+}
+
+/**
+ * The script in story order, scene by scene and beat by beat, for the room's
+ * Script screen: the showrunner reads it, highlights a passage, and gives it
+ * out. Scenes kept out of the script are left out here too.
+ */
+export const scriptForAssigning = (file: ProjectFile): ScriptScene[] => {
+  let lastEpisode: string | null = null;
+  return unitsInStoryOrder(file)
+    .filter((unit) => unit.inScript)
+    .map((unit) => {
+      const tag = episodeForTarget(file, { kind: 'scene', id: unit.id as string });
+      const label = tag?.label ?? null;
+      const episode = label !== lastEpisode ? label : null;
+      lastEpisode = label;
+      return {
+        id: unit.id as string,
+        title: unit.title || 'Untitled scene',
+        episode,
+        beats: beatsForUnit(file, unit.id).map((beat) => ({
+          id: beat.id as string,
+          title: beat.title || 'Untitled beat',
+          manuscript: beat.manuscript,
+        })),
+      };
+    });
+};

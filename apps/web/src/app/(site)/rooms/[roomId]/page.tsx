@@ -6,6 +6,7 @@ import {
   activityIn,
   applyTray,
   assignableThings,
+  scriptForAssigning,
   assignmentsFor,
   canAskHere,
   canAssign,
@@ -68,6 +69,7 @@ import { Compare, MarkupView, type VersionChoice } from './compare';
 import { MarkupActions } from './markup-actions';
 import { Board, TASK_TABS, type TaskTab } from './board';
 import { IntegrateScreen } from './integrate-screen';
+import { ScriptView } from './script-view';
 import { markupsIn } from '@/lib/markups';
 import { requestsIn } from '@/lib/permissions';
 import { auditIn } from '@/lib/audit';
@@ -193,6 +195,8 @@ export default async function RoomPage({
   // What there is to point the Assign menu at, read out of the project itself
   // — the room holds people, and the story is the project's.
   const things = giving && project ? assignableThings(project) : [];
+  // The script to read and give out from (§37).
+  const script = project ? scriptForAssigning(project) : [];
 
   // The Curation Tray, and the master it would make (§12, stage 9).
   //
@@ -354,6 +358,7 @@ export default async function RoomPage({
   type Screen = { key: string; label: string; count?: number };
   const screens: Screen[] = [
     { key: 'tasks', label: 'Tasks', count: acting || undefined },
+    { key: 'script', label: 'Script' },
     { key: 'overview', label: 'Room overview' },
     { key: 'ideas', label: 'Ideas', count: boxes.length },
     ...(curating ? [{ key: 'tray', label: 'Curation Tray', count: awaiting.length }] : []),
@@ -453,7 +458,7 @@ export default async function RoomPage({
     // Compare and Markups take the whole width of the window (from Ken: *it
     // needs to take up the whole area, so it's big, looks like the script*);
     // their menu moves to a row along the top.
-    <div className={`room-dashboard${screen === 'compare' || screen === 'markups' || screen === 'tasks' || screen === 'integrate' ? ' room-wide' : ''}`}>
+    <div className={`room-dashboard${screen === 'compare' || screen === 'markups' || screen === 'tasks' || screen === 'integrate' || screen === 'script' ? ' room-wide' : ''}`}>
       <header className="room-head">
         <div className="room-head-main">
           <p className="eyebrow">Writers Room · {here.label}</p>
@@ -572,6 +577,18 @@ export default async function RoomPage({
                 sequence={sequence}
                 refusal={mergeRefusal}
               />
+            </section>
+          ) : null}
+
+          {screen === 'script' ? (
+            <section className="room-panel">
+              <h2>Script</h2>
+              <p className="small">
+                {giving
+                  ? 'The script as the room has it. Highlight a passage, or choose a scene or beat, and give it to a writer from the panel on the right.'
+                  : 'The script as the room has it.'}
+              </p>
+              <ScriptView roomId={view.room.id} script={script} seats={view.seats} things={things} canGive={giving} />
             </section>
           ) : null}
 
