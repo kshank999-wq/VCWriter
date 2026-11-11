@@ -12,7 +12,8 @@ import {
 import { ResearchShelf } from '../components/ResearchShelf';
 
 /**
- * The phone's notes on the shelf inside the Outliner and the Sculptor
+ * The phone's notes on the shelf inside the Sculptor (the Outliner's shows only
+ * what is sorted, from Ken, 11 November)
  * (addendum 09 §15).
  *
  * `cast-surfaces`' shape: what can go wrong is not the carrying — the domain
@@ -37,7 +38,7 @@ const note = (text: string, category = 'idea'): CaptureItem =>
 
 const draw = (notes: CaptureItem[], onCarry = vi.fn()) => {
   const file = createProjectFile({ title: 'Blackout', format: 'screenplay' });
-  render(<ResearchShelf file={file} from="outline" reveal={null} notes={notes} onCarry={onCarry} />);
+  render(<ResearchShelf file={file} from="board" reveal={null} notes={notes} onCarry={onCarry} />);
   return { onCarry, notes };
 };
 
@@ -81,7 +82,7 @@ describe('the phone, on the research shelf', () => {
     render(
       <ResearchShelf
         file={file}
-        from="outline"
+        from="board"
         reveal={null}
         notes={[note('a bell rings')]}
         notesError="No signal"

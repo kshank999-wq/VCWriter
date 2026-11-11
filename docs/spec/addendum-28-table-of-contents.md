@@ -878,6 +878,22 @@ was driven in the preview: drop a note on *Multiplication*, then double-click
 it under *In 1.1 Multiplication*, rewrite it, press **Add as subsection**,
 and fold the new row.
 
+**Only what is sorted, since 11 November.** From Ken: *the notes that are
+divided up into the subsections and sections of the outline are the only
+things that should show up when you pick a section or subsection … nothing
+from the research area should show up in the outline area except for what has
+already been sorted.* The Outliner's Research column no longer lists the
+unsorted notes, the search, or the Phone and Board tabs:
+
+- with no row chosen it says to choose a section or subsection (or, where
+  nothing is sorted yet, that sorting is done in Research);
+- with a row chosen it lists only the notes sorted into it, each boxed, to
+  double-click, rewrite and add as above.
+
+Sorting itself is done in the Research window, on the outline beside the
+notes (§7). The Sculptor's column keeps the full shelf, its search and its
+tabs.
+
 ## 10. Sorted, worked in, used — and importing notes
 
 From Ken:

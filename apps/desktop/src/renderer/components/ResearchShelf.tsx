@@ -208,6 +208,59 @@ export function ResearchShelf({ file, from, reveal, notes = [], notesError = nul
     );
   };
 
+  /**
+   * **In the Outliner, only what is sorted** (from Ken, 11 November: *the
+   * notes that are divided up into the subsections and sections of the
+   * outline are the only things that should show up when you pick a section …
+   * nothing from the research area should show up in the outline area except
+   * for what has already been sorted*). Choose a row and its notes are here,
+   * boxed, to double-click, rewrite and add as a part of the outline. The
+   * shelf, its search and the other sources are the Sculptor's and the
+   * Research window's; sorting is done there, on the outline beside the notes.
+   */
+  if (sorting) {
+    const sortedAnywhere = file.researchItems.some((item) => item.place !== null && !item.archived);
+    return (
+      <aside className="research-shelf" aria-label="Research">
+        <header className="shelf-bar">
+          <h3>Research</h3>
+          <button
+            type="button"
+            className="ghost small"
+            aria-label="Hide the research shelf"
+            title="Out of the way"
+            onClick={() => setOpen(false)}
+          >
+            ⇤
+          </button>
+        </header>
+        {chosenRow ? (
+          <section className="shelf-process" aria-label={`Notes in ${chosenRow.label}`}>
+            <h4>
+              In {chosenRow.label} <span className="muted">{toProcess.length}</span>
+            </h4>
+            {toProcess.length === 0 ? (
+              <p className="muted small shelf-note">
+                No notes sorted into it. Sort notes in Research, by dragging them onto this part of the outline beside the notes.
+              </p>
+            ) : (
+              <>
+                <p className="muted small shelf-note">Double-click a note to rewrite it and add it to the outline.</p>
+                {toProcess.map((item) => draggable(item))}
+              </>
+            )}
+          </section>
+        ) : (
+          <p className="muted small shelf-note shelf-choose">
+            {sortedAnywhere
+              ? 'Choose a section or subsection in the outline to see the notes sorted into it.'
+              : 'No notes are sorted into the outline yet. Sort them in Research, by dragging them onto the outline beside the notes.'}
+          </p>
+        )}
+      </aside>
+    );
+  }
+
   return (
     <aside className="research-shelf" aria-label="Research">
       <header className="shelf-bar">

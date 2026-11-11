@@ -231,9 +231,8 @@ export const GUIDES_PLANNING: Guide[] = [
       {
         heading: 'The research shelf',
         body: [
-          'Down the left of the Outliner is the research shelf. It lists your notes that are not sorted yet, with a search box (*Search the shelf*). Its tabs show **Research**, your **Phone** notes, and your Story Sculptor map.',
-          'Drag a note onto a row to sort it there. The row then lists that note at the top of the shelf; double-click it to open the rewrite screen, shape the words, and press **Add as note** (or add it as the level below) to put it in the outline under that row. The note itself goes to *Put away* once it is worked in.',
-          'Drag a card from the map tab into the outline and it arrives as rows, with everything under it.',
+          'Down the left of the Outliner is the **Research** column. It shows only the notes you have already sorted into the outline: choose a section or subsection and the notes sorted into it are listed, each in its own box. Notes not yet sorted do not appear here.',
+          'Sort notes in **Research**, by dragging them onto the outline beside the notes. Then, back in the Outliner, choose that part and double-click a note to open the rewrite screen, shape the words, and press **Add as note** (or add it as the level below) to put it in the outline under that row. The note itself goes to *Put away* once it is worked in.',
         ],
       },
       {

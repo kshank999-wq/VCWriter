@@ -152,3 +152,35 @@ describe('taking a note back out of the outline (from Ken, 11 November)', () => 
     expect(note.place).toBeNull();
   });
 });
+
+describe('the Research column in the Outliner shows only what is sorted (from Ken, 11 November)', () => {
+  it('shows nothing until a part is chosen, then only the notes sorted into it', async () => {
+    const { ResearchShelf } = await import('../components/ResearchShelf');
+    const { addResearchItem: add } = await import('@vcwriter/domain');
+    let file = filed();
+    file = add(file, { categoryId: file.researchCategories[0]!.id, title: 'An unsorted idea', body: 'Not sorted anywhere.' });
+    const row = file.outlines![0]!.items.find((item) => item.title === 'The cemetery')!;
+    const onOpenNote = vi.fn();
+    const shown = render(<ResearchShelf file={file} from="outline" reveal={null} onCarry={vi.fn()} onOpenNote={onOpenNote} />);
+    expect(screen.queryByText('An unsorted idea')).toBeNull();
+    expect(screen.queryByText('Johnny has the car keys')).toBeNull();
+    expect(screen.getByText(/Choose a section or subsection/)).toBeTruthy();
+    expect(screen.queryByRole('searchbox')).toBeNull();
+    shown.unmount();
+
+    render(
+      <ResearchShelf
+        file={file}
+        from="outline"
+        reveal={null}
+        onCarry={vi.fn()}
+        onOpenNote={onOpenNote}
+        chosenRow={{ place: { kind: 'plan', itemId: row.id }, label: 'The cemetery' }}
+      />,
+    );
+    expect(screen.getByText('Johnny has the car keys')).toBeTruthy();
+    expect(screen.queryByText('An unsorted idea')).toBeNull();
+    fireEvent.doubleClick(screen.getByText('Johnny has the car keys'));
+    expect(onOpenNote).toHaveBeenCalledWith(expect.objectContaining({ title: 'Johnny has the car keys' }));
+  });
+});
