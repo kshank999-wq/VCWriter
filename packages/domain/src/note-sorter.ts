@@ -1,7 +1,8 @@
 import { noteSessionSchema, noteSourceSchema, type NoteSession, type NoteSource, type NoteSourceKind } from './entities/note-sorter.js';
 import { researchCategorySchema, researchItemSchema, type ResearchCategory, type ResearchItem } from './entities/research.js';
 import { nowIso } from './entities/common.js';
-import { isInstructional, nounsFor } from './formats.js';
+import { formatName, isInstructional, nounsFor } from './formats.js';
+import { projectFormatSchema } from './entities/project.js';
 import { onlyLiving } from './graveyard.js';
 import { newId } from './ids.js';
 import { orderKeyBetween, orderKeyForIndex, sortByOrderKey } from './ordering.js';
@@ -560,6 +561,7 @@ export const addSortCategory = (
     name: string;
     parentId?: ResearchCategoryId | null;
     color?: string | null;
+    description?: string;
   },
 ): { file: ProjectFile; category: ResearchCategory | null } => {
   const name = input.name.trim();
@@ -579,6 +581,7 @@ export const addSortCategory = (
     systemKey: null,
     parentId: input.parentId ?? null,
     color: input.color ?? null,
+    description: input.description ?? '',
     sessionId: input.sessionId,
     orderKey: afterAll(sessionCategories(file, input.sessionId)),
     createdAt: at,
@@ -1103,4 +1106,51 @@ export const archiveSortedSources = (file: ProjectFile): ProjectFile => {
     );
   }
   return { ...current, researchItems: [...current.researchItems, ...items] };
+};
+
+
+// ------------------------------------------------------- category templates
+
+/**
+ * A set of sorting categories to start a sitting from (from Ken, 11 November:
+ * *there needs to be an ability to save the categories as a template … we can
+ * have templates for screenplays, episodes, instructional books, etc. And then
+ * you can make your own personal templates*).
+ */
+export interface CategoryTemplate {
+  name: string;
+  categories: Array<{ name: string; color: string | null; description: string }>;
+}
+
+/** The templates VC Writer comes with: each kind of project's standard categories. */
+export const builtInTemplates = (): CategoryTemplate[] =>
+  projectFormatSchema.options.map((format) => ({
+    name: formatName(format),
+    categories: seedCategoriesFor(format).map((one) => ({ name: one.name, color: one.color ?? null, description: one.description ?? '' })),
+  }));
+
+/** The sitting's own categories as a template, to keep and use again. The unsorted pile is not one. */
+export const templateFromSession = (file: ProjectFile, sessionId: NoteSessionId, name: string): CategoryTemplate => ({
+  name: name.trim() || 'My categories',
+  categories: sortCategories(file, sessionId).map((one) => ({ name: one.name, color: one.color ?? null, description: one.description ?? '' })),
+});
+
+/**
+ * Put a template's categories in the sitting. A category it already has, by
+ * name, is kept as it is, with what is filed in it; the rest are added after
+ * it, in the template's order.
+ */
+export const applyCategoryTemplate = (
+  file: ProjectFile,
+  sessionId: NoteSessionId,
+  template: CategoryTemplate,
+): { file: ProjectFile; added: number } => {
+  let current = file;
+  let added = 0;
+  for (const one of template.categories) {
+    const before = current;
+    current = addSortCategory(current, { sessionId, name: one.name, color: one.color, description: one.description }).file;
+    if (current !== before) added += 1;
+  }
+  return { file: current, added };
 };

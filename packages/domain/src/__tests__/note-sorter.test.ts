@@ -375,3 +375,26 @@ describe('the notes archive (from Ken, 11 November)', () => {
     expect(d.archiveSortedSources(archived)).toBe(archived);
   });
 });
+
+describe('category templates (from Ken, 11 November)', () => {
+  it('offers each kind of project’s categories, saves a sitting’s own, and adds only what is missing', async () => {
+    const d = await import('../index.js');
+    const built = d.builtInTemplates();
+    expect(built.map((one) => one.name)).toContain('Instructional book');
+    expect(built.find((one) => one.name === 'Instructional book')!.categories.map((one) => one.name)).toContain('Concept');
+
+    let file = d.createProjectFile({ title: 'Villains', format: 'instructional' });
+    const begun = d.beginSession(file, 'Villains');
+    file = begun.file;
+    const mine = d.templateFromSession(file, begun.session.id, 'My book');
+    expect(mine.categories.map((one) => one.name)).not.toContain('Unsorted');
+    expect(mine.categories.length).toBeGreaterThan(0);
+
+    const screenplay = built.find((one) => one.name === 'Screenplay')!;
+    const applied = d.applyCategoryTemplate(file, begun.session.id, screenplay);
+    const names = d.sortCategories(applied.file, begun.session.id).map((one) => one.name);
+    expect(names).toContain('Character');
+    expect(names.filter((one) => one === 'Theme')).toHaveLength(1);
+    expect(applied.added).toBe(screenplay.categories.filter((one) => !mine.categories.some((had) => had.name === one.name)).length);
+  });
+});

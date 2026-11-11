@@ -147,7 +147,7 @@ describe('the Note Sorter room', () => {
     window.getSelection()!.addRange(range);
     fireEvent.mouseUp(page);
 
-    fireEvent.click(screen.getByRole('button', { name: /Character/ }));
+    fireEvent.click(screen.getAllByRole('button', { name: /Character/ }).find((one) => one.classList.contains('ns-folder-head'))!);
 
     const session = sortingSessions(latest!)[0]!;
     const character = sortCategories(latest!, session.id).find((one) => one.name === 'Character')!;
@@ -610,5 +610,38 @@ describe('a source sorted to its last word (from Ken, 11 November)', () => {
     const done = within(list).getByRole('option', { name: /Short note/ });
     expect(done.className).toContain('archived');
     expect(done.textContent).toContain('Archived');
+  });
+});
+
+describe('editing the categories, and templates (from Ken, 11 November)', () => {
+  it('renames and deletes a category, and adds a template’s categories', () => {
+    window.localStorage.clear();
+    render(<Harness initial={sorting()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Sort' }));
+    const session = () => sortingSessions(latest!)[0]!;
+    const names = () => sortCategories(latest!, session().id).map((one) => one.name);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rename Dialogue' }));
+    const box = screen.getByLabelText('New name for Dialogue');
+    fireEvent.change(box, { target: { value: 'Lines' } });
+    fireEvent.keyDown(box, { key: 'Enter' });
+    expect(names()).toContain('Lines');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Lines' }));
+    fireEvent.click(within(screen.getByRole('alertdialog', { name: 'Delete Lines?' })).getByRole('button', { name: 'Delete' }));
+    expect(names()).not.toContain('Lines');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use template' }));
+    const panel = screen.getByRole('region', { name: 'Category templates' });
+    fireEvent.click(within(panel).getByRole('button', { name: /^Screenplay/ }));
+    expect(names()).toEqual(expect.arrayContaining(['Character', 'Setting', 'Dialogue', 'Plot']));
+    expect(names().filter((one) => one === 'Character')).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use template' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save these categories as a template…' }));
+    const name = screen.getByLabelText('Name this template');
+    fireEvent.change(name, { target: { value: 'My villains' } });
+    fireEvent.keyDown(name, { key: 'Enter' });
+    expect(within(screen.getByRole('region', { name: 'Category templates' })).getByRole('button', { name: /^My villains/ })).toBeTruthy();
   });
 });

@@ -16,6 +16,10 @@ import {
   passageOf,
   piecesOf,
   progressOf,
+  applyCategoryTemplate,
+  builtInTemplates,
+  templateFromSession,
+  type CategoryTemplate,
   archiveSortedSources,
   sourceFullySorted,
   referenceCard,
@@ -1075,6 +1079,10 @@ function SortTab({
   const [range, setRange] = useState<{ from: number; to: number } | null>(null);
   const [over, setOver] = useState<string | null>(null);
   const [naming, setNaming] = useState(false);
+  /** The category being renamed, and the one being asked about deleting (from Ken, 11 November). */
+  const [renamingCat, setRenamingCat] = useState<string | null>(null);
+  const [deletingCat, setDeletingCat] = useState<string | null>(null);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
   /**
    * Which folder is open. **Nothing is stored** — which drawer you have in
    * front of you is about this minute, addendum 20 §9h's rail — and only one
@@ -1443,12 +1451,37 @@ function SortTab({
             />
           ) : (
             where === 'folders' ? (
-              <button type="button" className="tool" onClick={() => setNaming(true)}>
-                + Category
-              </button>
+              <span className="ns-cat-tools">
+                <button type="button" className="tool" onClick={() => setNaming(true)}>
+                  + Category
+                </button>
+                <button
+                  type="button"
+                  className="tool"
+                  aria-expanded={templatesOpen}
+                  onClick={() => setTemplatesOpen(!templatesOpen)}
+                >
+                  Use template
+                </button>
+              </span>
             ) : null
           )}
         </div>
+
+        {templatesOpen && where === 'folders' ? (
+          <TemplatePanel
+            file={file}
+            sessionId={session.id}
+            onApply={(template) => {
+              const added = applyCategoryTemplate(file, session.id, template).added;
+              onUpdate((current) => applyCategoryTemplate(current, session.id, template).file);
+              onSay(added === 0 ? `Every category in ${template.name} is here already.` : `Added the categories from ${template.name}.`);
+              setTemplatesOpen(false);
+            }}
+            onSay={onSay}
+            onClose={() => setTemplatesOpen(false)}
+          />
+        ) : null}
 
         {where === 'folders' && categories.length === 0 ? (
           <p className="muted small">
@@ -1578,9 +1611,72 @@ function SortTab({
                         {open ? '▾' : '▸'}
                       </span>
                       <span className="ns-dot" />
-                      {one.name}
+                      {renamingCat === (one.id as string) ? null : one.name}
                       <span className="muted small">{held.length}</span>
                     </button>
+                    {renamingCat === (one.id as string) ? (
+                      <input
+                        className="ns-cat-rename"
+                        autoFocus
+                        defaultValue={one.name}
+                        aria-label={`New name for ${one.name}`}
+                        onBlur={() => setRenamingCat(null)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Escape') setRenamingCat(null);
+                          if (event.key !== 'Enter') return;
+                          const name = event.currentTarget.value.trim();
+                          if (name) onUpdate((current) => updateResearchCategory(current, one.id, { name }));
+                          setRenamingCat(null);
+                        }}
+                      />
+                    ) : (
+                      <span className="ns-cat-edit">
+                        <button
+                          type="button"
+                          className="ghost small"
+                          aria-label={`Rename ${one.name}`}
+                          title="Rename"
+                          onClick={() => setRenamingCat(one.id as string)}
+                        >
+                          ✎
+                        </button>
+                        <button
+                          type="button"
+                          className="ghost small"
+                          aria-label={`Delete ${one.name}`}
+                          title="Delete — its notes go back to Unsorted"
+                          onClick={() => setDeletingCat(one.id as string)}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    )}
+                    {deletingCat === (one.id as string) ? (
+                      <div className="ns-cat-confirm" role="alertdialog" aria-label={`Delete ${one.name}?`}>
+                        <span className="small">
+                          Delete {one.name}?{' '}
+                          {held.length > 0
+                            ? `Its ${held.length === 1 ? 'note goes' : `${held.length} notes go`} back to Unsorted; nothing is lost.`
+                            : 'Nothing is filed in it.'}
+                        </span>
+                        <button
+                          type="button"
+                          className="tool"
+                          onClick={() => {
+                            {
+                              const into = unsortedOf(file, session.id);
+                              if (into) onUpdate((current) => removeSortCategory(current, one.id, into.id));
+                            }
+                            setDeletingCat(null);
+                          }}
+                        >
+                          Delete
+                        </button>
+                        <button type="button" className="ghost small" onClick={() => setDeletingCat(null)}>
+                          Keep
+                        </button>
+                      </div>
+                    ) : null}
                     {open ? (
                       <div className="ns-folder-cards">
                         {held.length === 0 ? (
@@ -2907,5 +3003,100 @@ function SourcePicker({
         </div>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * **Use template** (from Ken, 11 November). The categories each kind of
+ * project starts with, your own saved sets, and saving this sitting's
+ * categories as a new one. Your templates are kept on this computer, for every
+ * project. Using one adds the categories that are missing; those already here
+ * stay, with what is filed in them.
+ */
+function TemplatePanel({
+  file,
+  sessionId,
+  onApply,
+  onSay,
+  onClose,
+}: {
+  file: ProjectFile;
+  sessionId: NoteSource['sessionId'];
+  onApply(template: CategoryTemplate): void;
+  onSay(message: string): void;
+  onClose(): void;
+}) {
+  const [mine, setMine] = usePreference<CategoryTemplate[]>('sorterTemplates', []);
+  const [saving, setSaving] = useState(false);
+  const built = useMemo(() => builtInTemplates(), []);
+  const row = (template: CategoryTemplate, own: boolean) => (
+    <li key={`${own ? 'mine' : 'built'}:${template.name}`} className="ns-template">
+      <button
+        type="button"
+        className="ns-template-use"
+        title={template.categories.map((one) => one.name).join(', ')}
+        onClick={() => onApply(template)}
+      >
+        <strong>{template.name}</strong>
+        <span className="muted small">{template.categories.map((one) => one.name).join(' · ')}</span>
+      </button>
+      {own ? (
+        <button
+          type="button"
+          className="ghost small"
+          aria-label={`Delete the template ${template.name}`}
+          title="Delete this template"
+          onClick={() => setMine(mine.filter((one) => one.name !== template.name))}
+        >
+          ×
+        </button>
+      ) : null}
+    </li>
+  );
+  return (
+    <section className="ns-templates" aria-label="Category templates">
+      <header className="ns-templates-head">
+        <h4>Use a template</h4>
+        <button type="button" className="ghost small" aria-label="Close the templates" onClick={onClose}>
+          ×
+        </button>
+      </header>
+      <p className="muted small">Adds the template&rsquo;s categories that are not here yet. Those already here stay, with their notes.</p>
+      {mine.length > 0 ? (
+        <>
+          <h5>Your templates</h5>
+          <ul>{mine.map((one) => row(one, true))}</ul>
+        </>
+      ) : null}
+      <h5>For each kind of project</h5>
+      <ul>{built.map((one) => row(one, false))}</ul>
+      {saving ? (
+        <input
+          autoFocus
+          className="ns-template-name"
+          placeholder="Name this template"
+          aria-label="Name this template"
+          onBlur={() => setSaving(false)}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') setSaving(false);
+            if (event.key !== 'Enter') return;
+            const name = event.currentTarget.value.trim();
+            if (!name) return;
+            const made = templateFromSession(file, sessionId, name);
+            if (made.categories.length === 0) {
+              onSay('There are no categories to save yet.');
+            } else {
+              setMine([...mine.filter((one) => one.name !== made.name), made]);
+              onSay(`Saved ${made.name} as a template.`);
+            }
+            setSaving(false);
+          }}
+        />
+      ) : (
+        <button type="button" className="tool" onClick={() => setSaving(true)}>
+          Save these categories as a template…
+        </button>
+      )}
+    </section>
   );
 }

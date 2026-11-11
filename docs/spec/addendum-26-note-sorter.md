@@ -905,3 +905,27 @@ and sorted.*
   into **Archive — fully sorted** at its foot, folded by default, greyed and
   struck through, reading *Archived*. It can still be opened. A search shows
   matching archived sources too.
+
+## Editing the categories, and templates (November 2026)
+
+From Ken, 11 November: *you can add a category, but you need to be able to
+edit or delete a category also. And there needs to be an ability to save the
+categories as a template. So next to the plus category button, there needs to
+be another button that says use template. We can have templates for
+screenplays, episodes, instructional books, etc. And then you can make your
+own personal templates.*
+
+- **✎ and ×** on every category in Sort. ✎ renames it in place (Enter keeps,
+  Escape leaves it). × asks first — *Delete Example? Its 3 notes go back to
+  Unsorted; nothing is lost* — and then `removeSortCategory` does exactly
+  that.
+- **Use template**, beside **+ Category**, opens a menu over the categories:
+  - **For each kind of project** (`builtInTemplates`): each format's standard
+    categories, *Screenplay*, *Series or episodic*, *Novel*, *Instructional
+    book* and the rest, with the categories named under each.
+  - **Your templates**: saved with **Save these categories as a template…**
+    (`templateFromSession`), kept on this computer for every project, each
+    with × to delete it.
+  - Using one (`applyCategoryTemplate`) adds the categories that are missing,
+    with their colours and descriptions; those already there stay, with what
+    is filed in them.

@@ -24116,3 +24116,24 @@ input.note-rewrite-title:focus { border-color: var(--gold); outline: none; }
 .ns-src-option.archived .ns-src-name { text-decoration: line-through; text-decoration-thickness: 1px; }
 .ns-src-archive-head { margin-top: 6px; border-top: 1px solid var(--border); padding-top: 4px; }
 .ns-src-archive-toggle { width: 100%; padding: 6px 10px; background: none; border: 0; color: var(--text); font-size: 12px; font-weight: 600; text-align: left; box-shadow: none; text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* Sort's categories: rename and delete on each, and templates (from Ken, 11 November). */
+.ns-cat-tools { display: inline-flex; gap: 6px; }
+.ns-room .ns-folder { position: relative; }
+.ns-cat-edit { position: absolute; top: 4px; right: 6px; display: inline-flex; gap: 2px; opacity: 0.85; }
+.ns-cat-edit button { padding: 1px 6px; font-size: 12px; }
+.ns-cat-rename { position: absolute; top: 4px; left: 44px; right: 8px; padding: 3px 6px; background: var(--ink); border: 1px solid var(--gold); border-radius: 3px; color: var(--text); }
+.ns-cat-confirm { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 6px 10px 8px; border-top: 1px solid var(--border); }
+.ns-templates { margin: 6px 0 10px; padding: 10px 12px; border: 1px solid var(--gold-deep); border-radius: 6px; background: var(--panel); max-height: 60vh; overflow-y: auto; }
+.ns-templates-head { display: flex; align-items: center; justify-content: space-between; }
+.ns-templates h4 { margin: 0; }
+.ns-templates h5 { margin: 10px 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text); }
+.ns-templates ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.ns-template { display: flex; align-items: stretch; gap: 4px; }
+.ns-template-use { flex: 1 1 auto; display: grid; gap: 2px; padding: 6px 9px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 4px; color: var(--text); text-align: left; box-shadow: none; }
+.ns-template-use:hover { border-color: var(--gold); }
+.ns-template-name { width: 100%; margin-top: 8px; padding: 6px 8px; background: var(--ink); border: 1px solid var(--gold); border-radius: 4px; color: var(--text); }
+.ns-templates > .tool { margin-top: 10px; }
+/* The template menu floats over the categories rather than squeezing them. */
+.ns-room .ns-stacks { position: relative; }
+.ns-room .ns-templates { position: absolute; z-index: 30; top: 44px; left: 10px; right: 10px; margin: 0; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5); }
