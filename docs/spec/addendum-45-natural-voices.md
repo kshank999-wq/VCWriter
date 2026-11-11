@@ -101,17 +101,29 @@ needs either a legal opinion that this use is acceptable, or a replacement:
 The interface (`phonemesOf` in the engine) is one function, so the swap
 touches nothing else.
 
-**Decision (Ken, 11 November): keep eSpeak NG for now, and take legal advice
-before VC Writer is sold.** The voices themselves are not the question:
-Kokoro's model and voice files are Apache 2.0, free for commercial use with
-no licence to buy. The question is only the eSpeak NG code inside
-`phonemizer`. Under the GPL, distributing a program that includes GPL code
-can oblige you to offer that program's own source under the GPL too; whether
-that reaches VC Writer depends on how closely the two are combined (here it
-runs in its own worker process, which may count as a separate program, or may
-not). That is a judgement for a lawyer, not a setting, so it is settled before
-paid release: either an opinion that this use is acceptable as it stands, or
-the lexicon replacement above.
+**Decision (Ken, 11 November): keep eSpeak NG.** No commercial licence for
+it can be bought: it has many authors and is offered only under the GPL. Ken
+weighed the replacement above (misaki's lexicons, slightly weaker on unusual
+names) against the risk, judged the risk low, and keeps eSpeak NG without
+seeking legal advice. The replacement stays the way out if that ever changes:
+it is one function.
+
+**Open-source credits.** What the GPL and the other licences ask for in any
+case is done:
+
+- `apps/desktop/scripts/credits.mjs` walks every package the installer
+  carries (the main process's dependencies and what the renderer bundles) and
+  writes `apps/desktop/licenses/THIRD-PARTY-NOTICES.txt`, with each package's
+  licence text, `licenses/GPL-3.0.txt`, and `apps/web/src/lib/credits.json`.
+  Things that are not npm packages — eSpeak NG, the Kokoro voices, the
+  spelling dictionary, the thesaurus — are listed by hand in it.
+- electron-builder copies `licenses/` into the installed program as
+  `resources/licenses`.
+- **Help → Open-source credits** opens vc-writer.com/credits, linked from
+  the site footer too, which names eSpeak NG and where its source is.
+- `src/main/__tests__/credits.test.ts` runs the script with `--check`, so a
+  dependency change that is not re-credited fails the tests. Run
+  `node scripts/credits.mjs` in `apps/desktop` to bring it up to date.
 
 ## 5. More voices from elsewhere
 

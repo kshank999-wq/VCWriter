@@ -86,7 +86,8 @@ export type CommandId =
   | 'help.guide'
   | 'help.guides'
   | 'help.spec'
-  | 'help.about';
+  | 'help.about'
+  | 'help.credits';
 
 export interface MenuItem {
   command: CommandId;
@@ -296,6 +297,7 @@ export const menusFor = (format: ProjectFormat | null): readonly Menu[] => {
       null,
       { command: 'help.spec', label: 'What this build does' },
       { command: 'help.about', label: 'About VC Writer' },
+      { command: 'help.credits', label: 'Open-source credits' },
     ],
   },
   ];
@@ -367,6 +369,7 @@ const DOCUMENT_MENUS: readonly Menu[] = [
       null,
       { command: 'help.spec', label: 'What this build does' },
       { command: 'help.about', label: 'About VC Writer' },
+      { command: 'help.credits', label: 'Open-source credits' },
     ],
   },
 ];

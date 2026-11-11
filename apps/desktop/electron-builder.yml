@@ -25,6 +25,12 @@ files:
 # The natural voices' engine (addendum 45) is a native library. It has to sit
 # outside the app archive to load, and the package carries a build for every
 # platform, so each installer keeps only its own (about 35 MB rather than 250).
+# The open-source credits and licence texts (addendum 45 §4), written by
+# scripts/credits.mjs, ride along beside the program as resources/licenses.
+extraResources:
+  - from: licenses
+    to: licenses
+
 asarUnpack:
   - '**/node_modules/onnxruntime-node/**'
 

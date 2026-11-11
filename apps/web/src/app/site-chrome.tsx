@@ -68,7 +68,7 @@ export async function SiteChrome({ children }: { children: React.ReactNode }) {
                 the phone app links straight to them (addendum 27 §15) — these
                 are the same two documents, reachable from the site as well,
                 because a page only the app can reach is one nobody finds. */}
-            <Link href="/help">Help</Link> · <Link href="/privacy">Privacy</Link> · <Link href="/terms">Terms</Link> ·{' '}
+            <Link href="/help">Help</Link> · <Link href="/privacy">Privacy</Link> · <Link href="/terms">Terms</Link> · <Link href="/credits">Credits</Link> ·{' '}
             <a href="https://vc-software.com/support">Support</a>
           </p>
           {/* The company page above every VC app, as vc-gamestudio.com and

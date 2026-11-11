@@ -1,0 +1,642 @@
+[
+  {
+    "name": "eSpeak NG",
+    "version": "(inside phonemizer 1.2.1)",
+    "licence": "GPL-3.0-or-later",
+    "url": "https://github.com/espeak-ng/espeak-ng",
+    "note": "Turns words into speech sounds for the natural voices. It is included in the phonemizer package, compiled to WebAssembly. Its source code is at https://github.com/espeak-ng/espeak-ng, and the build used is at https://github.com/xenova/phonemizer.js. The full licence is in GPL-3.0.txt beside this file."
+  },
+  {
+    "name": "Kokoro-82M voices",
+    "version": "v1.0",
+    "licence": "Apache-2.0",
+    "url": "https://huggingface.co/hexgrad/Kokoro-82M",
+    "note": "The natural voices. Downloaded on request, not shipped in the installer. ONNX conversion by onnx-community (https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX). Text preparation ported from kokoro-js (Apache-2.0)."
+  },
+  {
+    "name": "en_US Hunspell dictionary (SCOWL)",
+    "version": "2020.12.07",
+    "licence": "MIT AND BSD-style",
+    "url": "http://wordlist.aspell.net",
+    "note": "The spelling dictionary."
+  },
+  {
+    "name": "Moby Thesaurus II",
+    "version": "Project Gutenberg #3202",
+    "licence": "Public domain",
+    "url": "https://www.gutenberg.org/ebooks/3202",
+    "note": "The thesaurus, by Grady Ward."
+  },
+  {
+    "name": "@isaacs/fs-minipass",
+    "version": "4.0.1",
+    "licence": "ISC",
+    "url": "https://github.com/npm/fs-minipass"
+  },
+  {
+    "name": "@supabase/auth-js",
+    "version": "2.115.0",
+    "licence": "MIT",
+    "url": "https://github.com/supabase/supabase-js/tree/master/packages/core/auth-js"
+  },
+  {
+    "name": "@supabase/functions-js",
+    "version": "2.115.0",
+    "licence": "MIT",
+    "url": "https://github.com/supabase/supabase-js/tree/master/packages/core/functions-js"
+  },
+  {
+    "name": "@supabase/phoenix",
+    "version": "0.4.5",
+    "licence": "MIT",
+    "url": "https://github.com/supabase/phoenix"
+  },
+  {
+    "name": "@supabase/postgrest-js",
+    "version": "2.115.0",
+    "licence": "MIT",
+    "url": "https://github.com/supabase/supabase-js/tree/master/packages/core/postgrest-js"
+  },
+  {
+    "name": "@supabase/realtime-js",
+    "version": "2.115.0",
+    "licence": "MIT",
+    "url": "https://github.com/supabase/supabase-js/tree/master/packages/core/realtime-js"
+  },
+  {
+    "name": "@supabase/storage-js",
+    "version": "2.115.0",
+    "licence": "MIT",
+    "url": "https://github.com/supabase/supabase-js/tree/master/packages/core/storage-js"
+  },
+  {
+    "name": "@supabase/supabase-js",
+    "version": "2.115.0",
+    "licence": "MIT",
+    "url": "https://github.com/supabase/supabase-js/tree/master/packages/core/supabase-js"
+  },
+  {
+    "name": "@tiptap/core",
+    "version": "3.31.4",
+    "licence": "MIT",
+    "url": "https://tiptap.dev"
+  },
+  {
+    "name": "@tiptap/extension-blockquote",
+    "version": "3.31.4",
+    "licence": "MIT",
+    "url": "https://tiptap.dev"
+  },
+  {
+    "name": "@tiptap/extension-bold",
+    "version": "3.31.4",
+    "licence": "MIT",
+    "url": "https://tiptap.dev"
+  },
+  {
+    "name": "@tiptap/extension-bullet-list",
+    "version": "3.31.4",
+    "licence": "MIT",
+    "url": "https://tiptap.dev"
+  },
+  {
+    "name": "@tiptap/extension-code",
+    "version": "3.31.4",
+    "licence": "MIT",
+    "url": "https://tiptap.dev"
+  },
+  {
+    "name": "@tiptap/extension-code-block",
+    "version": "3.31.4",
+    "licence": "MIT",
+    "url": "https://tiptap.dev"
+  },
+  {
+    "name": "@tiptap/extension-document",
+    "version": "3.31.4",
+    "licence": "MIT",
+    "url": "https://tiptap.dev"
+  },
+  {
+    "name": "@tiptap/extension-dropcursor",
+    "version": "3.31.4",
+    "licence": "MIT",
+    "url": "https://tiptap.dev"
+  },
+  {
+    "name": "@tiptap/extension-gapcursor",
+    "version": "3.31.4",
+    "licence": "MIT",
+    "url": "https://tiptap.dev"
+  },
+  {
+    "name": "@tiptap/extension-hard-break",
+    "version": "3.31.4",
+    "licence": "MIT",
+    "url": "https://tiptap.dev"
+  },
+  {
+    "name": "@tiptap/extension-heading",
+    "version": "3.31.4",
+    "licence": "MIT",
+    "url": "https://tiptap.dev"
+  },
+  {
+    "name": "@tiptap/extension-highlight",
+    "version": "3.31.4",
+    "licence": "MIT",
+    "url": "https://tiptap.dev"
+  },
+  {
+    "name": "@tiptap/extension-horizontal-rule",
+    "version": "3.31.4",
+    "licence": "MIT",
+    "url": "https://tiptap.dev"
+  },
+  {
+    "name": "@tiptap/extension-image",
+    "version": "3.31.4",
+    "licence": "MIT",
+    "url": "https://tiptap.dev"
+  },
+  {
+    "name": "@tiptap/extension-italic",
+    "version": "3.31.4",
+    "licence": "MIT",
+    "url": "https://tiptap.dev"
+  },
+  {
+    "name": "@tiptap/extension-link",
+    "version": "3.31.4",
+    "licence": "MIT",
+    "url": "https://tiptap.dev"
+  },
+  {
+    "name": "@tiptap/extension-list",
+    "version": "3.31.4",
+    "licence": "MIT",
+    "url": "https://tiptap.dev"
+  },
+  {
+    "name": "@tiptap/extension-list-item",
+    "version": "3.31.4",
+    "licence": "MIT",
+    "url": "https://tiptap.dev"
+  },
+  {
+    "name": "@tiptap/extension-list-keymap",
+    "version": "3.31.4",
+    "licence": "MIT",
+    "url": "https://tiptap.dev"
+  },
+  {
+    "name": "@tiptap/extension-ordered-list",
+    "version": "3.31.4",
+    "licence": "MIT",
+    "url": "https://tiptap.dev"
+  },
+  {
+    "name": "@tiptap/extension-paragraph",
+    "version": "3.31.4",
+    "licence": "MIT",
+    "url": "https://tiptap.dev"
+  },
+  {
+    "name": "@tiptap/extension-strike",
+    "version": "3.31.4",
+    "licence": "MIT",
+    "url": "https://tiptap.dev"
+  },
+  {
+    "name": "@tiptap/extension-subscript",
+    "version": "3.31.4",
+    "licence": "MIT",
+    "url": "https://tiptap.dev"
+  },
+  {
+    "name": "@tiptap/extension-superscript",
+    "version": "3.31.4",
+    "licence": "MIT",
+    "url": "https://tiptap.dev"
+  },
+  {
+    "name": "@tiptap/extension-table",
+    "version": "3.31.4",
+    "licence": "MIT",
+    "url": "https://tiptap.dev"
+  },
+  {
+    "name": "@tiptap/extension-text",
+    "version": "3.31.4",
+    "licence": "MIT",
+    "url": "https://tiptap.dev"
+  },
+  {
+    "name": "@tiptap/extension-text-align",
+    "version": "3.31.4",
+    "licence": "MIT",
+    "url": "https://tiptap.dev"
+  },
+  {
+    "name": "@tiptap/extension-text-style",
+    "version": "3.31.4",
+    "licence": "MIT",
+    "url": "https://tiptap.dev"
+  },
+  {
+    "name": "@tiptap/extension-underline",
+    "version": "3.31.4",
+    "licence": "MIT",
+    "url": "https://tiptap.dev"
+  },
+  {
+    "name": "@tiptap/extensions",
+    "version": "3.31.4",
+    "licence": "MIT",
+    "url": "https://tiptap.dev"
+  },
+  {
+    "name": "@tiptap/pm",
+    "version": "3.31.4",
+    "licence": "MIT",
+    "url": "https://tiptap.dev"
+  },
+  {
+    "name": "@tiptap/react",
+    "version": "3.31.4",
+    "licence": "MIT",
+    "url": "https://tiptap.dev"
+  },
+  {
+    "name": "@tiptap/starter-kit",
+    "version": "3.31.4",
+    "licence": "MIT",
+    "url": "https://tiptap.dev"
+  },
+  {
+    "name": "@types/use-sync-external-store",
+    "version": "0.0.6",
+    "licence": "MIT",
+    "url": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/use-sync-external-store"
+  },
+  {
+    "name": "boolean",
+    "version": "3.2.0",
+    "licence": "MIT",
+    "url": "https://github.com/thenativeweb/boolean"
+  },
+  {
+    "name": "chownr",
+    "version": "3.0.0",
+    "licence": "BlueOak-1.0.0",
+    "url": "https://github.com/isaacs/chownr"
+  },
+  {
+    "name": "define-data-property",
+    "version": "1.1.4",
+    "licence": "MIT",
+    "url": "https://github.com/ljharb/define-data-property#readme"
+  },
+  {
+    "name": "define-properties",
+    "version": "1.2.1",
+    "licence": "MIT",
+    "url": "https://github.com/ljharb/define-properties"
+  },
+  {
+    "name": "detect-node",
+    "version": "2.1.0",
+    "licence": "MIT",
+    "url": "https://github.com/iliakan/detect-node"
+  },
+  {
+    "name": "electron",
+    "version": "33.4.11",
+    "licence": "MIT",
+    "url": "https://github.com/electron/electron"
+  },
+  {
+    "name": "es-define-property",
+    "version": "1.0.1",
+    "licence": "MIT",
+    "url": "https://github.com/ljharb/es-define-property#readme"
+  },
+  {
+    "name": "es-errors",
+    "version": "1.3.0",
+    "licence": "MIT",
+    "url": "https://github.com/ljharb/es-errors#readme"
+  },
+  {
+    "name": "es6-error",
+    "version": "4.1.1",
+    "licence": "MIT",
+    "url": "https://github.com/bjyoungblood/es6-error"
+  },
+  {
+    "name": "escape-string-regexp",
+    "version": "4.0.0",
+    "licence": "MIT",
+    "url": "sindresorhus/escape-string-regexp"
+  },
+  {
+    "name": "fast-equals",
+    "version": "5.4.5",
+    "licence": "MIT",
+    "url": "https://github.com/planttheidea/fast-equals#readme"
+  },
+  {
+    "name": "global-agent",
+    "version": "3.0.0",
+    "licence": "BSD-3-Clause",
+    "url": "https://github.com/gajus/global-agent"
+  },
+  {
+    "name": "globalthis",
+    "version": "1.0.4",
+    "licence": "MIT",
+    "url": "https://github.com/ljharb/System.global"
+  },
+  {
+    "name": "gopd",
+    "version": "1.2.0",
+    "licence": "MIT",
+    "url": "https://github.com/ljharb/gopd#readme"
+  },
+  {
+    "name": "has-property-descriptors",
+    "version": "1.0.2",
+    "licence": "MIT",
+    "url": "https://github.com/inspect-js/has-property-descriptors#readme"
+  },
+  {
+    "name": "iceberg-js",
+    "version": "0.8.1",
+    "licence": "MIT",
+    "url": "https://github.com/supabase/iceberg-js#readme"
+  },
+  {
+    "name": "is-buffer",
+    "version": "2.0.5",
+    "licence": "MIT",
+    "url": "https://github.com/feross/is-buffer"
+  },
+  {
+    "name": "js-tokens",
+    "version": "4.0.0",
+    "licence": "MIT",
+    "url": "lydell/js-tokens"
+  },
+  {
+    "name": "json-stringify-safe",
+    "version": "5.0.1",
+    "licence": "ISC",
+    "url": "https://github.com/isaacs/json-stringify-safe"
+  },
+  {
+    "name": "linkifyjs",
+    "version": "4.3.3",
+    "licence": "MIT",
+    "url": "https://linkify.js.org"
+  },
+  {
+    "name": "loose-envify",
+    "version": "1.4.0",
+    "licence": "MIT",
+    "url": "https://github.com/zertosh/loose-envify"
+  },
+  {
+    "name": "matcher",
+    "version": "3.0.0",
+    "licence": "MIT",
+    "url": "sindresorhus/matcher"
+  },
+  {
+    "name": "minipass",
+    "version": "7.1.3",
+    "licence": "BlueOak-1.0.0",
+    "url": "https://github.com/isaacs/minipass"
+  },
+  {
+    "name": "minizlib",
+    "version": "3.1.0",
+    "licence": "MIT",
+    "url": "https://github.com/isaacs/minizlib"
+  },
+  {
+    "name": "nspell",
+    "version": "2.1.5",
+    "licence": "MIT",
+    "url": "wooorm/nspell"
+  },
+  {
+    "name": "object-keys",
+    "version": "1.1.1",
+    "licence": "MIT",
+    "url": "https://github.com/ljharb/object-keys"
+  },
+  {
+    "name": "onnxruntime-common",
+    "version": "1.21.0",
+    "licence": "MIT",
+    "url": "https://github.com/Microsoft/onnxruntime"
+  },
+  {
+    "name": "onnxruntime-node",
+    "version": "1.21.0",
+    "licence": "MIT",
+    "url": "https://github.com/Microsoft/onnxruntime"
+  },
+  {
+    "name": "orderedmap",
+    "version": "2.1.1",
+    "licence": "MIT",
+    "url": "https://github.com/marijnh/orderedmap#readme"
+  },
+  {
+    "name": "pdfjs-dist",
+    "version": "6.3.289",
+    "licence": "Apache-2.0",
+    "url": "https://mozilla.github.io/pdf.js/"
+  },
+  {
+    "name": "phonemizer",
+    "version": "1.2.1",
+    "licence": "Apache-2.0",
+    "url": "https://github.com/xenova/phonemizer.js#readme"
+  },
+  {
+    "name": "prosemirror-changeset",
+    "version": "2.4.4",
+    "licence": "MIT",
+    "url": "https://code.haverbeke.berlin/prosemirror/prosemirror-changeset"
+  },
+  {
+    "name": "prosemirror-commands",
+    "version": "1.7.2",
+    "licence": "MIT",
+    "url": "https://code.haverbeke.berlin/prosemirror/prosemirror-commands"
+  },
+  {
+    "name": "prosemirror-dropcursor",
+    "version": "1.8.4",
+    "licence": "MIT",
+    "url": "https://code.haverbeke.berlin/prosemirror/prosemirror-dropcursor"
+  },
+  {
+    "name": "prosemirror-gapcursor",
+    "version": "1.4.1",
+    "licence": "MIT",
+    "url": "https://github.com/prosemirror/prosemirror-gapcursor"
+  },
+  {
+    "name": "prosemirror-history",
+    "version": "1.5.1",
+    "licence": "MIT",
+    "url": "https://code.haverbeke.berlin/prosemirror/prosemirror-history"
+  },
+  {
+    "name": "prosemirror-inputrules",
+    "version": "1.5.1",
+    "licence": "MIT",
+    "url": "https://github.com/prosemirror/prosemirror-inputrules"
+  },
+  {
+    "name": "prosemirror-keymap",
+    "version": "1.2.3",
+    "licence": "MIT",
+    "url": "https://github.com/prosemirror/prosemirror-keymap"
+  },
+  {
+    "name": "prosemirror-model",
+    "version": "1.25.12",
+    "licence": "MIT",
+    "url": "https://code.haverbeke.berlin/prosemirror/prosemirror-model"
+  },
+  {
+    "name": "prosemirror-schema-list",
+    "version": "1.5.1",
+    "licence": "MIT",
+    "url": "https://github.com/prosemirror/prosemirror-schema-list"
+  },
+  {
+    "name": "prosemirror-state",
+    "version": "1.4.4",
+    "licence": "MIT",
+    "url": "https://github.com/prosemirror/prosemirror-state"
+  },
+  {
+    "name": "prosemirror-tables",
+    "version": "1.8.5",
+    "licence": "MIT",
+    "url": "https://github.com/ProseMirror/prosemirror-tables"
+  },
+  {
+    "name": "prosemirror-transform",
+    "version": "1.12.2",
+    "licence": "MIT",
+    "url": "https://code.haverbeke.berlin/prosemirror/prosemirror-transform"
+  },
+  {
+    "name": "prosemirror-view",
+    "version": "1.42.6",
+    "licence": "MIT",
+    "url": "https://code.haverbeke.berlin/prosemirror/prosemirror-view"
+  },
+  {
+    "name": "react",
+    "version": "18.3.1",
+    "licence": "MIT",
+    "url": "https://reactjs.org/"
+  },
+  {
+    "name": "react-dom",
+    "version": "18.3.1",
+    "licence": "MIT",
+    "url": "https://reactjs.org/"
+  },
+  {
+    "name": "roarr",
+    "version": "2.15.4",
+    "licence": "BSD-3-Clause",
+    "url": "git@github.com:gajus/roarr"
+  },
+  {
+    "name": "rope-sequence",
+    "version": "1.3.4",
+    "licence": "MIT",
+    "url": "https://github.com/marijnh/rope-sequence"
+  },
+  {
+    "name": "scheduler",
+    "version": "0.23.2",
+    "licence": "MIT",
+    "url": "https://reactjs.org/"
+  },
+  {
+    "name": "semver",
+    "version": "7.8.5",
+    "licence": "ISC",
+    "url": "https://github.com/npm/node-semver"
+  },
+  {
+    "name": "semver-compare",
+    "version": "1.0.0",
+    "licence": "MIT",
+    "url": "https://github.com/substack/semver-compare"
+  },
+  {
+    "name": "serialize-error",
+    "version": "7.0.1",
+    "licence": "MIT",
+    "url": "sindresorhus/serialize-error"
+  },
+  {
+    "name": "sprintf-js",
+    "version": "1.1.3",
+    "licence": "BSD-3-Clause",
+    "url": "https://github.com/alexei/sprintf.js"
+  },
+  {
+    "name": "tar",
+    "version": "7.5.22",
+    "licence": "BlueOak-1.0.0",
+    "url": "https://github.com/isaacs/node-tar"
+  },
+  {
+    "name": "tslib",
+    "version": "2.8.1",
+    "licence": "0BSD",
+    "url": "https://www.typescriptlang.org/"
+  },
+  {
+    "name": "type-fest",
+    "version": "0.13.1",
+    "licence": "(MIT OR CC0-1.0)",
+    "url": "sindresorhus/type-fest"
+  },
+  {
+    "name": "use-sync-external-store",
+    "version": "1.7.0",
+    "licence": "MIT",
+    "url": "https://github.com/react/react"
+  },
+  {
+    "name": "w3c-keyname",
+    "version": "2.2.8",
+    "licence": "MIT",
+    "url": "https://github.com/marijnh/w3c-keyname#readme"
+  },
+  {
+    "name": "yallist",
+    "version": "5.0.0",
+    "licence": "BlueOak-1.0.0",
+    "url": "https://github.com/isaacs/yallist"
+  },
+  {
+    "name": "zod",
+    "version": "3.25.76",
+    "licence": "MIT",
+    "url": "https://zod.dev"
+  }
+]

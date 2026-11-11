@@ -3668,3 +3668,7 @@ dialog.walkthrough::backdrop { background: rgba(0, 0, 0, 0.72); }
 .tk-priority-urgent { color: #111; background: #f97316; }
 /* Episodes in a series room (addendum 07 §36). */
 .tk-ep { font-size: 10.5px; font-weight: 700; padding: 0 5px; border-radius: 3px; border: 1px solid var(--border); color: var(--gold); white-space: nowrap; }
+
+/* Open-source credits (addendum 45 §4). */
+.credits-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.credits-table th, .credits-table td { text-align: left; padding: 0.3rem 0.6rem 0.3rem 0; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }

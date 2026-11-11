@@ -44,7 +44,7 @@ import {
 } from '@vcwriter/domain';
 import { DocumentWorkspace } from './document/DocumentWorkspace';
 import { documentCommands } from './document/document-commands';
-import { guideFor, openGuide } from './help-links';
+import { guideFor, openCredits, openGuide } from './help-links';
 import { useProject } from './use-project';
 import { useBuildStanding } from './use-build-standing';
 import { useWritingAccess } from './use-writing-access';
@@ -1015,6 +1015,8 @@ export default function App() {
           );
         case 'help.guides':
           return openGuide(null);
+        case 'help.credits':
+          return openCredits();
         case 'help.spec':
         case 'help.about':
           return setPreferencesOpen(true);

@@ -73,3 +73,13 @@ export const guideUrl = (slug: string | null): string => (slug ? `${HELP_BASE}/$
 export const openGuide = (slug: string | null): void => {
   window.open(guideUrl(slug), '_blank', 'noopener');
 };
+
+/**
+ * The open-source credits (addendum 45 §4). The same list, with every licence
+ * text, ships inside the installer as licenses/THIRD-PARTY-NOTICES.txt.
+ */
+export const CREDITS_URL = 'https://vc-writer.com/credits';
+
+export const openCredits = (): void => {
+  window.open(CREDITS_URL, '_blank', 'noopener');
+};
