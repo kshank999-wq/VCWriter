@@ -3,9 +3,12 @@ import { useCallback, useEffect, useState } from 'react';
 /**
  * Natural voices in the renderer (addendum 45): whether they are installed,
  * installing them with progress, and playing what the main process
- * generates. The bridge is absent in the browser preview, where read-back
- * keeps to the browser's own voices.
+ * generates. The bridge is absent in the browser preview, where nothing is
+ * read aloud: VC Writer reads only in its natural voices (§8).
  */
+
+/** Said when the voices are installed or removed, so every module's controls agree at once. */
+const CHANGED = 'vcw-natural-voices-changed';
 interface Clip {
   samples: Float32Array;
   sampleRate: number;
@@ -44,11 +47,15 @@ export function useNaturalVoices(): NaturalVoicesState {
 
   useEffect(() => {
     let live = true;
-    void bridge?.status().then((result) => {
-      if (live && result.ok && result.data) setInstalled(result.data.installed);
-    });
+    const check = () =>
+      void bridge?.status().then((result) => {
+        if (live && result.ok && result.data) setInstalled(result.data.installed);
+      });
+    check();
+    window.addEventListener(CHANGED, check);
     return () => {
       live = false;
+      window.removeEventListener(CHANGED, check);
     };
   }, [bridge]);
 
@@ -60,12 +67,14 @@ export function useNaturalVoices(): NaturalVoicesState {
     setProgress(null);
     if (result.ok && result.data) setInstalled(result.data.installed);
     else setError(result.error ?? 'The voices could not be downloaded.');
+    window.dispatchEvent(new Event(CHANGED));
   }, [bridge]);
 
   const remove = useCallback(async () => {
     if (!bridge) return;
     const result = await bridge.remove();
     if (result.ok && result.data) setInstalled(result.data.installed);
+    window.dispatchEvent(new Event(CHANGED));
   }, [bridge]);
 
   return { available: Boolean(bridge), installed, progress, error, install, remove };

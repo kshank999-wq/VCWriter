@@ -151,6 +151,7 @@ export const GUIDES_FINISHING: Guide[] = [
         ],
         steps: [
           'Click **Read back** on the bottom bar, or choose **Editor ▸ Read back**.',
+          'The first time, click **Get natural voices** and wait for the download to finish (about 100 MB, once).',
           'Choose the current scene or **Whole project** from the list at the top.',
           'Click **Play**.',
           'Click **Stop** to stop, or **Close** to stop and put the box away.',
@@ -172,7 +173,7 @@ export const GUIDES_FINISHING: Guide[] = [
         heading: 'Voices for the narrator and each character',
         body: [
           'Action and description are read by the narrator. Each character can have a voice of their own, so a scene plays like a conversation. Anyone without a voice is read by the narrator.',
-          'The voices come from your computer. Where your computer has Daniel, the British male voice, he is the default.',
+          'VC Writer reads in its own natural voices: fourteen voices that sound like people, which run on your computer, work offline and send nothing anywhere. George, a British male, is the default narrator.',
         ],
         steps: [
           'Under **Voices**, choose a voice for **Narrator (action and description)**.',

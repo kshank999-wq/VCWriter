@@ -268,7 +268,7 @@ export const GUIDES_SCRIPTS: Guide[] = [
         heading: 'The board, and playing it',
         body: [
           'Under the sheet is the **Timeline**. Along the top is the board, one frame per shot, each as wide as the time it holds. Below it are the segments, with the dialogue stretched along its time. The sheet and the timeline are one thing seen twice: add or move a shot on the sheet and the timeline follows.',
-          'Press **▶ Play** at the top of the sheet to play the board like an animatic. The frames advance at their durations, a gold playhead runs along the timeline, and the audio is read aloud in the voices you have assigned. Narration uses the narrator’s voice. Press **■ Stop** to stop.',
+          'Press **▶ Play** at the top of the sheet to play the board like an animatic. The frames advance at their durations, a gold playhead runs along the timeline, and the audio is read aloud in the natural voices you have assigned. Narration uses the narrator’s voice. Until the natural voices are downloaded, the board plays silently and **Get natural voices** sits beside **▶ Play**. Press **■ Stop** to stop.',
         ],
         tip: 'The board holds each shot for the time you gave it, even if the voice has not finished. That is how you find out whether a thirty is really a thirty.',
       },

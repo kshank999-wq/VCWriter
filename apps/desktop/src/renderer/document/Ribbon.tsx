@@ -908,14 +908,24 @@ function ReviewTab({ view, onView, words, characters, speech, comments, changes 
           onPress={speech.dictate}
           wide
         />
-        <Tool
-          label={speech.reading ? 'Stop reading' : 'Read aloud'}
-          title="Hear the selection, or from the cursor to the end"
-          active={speech.reading}
-          disabled={!speech.canRead}
-          onPress={() => void speech.read()}
-          wide
-        />
+        {speech.canRead && !speech.voicesInstalled ? (
+          <Tool
+            label={speech.voicesProgress !== null ? `Downloading ${Math.round(speech.voicesProgress * 100)}%` : 'Get voices'}
+            title="Read aloud uses VC Writer's natural voices: download them once (about 100 MB, free, works offline)"
+            disabled={speech.voicesProgress !== null}
+            onPress={() => void speech.getVoices()}
+            wide
+          />
+        ) : (
+          <Tool
+            label={speech.reading ? 'Stop reading' : 'Read aloud'}
+            title={speech.canRead ? 'Hear the selection, or from the cursor to the end' : 'Reading aloud runs in the desktop app'}
+            active={speech.reading}
+            disabled={!speech.canRead}
+            onPress={() => void speech.read()}
+            wide
+          />
+        )}
         <select className="wp-select" aria-label="Reading speed" value={String(speech.rate)} onChange={(event) => speech.setRate(Number(event.target.value))}>
           {[0.75, 1, 1.25, 1.5, 2].map((rate) => (
             <option key={rate} value={String(rate)}>
@@ -925,7 +935,6 @@ function ReviewTab({ view, onView, words, characters, speech, comments, changes 
         </select>
         {speech.voices.length > 0 ? (
           <select className="wp-select voice" aria-label="Reading voice" value={speech.voiceId} onChange={(event) => speech.setVoiceId(event.target.value)}>
-            <option value="">The computer's voice</option>
             {speech.voices.map((voice) => (
               <option key={voice.id} value={voice.id}>
                 {voice.name}

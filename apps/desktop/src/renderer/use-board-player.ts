@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { shotAt, type BoardPlayback, type BoardShot } from '@vcwriter/domain';
+import { naturalVoiceFor, shotAt, type BoardPlayback, type BoardShot } from '@vcwriter/domain';
+import { NaturalPlayer, useNaturalVoices, type NaturalVoicesState } from './natural-voices';
 
 /**
  * Playing the board (addendum 05 §5).
  *
  * An animatic: the board's own clock runs, the frames change at the durations
  * the sheet says, and each shot's audio is read aloud in the voices already
- * assigned. Nothing is rendered — this is a way of *hearing* whether a thirty
+ * assigned, in the natural voices (addendum 45 §8). Nothing is rendered — this is a way of *hearing* whether a thirty
  * is a thirty.
  *
  * **The clock is the sheet's, not the speech synthesiser's.** A voice reads a
@@ -25,7 +26,9 @@ export interface BoardPlayer {
   shot: BoardShot | null;
   play(from?: number): void;
   stop(): void;
+  /** The board is heard: the natural voices are installed. Without them it plays silently. */
   supported: boolean;
+  natural: NaturalVoicesState;
 }
 
 export const useBoardPlayer = (playback: BoardPlayback): BoardPlayer => {
@@ -40,36 +43,51 @@ export const useBoardPlayer = (playback: BoardPlayback): BoardPlayer => {
   /** The board as it was when Play was pressed: editing mid-play must not lurch. */
   const board = useRef(playback);
 
-  const supported = typeof window !== 'undefined' && Boolean(window.speechSynthesis);
+  const natural = useNaturalVoices();
+  const supported = natural.installed;
+  const voice = useRef<NaturalPlayer | null>(null);
+  /** Bumped at every cut, so a shot's remaining lines stop when the next shot speaks. */
+  const turn = useRef(0);
+
+  const hush = useCallback(() => {
+    turn.current += 1;
+    voice.current?.stop();
+  }, []);
 
   const stop = useCallback(() => {
     if (frame.current !== null) cancelAnimationFrame(frame.current);
     frame.current = null;
-    try {
-      window.speechSynthesis?.cancel();
-    } catch {
-      // A synthesiser that will not stop is not a reason to leave the UI stuck.
-    }
+    hush();
     setPlaying(false);
     setElapsed(0);
-  }, []);
+  }, [hush]);
 
   // Never leave a voice talking to an empty room.
   useEffect(() => stop, [stop]);
 
-  const speak = useCallback((shot: BoardShot) => {
-    const synthesis = window.speechSynthesis;
-    if (!synthesis) return;
-    const available = synthesis.getVoices();
-
-    for (const line of shot.lines) {
-      const utterance = new SpeechSynthesisUtterance(line.text);
-      const match = line.voice ? available.find((voice) => voice.voiceURI === line.voice?.voiceId) : undefined;
-      if (match) utterance.voice = match;
-      utterance.rate = line.voice?.rate ?? 1;
-      synthesis.speak(utterance);
-    }
-  }, []);
+  const speak = useCallback(
+    (shot: BoardShot) => {
+      if (!supported) return;
+      voice.current ??= new NaturalPlayer();
+      const player = voice.current;
+      const mine = turn.current;
+      // The shot's lines in order; the next is generated while one is heard.
+      void (async () => {
+        for (const [position, line] of shot.lines.entries()) {
+          if (turn.current !== mine) return;
+          const now = player.play(line.text, naturalVoiceFor(line.voice), line.voice?.rate ?? 1);
+          const next = shot.lines[position + 1];
+          if (next) void player.prepare(next.text, naturalVoiceFor(next.voice), next.voice?.rate ?? 1).catch(() => undefined);
+          try {
+            await now;
+          } catch {
+            // A line that could not be made is skipped; the board keeps its clock.
+          }
+        }
+      })();
+    },
+    [supported],
+  );
 
   const play = useCallback(
     (at = 0) => {
@@ -81,11 +99,7 @@ export const useBoardPlayer = (playback: BoardPlayback): BoardPlayer => {
       setPlaying(true);
       setElapsed(at);
 
-      try {
-        window.speechSynthesis?.cancel();
-      } catch {
-        // As above: an unwilling synthesiser plays silently rather than not at all.
-      }
+      hush();
 
       const tick = () => {
         const now = from.current + (performance.now() - startedAt.current) / 1000;
@@ -102,11 +116,7 @@ export const useBoardPlayer = (playback: BoardPlayback): BoardPlayer => {
         if (here && now >= here.saidAt && !said.current.has(here.beatId as string)) {
           said.current.add(here.beatId as string);
           // The previous shot's read is over the moment this one speaks.
-          try {
-            window.speechSynthesis?.cancel();
-          } catch {
-            /* see above */
-          }
+          hush();
           speak(here);
         }
 
@@ -116,7 +126,7 @@ export const useBoardPlayer = (playback: BoardPlayback): BoardPlayer => {
       if (frame.current !== null) cancelAnimationFrame(frame.current);
       frame.current = requestAnimationFrame(tick);
     },
-    [playback, speak, stop],
+    [playback, speak, stop, hush],
   );
 
   return {
@@ -126,5 +136,6 @@ export const useBoardPlayer = (playback: BoardPlayback): BoardPlayer => {
     play,
     stop,
     supported,
+    natural,
   };
 };

@@ -1,4 +1,6 @@
 import type { VoiceDescriptor } from './voice.js';
+import type { ProjectFile } from './project-file.js';
+import type { VoiceAssignment } from './entities/project.js';
 
 /**
  * Natural voices for read-back (spec §10; addendum 45).
@@ -262,4 +264,39 @@ export const wordAtFraction = (text: string, fraction: number): { from: number; 
     point -= weight;
   }
   return words[words.length - 1] ?? null;
+};
+
+// ------------------------------------------------- natural voices everywhere
+
+/**
+ * The natural voice to read in for an assignment (addendum 45 §8): its own
+ * where it is a natural voice, and otherwise the default. From Ken,
+ * 11 November: *put Kokoro in every module and take out the computer's
+ * voices* — a voice chosen among the computer's own before then is read by
+ * the default natural voice rather than not at all.
+ */
+export const naturalVoiceFor = (
+  assignment: Pick<VoiceAssignment, 'providerId' | 'voiceId'> | null | undefined,
+  fallback: string = DEFAULT_NATURAL_VOICE,
+): string =>
+  assignment && assignment.providerId === NATURAL_PROVIDER && naturalVoiceById(assignment.voiceId) ? assignment.voiceId : fallback;
+
+/**
+ * The project as read-back sees it: voices that are not natural voices left
+ * unchosen, so the narrator default reads them, *Suggest a cast* fills them,
+ * and the pickers show them as not yet chosen. The project itself is not
+ * changed until the writer picks a voice.
+ */
+export const withNaturalVoicesOnly = (file: ProjectFile): ProjectFile => {
+  const keep = (voice: VoiceAssignment | null | undefined): VoiceAssignment | null =>
+    voice && voice.providerId === NATURAL_PROVIDER ? voice : null;
+  const narrator = keep(file.settings.narratorVoice);
+  const foreign =
+    narrator !== (file.settings.narratorVoice ?? null) || file.characters.some((one) => one.voice && keep(one.voice) === null);
+  if (!foreign) return file;
+  return {
+    ...file,
+    settings: { ...file.settings, narratorVoice: narrator },
+    characters: file.characters.map((one) => (one.voice && keep(one.voice) === null ? { ...one, voice: null } : one)),
+  };
 };

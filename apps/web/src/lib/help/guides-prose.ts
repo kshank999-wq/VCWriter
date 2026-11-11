@@ -274,7 +274,7 @@ export const GUIDES_PROSE: Guide[] = [
         heading: 'Word files, PDF, and your voice',
         body: [
           'To bring in a Word or text file, open **File** on the ribbon and press **Insert a file…** — its words go in at the cursor, with headings, emphasis and pictures kept. To send the document out, the same tab has **Word (.docx)**, **PDF** and **Plain text**, beside **Print…**.',
-          'On **Review**, **Dictate** types what you say at the cursor, and **Read aloud** reads the selection, or from the cursor to the end, in the voice and speed you choose. Press either again to stop.',
+          'On **Review**, **Dictate** types what you say at the cursor, and **Read aloud** reads the selection, or from the cursor to the end, in the voice and speed you choose. Press either again to stop. The first time, **Get voices** downloads VC Writer’s natural voices (about 100 MB, once).',
         ],
       },
       {

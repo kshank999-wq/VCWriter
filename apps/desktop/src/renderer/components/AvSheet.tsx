@@ -26,6 +26,7 @@ import {
 } from '@vcwriter/domain';
 import { frameFrom, mediaFrom } from '../frames';
 import { useBoardPlayer } from '../use-board-player';
+import { NaturalVoicesBox } from './NaturalVoicesBox';
 
 /**
  * The AV sheet (addendum 05 §2), and the place the work happens (§8 stage 2).
@@ -143,13 +144,14 @@ export function AvSheet({ file, onUpdate, onOpenRow, readOnly = false, onPlayhea
                 title={
                   player.supported
                     ? 'Play the board: the frames advance and the audio is read aloud'
-                    : 'This build has no speech synthesis, so the board plays silently'
+                    : 'Without the natural voices the board plays silently'
                 }
                 onClick={() => player.play(0)}
               >
                 ▶ Play
               </button>
             )}
+            {!player.supported && !player.playing ? <NaturalVoicesBox natural={player.natural} compact /> : null}
             {player.playing ? (
               <span className="av-elapsed" role="status">
                 {formatRt(player.elapsed)}

@@ -310,22 +310,19 @@ describe('final editor panel', () => {
 });
 
 describe('read back panel', () => {
-  const voices = [
-    { voiceURI: 'v-daniel', name: 'Daniel', lang: 'en-GB' },
-    { voiceURI: 'v-samantha', name: 'Samantha', lang: 'en-US' },
-  ];
-
+  // Read back reads only in the natural voices (addendum 45 §8).
   beforeEach(() => {
-    Object.defineProperty(window, 'speechSynthesis', {
-      configurable: true,
-      value: {
-        getVoices: () => voices,
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-        speak: vi.fn(),
-        cancel: vi.fn(),
+    (window as unknown as { vcwriter: unknown }).vcwriter = {
+      naturalVoices: {
+        status: async () => ({ ok: true, data: { installed: true, installing: false } }),
+        install: async () => ({ ok: true, data: { installed: true, installing: false } }),
+        remove: async () => ({ ok: true, data: { installed: false, installing: false } }),
+        speak: async () => ({ ok: true, data: { samples: new Float32Array(10), sampleRate: 24000 } }),
       },
-    });
+    };
+  });
+  afterEach(() => {
+    delete (window as unknown as { vcwriter?: unknown }).vcwriter;
   });
 
   function ReadBackHarness({ initial }: { initial: ProjectFile }) {
@@ -364,12 +361,29 @@ describe('read back panel', () => {
     });
   };
 
-  it('offers the system voices, described where they are known', () => {
+  it('offers the natural voices, described, and none of the computer’s own', async () => {
     render(<ReadBackHarness initial={withCast()} />);
 
+    await screen.findByText('Natural voices are installed.');
     const picker = screen.getByLabelText('Voice for Marisol');
-    expect(within(picker).getByText(/Daniel · British · male/)).toBeDefined();
-    expect(within(picker).getByText(/Samantha · American · female/)).toBeDefined();
+    expect(within(picker).getByText(/George \(natural\) · British · male/)).toBeDefined();
+    expect(within(picker).getByText(/Heart \(natural\) · American · female/)).toBeDefined();
+    expect(within(picker).queryByText(/Daniel/)).toBeNull();
+  });
+
+  it('treats a voice chosen among the computer’s own as not chosen', async () => {
+    const file = withCast();
+    const old = {
+      ...file,
+      characters: file.characters.map((one) => ({
+        ...one,
+        voice: { providerId: 'system', voiceId: 'v-daniel', displayName: 'Daniel', accent: null, rate: 1, pitch: 0 },
+      })),
+    };
+    render(<ReadBackHarness initial={old} />);
+    await screen.findByText('Natural voices are installed.');
+    expect((screen.getByLabelText('Voice for Marisol') as HTMLSelectElement).value).toBe('');
+    expect(screen.getByText(/Marisol has no voice yet/)).toBeDefined();
   });
 
   it('says which characters have no voice yet rather than silently narrating them', () => {
@@ -377,16 +391,18 @@ describe('read back panel', () => {
     expect(screen.getByText(/Marisol has no voice yet/)).toBeDefined();
   });
 
-  it('assigns a voice and stops warning about it', () => {
+  it('assigns a voice and stops warning about it', async () => {
     render(<ReadBackHarness initial={withCast()} />);
+    await screen.findByText('Natural voices are installed.');
 
-    fireEvent.change(screen.getByLabelText('Voice for Marisol'), { target: { value: 'v-samantha' } });
+    fireEvent.change(screen.getByLabelText('Voice for Marisol'), { target: { value: 'af_heart' } });
 
     expect(screen.queryByText(/has no voice yet/)).toBeNull();
   });
 
-  it('fills the whole cast in one click', () => {
+  it('fills the whole cast in one click', async () => {
     render(<ReadBackHarness initial={withCast()} />);
+    await screen.findByText('Natural voices are installed.');
 
     fireEvent.click(screen.getByRole('button', { name: /suggest a cast/i }));
 

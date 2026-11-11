@@ -100,3 +100,32 @@ describe('the word being spoken', () => {
     expect(wordAtFraction('   ', 0.5)).toBeNull();
   });
 });
+
+describe('natural voices everywhere (addendum 45 §8)', () => {
+  it('reads a natural choice in its own voice, and anything else in the default', async () => {
+    const d = await import('../index.js');
+    expect(d.naturalVoiceFor({ providerId: 'natural', voiceId: 'af_heart' })).toBe('af_heart');
+    expect(d.naturalVoiceFor({ providerId: 'system', voiceId: 'Daniel' })).toBe('bm_george');
+    expect(d.naturalVoiceFor({ providerId: 'natural', voiceId: 'nobody' })).toBe('bm_george');
+    expect(d.naturalVoiceFor(null, 'bf_emma')).toBe('bf_emma');
+  });
+
+  it('leaves voices that are not natural unchosen, and a file without any untouched', async () => {
+    const d = await import('../index.js');
+    const file = d.createProjectFile({ title: 'Voices', format: 'screenplay' });
+    expect(d.withNaturalVoicesOnly(file)).toBe(file);
+    const system = { providerId: 'system', voiceId: 'Daniel', displayName: 'Daniel', accent: null, rate: 1, pitch: 0 };
+    const heart = { providerId: 'natural', voiceId: 'af_heart', displayName: 'Heart', accent: null, rate: 1, pitch: 0 };
+    const mixed = {
+      ...file,
+      settings: { ...file.settings, narratorVoice: system },
+      characters: [
+        { ...(file.characters[0] ?? ({} as never)), id: 'c1', name: 'MARA', voice: heart },
+        { ...(file.characters[0] ?? ({} as never)), id: 'c2', name: 'JONAH', voice: system },
+      ],
+    } as unknown as typeof file;
+    const only = d.withNaturalVoicesOnly(mixed);
+    expect(only.settings.narratorVoice).toBeNull();
+    expect(only.characters.map((one) => one.voice?.voiceId ?? null)).toEqual(['af_heart', null]);
+  });
+});

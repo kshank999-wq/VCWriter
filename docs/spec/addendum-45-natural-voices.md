@@ -23,10 +23,10 @@ on the writer's own computer.
 - **Highlighting:** the word being read is lit as before. The model gives no
   word timings, so the highlight follows how far through the line's sound
   playback is, with each word weighted by its length (`wordAtFraction`).
-- **Fallback:** a natural voice on a computer without the voices installed
-  is read by the system voice, as is any line the natural voice fails on.
-- **Browser preview:** there is no natural-voices bridge, so nothing about
-  them shows and read-back uses the browser's voices.
+- **No system voices** (§8): until the voices are installed, nothing is
+  read; a line the voice fails on is skipped and the writer told.
+- **Browser preview:** there is no natural-voices bridge, so nothing is read
+  aloud there, and the panels say the voices run in the desktop app.
 
 ## 2. The model
 
@@ -83,8 +83,8 @@ pauses once it has started; the first line waits for the model to load
   library under `x64ArchFiles`, because both architectures already ship side
   by side.
 
-Not done in this test version: the Document workspace's *Read aloud* and the
-Sculptor's board player still use the system voices.
+The Document workspace's *Read aloud* and the board player use them too
+(§8).
 
 ## 4. To settle before release
 
@@ -169,3 +169,28 @@ says all the Google voices.*
   lists so the choice still shows.
 - **In the browser preview**, which cannot run natural voices, the panel says
   they come with the desktop app.
+
+*Superseded by §8 on 11 November: the tick and the system voices are gone.*
+
+## 8. Natural voices in every module, and no system voices
+
+From Ken, 11 November: *put Kokoro in every module and take out the
+computer's natural voices.*
+
+- **Everywhere VC Writer reads aloud** — Read back, the Document
+  workspace's *Read aloud*, and the AV sheet's board player — it reads in the
+  natural voices and nothing else. The operating system's voices are no
+  longer listed or used anywhere in the desktop program.
+- **One download, offered in each place.** `NaturalVoicesBox` is the same
+  *Get natural voices* box in Read back and beside the board's ▶ Play; the
+  Document ribbon has **Get voices** where *Read aloud* will be. Installing
+  or removing in one place updates the others at once (a window event).
+- **Old choices.** A voice chosen among the computer's own before this is
+  treated as not chosen (`withNaturalVoicesOnly`, `naturalVoiceFor`): read
+  in the default, George, shown as unchosen in the pickers, and filled by
+  *Suggest a cast*. The project keeps the old assignment until the writer
+  picks another voice.
+- **Order.** Each player asks for the line it is about to play before the
+  next one, so generating ahead never holds up the line being heard.
+- **Not covered:** the phone app's *Read it back* and the website's Notes
+  page still use the device's own voices; Kokoro does not run there.

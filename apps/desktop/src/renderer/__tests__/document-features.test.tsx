@@ -130,38 +130,79 @@ describe('the view', () => {
 });
 
 describe('speech', () => {
-  it('reads aloud from the cursor, a paragraph at a time, choosing each as it is read', async () => {
+  it('reads aloud from the cursor in the natural voices, a paragraph at a time', async () => {
     const spoken: string[] = [];
     vi.stubGlobal(
-      'SpeechSynthesisUtterance',
+      'AudioContext',
       class {
-        onend: (() => void) | null = null;
-        onerror: (() => void) | null = null;
-        rate = 1;
-        voice: unknown = null;
-        constructor(public text: string) {}
+        currentTime = 0;
+        state = 'running';
+        destination = {};
+        resume = async () => undefined;
+        createBuffer(_c: number, length: number, rate: number) {
+          return { duration: length / rate, copyToChannel: () => undefined };
+        }
+        createBufferSource() {
+          const source: { buffer: unknown; onended: (() => void) | null; connect(): void; start(): void; stop(): void } = {
+            buffer: null,
+            onended: null,
+            connect: () => undefined,
+            start: () => setTimeout(() => source.onended?.(), 0),
+            stop: () => undefined,
+          };
+          return source;
+        }
       },
     );
-    vi.stubGlobal('speechSynthesis', {
-      getVoices: () => [],
-      addEventListener: () => undefined,
-      removeEventListener: () => undefined,
-      cancel: () => undefined,
-      speak: (utterance: { text: string; onend: () => void }) => {
-        spoken.push(utterance.text);
-        setTimeout(() => utterance.onend(), 0);
+    (window as unknown as { vcwriter: Record<string, unknown> }).vcwriter = {
+      ...((window as unknown as { vcwriter?: Record<string, unknown> }).vcwriter ?? {}),
+      naturalVoices: {
+        status: async () => ({ ok: true, data: { installed: true, installing: false } }),
+        install: async () => ({ ok: true, data: { installed: true, installing: false } }),
+        remove: async () => ({ ok: true, data: { installed: false, installing: false } }),
+        speak: async ({ text, voice }: { text: string; voice: string }) => {
+          if (voice === 'bm_george' && !spoken.includes(text)) spoken.push(text);
+          return { ok: true, data: { samples: new Float32Array(10), sampleRate: 24000 } };
+        },
       },
-    });
+    };
     open();
     act(() => {
       editorOf().commands.setTextSelection(3);
     });
     tab('Review');
     await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    await act(async () => {
       press('Read aloud');
-      await new Promise((resolve) => setTimeout(resolve, 20));
+      await new Promise((resolve) => setTimeout(resolve, 50));
     });
     expect(spoken).toEqual(['The ferry docks at noon.', 'She leaves before dawn.']);
+  });
+
+  it('offers the natural voices where they are not yet downloaded, and has no computer voices', async () => {
+    const install = vi.fn(async () => ({ ok: true, data: { installed: true, installing: false } }));
+    (window as unknown as { vcwriter: Record<string, unknown> }).vcwriter = {
+      ...((window as unknown as { vcwriter?: Record<string, unknown> }).vcwriter ?? {}),
+      naturalVoices: {
+        status: async () => ({ ok: true, data: { installed: false, installing: false } }),
+        install,
+        remove: async () => ({ ok: true, data: { installed: false, installing: false } }),
+        speak: async () => ({ ok: false, error: 'not installed' }),
+      },
+    };
+    open();
+    tab('Review');
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    await act(async () => {
+      press('Get voices');
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(install).toHaveBeenCalledOnce();
+    expect(screen.queryByText("The computer's voice")).toBeNull();
   });
 
   it('types what is dictated at the cursor', () => {

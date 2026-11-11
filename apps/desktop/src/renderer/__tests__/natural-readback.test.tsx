@@ -7,7 +7,7 @@ import { ReadBackPanel } from '../components/ReadBackPanel';
 /**
  * Natural voices in read-back (addendum 45): offered for download where the
  * desktop app can run them, listed first once installed, and used to read —
- * George narrating by default — with the system voices as the fallback.
+ * George narrating by default. The computer's own voices are not used (§8).
  */
 afterEach(() => {
   cleanup();
@@ -87,26 +87,25 @@ describe('natural voices in read-back', () => {
     await waitFor(() => expect((screen.getByRole('button', { name: 'Play' }) as HTMLButtonElement).disabled).toBe(false));
   });
 
-  it('says where natural voices are to be had where the build cannot run them, and offers no download', () => {
+  it('says where natural voices are to be had where the build cannot run them, and cannot play', () => {
     render(<ReadBackPanel file={scene()} currentUnitId={null} onUpdate={() => undefined} />);
-    expect(screen.getByText(/come with the VC Writer desktop app/)).toBeTruthy();
+    expect(screen.getByText(/run in the desktop app/)).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Get natural voices' })).toBeNull();
+    expect((screen.getByRole('button', { name: 'Play' }) as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it('lists only the natural voices once installed, the computer’s own a tick away', async () => {
-    bridge(true);
-    vi.stubGlobal('speechSynthesis', {
-      getVoices: () => [{ voiceURI: 'google-us', name: 'Google US English', lang: 'en-US' }],
-      addEventListener: () => undefined,
-      removeEventListener: () => undefined,
-      cancel: () => undefined,
-    });
-    render(<ReadBackPanel file={scene()} currentUnitId={null} onUpdate={() => undefined} />);
+  it('never lists the computer’s own voices, and reads an old choice of one in George', async () => {
+    vi.stubGlobal('AudioContext', InstantAudio);
+    const { speak } = bridge(true);
+    const base = scene();
+    const file = { ...base, settings: { ...base.settings, narratorVoice: { providerId: 'system', voiceId: 'google-us', displayName: 'Google US English', accent: null, rate: 1, pitch: 0 } } };
+    render(<ReadBackPanel file={file} currentUnitId={file.units[0]!.id} onUpdate={() => undefined} />);
     await screen.findByText('Natural voices are installed.');
-    const names = () => [...(screen.getByLabelText('Narrator voice') as HTMLSelectElement).options].map((one) => one.textContent ?? '');
-    expect(names().some((name) => name.includes('Google'))).toBe(false);
-    expect(names().some((name) => name.includes('Heart (natural)'))).toBe(true);
-    fireEvent.click(screen.getByLabelText(/Also list this computer/));
-    expect(names().some((name) => name.includes('Google'))).toBe(true);
+    const names = [...(screen.getByLabelText('Narrator voice') as HTMLSelectElement).options].map((one) => one.textContent ?? '');
+    expect(names.some((name) => name.includes('Google'))).toBe(false);
+    expect(names.some((name) => name.includes('Heart (natural)'))).toBe(true);
+    expect(screen.queryByLabelText(/Also list this computer/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+    await waitFor(() => expect(speak).toHaveBeenCalledWith({ text: 'Barbra runs.', voice: 'bm_george', speed: 1 }));
   });
 });

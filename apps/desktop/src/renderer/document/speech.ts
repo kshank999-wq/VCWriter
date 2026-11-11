@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Editor } from '@tiptap/core';
+import { DEFAULT_NATURAL_VOICE, naturalVoiceDescriptors } from '@vcwriter/domain';
 import { startDictation, systemDictationKey, type DictationSession } from '../dictation';
+import { NaturalPlayer, useNaturalVoices } from '../natural-voices';
 
 /**
  * **Dictate and read aloud** in a document (addendum 42 §15).
@@ -10,8 +12,8 @@ import { startDictation, systemDictationKey, type DictationSession } from '../di
  * service the writer is told which keys start the operating system's
  * dictation, which types into the page as it does into any field.
  *
- * Reading aloud is the operating system's voices, as the Script's read-back
- * is: from the selection, or from the cursor to the end, one paragraph at a
+ * Reading aloud is in the natural voices, as the Script's read-back is
+ * (addendum 45 §8), never the operating system's: from the selection, or from the cursor to the end, one paragraph at a
  * time with the paragraph being read selected, so the writer can follow it
  * and stop where they want to change something.
  */
@@ -95,32 +97,22 @@ export function useDocumentSpeech(editor: Editor | null, onSay: (message: string
   }, [editor, onSay, stopDictating]);
 
   // ------------------------------------------------------------ reading aloud
-  const synthesis = typeof window !== 'undefined' ? window.speechSynthesis : undefined;
+  const natural = useNaturalVoices();
+  const player = useRef<NaturalPlayer | null>(null);
   const [reading, setReading] = useState(false);
   const [rate, setRate] = useState(1);
-  const [voices, setVoices] = useState<Voice[]>([]);
-  const [voiceId, setVoiceId] = useState<string>('');
+  const voices: Voice[] = useMemo(
+    () => (natural.installed ? naturalVoiceDescriptors().map((voice) => ({ id: voice.id, name: `${voice.name.replace(' (natural)', '')} · ${voice.accent} ${voice.gender}` })) : []),
+    [natural.installed],
+  );
+  const [voiceId, setVoiceId] = useState<string>(DEFAULT_NATURAL_VOICE);
   const cancelled = useRef(false);
-
-  useEffect(() => {
-    if (!synthesis) return;
-    const load = () =>
-      setVoices(
-        synthesis
-          .getVoices()
-          .map((voice) => ({ id: voice.voiceURI, name: `${voice.name} (${voice.lang})` }))
-          .sort((a, b) => a.name.localeCompare(b.name)),
-      );
-    load();
-    synthesis.addEventListener?.('voiceschanged', load);
-    return () => synthesis.removeEventListener?.('voiceschanged', load);
-  }, [synthesis]);
 
   const stopReading = useCallback(() => {
     cancelled.current = true;
-    synthesis?.cancel();
+    player.current?.stop();
     setReading(false);
-  }, [synthesis]);
+  }, []);
 
   const read = useCallback(async () => {
     if (!editor) return;
@@ -128,8 +120,8 @@ export function useDocumentSpeech(editor: Editor | null, onSay: (message: string
       stopReading();
       return;
     }
-    if (!synthesis) {
-      onSay('This computer has no voices to read with.');
+    if (!natural.installed) {
+      onSay(natural.available ? 'Get the natural voices first: Get voices, beside Read aloud.' : 'Reading aloud runs in the desktop app.');
       return;
     }
     const paragraphs = paragraphsToRead(editor);
@@ -139,31 +131,31 @@ export function useDocumentSpeech(editor: Editor | null, onSay: (message: string
     }
     cancelled.current = false;
     setReading(true);
-    const voice = synthesis.getVoices().find((one) => one.voiceURI === voiceId);
-    for (const paragraph of paragraphs) {
+    player.current ??= new NaturalPlayer();
+    for (const [position, paragraph] of paragraphs.entries()) {
       if (cancelled.current) break;
       editor.chain().setTextSelection({ from: paragraph.from, to: paragraph.to }).scrollIntoView().run();
-      await new Promise<void>((resolve) => {
-        const utterance = new SpeechSynthesisUtterance(paragraph.text);
-        if (voice) utterance.voice = voice;
-        utterance.rate = rate;
-        utterance.onend = () => resolve();
-        // An error must not stall the reading: the next paragraph is still read.
-        utterance.onerror = () => resolve();
-        synthesis.speak(utterance);
-      });
+      // The next paragraph is generated while this one is heard.
+      const now = player.current.play(paragraph.text, voiceId, rate);
+      const next = paragraphs[position + 1];
+      if (next) void player.current.prepare(next.text, voiceId, rate).catch(() => undefined);
+      try {
+        await now;
+      } catch {
+        // A paragraph the voice could not make must not stall the reading.
+      }
     }
     setReading(false);
-  }, [editor, reading, synthesis, voiceId, rate, onSay, stopReading]);
+  }, [editor, reading, natural.installed, natural.available, voiceId, rate, onSay, stopReading]);
 
   // Never leave a voice talking, or a microphone open, after the document closes.
   useEffect(
     () => () => {
       cancelled.current = true;
-      synthesis?.cancel();
+      player.current?.stop();
       session.current?.stop();
     },
-    [synthesis],
+    [],
   );
 
   return {
@@ -172,7 +164,10 @@ export function useDocumentSpeech(editor: Editor | null, onSay: (message: string
     dictate,
     reading,
     read,
-    canRead: Boolean(synthesis),
+    canRead: natural.available,
+    voicesInstalled: natural.installed,
+    voicesProgress: natural.progress,
+    getVoices: natural.install,
     rate,
     setRate,
     voices,
