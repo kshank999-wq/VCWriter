@@ -310,8 +310,14 @@ export function StoryView({
 
   // A selection made in the tracks or the inspector brings the beat into view.
   // One made here — the cursor is already in it — must not yank the page.
+  /** A choice made by a click in this page: the track follows it, and the page stays put. */
+  const pickedHere = useRef(false);
   useEffect(() => {
     if (!selectedBeatId) return;
+    if (pickedHere.current) {
+      pickedHere.current = false;
+      return;
+    }
     const block = blocks.current.get(selectedBeatId);
     if (!block || block.contains(document.activeElement)) return;
     if (typeof block.scrollIntoView === 'function') block.scrollIntoView({ block: 'center' });
@@ -684,18 +690,38 @@ export function StoryView({
                   </div>
                 ) : null}
 
-                {display.sceneNames ? sceneHeader(unit) : null}
+                {/* **A section's heading chooses it** (from Ken, 11 November: *when
+                    you select a section or any part of text over there, it goes
+                    directly to the beat or the section in the track view*): its
+                    first subsection is chosen, and the track brings the section
+                    into view. */}
+                <div
+                  className="scene-heading-pick"
+                  onClick={() => {
+                    if (!beats[0]) return;
+                    pickedHere.current = beats[0].id !== selectedBeatId;
+                    onSelectBeat(beats[0].id);
+                  }}
+                >
+                  {display.sceneNames ? sceneHeader(unit) : null}
 
-                {headed ? (
-                  <BookHeadingLine
-                    heading={sectionHeading(file, unit, numbers)}
-                    untitled={`Untitled ${nouns.unit.toLowerCase()}`}
-                    onToggle={(shown) => onUpdate((current) => updateUnit(current, unit.id, { headingShown: shown }))}
-                  />
-                ) : null}
+                  {headed ? (
+                    <BookHeadingLine
+                      heading={sectionHeading(file, unit, numbers)}
+                      untitled={`Untitled ${nouns.unit.toLowerCase()}`}
+                      onToggle={(shown) => onUpdate((current) => updateUnit(current, unit.id, { headingShown: shown }))}
+                    />
+                  ) : null}
+                </div>
 
                 {beats.map((beat) => (
-                  <div key={beat.id}>
+                  <div
+                    key={beat.id}
+                    onMouseDown={() => {
+                      pickedHere.current = beat.id !== selectedBeatId;
+                      onSelectBeat(beat.id);
+                    }}
+                  >
                     {display.beatNames ? beatHeader(beat) : null}
                     {headed ? (
                       <BookHeadingLine

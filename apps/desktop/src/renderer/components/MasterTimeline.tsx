@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useMemo, useState } from 'react';
 import {
   defaultMarkerKind,
   markerNoun,
@@ -235,7 +235,9 @@ export function MasterTimeline({
    * about the window and nothing else can keep it (addendum 02 §4d).
    */
   const [across, setAcross] = useState(900);
+  const scrollNode = useRef<HTMLDivElement | null>(null);
   const scroller = useCallback((node: HTMLDivElement | null) => {
+    scrollNode.current = node;
     if (!node) return;
     const read = () => setAcross(node.clientWidth - HEAD_WIDTH - 96);
     read();
@@ -243,6 +245,32 @@ export function MasterTimeline({
     const watch = new ResizeObserver(read);
     watch.observe(node);
   }, []);
+
+  /**
+   * **The track goes to what is chosen** (from Ken, 11 November: *when you
+   * select a section or any part of text over there, it goes directly to the
+   * beat or the section in the track view, and vice versa*). A beat or a
+   * section chosen in the script, or anywhere else, is scrolled into the
+   * track's view — this scroller only, never the page around it — and nothing
+   * moves when it is already in sight.
+   */
+  useEffect(() => {
+    const node = scrollNode.current;
+    if (!node) return;
+    const target =
+      (selectedBeatId ? node.querySelector<HTMLElement>(`[data-beat="${selectedBeatId as string}"]`) : null) ??
+      (selectedUnitId ? node.querySelector<HTMLElement>(`[data-unit-block="${selectedUnitId as string}"]`) : null);
+    if (!target) return;
+    const view = node.getBoundingClientRect();
+    const box = target.getBoundingClientRect();
+    const left = view.left + HEAD_WIDTH;
+    if (box.left < left || box.right > view.right) {
+      node.scrollLeft += box.left - left - Math.max(0, (view.right - left - box.width) / 2);
+    }
+    if (box.top < view.top || box.bottom > view.bottom) {
+      node.scrollTop += box.top - view.top - Math.max(0, (view.height - box.height) / 2);
+    }
+  }, [selectedBeatId, selectedUnitId]);
 
   /**
    * **Beats build down and never wrap** (§4e, Ken's own words). They stacked
@@ -1288,6 +1316,7 @@ function TrackRow({
               markedUnits().includes(unit.id) ? ' marked' : ''
             }${dropClass(drag.dropTarget, unit.id)}`}
             style={{ borderTopColor: track.color }}
+            data-unit-block={unit.id}
             title={unit.inScript ? undefined : `Switched off: not in the script`}
             onDragOver={(event) => unitDragOver(event, unit.id)}
             onDragLeave={() => drag.clearHover(unit.id)}

@@ -3185,3 +3185,22 @@ book — where the scroll bar could not reach, so the top of the book was lost
 until the window was reopened. Both frames are `overflow: clip`, which draws
 the same and cannot be scrolled; measured again, the frame stays at 0 and the
 scroll bar alone moves.
+
+## The script and the track go to each other (November 2026)
+
+From Ken, 11 November: *when you select a section or any part of text over
+there, it goes directly to the beat or the section in the track view, and
+vice versa.*
+
+- **From the script:** a press anywhere in a subsection's writing chooses it,
+  and a press on a section's heading chooses its first subsection. The track
+  scrolls the chosen beat (or, failing that, its section block,
+  `data-unit-block`) into its view — that scroller only, never the page around
+  it — and moves nothing when it is already in sight. A section chosen on the
+  track earlier no longer overrides the beat chosen in the script. The script
+  itself stays put: a choice made by pressing in it does not re-centre it.
+- **From the track:** choosing a beat scrolls the script to it, as before.
+
+Driven in a 30-section book: pressing in section 27's words brought *Sub 27*
+into the track's view with the script still; choosing *Sub 3* on the track
+brought it into the script's.

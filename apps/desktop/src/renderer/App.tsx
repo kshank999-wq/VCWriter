@@ -1236,7 +1236,11 @@ export default function App() {
         file={file}
         layout={layout ?? undefined}
         selectedBeatId={selectedBeat?.id ?? null}
-        onSelectBeat={setSelectedBeatId}
+        // Chosen in the script: the track follows the beat, not a block chosen there before.
+        onSelectBeat={(beatId) => {
+          setSelectedBeatId(beatId);
+          setSelectedUnitId(null);
+        }}
         onUpdate={project.update}
         focusMode={false}
         focusTitleBeatId={focusTitleBeatId}
