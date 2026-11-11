@@ -24007,9 +24007,54 @@ input.note-rewrite-title:focus { border-color: var(--gold); outline: none; }
 .research-outline-hidden { flex: 0 0 auto; margin-left: 4px; padding: 0 5px; border-radius: 8px; font-size: 10.5px; font-weight: 700; border: 1px solid var(--gold-deep); color: var(--text); }
 
 /* Back to the notes (addendum 28 §7): from the outline column, the "Filed here" pane, or by dragging onto the list. */
-.research-outline-notes li { display: flex; align-items: center; gap: 2px; }
-.research-outline-notes li > .research-outline-note { flex: 1 1 auto; min-width: 0; }
-.research-outline-back { flex: 0 0 auto; border: 0; background: none; color: var(--gold); cursor: pointer; padding: 0 4px; font-size: 13px; }
+/* **Each note in its own box** (from Ken, 11 November: *make those look
+   separate, like they're in a separate box … the notes are surrounded by a
+   box*). The box is the list item, so the note and its ↩ sit inside one
+   clear border, with room between one note and the next. */
+.research-outline-notes { display: grid; gap: 6px; padding-top: 4px; padding-bottom: 4px; }
+.research-outline-notes li {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  border: 1.5px solid var(--gold-deep);
+  border-left-width: 4px;
+  border-radius: 5px;
+  background: var(--panel);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+.research-outline-notes li:has(.research-outline-note.waiting) { border-left-color: #e3b62e; }
+.research-outline-notes li:has(.research-outline-note.selected) { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold); }
+.research-outline-notes li > .research-outline-note {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  padding: 7px 22px 7px 9px;
+  border: 0;
+  border-radius: 0;
+  font-size: 12px;
+}
+.research-outline-notes li > .research-outline-note.used { opacity: 1; }
+.research-outline-back { flex: 0 0 auto; border: 0; border-left: 1px solid var(--border); background: var(--panel-2); color: var(--gold); cursor: pointer; padding: 0 8px; font-size: 13px; }
 .research-outline-back:hover { color: var(--gold-bright); }
 .folder-notes-back { margin-top: 6px; }
 .research-contents.taking-back { outline: 2px dashed var(--gold); outline-offset: -4px; }
+
+/* **Each note on the shelf in its own box** (from Ken, 11 November: *the
+   notes under research … I just want them to look more separate from each
+   other*). In the Outliner's and the Sculptor's Research column every note,
+   phone note and board card is a card with an edge and room around it. */
+.research-shelf .shelf-item {
+  margin: 0 10px 8px 14px;
+  padding: 8px 10px;
+  border: 1.5px solid var(--gold-deep);
+  border-left-width: 4px;
+  border-radius: 5px;
+  background: var(--panel-2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+.research-shelf .shelf-item:hover { border-color: var(--gold); background: var(--panel-2); }
+.research-shelf .shelf-item.revealed { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold); }
+.research-shelf .shelf-item.used { border-left-color: #3fae5a; }
+.research-shelf .shelf-card-title { color: var(--text); }
+.research-shelf .shelf-card-body { margin-top: 4px; }
