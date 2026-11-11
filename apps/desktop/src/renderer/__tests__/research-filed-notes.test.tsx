@@ -76,3 +76,50 @@ describe('a part of the outline in Research', () => {
     expect(latest!.units.find((unit) => unit.id === beat!.unitId)?.title).toBe('The cemetery');
   });
 });
+
+describe('folding the outline in Research like the Outliner (from Ken, 11 November)', () => {
+  it('keeps the fold on the outline row, so it lasts and the Outliner folds with it', async () => {
+    const { foldFolders } = await import('@vcwriter/domain');
+    let latest: ProjectFile | null = null;
+    function Harness() {
+      const [file, setFile] = useState(filed);
+      latest = file;
+      return (
+        <OutlineSidebar
+          file={file}
+          dragging={null}
+          selectedId={null}
+          onFile={() => undefined}
+          onDragNote={() => undefined}
+          onSelect={() => undefined}
+          onRewrite={() => undefined}
+          onHide={() => undefined}
+          onFold={(folders, collapsed) => setFile((current) => foldFolders(current, folders, collapsed))}
+        />
+      );
+    }
+    const first = render(<Harness />);
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse all' }));
+    expect(screen.queryByText('Johnny has the car keys')).toBeNull();
+    const row = latest!.outlines![0]!.items.find((item) => item.title === 'The cemetery')!;
+    expect(row.collapsed).toBe(true);
+
+    // Opened again from the same project: still folded.
+    first.unmount();
+    render(
+      <OutlineSidebar
+        file={latest!}
+        dragging={null}
+        selectedId={null}
+        onFile={() => undefined}
+        onDragNote={() => undefined}
+        onSelect={() => undefined}
+        onRewrite={() => undefined}
+        onHide={() => undefined}
+        onFold={() => undefined}
+      />,
+    );
+    expect(screen.queryByText('Johnny has the car keys')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Unfold The cemetery' })).toBeTruthy();
+  });
+});

@@ -948,6 +948,19 @@ sidebar now hides its sections and subsections too, not only its notes; each
 folder that holds anything shows ▸ or ▾; and **Collapse all** and **Expand
 all** sit beside the heading.
 
+**The same folds as the Outliner** (from Ken, 11 November: *I need the
+ability to collapse the outline in the research section, same functionality
+as in the outline page*). A folder that is a row of the outline now folds by
+the row's own `collapsed` (`folderFolded`, `foldFolders`), so:
+
+- folding a chapter in Research folds it in the Outliner, and the other way
+  round;
+- the fold is kept with the project, so Research opens folded as it was left;
+- a folded folder shows how many folders it hides, as an Outliner row does.
+
+A part of the book the outline has no row for keeps its fold in the column,
+for the session, as before.
+
 ## The title is retyped where the note opens (November 2026)
 
 From Ken: *when you open up a note in the research section, it needs to allow

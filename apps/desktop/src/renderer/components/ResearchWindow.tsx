@@ -71,6 +71,7 @@ import {
   fileNoteUnder,
   noteUsed,
   outlineFolders,
+  foldFolders,
   importFiles,
   type NotePlace,
 } from '@vcwriter/domain';
@@ -1707,6 +1708,7 @@ export function ResearchBody({
               setOpenFolderKey(folder.key);
               setSelectedItemId(null);
             }}
+            onFold={(folders, collapsed) => onUpdate((current) => foldFolders(current, folders, collapsed))}
           />
         ) : null}
 

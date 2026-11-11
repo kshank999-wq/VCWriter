@@ -95,7 +95,7 @@ export const GUIDES_PLANNING: Guide[] = [
       {
         heading: 'Sorting notes into the outline, importing, and the phone',
         body: [
-          'Beside every list of notes stands an **Outline** column, listing your outline’s chapters, sections and scenes in order. Drag a note onto one to sort it there: it leaves its folder and waits in *Sorted into the outline* until it is used. A sorted note shows yellow until its words reach the manuscript. Hide the column with › and bring it back with **‹ Outline**; **Collapse all** and **Expand all** fold it.',
+          'Beside every list of notes stands an **Outline** column, listing your outline’s chapters, sections and scenes in order. Drag a note onto one to sort it there: it leaves its folder and waits in *Sorted into the outline* until it is used. A sorted note shows yellow until its words reach the manuscript. Hide the column with › and bring it back with **‹ Outline**; **Collapse all** and **Expand all** fold it, as does the arrow on any folder. A fold here is the same fold as in the Outliner: folding a chapter in one folds it in the other, and it stays folded next time.',
           '**Import notes…** in the top bar brings in one file or many (text, Markdown or Word). Each file becomes a note, a Word document is split at its own headings, and they all land in the **Imported** folder as not yet used.',
           'Notes you catch on your phone arrive under **Mobile App**, on the **This project** tab. Press **File it there** to accept where the program suggests, **Move…** to correct the words or pick the folder yourself, or × to stop it waiting. You can also drag a phone note onto a folder, onto the outline column, or onto a person in the Character Creator list.',
         ],

@@ -261,3 +261,23 @@ describe('sorted, worked in, and in the manuscript (addendum 28 §10)', () => {
     expect(beat.manuscript.elements.map((element) => element.text)).toEqual(['Multiply it back.', 'It should match.']);
   });
 });
+
+describe('folding the outline beside the notes like the Outliner', () => {
+  it('keeps a folder’s fold on its outline row, so the Outliner folds with it', async () => {
+    const { folderFolded, foldFolders } = await import('../index.js');
+    const made = planned();
+    const folders = outlineFolders(made.file).filter((folder) => folder.fromOutline);
+    const chapter = folders.find((folder) => folder.title === 'Mathematics')!;
+    expect(folderFolded(made.file, chapter)).toBe(false);
+
+    const folded = foldFolders(made.file, [chapter], true);
+    expect(folderFolded(folded, chapter)).toBe(true);
+    const row = findOutline(folded, made.outlineId)!.items.find((item) => item.title === 'Mathematics')!;
+    expect(row.collapsed).toBe(true);
+
+    expect(folderFolded(foldFolders(folded, folders, false), chapter)).toBe(false);
+    // A part of the book with no outline row has nowhere to keep a fold.
+    expect(folderFolded(folded, { place: { kind: 'section', unitId: 'u' as never } })).toBeNull();
+    expect(foldFolders(folded, [{ place: { kind: 'section', unitId: 'u' as never } }], true)).toBe(folded);
+  });
+});

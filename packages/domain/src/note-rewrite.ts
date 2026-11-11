@@ -426,3 +426,40 @@ export const placeNoteText = (
   return { ok: true, file: current, elementIds: lines.map((one) => one.id) };
 };
 
+
+// ------------------------------------------------------- folding, shared
+
+/**
+ * Folding the outline beside the notes the way the Outliner folds it (from
+ * Ken, 11 November: *the ability to collapse the outline in the research
+ * section, same functionality as in the outline page*). A folder that is a
+ * row of the outline folds by the row's own `collapsed`, so folding it in
+ * Research folds it in the Outliner and the other way round, and it is kept
+ * with the project. A part of the book the outline lacks has no row to keep
+ * it on, and the column remembers it for the session only.
+ */
+const rowOf = (file: ProjectFile, folder: Pick<OutlineFolder, 'place'>) => {
+  if (folder.place.kind !== 'plan') return null;
+  const itemId = folder.place.itemId;
+  for (const outline of file.outlines ?? []) {
+    const item = outline.items.find((one) => one.id === itemId);
+    if (item) return { outline, item };
+  }
+  return null;
+};
+
+/** Whether a folder is folded on the outline itself; null where it has no row to say. */
+export const folderFolded = (file: ProjectFile, folder: Pick<OutlineFolder, 'place'>): boolean | null =>
+  rowOf(file, folder)?.item.collapsed ?? null;
+
+/** Fold or unfold folders that are rows of the outline; the others are left alone. */
+export const foldFolders = (
+  file: ProjectFile,
+  folders: ReadonlyArray<Pick<OutlineFolder, 'place'>>,
+  collapsed: boolean,
+): ProjectFile =>
+  folders.reduce((current, folder) => {
+    const found = rowOf(current, folder);
+    if (!found || found.item.collapsed === collapsed) return current;
+    return updateItem(current, found.outline.id, found.item.id, { collapsed });
+  }, file);

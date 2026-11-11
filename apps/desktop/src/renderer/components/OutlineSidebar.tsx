@@ -1,5 +1,5 @@
 import { useMemo, useState, type DragEvent } from 'react';
-import { noteUsed, outlineFolders, type NotePlace, type OutlineFolder, type ProjectFile, type ResearchItem, type ResearchItemId } from '@vcwriter/domain';
+import { folderFolded, noteUsed, outlineFolders, type NotePlace, type OutlineFolder, type ProjectFile, type ResearchItem, type ResearchItemId } from '@vcwriter/domain';
 
 /**
  * The outline beside the notes (addendum 28 §7).
@@ -35,6 +35,13 @@ export interface OutlineSidebarProps {
    * notes that were dropped in*). The arrow still folds; the name opens.
    */
   onOpenFolder?(folder: OutlineFolder): void;
+  /**
+   * Fold or unfold folders that are rows of the outline, on the outline itself,
+   * so the Outliner folds with them and the fold is kept with the project
+   * (from Ken, 11 November: *same functionality as in the outline page*).
+   * Absent, every fold is this column's own, for the session.
+   */
+  onFold?(folders: OutlineFolder[], collapsed: boolean): void;
 }
 
 const KIND_LABEL: Record<OutlineFolder['kind'], string> = {
@@ -53,9 +60,37 @@ const KIND_MARK: Record<OutlineFolder['kind'], string> = {
   heading: '▤',
 };
 
-export function OutlineSidebar({ file, dragging, selectedId, onFile, onDragNote, onSelect, onRewrite, onHide, openKey = null, onOpenFolder }: OutlineSidebarProps) {
+export function OutlineSidebar({ file, dragging, selectedId, onFile, onDragNote, onSelect, onRewrite, onHide, openKey = null, onOpenFolder, onFold }: OutlineSidebarProps) {
   const folders = useMemo(() => outlineFolders(file), [file]);
-  const [closed, setClosed] = useState<ReadonlySet<string>>(() => new Set());
+  /** Folds of folders with no outline row to keep them on (or all, without `onFold`). */
+  const [localClosed, setClosed] = useState<ReadonlySet<string>>(() => new Set());
+  const sharedFold = (folder: OutlineFolder): boolean | null => (onFold ? folderFolded(file, folder) : null);
+  const closed = useMemo(
+    () => new Set(folders.filter((folder) => sharedFold(folder) ?? localClosed.has(folder.key)).map((folder) => folder.key)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [folders, localClosed, file, onFold],
+  );
+  const foldable = (folder: OutlineFolder, index: number) =>
+    folder.notes.length > 0 || (folders[index + 1]?.depth ?? -1) > folder.depth;
+  const fold = (targets: OutlineFolder[], collapsed: boolean) => {
+    const shared = targets.filter((folder) => sharedFold(folder) !== null);
+    if (shared.length > 0) onFold?.(shared, collapsed);
+    const own = targets.filter((folder) => sharedFold(folder) === null).map((folder) => folder.key);
+    setClosed((current) => {
+      const next = new Set(current);
+      for (const key of own) {
+        if (collapsed) next.add(key);
+        else next.delete(key);
+      }
+      return next;
+    });
+  };
+  /** How many folders a folded one hides: everything deeper, up to the next at its level. */
+  const hiddenUnder = (index: number): number => {
+    let count = 0;
+    for (let at = index + 1; at < folders.length && folders[at]!.depth > folders[index]!.depth; at += 1) count += 1;
+    return count;
+  };
   const [over, setOver] = useState<string | null>(null);
   const droppable = dragging !== null && dragging.kind !== 'folder';
   const fromBook = folders.some((folder) => !folder.fromOutline) && folders.some((folder) => folder.fromOutline);
@@ -79,11 +114,11 @@ export function OutlineSidebar({ file, dragging, selectedId, onFile, onDragNote,
               type="button"
               className="ghost small"
               title="Fold every chapter, section and subsection"
-              onClick={() => setClosed(new Set(folders.filter((one, index) => (folders[index + 1]?.depth ?? -1) > one.depth || one.notes.length > 0).map((one) => one.key)))}
+              onClick={() => fold(folders.filter((one, index) => foldable(one, index)), true)}
             >
               Collapse all
             </button>
-            <button type="button" className="ghost small" title="Open every chapter, section and subsection" onClick={() => setClosed(new Set())}>
+            <button type="button" className="ghost small" title="Open every chapter, section and subsection" onClick={() => fold(folders, false)}>
               Expand all
             </button>
           </span>
@@ -139,14 +174,7 @@ export function OutlineSidebar({ file, dragging, selectedId, onFile, onDragNote,
                       aria-expanded={open}
                       aria-label={`${open ? 'Fold' : 'Unfold'} ${label}`}
                       disabled={!hasInside}
-                      onClick={() =>
-                        setClosed((current) => {
-                          const next = new Set(current);
-                          if (next.has(folder.key)) next.delete(folder.key);
-                          else next.add(folder.key);
-                          return next;
-                        })
-                      }
+                      onClick={() => fold([folder], open)}
                     >
                       <span className="research-outline-chevron" aria-hidden="true">
                         {hasInside ? (open ? '▾' : '▸') : ''}
@@ -163,6 +191,11 @@ export function OutlineSidebar({ file, dragging, selectedId, onFile, onDragNote,
                         {KIND_MARK[folder.kind]}
                       </span>
                       <span className="research-outline-title">{label}</span>
+                      {!open && hiddenUnder(index) > 0 ? (
+                        <span className="research-outline-hidden" title={`${hiddenUnder(index)} folded away inside`}>
+                          {hiddenUnder(index)}
+                        </span>
+                      ) : null}
                       {folder.notes.length > 0 ? (
                         <span className="count muted" title={`${folder.used} of ${folder.notes.length} on the track`}>
                           {folder.used > 0 ? `${folder.used}/` : ''}
