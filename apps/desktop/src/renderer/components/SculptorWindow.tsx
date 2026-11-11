@@ -1,3 +1,4 @@
+import { inTextField } from './TextMenu';
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { RoomSave } from './RoomSave';
 import { RoomFormat } from './RoomFormat';
@@ -1731,6 +1732,8 @@ function Card({
         onOpen();
       }}
       onContextMenu={(event) => {
+        // Writing in it (editing a note, renaming a card): the spelling menu's.
+        if (inTextField(event.target)) return;
         event.preventDefault();
         onMenu(event.clientX, event.clientY);
       }}

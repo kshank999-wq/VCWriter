@@ -1,3 +1,4 @@
+import { inTextField } from './TextMenu';
 import { useState } from 'react';
 import {
   CAPTURE_CATEGORY_NAMES,
@@ -331,6 +332,8 @@ function Note({
       }}
       onDragEnd={onDragEnd}
       onContextMenu={(event) => {
+        // Writing in it (editing a note, renaming a card): the spelling menu's.
+        if (inTextField(event.target)) return;
         event.preventDefault();
         setMenu({ x: event.clientX, y: event.clientY });
       }}

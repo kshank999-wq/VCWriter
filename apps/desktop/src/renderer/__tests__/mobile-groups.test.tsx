@@ -95,3 +95,38 @@ describe('the inbox, divided by what was said on the walk', () => {
     expect(screen.queryByText(/Scene or chapter/)).toBeNull();
   });
 });
+
+describe('correcting a phone note (from Ken, 11 November)', () => {
+  it('gives the spelling menu on a right-click in its words, not the card’s own menu', async () => {
+    const { TextMenu } = await import('../components/TextMenu');
+    const { within } = await import('@testing-library/react');
+    const capture = said(null, 'idea', 'a hambuger stand');
+    const file = createProjectFile({ title: 'Blackout', format: 'screenplay' });
+    render(
+      <>
+        <TextMenu />
+        <MobileInbox
+          file={file}
+          captures={[capture]}
+          loading={false}
+          error={null}
+          draggingId={null}
+          onDragStart={vi.fn()}
+          onDragEnd={vi.fn()}
+          onAcceptSuggestion={vi.fn()}
+          onReject={vi.fn()}
+          onRefresh={vi.fn()}
+          onPlace={vi.fn()}
+          onFileGroup={vi.fn()}
+        />
+      </>,
+    );
+    fireEvent.click(screen.getAllByRole('button', { name: /somewhere else/ })[0]!);
+    const words = screen.getAllByDisplayValue(/hambuger/).find((one) => one.tagName === 'TEXTAREA') as HTMLTextAreaElement;
+    words.setSelectionRange(4, 4);
+    fireEvent.contextMenu(words, { clientX: 10, clientY: 10 });
+    const menu = screen.getByRole('menu', { name: 'Editing' });
+    fireEvent.click(within(menu).getByRole('menuitem', { name: 'hamburger' }));
+    expect(words.value).toContain('hamburger');
+  });
+});

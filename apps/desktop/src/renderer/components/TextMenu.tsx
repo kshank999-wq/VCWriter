@@ -64,6 +64,17 @@ const press = (element: Editable, key: string, shift = false) => {
   element.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ctrlKey: !mac, metaKey: mac, shiftKey: shift }));
 };
 
+/**
+ * Whether a right-click landed in something typed into. A card or row that
+ * draws its own menu asks this first and stands aside, so writing anywhere
+ * gets the spelling menu (from Ken, 11 November: *when I go to edit, the
+ * spell checker catches spelling errors but it doesn't give me the right
+ * click menu*).
+ */
+export const inTextField = (target: EventTarget | null): boolean =>
+  target instanceof Element &&
+  target.closest('textarea, input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=button]), [contenteditable=""], [contenteditable="true"]') !== null;
+
 const catchAt = (event: MouseEvent): Caught | null => {
   const target = event.target instanceof Element ? event.target : null;
   if (!target) return null;
