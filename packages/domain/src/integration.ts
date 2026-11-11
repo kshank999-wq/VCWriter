@@ -420,3 +420,76 @@ export const integrationAuthors = (ops: readonly IntegrationOp[]): string[] => [
 export const integrationSubmissions = (ops: readonly IntegrationOp[]): string[] => [
   ...new Set(ops.flatMap((op) => (op.source?.submissionId ? [op.source.submissionId] : []))),
 ];
+
+// ------------------------------------------------- a task's passage, found again
+
+export interface PassageInDraft {
+  /** Each line the passage covers, and the part of it: character offsets. */
+  ranges: Array<{ elementId: string; from: number; to: number }>;
+  /**
+   * `exact`: where it was, as it was. `moved`: the same words, found elsewhere
+   * in the beat. `lines`: the lines are still there but the words have been
+   * changed, so the lines are marked and not the words.
+   */
+  how: 'exact' | 'moved' | 'lines';
+}
+
+const squash = (text: string): string => text.replace(/\s+/g, ' ').trim();
+
+/**
+ * Where a task's passage is in the writer's draft (addendum 07 §37), so the
+ * editor can light it when the task is opened. The draft is the writer's
+ * own copy of the beat, and may have been worked on since the passage was
+ * highlighted: the words are trusted over the offsets.
+ */
+export const findPassageInDraft = (
+  segment: ManuscriptSegment,
+  passage: PassageAnchor & { quote: string },
+): PassageInDraft | null => {
+  const elements = segment.elements;
+  const want = squash(passage.quote);
+  if (!want) return null;
+
+  const rangesOf = (found: { start: Point; end: Point }) => {
+    const out: PassageInDraft['ranges'] = [];
+    for (let index = found.start.index; index <= found.end.index; index += 1) {
+      const element = elements[index]!;
+      const from = index === found.start.index ? found.start.offset : 0;
+      const to = index === found.end.index ? found.end.offset : element.text.length;
+      out.push({ elementId: element.id as string, from, to });
+    }
+    return out;
+  };
+
+  // Where it was, if it still reads the same there.
+  const there = locate(elements, passage);
+  if (there && squash(passageText(segment, passage) ?? '') === want) return { ranges: rangesOf(there), how: 'exact' };
+
+  // The same words elsewhere in the beat: a passage within one line, or its
+  // first and last lines when it ran across several.
+  const lines = passage.quote.split('\n').map((line) => line.trim()).filter(Boolean);
+  if (lines.length === 1) {
+    for (const element of elements) {
+      const at = element.text.indexOf(lines[0]!);
+      if (at >= 0) return { ranges: [{ elementId: element.id as string, from: at, to: at + lines[0]!.length }], how: 'moved' };
+    }
+  } else if (lines.length > 1) {
+    const first = elements.findIndex((element) => element.text.includes(lines[0]!));
+    const last = first < 0 ? -1 : elements.findIndex((element, index) => index >= first && element.text.includes(lines[lines.length - 1]!));
+    if (first >= 0 && last >= 0) {
+      const from = elements[first]!.text.indexOf(lines[0]!);
+      const endLine = lines[lines.length - 1]!;
+      const to = elements[last]!.text.indexOf(endLine) + endLine.length;
+      return { ranges: rangesOf({ start: { index: first, offset: from }, end: { index: last, offset: to } }), how: 'moved' };
+    }
+  }
+
+  // The words have changed, but the lines are still there.
+  if (there) {
+    return {
+      ranges: rangesOf(there).map((range) => ({ ...range, from: 0, to: elements.find((one) => (one.id as string) === range.elementId)!.text.length })),
+      how: 'lines',
+    };
+  }
+  return null;
+};

@@ -12,6 +12,7 @@ import {
   type DictationSession,
 } from '../dictation';
 import {
+  type PassageInDraft,
   autoType,
   CHARACTER_EXTENSIONS,
   captureFromScript,
@@ -188,6 +189,8 @@ interface BeatBodyProps {
   movable?: boolean;
   /** Lines just placed from a note: drawn as one block, and dragged as one. */
   placedBlock?: ReadonlyArray<string>;
+  /** The passage a room task is about, lit in the page (addendum 07 §37). */
+  taskPassage?: PassageInDraft | null;
 }
 
 const MARK_KEYS: Record<string, InlineMark> = { b: 'bold', i: 'italic', u: 'underline' };
@@ -283,6 +286,7 @@ export function BeatBody({
   toolbar = false,
   movable = false,
   placedBlock = [],
+  taskPassage = null,
 }: BeatBodyProps) {
   const format = file.project.format;
   const layout = layoutForFile(file);
@@ -325,6 +329,46 @@ export function BeatBody({
   const [focusId, setFocusId] = useState<ManuscriptElementId | null>(null);
   const [selection, setSelection] = useState<{ id: ManuscriptElementId; start: number; end: number } | null>(null);
   const inputs = useRef(new Map<ManuscriptElementId, HTMLTextAreaElement>());
+  /** The page, for lighting a task's passage in its lines' ink (addendum 07 §37). */
+  const pageRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const registry = (globalThis as unknown as { CSS?: { highlights?: Map<string, unknown> } }).CSS?.highlights;
+    const HighlightCtor = (globalThis as unknown as { Highlight?: new (...ranges: Range[]) => unknown }).Highlight;
+    if (!registry || !HighlightCtor) return undefined;
+    const name = 'vcw-task-passage';
+    if (!taskPassage || !pageRef.current) {
+      registry.delete(name);
+      return undefined;
+    }
+    // The ink under each line carries the same characters as its box, so a
+    // character offset is found by walking the ink's text.
+    const ranges: Range[] = [];
+    for (const want of taskPassage.ranges) {
+      const ink = pageRef.current.querySelector(`[data-element-id="${want.elementId}"] .ink`);
+      if (!ink) continue;
+      const walker = document.createTreeWalker(ink, NodeFilter.SHOW_TEXT);
+      let seen = 0;
+      const range = document.createRange();
+      let started = false;
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        const length = node.textContent?.length ?? 0;
+        if (!started && want.from <= seen + length) {
+          range.setStart(node, Math.max(0, want.from - seen));
+          started = true;
+        }
+        if (started && want.to <= seen + length) {
+          range.setEnd(node, Math.max(0, want.to - seen));
+          ranges.push(range);
+          break;
+        }
+        seen += length;
+      }
+    }
+    registry.set(name, new HighlightCtor(...ranges));
+    return () => {
+      registry.delete(name);
+    };
+  }, [taskPassage, beat.manuscript]);
 
   /**
    * **The line the toolbar acts on** (addendum 02 §19a).
@@ -975,6 +1019,7 @@ export function BeatBody({
           }
           className={[
             placedBlock.includes(element.id as string) ? 'placed-block' : '',
+            taskPassage?.ranges.some((range) => range.elementId === (element.id as string)) ? 'task-passage-line' : '',
             dropAt?.id === element.id ? (dropAt.before ? 'line-drop-before' : 'line-drop-after') : '',
             `element element-${element.type}`,
             // **Centred where the page centres it** (addendum 40): a stage
@@ -1335,6 +1380,7 @@ export function BeatBody({
 
   return (
     <div
+      ref={pageRef}
       className={readOnly ? 'page-column reading' : 'page-column'}
       style={{ width: `${layout.columns}ch` }}
     >

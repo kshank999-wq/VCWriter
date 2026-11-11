@@ -139,3 +139,21 @@ describe('helpers', () => {
     expect(passageText(master, { startElementId: 'e2', startOffset: 4, endElementId: 'e1', endOffset: 4 })).toBe('opens the letter and leaves.\nThe ');
   });
 });
+
+describe('a task’s passage, found again in the draft (§37)', () => {
+  it('finds it where it was, where it moved, and marks the lines where the words changed', async () => {
+    const d = await import('../index.js');
+    const el = (id: string, text: string) => ({ id: id as never, type: 'dialogue' as const, text, characterId: null, attributes: {} });
+    const passage = { startElementId: 'b', startOffset: 0, endElementId: 'b', endOffset: 11, quote: 'Tides turn.' };
+    const same = { elements: [el('a', 'He said so.'), el('b', 'Tides turn. Twice.')] };
+    expect(d.findPassageInDraft(same, passage)).toEqual({ ranges: [{ elementId: 'b', from: 0, to: 11 }], how: 'exact' });
+
+    const moved = { elements: [el('a', 'He said so.'), el('b', 'Oh. Tides turn. Twice.')] };
+    expect(d.findPassageInDraft(moved, passage)).toEqual({ ranges: [{ elementId: 'b', from: 4, to: 15 }], how: 'moved' });
+
+    const changed = { elements: [el('a', 'He said so.'), el('b', 'The sea comes back.')] };
+    expect(d.findPassageInDraft(changed, passage)).toEqual({ ranges: [{ elementId: 'b', from: 0, to: 19 }], how: 'lines' });
+
+    expect(d.findPassageInDraft({ elements: [el('z', 'Nothing here.')] }, passage)).toBeNull();
+  });
+});

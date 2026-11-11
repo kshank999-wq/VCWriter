@@ -370,3 +370,61 @@ describe('opened from a task (addendum 07 §31)', () => {
     expect(screen.queryByText(/Master has changed/)).toBeNull();
   });
 });
+
+describe('the passage a task is about (addendum 07 §37)', () => {
+  const ROOM = 'b2412c98-cde9-485a-a867-bbac4f2a6f32';
+  const ID = '11111111-2222-3333-4444-555555555555';
+  afterEach(() => window.history.replaceState(null, '', '/'));
+
+  it('names the passage above the page and lights its line', async () => {
+    const { BeatWriter } = await import('../components/BeatWriter');
+    const { updateBeat, assignmentSchema } = await import('@vcwriter/domain');
+    const base = script();
+    const beat = base.beats[0]!;
+    const LINE = 'e1111111-1111-4111-8111-111111111111';
+    const file = updateBeat(base, beat.id, {
+      manuscript: {
+        elements: [
+          { id: 'e0000000-0000-4000-8000-000000000000' as never, type: 'action', text: 'Rain on the glass.', characterId: null, attributes: {} },
+          { id: LINE as never, type: 'action', text: 'Mara steps in, soaked.', characterId: null, attributes: {} },
+        ],
+      },
+    });
+    window.history.replaceState(null, '', `/preview?room=${ROOM}&task=a:${ID}&beat=${beat.id}`);
+    inARoom();
+    const vcwriter = (window as unknown as { vcwriter: { roomIdentity: ReturnType<typeof vi.fn> } }).vcwriter;
+    const identity = (await vcwriter.roomIdentity()) as { data: Record<string, unknown> };
+    vcwriter.roomIdentity = vi.fn().mockResolvedValue({
+      ok: true,
+      data: {
+        ...identity.data,
+        assignments: [
+          assignmentSchema.parse({
+            id: ID,
+            roomId: 'r',
+            assigneeId: 'jo',
+            note: 'Make her colder.',
+            targetKind: 'beat',
+            targetId: beat.id,
+            passage: { startElementId: LINE, startOffset: 0, endElementId: LINE, endOffset: 14, quote: 'Mara steps in,' },
+            createdAt: AT,
+            updatedAt: AT,
+          }),
+        ],
+      },
+    });
+    const now = file.beats.find((one) => one.id === beat.id)!;
+    const { container } = render(
+      <RoomProvider>
+        <BeatWriter file={file} beat={now} onUpdate={() => undefined} />
+      </RoomProvider>,
+    );
+    expect(await screen.findByText('Mara steps in,')).toBeTruthy();
+    expect(screen.getByText('— Make her colder.')).toBeTruthy();
+    expect(screen.getByText('Lit on the page.')).toBeTruthy();
+    expect(container.querySelector(`[data-element-id="${LINE}"]`)?.className).toContain('task-passage-line');
+    fireEvent.click(screen.getByRole('button', { name: 'Hide the passage' }));
+    expect(screen.queryByText('Lit on the page.')).toBeNull();
+    expect(container.querySelector(`[data-element-id="${LINE}"]`)?.className).not.toContain('task-passage-line');
+  });
+});

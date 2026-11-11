@@ -23993,3 +23993,11 @@ input.note-rewrite-title:focus { border-color: var(--gold); outline: none; }
 .writer-sheet.master-beside .marked-character { margin-left: calc(2.2in * var(--page-zoom)); }
 .writer-sheet.master-beside .marked-dialogue { margin-left: calc(1in * var(--page-zoom)); margin-right: calc(1.5in * var(--page-zoom)); }
 .writer-sheet.master-beside .marked-parenthetical { margin-left: calc(1.6in * var(--page-zoom)); }
+
+/* The passage a room task is about (addendum 07 §37): named above the page, lit in it. */
+.task-passage-bar { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; margin: 0 auto 8px; max-width: 72ch; padding: 6px 10px; border: 1px solid var(--accent, #c9a24a); border-radius: 4px; background: rgba(201, 162, 74, 0.08); font-size: 13px; }
+.task-passage-label { font-weight: 600; }
+.task-passage-quote { font-family: 'Courier Prime', 'Courier New', monospace; white-space: pre-wrap; max-height: 4.5em; overflow: auto; }
+.task-passage-ask { font-style: italic; }
+.element.task-passage-line { box-shadow: -4px 0 0 0 var(--accent, #c9a24a); }
+::highlight(vcw-task-passage) { background-color: rgba(255, 214, 92, 0.55); }

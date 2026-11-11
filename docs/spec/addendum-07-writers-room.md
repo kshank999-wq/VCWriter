@@ -2284,5 +2284,19 @@ screen):
 - What is being asked is a text box, with priority and date beside each
   other under it.
 
-Not done here: the desktop editor does not yet highlight the passage when a
-writer opens the task; it opens on the beat, as before (§31).
+**The passage in the writer's draft.** Opened from the task (*Open in VC
+Writer*, `?task=a:<assignment>&beat=`), the beat's writing screen finds the
+assignment among the room's (they are already loaded for the badges, with the
+passage on them) and:
+
+- names it in a bar above the page: *Your task is about "…" — what was
+  asked*, with **Show** (scroll to it) and **Hide**;
+- lights the words in the page (the CSS Custom Highlight API over each
+  line's ink, so the textarea and its text are untouched) and marks their
+  lines with a gold bar at the left.
+
+The draft may have been worked on since, so `findPassageInDraft` trusts the
+words over the offsets: *exact* where it still reads the same where it was;
+*moved* where the same words are elsewhere in the beat; *lines* where the
+lines are there but the words have changed (the lines are marked, not the
+words); nothing found, and the bar says *No longer in this draft*.

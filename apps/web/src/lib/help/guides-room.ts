@@ -65,6 +65,7 @@ export const GUIDES_ROOM: ReadonlyArray<Guide> = [
         steps: [
           'Open the task on the board and press **Start draft**. It moves to **In Progress**.',
           'Press **Open in VC Writer**. The desktop program opens on the task’s beat.',
+          'If the task was given from a highlighted passage, a bar above the page quotes it and the words are lit in your draft. **Show** scrolls to them; **Hide** puts the bar away.',
           'Write. Press **View master** to read the showrunner’s current version beside your draft.',
           'Press **Submit** at the top of the window. The task is already chosen; send it. It moves to **Awaiting Review**.',
           'Press **Back to Writer’s Room** to return to the board.',

@@ -2,6 +2,7 @@ import { BookHeadingLine } from './BookHeadingLine';
 import { BeatPlanPanel } from './BeatPlanPanel';
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import {
+  findPassageInDraft,
   countWords,
   draftText,
   draftsOf,
@@ -44,6 +45,8 @@ import { BeatBody } from './BeatBody';
 import { MarkedDraft, MarkedLine, MarkingPage } from './MarkedDraft';
 import { ManuscriptDataLists } from './ManuscriptDataLists';
 import { usePreference } from '../use-split';
+import { useRoom } from '../room';
+import { taskFrom } from './RoomBar';
 
 const NEW_REVISION = '__new__';
 const WORKING = '__working__';
@@ -136,6 +139,21 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
    */
   const readMaster = typeof window !== 'undefined' ? window.vcwriter?.roomMaster : undefined;
   const [masterOn, setMasterOn] = useState(false);
+  /**
+   * **The passage the task is about** (addendum 07 §37): opened from a task
+   * that was given out by highlighting words in the room's Script screen, the
+   * same words are lit in the writer's draft, and named above the page.
+   */
+  const room = useRoom();
+  const taskKey = typeof window === 'undefined' ? null : taskFrom(window.location.search);
+  const asked = taskKey?.startsWith('a:')
+    ? (room.assignments.find((one) => `a:${one.id}` === taskKey && one.targetId === (beat.id as string) && one.passage) ?? null)
+    : null;
+  const passage = useMemo(
+    () => (asked?.passage ? findPassageInDraft(beat.manuscript, asked.passage) : null),
+    [asked?.passage, beat.manuscript],
+  );
+  const [passageShown, setPassageShown] = useState(true);
   const [masterBeat, setMasterBeat] = useState<{ label: string; manuscript: ManuscriptSegment | null; error: string | null } | null>(null);
   useEffect(() => {
     if (!masterOn || !readMaster) return;
@@ -480,6 +498,39 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
           strip collapses to nothing. */}
       <div className="writer-tools" ref={setTools} />
 
+      {asked?.passage && passageShown ? (
+        <div className="task-passage-bar" role="note">
+          <span className="task-passage-label">Your task is about</span>
+          <q className="task-passage-quote">{asked.passage.quote}</q>
+          {asked.note.trim() ? <span className="task-passage-ask">— {asked.note.trim()}</span> : null}
+          <span className="muted small">
+            {passage?.how === 'exact'
+              ? 'Lit on the page.'
+              : passage?.how === 'moved'
+                ? 'Lit where it is now on the page.'
+                : passage?.how === 'lines'
+                  ? 'Its lines are lit; the words have changed since.'
+                  : 'No longer in this draft.'}
+          </span>
+          {passage ? (
+            <button
+              type="button"
+              className="ghost small"
+              onClick={() =>
+                document
+                  .querySelector(`.writer-sheet [data-element-id="${passage.ranges[0]!.elementId}"]`)
+                  ?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+              }
+            >
+              Show
+            </button>
+          ) : null}
+          <button type="button" className="ghost small" aria-label="Hide the passage" onClick={() => setPassageShown(false)}>
+            Hide
+          </button>
+        </div>
+      ) : null}
+
       <div
         className={[
           beside > 0 ? 'writer-body comparing' : 'writer-body',
@@ -546,6 +597,7 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
             toolbar
             movable
             placedBlock={placed}
+            taskPassage={passageShown ? passage : null}
           />}
         </div>
 
