@@ -123,3 +123,32 @@ describe('folding the outline in Research like the Outliner (from Ken, 11 Novemb
     expect(screen.getByRole('button', { name: 'Unfold The cemetery' })).toBeTruthy();
   });
 });
+
+describe('taking a note back out of the outline (from Ken, 11 November)', () => {
+  it('sends a filed note back to the notes from the outline column', async () => {
+    const { unfileNote } = await import('@vcwriter/domain');
+    let latest: ProjectFile | null = null;
+    function Harness() {
+      const [file, setFile] = useState(filed);
+      latest = file;
+      return (
+        <OutlineSidebar
+          file={file}
+          dragging={null}
+          selectedId={null}
+          onFile={() => undefined}
+          onDragNote={() => undefined}
+          onSelect={() => undefined}
+          onRewrite={() => undefined}
+          onHide={() => undefined}
+          onBackToNotes={(note) => setFile((current) => unfileNote(current, note.id))}
+        />
+      );
+    }
+    render(<Harness />);
+    fireEvent.click(screen.getByRole('button', { name: 'Back to notes: Johnny has the car keys' }));
+    expect(screen.queryByText('Johnny has the car keys')).toBeNull();
+    const note = latest!.researchItems.find((one) => one.title === 'Johnny has the car keys')!;
+    expect(note.place).toBeNull();
+  });
+});

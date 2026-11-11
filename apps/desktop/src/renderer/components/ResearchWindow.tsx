@@ -32,6 +32,7 @@ import {
   tracksInOrder,
   markResearchUsed,
   moveResearchItem,
+  unfileNote,
   ref,
   removeResearchCategory,
   reparentResearchCategory,
@@ -698,14 +699,37 @@ export function ResearchBody({
       return;
     }
     if (dragging.kind === 'item') {
+      // A note dragged out of the outline onto a folder goes back to the
+      // notes, in that folder (from Ken, 11 November).
       onUpdate((current) =>
-        moveResearchItem(current, { itemId: dragging.id as ResearchItemId, toCategoryId: categoryId, index: 0 }),
+        unfileNote(
+          moveResearchItem(current, { itemId: dragging.id as ResearchItemId, toCategoryId: categoryId, index: 0 }),
+          dragging.id as ResearchItemId,
+        ),
       );
     } else if (dragging.id !== categoryId) {
       onUpdate((current) => reparentResearchCategory(current, dragging.id as ResearchCategoryId, categoryId));
     }
     setDragging(null);
   };
+
+  /**
+   * **Back to the notes** (from Ken, 11 November: *if you have a note that
+   * you've dropped into a category in the outline, you need to be able to
+   * pull that back into the general notes screen so you can move it to
+   * another section*). It leaves the outline and is a note on its shelf again,
+   * shown and chosen, ready to be dragged onto another part.
+   */
+  const backToNotes = (itemId: ResearchItemId) => {
+    setDragging(null);
+    onUpdate((current) => unfileNote(current, itemId));
+    setSelectedItemId(itemId);
+  };
+  /** A note being dragged that is filed in the outline, so the notes list can take it back. */
+  const draggingFiled =
+    dragging?.kind === 'item' &&
+    (file.researchItems.find((one) => (one.id as string) === dragging.id)?.place ?? null) !== null;
+  const [takingBack, setTakingBack] = useState(false);
 
   // `living` rather than a plain find: deleting somebody while their Creator
   // is open must close it, or the one screen in the room still showing them
@@ -1287,7 +1311,24 @@ export function ResearchBody({
         </nav>
 
         {/* What is in it — or, when somebody is being built, them. */}
-        <section className="research-contents" aria-label={creator ? creator.name : title}>
+        <section
+          className={`research-contents${draggingFiled && takingBack ? ' taking-back' : ''}`}
+          aria-label={creator ? creator.name : title}
+          onDragOver={(event) => {
+            if (!draggingFiled) return;
+            event.preventDefault();
+            if (!takingBack) setTakingBack(true);
+          }}
+          onDragLeave={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setTakingBack(false);
+          }}
+          onDrop={(event) => {
+            setTakingBack(false);
+            if (!draggingFiled || !dragging) return;
+            event.preventDefault();
+            backToNotes(dragging.id as ResearchItemId);
+          }}
+        >
           {creator ? (
             <CharacterCreator
               // Keyed on the person so switching between two of them starts
@@ -1709,6 +1750,7 @@ export function ResearchBody({
               setSelectedItemId(null);
             }}
             onFold={(folders, collapsed) => onUpdate((current) => foldFolders(current, folders, collapsed))}
+            onBackToNotes={(item) => backToNotes(item.id)}
           />
         ) : null}
 
@@ -1732,6 +1774,7 @@ export function ResearchBody({
                 setRewriting(note.id);
               }}
               onClose={() => setOpenFolderKey(null)}
+              onBackToNotes={(note) => backToNotes(note.id)}
             />
           ) : selectedItem ? (
             <Detail
@@ -2665,6 +2708,7 @@ function FolderNotes({
   onSelect,
   onRewrite,
   onClose,
+  onBackToNotes,
 }: {
   file: ProjectFile;
   folder: OutlineFolder;
@@ -2673,6 +2717,8 @@ function FolderNotes({
   onSelect(note: ResearchItem): void;
   onRewrite(note: ResearchItem): void;
   onClose(): void;
+  /** Take a note out of this part, back to the notes, to be sorted elsewhere. */
+  onBackToNotes(note: ResearchItem): void;
 }) {
   return (
     <section className="folder-notes" aria-label={`Notes filed under ${folderLabel(folder)}`}>
@@ -2720,6 +2766,19 @@ function FolderNotes({
               }}
             >
               Rewrite and add as a {sub.toLowerCase()}…
+            </button>
+          ) : null}
+          {selectedId && folder.notes.some((note) => note.id === selectedId) ? (
+            <button
+              type="button"
+              className="ghost small folder-notes-back"
+              title="Take it out of this part and back to the notes, to drag onto another part"
+              onClick={() => {
+                const note = folder.notes.find((one) => one.id === selectedId);
+                if (note) onBackToNotes(note);
+              }}
+            >
+              ↩ Back to notes
             </button>
           ) : null}
         </>

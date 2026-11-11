@@ -961,6 +961,19 @@ the row's own `collapsed` (`folderFolded`, `foldFolders`), so:
 A part of the book the outline has no row for keeps its fold in the column,
 for the session, as before.
 
+**Back to the notes** (from Ken, 11 November: *if you have a note that
+you've dropped into a category in the outline, you need to be able to pull
+that back into the general notes screen so you can move it to another
+section*). A filed note comes back out (`unfileNote`: its place cleared, its
+shelf folder untouched) three ways:
+
+- **↩** beside it in the outline column;
+- **↩ Back to notes** under the chosen note in the *Filed here* pane;
+- dragged from the outline onto the notes list (it outlines in gold to take
+  it), or onto a shelf folder, which also moves it there.
+
+It is then a note on its shelf again, chosen, ready to drag onto another part.
+
 ## The title is retyped where the note opens (November 2026)
 
 From Ken: *when you open up a note in the research section, it needs to allow

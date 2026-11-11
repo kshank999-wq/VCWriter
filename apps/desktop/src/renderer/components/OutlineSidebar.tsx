@@ -42,6 +42,8 @@ export interface OutlineSidebarProps {
    * Absent, every fold is this column's own, for the session.
    */
   onFold?(folders: OutlineFolder[], collapsed: boolean): void;
+  /** Take a filed note back out of the outline, to the notes (from Ken, 11 November). */
+  onBackToNotes?(note: ResearchItem): void;
 }
 
 const KIND_LABEL: Record<OutlineFolder['kind'], string> = {
@@ -60,7 +62,7 @@ const KIND_MARK: Record<OutlineFolder['kind'], string> = {
   heading: '▤',
 };
 
-export function OutlineSidebar({ file, dragging, selectedId, onFile, onDragNote, onSelect, onRewrite, onHide, openKey = null, onOpenFolder, onFold }: OutlineSidebarProps) {
+export function OutlineSidebar({ file, dragging, selectedId, onFile, onDragNote, onSelect, onRewrite, onHide, openKey = null, onOpenFolder, onFold, onBackToNotes }: OutlineSidebarProps) {
   const folders = useMemo(() => outlineFolders(file), [file]);
   /** Folds of folders with no outline row to keep them on (or all, without `onFold`). */
   const [localClosed, setClosed] = useState<ReadonlySet<string>>(() => new Set());
@@ -133,7 +135,7 @@ export function OutlineSidebar({ file, dragging, selectedId, onFile, onDragNote,
         </p>
       ) : (
         <>
-          <p className="muted small research-outline-hint">Drag a note onto a folder. Double-click a note to rewrite it.</p>
+          <p className="muted small research-outline-hint">Drag a note onto a folder. Double-click a note to rewrite it. ↩, or dragging it back to the notes, takes it out again.</p>
           <ul className="research-outline-list">
             {folders.map((folder, index) => {
               // A folded chapter hides its sections and subsections too: the
@@ -231,6 +233,17 @@ export function OutlineSidebar({ file, dragging, selectedId, onFile, onDragNote,
                                 </span>
                               ) : null}
                             </button>
+                            {onBackToNotes ? (
+                              <button
+                                type="button"
+                                className="research-outline-back"
+                                aria-label={`Back to notes: ${note.title}`}
+                                title="Back to the notes, to drag onto another part"
+                                onClick={() => onBackToNotes(note)}
+                              >
+                                ↩
+                              </button>
+                            ) : null}
                           </li>
                         );
                       })}
