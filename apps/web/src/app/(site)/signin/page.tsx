@@ -4,6 +4,7 @@ import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { browserClient } from '@/lib/supabase-browser';
 import { safeNextPath } from '@/lib/auth-redirect';
+import { TURNSTILE_SITE_KEY, TurnstileBox } from './turnstile-box';
 
 /**
  * Signing in, two ways (addendum 09 §14).
@@ -53,6 +54,26 @@ function SignInForm() {
   const [password, setPassword] = useState('');
   const [status, setStatus] = useState<'idle' | 'working' | 'sent' | 'reset-sent'>('idle');
   const [error, setError] = useState<string | null>(null);
+  // The CAPTCHA's answer for the link and reset forms (§14d), and a counter
+  // that draws a fresh box after each try.
+  const [human, setHuman] = useState('');
+  const [round, setRound] = useState(0);
+  const needsHuman = TURNSTILE_SITE_KEY !== '' && human === '';
+
+  /** Both emailed links go through the server, which checks the CAPTCHA first. */
+  const askServer = async (kind: 'link' | 'reset'): Promise<string | null> => {
+    const response = await fetch('/api/auth/email-link', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ kind, email, next, token: human }),
+    }).catch(() => null);
+    setHuman('');
+    setRound((n) => n + 1);
+    if (!response) return 'That could not be sent. Check your connection and try again.';
+    if (response.ok) return null;
+    const body = (await response.json().catch(() => ({}))) as { error?: string };
+    return body.error ?? 'That could not be sent. Try again in a moment.';
+  };
 
   const signIn = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -80,12 +101,9 @@ function SignInForm() {
     event.preventDefault();
     setStatus('working');
     setError(null);
-    const { error: failure } = await browserClient().auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
-    });
+    const failure = await askServer('link');
     if (failure) {
-      setError(failure.message);
+      setError(failure);
       setStatus('idle');
       return;
     }
@@ -101,11 +119,9 @@ function SignInForm() {
     event.preventDefault();
     setStatus('working');
     setError(null);
-    const { error: failure } = await browserClient().auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/reset')}`,
-    });
+    const failure = await askServer('reset');
     if (failure) {
-      setError(failure.message);
+      setError(failure);
       setStatus('idle');
       return;
     }
@@ -250,7 +266,8 @@ function SignInForm() {
               placeholder="you@example.com"
               aria-label="Email address"
             />
-            <button type="submit" className="button" disabled={status === 'working'}>
+            <TurnstileBox key="reset" round={round} onToken={setHuman} />
+            <button type="submit" className="button" disabled={status === 'working' || needsHuman}>
               {status === 'working' ? 'Sending…' : 'Email me a reset link'}
             </button>
             <p className="muted small">
@@ -279,7 +296,8 @@ function SignInForm() {
               placeholder="you@example.com"
               aria-label="Email address"
             />
-            <button type="submit" className="button" disabled={status === 'working'}>
+            <TurnstileBox key="link" round={round} onToken={setHuman} />
+            <button type="submit" className="button" disabled={status === 'working' || needsHuman}>
               {status === 'working' ? 'Sending…' : 'Email me a link'}
             </button>
             <p className="muted small">

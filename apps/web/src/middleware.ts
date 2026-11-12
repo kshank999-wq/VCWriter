@@ -35,6 +35,8 @@ const contentSecurityPolicy = (nonce: string): string => {
     "img-src 'self' data: blob:",
     "font-src 'self' data:",
     `connect-src 'self' ${supabase} ${supabaseSocket}`.trim(),
+    // The sign-in page's CAPTCHA box (addendum 09 §14d) is Cloudflare's frame.
+    'frame-src https://challenges.cloudflare.com',
     "form-action 'self'",
     "frame-ancestors 'none'",
     "base-uri 'self'",

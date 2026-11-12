@@ -1353,7 +1353,49 @@ is the same rule as the label, said one control down.
 
 ---
 
-## 15. The notes at the desk
+### 14d. Bots at the link form, and the CAPTCHA
+
+From Ken, 12 November, looking at the customers list: *they're all the same
+date. Is this just a sample?* It was not. Between 11 and 29 September, 294
+accounts were made through the **Email me a link** form for addresses that
+were not the makers' — dotted Gmail spellings (`c.o.leh.e.n…@gmail.com`) and
+the like, the mark of a form-filling bot. None ever signed in, made a project,
+bought anything or held a licence; 59 had their confirmation link clicked. At
+Ken's word they were deleted (kept: his own account), checked first by a count
+inside the same statement that would have refused anything but 294.
+
+A bare account gives nothing here, so the harm was the mail: confirmation
+emails to strangers, which is what wears down a sending domain's name.
+
+**What changed.** The link and the reset link are no longer asked for from the
+browser. `/signin` posts to **`/api/auth/email-link`**, which:
+
+1. rate-limits by address (`RULES.emailLink`, ten an hour);
+2. checks **Cloudflare Turnstile** (`lib/turnstile.ts`) — the box under the
+   email field on the link and reset forms (`signin/turnstile-box.tsx`);
+3. asks Supabase from the server's own client, which keeps the PKCE verifier
+   in this browser's cookie, so the link still opens only where it was asked
+   for (§14).
+
+Signing in with a password is unchanged and has no box: it makes no account
+and sends no mail.
+
+**Why not Supabase's own CAPTCHA.** It guards every way in, and the desktop's
+emailed code and the phone's password cannot show a Turnstile box, so turning
+it on would lock both apps out.
+
+**Keys, and what is left open.** The site key (`NEXT_PUBLIC_TURNSTILE_SITE_KEY`)
+and secret (`TURNSTILE_SECRET_KEY`) come from a Turnstile widget in Ken's
+Cloudflare account and are set in Vercel. Until they are, the box is not drawn
+and the server skips the check; the rate limit holds regardless. Anyone holding
+the public anonymous key can still ask Supabase directly; closing that means
+switching **Allow new users to sign up** off in Supabase (Authentication →
+Sign In / Providers). The route is written for that: on *signups not allowed*
+it makes the account with the service role, after the CAPTCHA, and asks again.
+The desktop then tells a new address to make its account at vc-writer.com.
+Accounts made by a purchase or a granted licence use the service role and are
+not affected.
+
 
 From Ken, in one message, after §13 put the notes on the server:
 

@@ -147,6 +147,11 @@ export const requestSignInCode = async (email: string): Promise<void> => {
     email,
     options: { shouldCreateUser: true },
   });
+  // With sign-ups switched off in Supabase (addendum 09 §14d), a new account
+  // is made on the website, behind its CAPTCHA, and never from here.
+  if (error && /signups? not allowed|signup.*disabled/i.test(error.message)) {
+    throw new CloudError('There is no VC Writer account for that address yet. Make one at vc-writer.com/signin, then sign in here.');
+  }
   if (error) throw new CloudError(error.message);
 };
 

@@ -79,6 +79,12 @@ export const RULES = {
    * and an account that tries is not a writer.
    */
   oneSheet: { name: 'one-sheet', limit: 20, windowSeconds: 3600 },
+  /**
+   * Emailed sign-in and reset links (addendum 09 §14d), by address. Bots used
+   * the link form to make accounts in the hundreds; a person asks for a link
+   * a few times at most, so ten an hour is room for mistakes and nothing more.
+   */
+  emailLink: { name: 'email-link', limit: 10, windowSeconds: 3600 },
 } as const satisfies Record<string, RateLimitRule>;
 
 /** The first hop in X-Forwarded-For is the client; Vercel sets it. */
