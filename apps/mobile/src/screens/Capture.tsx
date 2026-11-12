@@ -5,6 +5,10 @@ import {
   applyCorrection,
   captureKeyName,
   captureVocabulary,
+  categoryChoices,
+  parseCategoryChoices,
+  NO_CATEGORY_CHOICES,
+  type CategoryChoices,
   guidedQuestion,
   emptySitting,
   everything,
@@ -16,12 +20,12 @@ import {
   projectNamed,
   readSpoken,
   sayBack,
-  type CaptureKey,
   type ProjectFormat,
   type Sitting,
 } from '@vcwriter/domain';
 import { makeProject, type ProjectSummary, type StoryChoice } from '../host/api';
 import { StoryPicker } from './StoryPicker';
+import { CategoryEditor } from './CategoryEditor';
 import { file as fileNote, newClientCaptureId, pendingCaptures } from '../host/queue';
 import { canHear, mayHear, readyToSpeak, startDictation, type DictationSession } from '../host/listen';
 import { beep, hush, readAloud } from '../host/say';
@@ -64,6 +68,26 @@ export function Capture({
   const format = (project.format as ProjectFormat) ?? 'screenplay';
   const vocabulary = captureVocabulary(format);
   /**
+   * **The writer's own categories** (§35): what they added and which of the
+   * format's they hid, kept per project on this phone, and the list the chips
+   * draw from.
+   */
+  const categoriesKey = `vcwriter-notes-categories:${project.id}`;
+  const [choices, setChoices] = useState<CategoryChoices>(NO_CATEGORY_CHOICES);
+  const [editingCategories, setEditingCategories] = useState(false);
+  useEffect(() => {
+    setChoices(NO_CATEGORY_CHOICES);
+    void AsyncStorage.getItem(categoriesKey)
+      .then((kept) => setChoices(parseCategoryChoices(kept)))
+      .catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project.id]);
+  const changeChoices = (next: CategoryChoices) => {
+    setChoices(next);
+    void AsyncStorage.setItem(categoriesKey, JSON.stringify(next)).catch(() => undefined);
+  };
+  const categories = categoryChoices(format, choices);
+  /**
    * The story of a collection the notes are for (addendum 27 §23), chosen from
    * the list at the top of the screen and remembered per project, so a walk
    * back into the same collection is still on the same story. A ref beside it
@@ -89,7 +113,14 @@ export function Capture({
   }, [project.id]);
 
   /** Typed capture. */
-  const [category, setCategory] = useState<CaptureKey>('idea');
+  const [category, setCategory] = useState<string>('idea');
+  /**
+   * **The note box's scroll bar** (§35, from Ken: *if you go past, it will now
+   * have a scroll bar next to it, just like any other web page or app*). A
+   * phone shows a text box's bar only while it moves, so this one is drawn,
+   * and stays while there is more than fits.
+   */
+  const [noteScroll, setNoteScroll] = useState({ box: 0, content: 0, top: 0 });
   const [subjectName, setSubjectName] = useState('');
   const [text, setTextState] = useState('');
   /**
@@ -236,8 +267,12 @@ export function Capture({
     };
   }, []);
 
-  const picked = vocabulary.find((one) => one.key === category);
-  const chosenKey: CaptureKey = picked?.key ?? 'idea';
+  // A category said aloud still counts if it was hidden from the chips.
+  const spokenHidden = vocabulary.find((one) => one.key === category);
+  const picked =
+    categories.find((one) => one.key === category) ??
+    (spokenHidden ? { key: spokenHidden.key as string, name: spokenHidden.name, takesName: spokenHidden.takesName, own: false } : categories[0]);
+  const chosenKey: string = picked?.key ?? 'idea';
   const takesName = picked?.takesName ?? false;
 
   // ------------------------------------------------------------- filing
@@ -770,39 +805,57 @@ export function Capture({
             autoCapitalize={takesName ? 'characters' : 'words'}
             autoCorrect={false}
           />
-          <TextInput
-            ref={bodyBox}
-            key={bodyKey}
-            style={[
-              styles.input,
-              // Room under the words for the Enter button in the corner (§32).
-              { flex: 1, textAlignVertical: 'top', paddingTop: 12, paddingBottom: 44 },
-              into === 'body' ? { borderColor: listening ? colour.live : colour.goldDeep } : null,
-            ]}
-            defaultValue={bodySeed}
-            editable={typing}
-            onPressIn={() => aim('body')}
-            onFocus={() => aim('body')}
-            inputAccessoryViewID={KEYS}
-            onChangeText={(typed) => {
-              typingOver();
-              typedText(typed);
-            }}
-            placeholder="What just occurred to you?"
-            placeholderTextColor={colour.muted}
-            multiline
-            scrollEnabled
-          />
-          {/* Enter, in the note box's bottom corner (§32). */}
-          <Pressable
-            onPress={newLine}
-            accessibilityRole="button"
-            accessibilityLabel="Enter: start a new line in the note"
-            hitSlop={8}
-            style={[styles.button, styles.secondary, { position: 'absolute', right: 24, bottom: undone ? 76 : 24, paddingVertical: 6, paddingHorizontal: 12 }]}
-          >
-            <Text style={[styles.buttonText, styles.secondaryText, { fontSize: 13 }]}>↵ Enter</Text>
-          </Pressable>
+          {/* The note box, with Enter in its corner, takes what the categories
+              under it leave (§35): more categories, a shorter box. */}
+          <View style={{ flex: 1, minHeight: 96 }}>
+            <TextInput
+              ref={bodyBox}
+              key={bodyKey}
+              style={[
+                styles.input,
+                // Room under the words for the Enter button in the corner (§32),
+                // and on the right for the scroll bar (§35).
+                { flex: 1, textAlignVertical: 'top', paddingTop: 12, paddingBottom: 44, paddingRight: 18 },
+                into === 'body' ? { borderColor: listening ? colour.live : colour.goldDeep } : null,
+              ]}
+              defaultValue={bodySeed}
+              editable={typing}
+              onPressIn={() => aim('body')}
+              onFocus={() => aim('body')}
+              inputAccessoryViewID={KEYS}
+              onChangeText={(typed) => {
+                typingOver();
+                typedText(typed);
+              }}
+              placeholder="What just occurred to you?"
+              placeholderTextColor={colour.muted}
+              multiline
+              scrollEnabled
+              onLayout={(event) => {
+                const box = event.nativeEvent.layout.height;
+                setNoteScroll((now) => ({ ...now, box }));
+              }}
+              onContentSizeChange={(event) => {
+                const content = event.nativeEvent.contentSize.height;
+                setNoteScroll((now) => ({ ...now, content }));
+              }}
+              onScroll={(event) => {
+                const top = event.nativeEvent.contentOffset.y;
+                setNoteScroll((now) => ({ ...now, top }));
+              }}
+            />
+            <NoteScrollBar {...noteScroll} />
+            {/* Enter, in the note box's bottom corner (§32). */}
+            <Pressable
+              onPress={newLine}
+              accessibilityRole="button"
+              accessibilityLabel="Enter: start a new line in the note"
+              hitSlop={8}
+              style={[styles.button, styles.secondary, { position: 'absolute', right: 14, bottom: 8, paddingVertical: 6, paddingHorizontal: 12 }]}
+            >
+              <Text style={[styles.buttonText, styles.secondaryText, { fontSize: 13 }]}>↵ Enter</Text>
+            </Pressable>
+          </View>
         {undone ? (
           <Pressable
             style={[styles.button, styles.secondary]}
@@ -814,6 +867,49 @@ export function Capture({
             <Text style={[styles.buttonText, styles.secondaryText]}>Put the old wording back</Text>
           </Pressable>
         ) : null}
+          {/* **The categories under the note box, the gear at their right**
+              (§35, from Ken: *the little cog icon will be right under the
+              right-hand corner of the text screen under Enter, next to where
+              the categories are*). They sit on the line above Save it, so a
+              longer list builds up from there and the box above gives way. */}
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6 }}>
+            <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 5 }} accessibilityLabel="Kind of note">
+              {categories.map((one) => (
+                <Pressable
+                  key={one.key}
+                  onPress={() => setCategory(one.key)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: chosenKey === one.key }}
+                  style={[
+                    styles.button,
+                    styles.secondary,
+                    { paddingVertical: 5, paddingHorizontal: 9 },
+                    chosenKey === one.key ? { borderColor: colour.gold } : null,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.buttonText,
+                      styles.secondaryText,
+                      { fontSize: 11, letterSpacing: 0.3 },
+                      chosenKey === one.key ? { color: colour.goldBright } : null,
+                    ]}
+                  >
+                    {one.name}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <Pressable
+              onPress={() => setEditingCategories(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Make, hide or delete categories"
+              hitSlop={10}
+              style={[styles.button, styles.secondary, { paddingVertical: 3, paddingHorizontal: 8 }]}
+            >
+              <Text style={{ color: colour.gold, fontSize: 18, lineHeight: 22 }}>⚙</Text>
+            </Pressable>
+          </View>
         </View>
 
         <ScrollView
@@ -822,36 +918,6 @@ export function Capture({
           contentContainerStyle={[styles.body, { paddingBottom: 56 }]}
           keyboardShouldPersistTaps="handled"
         >
-          {/* The kinds, small and first, with no label over them (§28): a
-              turned phone has half the height, and they were what the
-              keyboard's tab sat on. */}
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5 }} accessibilityLabel="Kind of note">
-            {vocabulary.map((one) => (
-              <Pressable
-                key={one.key}
-                onPress={() => setCategory(one.key)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: chosenKey === one.key }}
-                style={[
-                  styles.button,
-                  styles.secondary,
-                  { paddingVertical: 5, paddingHorizontal: 9 },
-                  chosenKey === one.key ? { borderColor: colour.gold } : null,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.buttonText,
-                    styles.secondaryText,
-                    { fontSize: 11, letterSpacing: 0.3 },
-                    chosenKey === one.key ? { color: colour.goldBright } : null,
-                  ]}
-                >
-                  {one.name}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
           {onSubscribe ? (
             <Pressable onPress={onSubscribe} style={styles.row}>
               <Text style={[styles.muted, { flex: 1 }]}>
@@ -963,6 +1029,18 @@ export function Capture({
         </ScrollView>
       </View>
 
+      <CategoryEditor
+        visible={editingCategories}
+        format={format}
+        choices={choices}
+        onChange={(next) => {
+          changeChoices(next);
+          // A category taken off the list cannot stay chosen.
+          if (!categoryChoices(format, next).some((one) => one.key === category)) setCategory(categoryChoices(format, next)[0]?.key ?? 'idea');
+        }}
+        onClose={() => setEditingCategories(false)}
+      />
+
       {/* **The keyboard is the writer's to call** (§22), and its tab is a
           small one in the corner (§28, from Ken: *a small tab in the right or
           left corner that says keyboard, so it doesn't run across the entire
@@ -987,6 +1065,23 @@ export function Capture({
           </View>
         </InputAccessoryView>
       ) : null}
+    </View>
+  );
+}
+
+/**
+ * The note box's scroll bar (§35): a thumb the length of what shows, at where
+ * it shows, while there is more than fits. Drawn rather than the phone's own,
+ * which only appears while the text moves.
+ */
+function NoteScrollBar({ box, content, top }: { box: number; content: number; top: number }) {
+  if (box <= 0 || content <= box + 1) return null;
+  const track = box - 16;
+  const thumb = Math.max(28, (box / content) * track);
+  const travel = Math.max(0, Math.min(1, top / (content - box)));
+  return (
+    <View pointerEvents="none" style={{ position: 'absolute', right: 4, top: 8, width: 4, height: track, backgroundColor: colour.raised2, borderRadius: 2 }}>
+      <View style={{ position: 'absolute', top: travel * (track - thumb), width: 4, height: thumb, backgroundColor: colour.goldDeep, borderRadius: 2 }} />
     </View>
   );
 }

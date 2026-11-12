@@ -1244,3 +1244,40 @@ and the desktop, before they are removed for good. Migration 0087.
   now, Restore all, Empty); on the desk, Research ▸ Mobile App ▸ *Recently
   deleted*; `GET/POST/DELETE /api/notes/deleted` on the website. The phone's
   delete question and the desk's Archive now say where a deleted note goes.
+
+## 35. Your own categories, and the note box's scroll bar
+
+From Ken, 12 November: *there needs to be a little gear wheel that allows you
+to create and delete your own categories… instead of having this standard set
+of section, subsection, character… The little cog icon will be right under the
+right-hand corner of the text screen under Enter, next to where the categories
+are. If you have a bunch of categories, it's going to just shrink the text
+screen, and it will build up from the Save it bar. And the text screen, if you
+go past, it will now have a scroll bar next to it.*
+
+**Where things are.** The category chips moved from the top of the controls
+to the line under the note box, with **⚙** at their right, under Enter. They
+sit directly above *Save it*, so a longer list wraps upward and the note box
+gives way (it keeps at least 96 points). The note box has a drawn scroll bar
+on its right while its words run past what shows; a phone's own bar only
+appears while text moves.
+
+**The gear** opens *Categories*: a name box and **Add**, then every category on
+the list — **Delete** on one the writer made, **Hide** on one of the format's —
+and *Put back the standard ones* once any are hidden. One always stays, so a
+note has somewhere to go.
+
+**How they are stored** (`capture-vocabulary.ts`). An own category is saved on
+the note as `my:` and its name (37 characters for the name inside the key's
+forty). The key was already free text, and every reader keeps an unknown key
+as a group of its own, so the phone's Review, the website's notes and the
+desktop's Mobile App screen all show it under the writer's name with no
+database change; `captureKeyName` strips the prefix. The list itself —
+`{ own, hidden }` — is kept **per project on the phone** (AsyncStorage
+`vcwriter-notes-categories:<project>`); notes already saved keep their
+category whatever is deleted later. A built-in typed by name (*Theme*) puts the
+hidden one back rather than making a second.
+
+**Not yet:** own categories are chosen by tapping, not by voice or in *Hands
+free*, and the list is not shared with the website's notes or a second phone.
+A spoken built-in still files under it even if hidden.

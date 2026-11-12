@@ -163,6 +163,111 @@ export const captureVocabulary = (format: ProjectFormat): SpokenCategory[] => {
     : [...STORY, ...scene, ...structural, ...ANYWHERE];
 };
 
+// ------------------------------------------------- the writer's own categories
+
+/**
+ * **The writer's own categories** (addendum 27 §35, from Ken, 12 November:
+ * *a little gear wheel that allows you to create and delete your own
+ * categories… so if you want to actually put things for a character or a
+ * scene, you can actually create your own*).
+ *
+ * An own category is stored on the note as `my:` and its name. The key was
+ * always free text (`captureKeySchema`, forty characters) and every reader
+ * already keeps a key it does not know as a group of its own, so the phone,
+ * the website and the desktop all show these under the name the writer gave
+ * them with nothing else changed — and the prefix keeps *Idea* typed by hand
+ * from ever being mistaken for the built-in `idea`.
+ */
+export const OWN_CATEGORY_PREFIX = 'my:';
+/** Room for the name inside the key's forty characters. */
+export const OWN_CATEGORY_MAX = 40 - OWN_CATEGORY_PREFIX.length;
+
+export const isOwnCategoryKey = (key: string | null | undefined): boolean => !!key && key.startsWith(OWN_CATEGORY_PREFIX);
+
+/** A name as typed, tidied: spaces closed up, cut to fit. Empty when there is nothing to keep. */
+export const tidyOwnCategoryName = (typed: string): string => typed.replace(/\s+/g, ' ').trim().slice(0, OWN_CATEGORY_MAX).trim();
+
+export const ownCategoryKey = (name: string): string => `${OWN_CATEGORY_PREFIX}${tidyOwnCategoryName(name)}`;
+
+/** What the writer has changed about the list, kept per project on the phone. */
+export interface CategoryChoices {
+  /** Their own, in the order they were made. */
+  own: string[];
+  /** Built-in keys they took off the list. */
+  hidden: string[];
+}
+
+export const NO_CATEGORY_CHOICES: CategoryChoices = { own: [], hidden: [] };
+
+export interface CategoryChoice {
+  key: string;
+  name: string;
+  takesName: boolean;
+  /** Made by the writer, rather than one of the format's own. */
+  own: boolean;
+}
+
+/**
+ * The list the note screen shows: the format's categories the writer has not
+ * hidden, then their own. **Never empty**: the last one standing cannot be
+ * taken off (`canRemoveNoteCategory`), and a list somehow emptied falls back to
+ * the format's own.
+ */
+export const categoryChoices = (format: ProjectFormat, choices: CategoryChoices = NO_CATEGORY_CHOICES): CategoryChoice[] => {
+  const builtIn = captureVocabulary(format)
+    .filter((one) => !choices.hidden.includes(one.key))
+    .map((one) => ({ key: one.key as string, name: one.name, takesName: one.takesName, own: false }));
+  const seen = new Set<string>();
+  const own = choices.own
+    .map(tidyOwnCategoryName)
+    .filter((name) => name && !seen.has(name.toLowerCase()) && (seen.add(name.toLowerCase()), true))
+    .map((name) => ({ key: ownCategoryKey(name), name, takesName: false, own: true }));
+  const all = [...builtIn, ...own];
+  return all.length > 0
+    ? all
+    : captureVocabulary(format).map((one) => ({ key: one.key as string, name: one.name, takesName: one.takesName, own: false }));
+};
+
+/** Adds an own category; unchanged if the name is empty or already on the list (either kind). */
+export const addOwnCategory = (format: ProjectFormat, choices: CategoryChoices, typed: string): CategoryChoices => {
+  const name = tidyOwnCategoryName(typed);
+  if (!name) return choices;
+  const lower = name.toLowerCase();
+  const builtIn = captureVocabulary(format).find((one) => one.name.toLowerCase() === lower);
+  // A built-in by the same name that was hidden is put back rather than doubled.
+  if (builtIn) return { ...choices, hidden: choices.hidden.filter((key) => key !== builtIn.key) };
+  if (choices.own.some((one) => one.toLowerCase() === lower)) return choices;
+  return { ...choices, own: [...choices.own, name] };
+};
+
+/** Whether this one may come off the list: never the last. */
+export const canRemoveNoteCategory = (format: ProjectFormat, choices: CategoryChoices): boolean =>
+  categoryChoices(format, choices).length > 1;
+
+/** Deletes an own category, or hides a built-in one. Notes already filed under it keep it. */
+export const removeNoteCategory = (format: ProjectFormat, choices: CategoryChoices, key: string): CategoryChoices => {
+  if (!canRemoveNoteCategory(format, choices)) return choices;
+  if (isOwnCategoryKey(key)) {
+    const name = key.slice(OWN_CATEGORY_PREFIX.length).toLowerCase();
+    return { ...choices, own: choices.own.filter((one) => tidyOwnCategoryName(one).toLowerCase() !== name) };
+  }
+  return choices.hidden.includes(key) ? choices : { ...choices, hidden: [...choices.hidden, key] };
+};
+
+/** Puts the format's own categories back, keeping the writer's. */
+export const restoreBuiltInCategories = (choices: CategoryChoices): CategoryChoices => ({ ...choices, hidden: [] });
+
+/** Reads what was kept, tolerating anything malformed. */
+export const parseCategoryChoices = (raw: string | null | undefined): CategoryChoices => {
+  try {
+    const value = JSON.parse(raw ?? '') as Partial<CategoryChoices>;
+    const strings = (list: unknown) => (Array.isArray(list) ? list.filter((one): one is string => typeof one === 'string') : []);
+    return { own: strings(value.own), hidden: strings(value.hidden) };
+  } catch {
+    return NO_CATEGORY_CHOICES;
+  }
+};
+
 /**
  * What a stored key is called, in a format's own words.
  *
@@ -171,6 +276,7 @@ export const captureVocabulary = (format: ProjectFormat): SpokenCategory[] => {
  * promise is that **the last group is never hidden**.
  */
 export const captureKeyName = (key: string, format: ProjectFormat | null): string => {
+  if (isOwnCategoryKey(key)) return key.slice(OWN_CATEGORY_PREFIX.length);
   if (format) {
     const found = captureVocabulary(format).find((one) => one.key === key);
     if (found) return found.name;
