@@ -48,7 +48,7 @@ describe('POST /api/auth/email-link', () => {
     createUser.mockResolvedValue({ error: null });
     expect((await ask({ kind: 'link', email: 'New@B.co', token: 't' })).status).toBe(200);
     expect(createUser).toHaveBeenCalledWith({ email: 'new@b.co' });
-    expect(signInWithOtp.mock.calls[1][0].options.shouldCreateUser).toBe(false);
+    expect(signInWithOtp.mock.calls[1]?.[0]?.options?.shouldCreateUser).toBe(false);
   });
 
   it('answers a reset the same whether or not the address has an account', async () => {
