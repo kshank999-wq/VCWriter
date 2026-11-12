@@ -1,0 +1,58 @@
+[
+  {
+    "format": "screenplay",
+    "file": "screenplay.vcw",
+    "title": "Night of the Living Dead",
+    "author": "George A. Romero & John A. Russo",
+    "about": "The opening scenes of the 1968 film, with notes, a story map, setups and an outline."
+  },
+  {
+    "format": "series",
+    "file": "series.vcw",
+    "title": "Sherlock Holmes",
+    "author": "after Arthur Conan Doyle",
+    "about": "Three episodes after Arthur Conan Doyle, in Doyle’s own words."
+  },
+  {
+    "format": "stage_play",
+    "file": "stage_play.vcw",
+    "title": "Hamlet",
+    "author": "William Shakespeare",
+    "about": "Act One, Scene One of Hamlet, with the rest of the act planned in the outline."
+  },
+  {
+    "format": "short_form",
+    "file": "short_form.vcw",
+    "title": "Harbour Bakery — 30s Spot",
+    "author": "A. Writer",
+    "about": "A 30-second spot as an audio/visual sheet, ready for your own storyboard frames."
+  },
+  {
+    "format": "novel",
+    "file": "novel.vcw",
+    "title": "Great Expectations",
+    "author": "Charles Dickens",
+    "about": "The first three chapters of Dickens, with an outline of chapters and sections."
+  },
+  {
+    "format": "short_story",
+    "file": "short_story.vcw",
+    "title": "Tales of Mystery",
+    "author": "Edgar Allan Poe",
+    "about": "Three of Poe’s tales as one collection."
+  },
+  {
+    "format": "instructional",
+    "file": "instructional.vcw",
+    "title": "Plain and Clear",
+    "author": "A. Writer",
+    "about": "Two chapters of a writing guide, with sources, citations and an outline."
+  },
+  {
+    "format": "document",
+    "file": "document.vcw",
+    "title": "Heron Window Proposal",
+    "author": "A. Writer",
+    "about": "A short heritage-trust proposal in the word processor."
+  }
+]

@@ -1,13 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { freshCopy, parseProjectFile } from '@vcwriter/domain';
 import { useRouter } from 'next/navigation';
 
 /**
  * Starting a room (addendum 07 §5, §33).
  *
- * The project is chosen on purpose: a **new project made for the room**, or a
- * **project brought from VC Writer** as its project file. The account's other
+ * The project is chosen on purpose: a **new project made for the room**, a
+ * **project brought from VC Writer** as its project file, or **one of the
+ * samples** (addendum 35 §15) — the same sample projects the desktop program
+ * opens, from `/samples`, copied with new ids so each room has its own. The account's other
  * projects (mostly what the Notes app made) are not offered.
  *
  * No seat count is asked for: the room's fee covers the showrunner and one
@@ -24,12 +27,22 @@ const FORMATS: { value: string; label: string }[] = [
   { value: 'instructional', label: 'Instructional book' },
 ];
 
+interface Sample {
+  format: string;
+  file: string;
+  title: string;
+  author: string;
+  about: string;
+}
+
 /** Bigger than this will not get through the upload. */
 const MAX_BYTES = 4 * 1024 * 1024;
 
 export function StartRoom() {
   const router = useRouter();
-  const [how, setHow] = useState<'new' | 'bring'>('new');
+  const [how, setHow] = useState<'new' | 'bring' | 'sample'>('new');
+  const [samples, setSamples] = useState<Sample[]>([]);
+  const [sample, setSample] = useState('');
   const [title, setTitle] = useState('');
   const [format, setFormat] = useState('screenplay');
   const [upload, setUpload] = useState<{ name: string; data: unknown; title: string } | null>(null);
@@ -54,15 +67,44 @@ export function StartRoom() {
     }
   };
 
-  const ready = how === 'new' ? title.trim().length > 0 : upload !== null;
+  useEffect(() => {
+    if (how !== 'sample' || samples.length > 0) return;
+    void fetch('/samples/samples.json')
+      .then((response) => response.json() as Promise<Sample[]>)
+      .then(setSamples)
+      .catch(() => setError('The samples could not be loaded. Try again in a moment.'));
+  }, [how, samples.length]);
+
+  const chosenSample = samples.find((one) => one.file === sample) ?? null;
+
+  /** The sample's project file, with every id new (`freshCopy`). */
+  const sampleData = async (one: Sample) => {
+    const response = await fetch(`/samples/${one.file}`);
+    if (!response.ok) throw new Error('missing');
+    return freshCopy(parseProjectFile(await response.json()));
+  };
+
+  const ready = how === 'new' ? title.trim().length > 0 : how === 'bring' ? upload !== null : chosenSample !== null;
 
   const start = async () => {
     setBusy(true);
     setError(null);
+    let payload: unknown;
+    if (how === 'new') payload = { newProject: { title: title.trim(), format }, name };
+    else if (how === 'bring') payload = { upload: upload!.data, name };
+    else {
+      try {
+        payload = { upload: await sampleData(chosenSample!), name };
+      } catch {
+        setBusy(false);
+        setError('That sample could not be loaded. Try again in a moment.');
+        return;
+      }
+    }
     const response = await fetch('/api/rooms', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(how === 'new' ? { newProject: { title: title.trim(), format }, name } : { upload: upload!.data, name }),
+      body: JSON.stringify(payload),
     });
     const body = (await response.json().catch(() => ({}))) as { room?: { id: string }; error?: string };
     setBusy(false);
@@ -90,6 +132,13 @@ export function StartRoom() {
             <span className="small block muted">A script you already have in the desktop app, as its project file (.vcw).</span>
           </span>
         </label>
+        <label className={how === 'sample' ? 'start-room-choice on' : 'start-room-choice'}>
+          <input type="radio" name="how" checked={how === 'sample'} onChange={() => setHow('sample')} />
+          <span>
+            <strong>Start from a sample</strong>
+            <span className="small block muted">A finished sample project to try the room with — a screenplay, a series, a novel and more.</span>
+          </span>
+        </label>
       </div>
 
       {how === 'new' ? (
@@ -108,6 +157,22 @@ export function StartRoom() {
               ))}
             </select>
           </label>
+        </>
+      ) : how === 'sample' ? (
+        <>
+          <label className="field">
+            <span>Sample</span>
+            <select value={sample} onChange={(event) => setSample(event.target.value)}>
+              <option value="">{samples.length === 0 ? 'Loading…' : 'Choose a sample…'}</option>
+              {samples.map((one) => (
+                <option key={one.file} value={one.file}>
+                  {one.title} — {one.author}
+                </option>
+              ))}
+            </select>
+          </label>
+          {chosenSample ? <p className="small muted">{chosenSample.about}</p> : null}
+          <p className="small muted">The room gets its own copy. Change it as much as you like; the sample stays as it was.</p>
         </>
       ) : (
         <>
@@ -132,7 +197,9 @@ export function StartRoom() {
         <input
           value={name}
           onChange={(event) => setName(event.target.value)}
-          placeholder={how === 'new' ? title || 'The project’s title' : upload?.title || 'The project’s title'}
+          placeholder={
+            (how === 'new' ? title : how === 'bring' ? upload?.title : chosenSample?.title) || 'The project’s title'
+          }
           maxLength={120}
         />
       </label>

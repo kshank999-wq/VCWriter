@@ -75,6 +75,17 @@ export const GUIDES_START: Guide[] = [
         ],
         tip: 'With a project open, **File ▸ New project…** brings you back to this screen. Press **← Back to** your project to return without changing anything.',
       },
+      {
+        heading: 'Try a sample project',
+        body: [
+          'There is a finished sample for every kind of project: a screenplay (*Night of the Living Dead*), a series (Sherlock Holmes), a stage play (*Hamlet*), a novel (*Great Expectations*), short stories (Poe), an instructional book, a short-form spot and a document. The classics are all in the public domain.',
+        ],
+        steps: [
+          'On the start screen, open **Open a sample…** under the Open buttons.',
+          'Click the sample you want. It opens as a new project of your own, saved in your projects folder.',
+        ],
+        tip: 'Change a sample as much as you like: it is your copy. Open the sample again for a fresh one.',
+      },
     ],
     related: ['the-workspace', 'saving-and-recovery', 'screenplay', 'novel'],
   },

@@ -23,11 +23,11 @@ export const GUIDES_ROOM: ReadonlyArray<Guide> = [
         heading: 'Start a room',
         steps: [
           'Sign in at vc-writer.com and click **Writers Room** at the top of the page.',
-          'Choose **Start a new project for the room**, give it a title and a format — or choose **Bring a project from VC Writer** and pick a .vcw file.',
+          'Choose **Start a new project for the room**, give it a title and a format — or choose **Bring a project from VC Writer** and pick a .vcw file — or choose **Start from a sample** and pick one of the sample projects.',
           'Optionally name the room, then press **Start the room**.',
           'Finish the room subscription when asked. The room opens on its **Tasks** board.',
         ],
-        tip: 'Bringing a project in copies it into your account; the file on your computer is not changed.',
+        tip: 'Bringing a project in copies it into your account; the file on your computer is not changed. A sample is copied too, so every room started from it has its own.',
       },
       {
         heading: 'Ask somebody in',

@@ -1,3 +1,4 @@
+import { SAMPLES, type Sample } from '../samples';
 import { useEffect, useState } from 'react';
 import {
   builtElsewhere,
@@ -34,6 +35,8 @@ interface WelcomeProps {
    * they have decided they have too many of them.
    */
   onProjects(): void;
+  /** Open one of the sample projects as a new project of the writer's own (from Ken, 12 November). */
+  onSample?(sample: Sample): void;
   /**
    * Bumped when the project list changes underneath this screen — a delete,
    * usually. The recents are read from the same store, and a list still
@@ -57,6 +60,7 @@ export function Welcome({
   onOpen,
   onImport,
   onProjects,
+  onSample,
   projectsChanged = 0,
   onOpenPath,
   onCancel,
@@ -266,6 +270,29 @@ export function Welcome({
         <button type="button" onClick={onProjects}>
           Projects on this machine…
         </button>
+        {onSample ? (
+          <details className="welcome-samples">
+            <summary>Open a sample…</summary>
+            <p className="muted small">
+              One for each kind of project, from public-domain classics and a few written for VC Writer. Each opens as a new
+              project of your own to try things in.
+            </p>
+            <ul>
+              {SAMPLES.map((sample) => (
+                <li key={sample.format}>
+                  <button type="button" className="welcome-sample" onClick={() => onSample(sample)}>
+                    <strong>{sample.title}</strong>
+                    <span className="muted small">
+                      {formatName(sample.format as ProjectFormat)}
+                      {sample.author ? ` · ${sample.author}` : ''}
+                    </span>
+                    <span className="small">{sample.about}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </details>
+        ) : null}
         {inFolder && (inFolder.projects.length > 0 || inFolder.notDownloaded > 0) ? (
           <>
             <h3 className="welcome-subhead">In your projects folder</h3>

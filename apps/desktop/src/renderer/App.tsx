@@ -1,3 +1,4 @@
+import { loadSample } from './samples';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   addTrack,
@@ -1135,6 +1136,12 @@ export default function App() {
           }}
           onImport={() => setChooserOpen(true)}
           onProjects={() => setProjectsOpen(true)}
+          onSample={(sample) => {
+            setStartingNew(false);
+            void loadSample(sample)
+              .then((made) => project.createFrom(made))
+              .catch((cause: unknown) => window.alert(cause instanceof Error ? cause.message : 'That sample could not be opened.'));
+          }}
           projectsChanged={projectsChanged}
           onOpenPath={(path) => {
             setStartingNew(false);

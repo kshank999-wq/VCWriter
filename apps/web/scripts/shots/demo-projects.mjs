@@ -362,7 +362,12 @@ const withMap = (file) => {
   return next;
 };
 
-export function demoProjects() {
+/**
+ * `frames: false` leaves the short-form spot's storyboard frames out: the
+ * samples writers load in the program and the Writers Room are text, for the
+ * writer to board themselves (from Ken, 12 November).
+ */
+export function demoProjects({ frames = true } = {}) {
   const projects = {};
 
   projects.screenplay = withPolarity(fileUnderScene(fileUnderRow(withOutline(withSetups(withMap(withNotes(
@@ -544,9 +549,9 @@ export function demoProjects() {
       file = updateUnit(file, unit.id, { title: 'Dawn at the bakery' });
       // A storyboard frame on every row: rough pencil thumbnails, as a board
       // artist would sketch them (classics/frames, drawn for the demo).
-      const frames = ['01-bakery-dawn', '02-hands-dough', '03-oven', '04-fisherman', '05-sign'];
+      const sketches = frames ? ['01-bakery-dawn', '02-hands-dough', '03-oven', '04-fisherman', '05-sign'] : [];
       beatsForUnit(file, unit.id).forEach((beat, index) => {
-        const name = frames[index];
+        const name = sketches[index];
         if (!name) return;
         const data = `data:image/png;base64,${readFileSync(resolve(import.meta.dirname, 'classics', 'frames', `${name}.png`)).toString('base64')}`;
         file = setRowFrame(file, beat.id, { name: `${name}.png`, data, width: 640, height: 360 }).file;

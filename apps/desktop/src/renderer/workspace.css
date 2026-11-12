@@ -24146,3 +24146,9 @@ input.note-rewrite-title:focus { border-color: var(--gold); outline: none; }
 
 /* A row below a subsection: in its subsection's list, not on the track (from Ken, 11 November). */
 .outline-real.beneath { width: auto; height: auto; font-size: 13px; line-height: 1; color: var(--muted); background: none; box-shadow: none; }
+
+/* Samples on the start screen (from Ken, 12 November). */
+.welcome-samples { margin-top: 8px; }
+.welcome-samples summary { cursor: pointer; padding: 8px 12px; border: 1px solid var(--gold-deep); border-radius: 4px; color: var(--gold); text-align: center; }
+.welcome-samples ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.welcome-sample { display: grid; gap: 2px; width: 100%; padding: 8px 12px; text-align: left; }

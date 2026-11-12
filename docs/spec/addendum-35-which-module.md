@@ -759,3 +759,34 @@ So the page says *being finished and not on sale yet*, and its buttons go to
 
 The Writers Room box on the screenplay and series pages links to the page.
 
+
+## 15. The samples, in the program and in the Writers Room
+
+From Ken, 12 November: *create sample projects for each module using the
+information that we have … they should be available as a sample that you
+can load, when you have the Writers Room.* Short form gets its text, and Ken
+adds the storyboard pictures later.
+
+The demo projects of §10 are now shipped as samples, one per module:
+
+- `apps/web/scripts/samples.mjs` builds them with `demoProjects({ frames: false })`
+  — the short-form spot without the screenshot script's sketched frames, so
+  its storyboard is Ken's to draw — and writes `<format>.vcw` and
+  `samples.json` (title, author, one line about it) into **both**
+  `apps/web/public/samples/` and `apps/desktop/src/renderer/samples/`. A web
+  test (`samples.test.ts`) fails if the two copies differ, if a module is
+  missing, or if a file does not open. Run the script again after changing a
+  demo project.
+- **Desktop:** the Welcome screen has **Open a sample…** under the Open
+  buttons. Choosing one makes a new project from it, saved in the projects
+  folder like any other, named from its title.
+- **Writers Room:** *Start a room* has a third choice, **Start from a
+  sample**. The page fetches the sample from `/samples` and sends it through
+  the same upload path as a .vcw brought from VC Writer.
+- Every opening is a copy with **new ids** (`freshCopy` in the domain: every
+  UUID in the file is replaced, consistently, so references still hold). The
+  files carry fixed ids, and two projects or rooms made from one sample must
+  not share any.
+
+About 380 KB in all. Only public-domain texts and the three originals
+(§10), so nothing here is anybody else's.
