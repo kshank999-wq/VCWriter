@@ -248,6 +248,15 @@ export const GUIDES_PLANNING: Guide[] = [
         tip: 'The outline and the track stay linked both ways: move a scene in one and it moves in the other.',
       },
       {
+        heading: 'Go to where it is written',
+        steps: [
+          'Click a row: a scene, a section, a beat or a subsection.',
+          'Press **Go ▸** beside it. The writing screen opens at that point. A scene or section opens at its first beat; a note or idea under a beat opens that beat.',
+          'In the writing screen, press **Outliner ▸** at the top to come back. The Outliner opens with that row chosen and in view.',
+        ],
+        tip: 'Go is greyed out on a row that is not on the track yet. Add it to the track first.',
+      },
+      {
         heading: 'Finding rows',
         body: [
           'Type in *Search the outline* to find rows. A match keeps the rows it sits under, so you can still see what it belongs to. The **Everything** list beside it shows one type at a time (Scenes, Beats, Characters and so on).',

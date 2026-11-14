@@ -191,7 +191,50 @@ interface BeatBodyProps {
   placedBlock?: ReadonlyArray<string>;
   /** The passage a room task is about, lit in the page (addendum 07 §37). */
   taskPassage?: PassageInDraft | null;
+  /**
+   * **Markup notes on the page** (from Ken, 13 November): each mark's words
+   * lit as it was marked, with its number in a little circle at the end.
+   */
+  markupPlaces?: ReadonlyArray<MarkupPlace>;
 }
+
+/** One markup note, found in the draft being written. */
+export interface MarkupPlace {
+  number: number;
+  kind: string;
+  ranges: ReadonlyArray<{ elementId: string; from: number; to: number }>;
+}
+
+const NO_PLACES: ReadonlyArray<MarkupPlace> = [];
+
+/** A character range inside one line's ink, as a DOM Range; null where the line is not drawn. */
+const inkRange = (page: HTMLElement, elementId: string, from: number, to: number): Range | null => {
+  const ink = page.querySelector(`[data-element-id="${elementId}"] .ink`);
+  if (!ink) return null;
+  const walker = document.createTreeWalker(ink, NodeFilter.SHOW_TEXT);
+  let seen = 0;
+  const range = document.createRange();
+  let started = false;
+  let last: Node | null = null;
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    last = node;
+    const length = node.textContent?.length ?? 0;
+    if (!started && from <= seen + length) {
+      range.setStart(node, Math.max(0, from - seen));
+      started = true;
+    }
+    if (started && to <= seen + length) {
+      range.setEnd(node, Math.max(0, to - seen));
+      return range;
+    }
+    seen += length;
+  }
+  if (started && last) {
+    range.setEnd(last, last.textContent?.length ?? 0);
+    return range;
+  }
+  return null;
+};
 
 const MARK_KEYS: Record<string, InlineMark> = { b: 'bold', i: 'italic', u: 'underline' };
 
@@ -287,6 +330,7 @@ export function BeatBody({
   movable = false,
   placedBlock = [],
   taskPassage = null,
+  markupPlaces = NO_PLACES,
 }: BeatBodyProps) {
   const format = file.project.format;
   const layout = layoutForFile(file);
@@ -369,6 +413,60 @@ export function BeatBody({
       registry.delete(name);
     };
   }, [taskPassage, beat.manuscript]);
+
+  /** Where each markup note's circle stands on the page. */
+  const [badges, setBadges] = useState<Array<{ number: number; top: number; left: number }>>([]);
+  useEffect(() => {
+    const registry = (globalThis as unknown as { CSS?: { highlights?: Map<string, unknown> } }).CSS?.highlights;
+    const HighlightCtor = (globalThis as unknown as { Highlight?: new (...ranges: Range[]) => unknown }).Highlight;
+    const names = ['vcw-markup-highlight', 'vcw-markup-underline', 'vcw-markup-strike', 'vcw-markup-note'];
+    const page = pageRef.current;
+    const draw = () => {
+      if (!page) return;
+      const lit: Record<string, Range[]> = Object.fromEntries(names.map((name) => [name, []]));
+      const next: Array<{ number: number; top: number; left: number }> = [];
+      const origin = page.getBoundingClientRect();
+      for (const place of markupPlaces) {
+        const name =
+          place.kind === 'highlight' || place.kind === 'underline' || place.kind === 'strike'
+            ? `vcw-markup-${place.kind}`
+            : 'vcw-markup-note';
+        let end: Range | null = null;
+        for (const want of place.ranges) {
+          const range = inkRange(page, want.elementId, want.from, want.to);
+          if (!range) continue;
+          if (want.to > want.from) lit[name]!.push(range);
+          end = range;
+        }
+        if (!end) continue;
+        // A page with no layout (a test's) has no boxes to measure: the
+        // circle stands at the top corner rather than not at all.
+        const rects = typeof end.getClientRects === 'function' ? end.getClientRects() : null;
+        const box =
+          rects && rects.length > 0
+            ? rects[rects.length - 1]!
+            : typeof end.getBoundingClientRect === 'function'
+              ? end.getBoundingClientRect()
+              : { top: origin.top + 7, right: origin.left - 1 };
+        next.push({ number: place.number, top: box.top - origin.top - 11, left: box.right - origin.left - 3 });
+      }
+      if (registry && HighlightCtor) {
+        for (const name of names) {
+          if (lit[name]!.length > 0) registry.set(name, new HighlightCtor(...lit[name]!));
+          else registry.delete(name);
+        }
+      }
+      setBadges(next);
+    };
+    draw();
+    if (!page || markupPlaces.length === 0) return () => names.forEach((name) => registry?.delete(name));
+    const watch = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => draw());
+    watch?.observe(page);
+    return () => {
+      watch?.disconnect();
+      names.forEach((name) => registry?.delete(name));
+    };
+  }, [markupPlaces, beat.manuscript]);
 
   /**
    * **The line the toolbar acts on** (addendum 02 §19a).
@@ -1382,8 +1480,20 @@ export function BeatBody({
     <div
       ref={pageRef}
       className={readOnly ? 'page-column reading' : 'page-column'}
-      style={{ width: `${layout.columns}ch` }}
+      style={{ width: `${layout.columns}ch`, position: 'relative' }}
     >
+      {/* The markup notes' circles, over the words they belong to. */}
+      {badges.map((badge) => (
+        <span
+          key={badge.number}
+          className="mark-num page-mark-num"
+          aria-hidden="true"
+          style={{ top: badge.top, left: badge.left }}
+          data-mark-number={badge.number}
+        >
+          {badge.number}
+        </span>
+      ))}
       {/* The cue list is the beat's own: it is ordered for this beat. */}
       <datalist id={`cues-${beat.id}`}>
         {cues.map((name) => (

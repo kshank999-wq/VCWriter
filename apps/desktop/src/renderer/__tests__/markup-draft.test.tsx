@@ -104,14 +104,27 @@ describe('the Mark up switch', () => {
     window.getSelection()!.removeAllRanges();
     window.getSelection()!.addRange(range);
     fireEvent.click(screen.getByRole('button', { name: 'Highlight' }));
-    expect(screen.getByText(/Highlight “opens”/)).toBeTruthy();
+    // Numbered in the margin, with its words and room for a note (from Ken, 13 November).
+    const margin = screen.getByRole('complementary', { name: 'Markup notes' });
+    expect(margin.querySelector('.mark-num')?.textContent).toBe('1');
+    expect(margin.querySelector('q')?.textContent).toBe('opens');
+    fireEvent.change(screen.getByLabelText('Note for mark 1'), { target: { value: 'Too soft.' } });
+    // …and circled with the same number on the page.
+    expect(document.querySelector('.marking-page .mark-num')?.textContent).toBe('1');
 
     fireEvent.change(screen.getByPlaceholderText('Your name'), { target: { value: 'Ken Shank' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save as markup draft' }));
 
-    // Back to writing, with the new markup read beside it and listed as one.
-    expect(screen.getByText('KS markup — markup')).toBeTruthy();
-    expect(screen.getByText(/One mark by Ken Shank/)).toBeTruthy();
+    // Back to writing, the marks as markup notes in the margin, numbered.
+    const notes = screen.getByRole('complementary', { name: 'Markup notes' });
+    expect(notes.textContent).toContain('Too soft.');
+    expect(notes.textContent).toContain('Ken Shank');
+    // The one brought in from the room (MA markup) is number 1; these follow.
+    expect(screen.getByRole('button', { name: /Markup notes \(2\)/ })).toBeTruthy();
+    expect(Array.from(notes.querySelectorAll('.mark-num')).map((one) => one.textContent)).toEqual(['1', '2']);
+    // Addressed, it leaves the list (Hide addressed is on by default).
+    fireEvent.click(screen.getAllByLabelText('Addressed')[1]!);
+    expect(screen.getByRole('complementary', { name: 'Markup notes' }).textContent).toContain('1 addressed note is hidden');
     const menu = screen.getByLabelText('Draft') as HTMLSelectElement;
     expect(Array.from(menu.querySelectorAll('optgroup[label="Markups"] option')).map((one) => one.textContent)).toContain('KS markup ✎');
   });

@@ -68,12 +68,14 @@ import {
   statusesIn,
   unpromoteRow,
   updateItem,
+  writingBeatForRow,
   updateUnit,
   whatGoesWithRows,
   whyUnnumbered,
   type Outline,
   type OutlineItem,
   type OutlineItemId,
+  type OutlineId,
   type OutlineFilter,
   type OutlineRow,
   type ProjectFile,
@@ -157,6 +159,17 @@ interface OutlinerWindowProps {
   onSendRows?(items: OutlineItem[]): void;
   /** The host's own lines about the chosen row, under its notes: a document's *Sent to…* receipts. */
   rowDetail?(item: OutlineItem): React.ReactNode;
+  /**
+   * **Go** to where a row is written (from Ken, 13 November): the chosen row
+   * carries a Go button that opens the writing screen at its beat or
+   * subsection. Absent where the host has no writing screen to open.
+   */
+  onGoToWriting?(beatId: string): void;
+  /**
+   * The row to show, from the writing screen's own **Go** (the other way):
+   * chosen, its parents unfolded, scrolled to. A new `token` asks again.
+   */
+  focusRow?: { outlineId: string; itemId: string; token: number } | null;
 }
 
 /** How far one level of depth moves a row in. */
@@ -286,6 +299,8 @@ export function OutlinerWindow({
   toolbar,
   onSendRows,
   rowDetail,
+  onGoToWriting,
+  focusRow = null,
 }: OutlinerWindowProps) {
   const outlines = outlinesOf(file);
   const [chosenOutlineId, setOutlineId] = useState<string | null>(null);
@@ -352,6 +367,35 @@ export function OutlinerWindow({
     const chosen = outlineId ? outlines.find((candidate) => (candidate.id as string) === outlineId) : undefined;
     return chosen ?? outlines[0] ?? null;
   }, [outlines, outlineId]);
+
+  // **Shown a row from the writing screen** (the other half of Go): that
+  // outline, its parents unfolded, the row chosen and scrolled to.
+  useEffect(() => {
+    if (!open || !focusRow) return undefined;
+    if (!pinned) setOutlineId(focusRow.outlineId);
+    const target = outlines.find((one) => (one.id as string) === focusRow.outlineId);
+    const folded: string[] = [];
+    for (let at = target?.items.find((one) => (one.id as string) === focusRow.itemId)?.parentId ?? null; at; ) {
+      const parent = target?.items.find((one) => one.id === at);
+      if (!parent) break;
+      if (parent.collapsed) folded.push(parent.id as string);
+      at = parent.parentId;
+    }
+    if (folded.length > 0) {
+      onUpdate((current) =>
+        folded.reduce((file, id) => updateItem(file, focusRow.outlineId as OutlineId, id as OutlineItemId, { collapsed: false }), current),
+      );
+    }
+    setSelected(focusRow.itemId as OutlineItemId);
+    setAlsoPicked(new Set());
+    const frame = requestAnimationFrame(() =>
+      requestAnimationFrame(() =>
+        document.querySelector(`.outline-row[data-row="${focusRow.itemId}"]`)?.scrollIntoView({ block: 'center' }),
+      ),
+    );
+    return () => cancelAnimationFrame(frame);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, focusRow?.token]);
 
   // A project with no outline gets one the first time the Outliner is opened.
   // Unlike a board it starts genuinely empty: there is no row a story must
@@ -1178,6 +1222,14 @@ export function OutlinerWindow({
               onSelect={(how) => choose(row.item.id, how)}
               pickedCount={picked.length}
               onOpen={onOpenRow ? () => onOpenRow(row.item) : undefined}
+              go={
+                onGoToWriting && outline && selected === row.item.id
+                  ? (() => {
+                      const beat = writingBeatForRow(file, outline, row.item.id);
+                      return beat ? () => onGoToWriting(beat.id as string) : null;
+                    })()
+                  : undefined
+              }
               onEdit={(on) => {
                 setEditing(on ? row.item.id : null);
                 // Cast the name when the writer leaves the box, never while
@@ -1801,6 +1853,7 @@ function Row({
   editing,
   onSelect,
   onOpen,
+  go,
   onEdit,
   onTitle,
   onFold,
@@ -1841,6 +1894,8 @@ function Row({
   hit: boolean;
   /** A double-click: where the host has somewhere to go for this row (addendum 42 §9). */
   onOpen?(): void;
+  /** Go to where this row is written: a function, null where it is not on the track yet, absent where there is no Go. */
+  go?: (() => void) | null;
   editing: boolean;
   onSelect(how: { add?: boolean; through?: boolean }): void;
   onEdit(on: boolean): void;
@@ -1905,6 +1960,7 @@ function Row({
          writing rather than the row's own name (§4c). An idea that is not on
          the track yet has no writing to show and carries nothing. */
       data-beat={item.boundBeatId ?? undefined}
+      data-row={item.id as string}
       role="treeitem"
       aria-level={depth + 1}
       aria-selected={selected}
@@ -2111,6 +2167,24 @@ function Row({
       </span>
 
       {item.collapsed && childCount > 0 ? <span className="muted small outline-hidden">{childCount}</span> : null}
+
+      {/* **Go** to where it is written (from Ken, 13 November), on the
+          chosen row only, so the outline is not a column of buttons. */}
+      {go !== undefined ? (
+        <button
+          type="button"
+          className="small outline-go"
+          disabled={go === null}
+          title={go ? 'Open the writing screen at this point' : 'Not on the track yet: add it to the track to write it'}
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            go?.();
+          }}
+        >
+          Go ▸
+        </button>
+      ) : null}
 
       <div className="outline-tools">
         <button type="button" className="ghost small" aria-label={`Move ${item.title || 'this row'} out`} onClick={() => onIndent(false)}>

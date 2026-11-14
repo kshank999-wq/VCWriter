@@ -165,3 +165,46 @@ describe('marking up in the beat writing screen', () => {
     expect(addMarkupDraft(file, { beatId: made.beat.id as string, marks: [], markedBy: 'Ken' })).toBe(file);
   });
 });
+
+describe('markup notes, numbered (from Ken, 13 November)', () => {
+  it('numbers every live mark, finds its words in the draft as it reads now, and keeps a number when addressed', async () => {
+    const { addMarkupDraft, createProjectFile, addUnit, addBeat, updateBeat, markupNotesOf, markupNotePlace, setMarkAddressed, archiveRevision } =
+      await import('../index.js');
+    const empty = createProjectFile({ title: 'Mine', format: 'screenplay' });
+    const scene = addUnit({ ...empty, units: [], beats: [] }, { trackId: empty.tracks[0]!.id, title: 'EXT. ROAD - DAY' });
+    const made = addBeat(scene.file, { unitId: scene.unit.id, title: 'Road' });
+    const beatId = made.beat.id as string;
+    let file = updateBeat(made.file, made.beat.id, {
+      manuscript: { elements: [{ id: 'e1', type: 'action', text: 'She opens the door.', characterId: null, attributes: {} }] },
+    } as never);
+    file = addMarkupDraft(file, {
+      beatId,
+      marks: [mark({ id: 'a', elementId: 'e1', start: 4, end: 9 }), mark({ id: 'b', elementId: 'e1', start: 14, end: 18, kind: 'strike' })],
+      markedBy: 'Ken Shank',
+    });
+    let beat = file.beats.find((one) => (one.id as string) === beatId)!;
+    let notes = markupNotesOf(beat);
+    expect(notes.map((one) => [one.number, one.quote])).toEqual([
+      [1, 'opens'],
+      [2, 'door'],
+    ]);
+
+    // The writing moves on: the words are found where they are now.
+    file = updateBeat(file, made.beat.id, {
+      manuscript: { elements: [{ id: 'e1', type: 'action', text: 'Slowly, she opens the door.', characterId: null, attributes: {} }] },
+    } as never);
+    beat = file.beats.find((one) => (one.id as string) === beatId)!;
+    expect(markupNotePlace(beat.manuscript, notes[0]!)?.ranges).toEqual([{ elementId: 'e1', from: 12, to: 17 }]);
+
+    file = setMarkAddressed(file, beatId, notes[0]!.revisionId, 'a', true);
+    beat = file.beats.find((one) => (one.id as string) === beatId)!;
+    notes = markupNotesOf(beat);
+    expect(notes.map((one) => [one.number, one.mark.addressed])).toEqual([
+      [1, true],
+      [2, false],
+    ]);
+
+    file = archiveRevision(file, made.beat.id, notes[0]!.revisionId as never, true);
+    expect(markupNotesOf(file.beats.find((one) => (one.id as string) === beatId)!)).toEqual([]);
+  });
+});

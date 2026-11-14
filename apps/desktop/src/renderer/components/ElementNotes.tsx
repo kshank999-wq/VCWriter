@@ -23,6 +23,8 @@ export function ElementNotes({
   rows = [],
   placeWord,
   onOpen,
+  open: shownFromOutside,
+  onOpenChange,
 }: {
   file: ProjectFile;
   notes: ReadonlyArray<ResearchItem>;
@@ -31,8 +33,20 @@ export function ElementNotes({
   /** What placing a note does here, for the hint: "add it as a beat", "place its text". */
   placeWord: string;
   onOpen(note: ResearchItem): void;
+  /**
+   * Open or folded, where the host holds it: the writing screen's **Notes**
+   * button and this panel's own fold are then one switch (from Ken, 13
+   * November: *when you hit notes, it just moves the main screen over*).
+   */
+  open?: boolean;
+  onOpenChange?(open: boolean): void;
 }) {
-  const [open, setOpen] = useState(() => read('vcw-element-notes-open', true));
+  const [ownOpen, setOwnOpen] = useState(() => read('vcw-element-notes-open', true));
+  const open = shownFromOutside ?? ownOpen;
+  const setOpen = (next: boolean) => {
+    setOwnOpen(next);
+    onOpenChange?.(next);
+  };
   const [hideUsed, setHideUsed] = useState(() => read('vcw-element-notes-hide-used', true));
   const keep = (key: string, value: boolean) => {
     try {

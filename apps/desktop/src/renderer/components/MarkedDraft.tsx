@@ -58,7 +58,20 @@ export const MarkedDraft = ({
   </div>
 );
 
-export const MarkedLine = ({ id, type, text, marks }: { id: string; type: string; text: string; marks: Mark[] }) => {
+export const MarkedLine = ({
+  id,
+  type,
+  text,
+  marks,
+  numbers,
+}: {
+  id: string;
+  type: string;
+  text: string;
+  marks: Mark[];
+  /** Each mark's number, for the little circle at its end (from Ken, 13 November). */
+  numbers?: ReadonlyMap<string, number>;
+}) => {
   const segments = segmentsFor(text, marks);
   let at = 0;
   return (
@@ -85,6 +98,15 @@ export const MarkedLine = ({ id, type, text, marks }: { id: string; type: string
                 {mark.replacement}
               </ins>
             ))}
+            {numbers
+              ? segment.marks
+                  .filter((mark) => Math.min(mark.end, text.length) === from + segment.text.length && numbers.has(mark.id))
+                  .map((mark) => (
+                    <span key={`n${mark.id}`} className="mark-num" title={describeMark(mark)}>
+                      {numbers.get(mark.id)}
+                    </span>
+                  ))
+              : null}
           </span>
         );
       })}
@@ -92,7 +114,7 @@ export const MarkedLine = ({ id, type, text, marks }: { id: string; type: string
         .filter((mark) => mark.end === mark.start)
         .map((mark) => (
           <span key={mark.id} className="marked-pin" title={mark.note}>
-            ✎
+            {numbers?.has(mark.id) ? <span className="mark-num">{numbers.get(mark.id)}</span> : '✎'}
           </span>
         ))}
     </p>
@@ -119,10 +141,18 @@ const COLOUR_NAMES = ['Yellow', 'Green', 'Pink', 'Blue'];
 const TOOLS: MarkKind[] = ['highlight', 'strike', 'underline', 'note', 'suggest'];
 const TOOL_WORDS: Record<MarkKind, string> = {
   highlight: 'Highlight',
-  strike: 'Strike',
+  strike: 'Cross out',
   underline: 'Underline',
   note: 'Note',
   suggest: 'Suggest',
+};
+/** What each tool looks like on its button, so the row reads at a glance. */
+const TOOL_FACES: Record<MarkKind, React.ReactNode> = {
+  highlight: <span className="tool-face tool-face-highlight" aria-hidden="true">ab</span>,
+  strike: <s className="tool-face" aria-hidden="true">ab</s>,
+  underline: <u className="tool-face" aria-hidden="true">ab</u>,
+  note: <span className="tool-face" aria-hidden="true">✎</span>,
+  suggest: <span className="tool-face" aria-hidden="true">⇄</span>,
 };
 
 /**
@@ -154,6 +184,8 @@ export const MarkingPage = ({
   const [asking, setAsking] = useState<null | { kind: 'note' | 'suggest'; at: NonNullable<ReturnType<typeof selectionIn>> }>(null);
   const [words, setWords] = useState('');
   const [said, setSaid] = useState<string | null>(null);
+  /** Each mark's number: its place in the list, 1 first. */
+  const numbers = new Map(marks.map((mark, index) => [mark.id, index + 1] as const));
 
   const id = () =>
     typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `m${Date.now()}${Math.random()}`;
@@ -207,13 +239,16 @@ export const MarkingPage = ({
           <button
             key={kind}
             type="button"
-            className={`ghost small marking-tool marking-tool-${kind}`}
+            className={`marking-tool marking-tool-${kind}`}
             // Keep the selection: pressing the button must not clear it.
             onMouseDown={(event) => event.preventDefault()}
             onClick={() => apply(kind)}
-            title={MARK_KIND_NAMES[kind]}
+            title={`${MARK_KIND_NAMES[kind]} the selected words`}
+            aria-label={TOOL_WORDS[kind]}
+            style={kind === 'highlight' ? ({ '--marker': colour } as React.CSSProperties) : undefined}
           >
-            {TOOL_WORDS[kind]}
+            {TOOL_FACES[kind]}
+            <span>{TOOL_WORDS[kind]}</span>
           </button>
         ))}
         <span className="marking-swatches">
@@ -249,6 +284,7 @@ export const MarkingPage = ({
         </div>
       ) : null}
 
+      <div className="marking-sheet">
       <div className="marked-draft-page marking-page" ref={page}>
         {manuscript.elements.length === 0 ? <p className="muted">Nothing written in this draft yet.</p> : null}
         {manuscript.elements.map((element) => (
@@ -258,30 +294,53 @@ export const MarkingPage = ({
             type={element.type}
             text={element.text}
             marks={marksOn(marks, element.id as string)}
+            numbers={numbers}
           />
         ))}
       </div>
 
-      <div className="marked-draft-list">
+      {/* **The markup notes, numbered, in the margin** (from Ken, 13
+          November): one line for every mark, its number the circle's on the
+          page, with room to say something about it. */}
+      <aside className="marked-draft-list marking-margin" aria-label="Markup notes">
+        <h4>Markup notes</h4>
         {marks.length > 0 ? (
-          <ol>
-            {marks.map((mark) => (
-              <li key={mark.id}>
-                <span
-                  className={`marked-kind marked-kind-${mark.kind}`}
-                  style={mark.kind === 'highlight' ? { background: mark.colour } : undefined}
-                >
-                  {MARK_KIND_NAMES[mark.kind]}
-                </span>{' '}
-                {describeMark(mark)}{' '}
-                <button type="button" className="ghost small" onClick={() => setMarks((now) => now.filter((one) => one.id !== mark.id))}>
-                  Remove
-                </button>
+          <ol className="markup-note-list">
+            {marks.map((mark, index) => (
+              <li key={mark.id} className="markup-note">
+                <span className="mark-num">{index + 1}</span>
+                <span className="markup-note-text">
+                  <span
+                    className={`marked-kind marked-kind-${mark.kind}`}
+                    style={mark.kind === 'highlight' ? { background: mark.colour } : undefined}
+                  >
+                    {MARK_KIND_NAMES[mark.kind]}
+                  </span>{' '}
+                  {mark.quote.trim() ? <q>{mark.quote.trim().slice(0, 80)}</q> : null}
+                  {mark.kind === 'suggest' ? <span> → “{mark.replacement}”</span> : null}
+                  <textarea
+                    className="markup-note-say"
+                    rows={2}
+                    placeholder={mark.kind === 'note' ? 'The note' : 'Say something about it (optional)'}
+                    aria-label={`Note for mark ${index + 1}`}
+                    value={mark.note}
+                    onChange={(event) =>
+                      setMarks((now) => now.map((one) => (one.id === mark.id ? { ...one, note: event.target.value } : one)))
+                    }
+                  />
+                  <button
+                    type="button"
+                    className="ghost small"
+                    onClick={() => setMarks((now) => now.filter((one) => one.id !== mark.id))}
+                  >
+                    Remove
+                  </button>
+                </span>
               </li>
             ))}
           </ol>
         ) : (
-          <p className="muted small">Select words on the page, then pick a tool.</p>
+          <p className="muted small">Select words on the page, then pick a tool above. Each mark gets a number here and on the page.</p>
         )}
         <label className="marking-name">
           <span className="muted small">Your name, on the marks</span>
@@ -306,6 +365,7 @@ export const MarkingPage = ({
             {said}
           </p>
         ) : null}
+      </aside>
       </div>
     </div>
   );

@@ -42,6 +42,7 @@ import {
   type StructuralUnitId,
   type SyncConflict,
   nounsFor,
+  outlineRowForBeat,
 } from '@vcwriter/domain';
 import { DocumentWorkspace } from './document/DocumentWorkspace';
 import { documentCommands } from './document/document-commands';
@@ -239,6 +240,8 @@ export default function App() {
   const [sculptorOpen, setSculptorOpen] = useState(false);
   const [narrativeOpen, setNarrativeOpen] = useState(false);
   const [outlinerOpen, setOutlinerOpen] = useState(false);
+  /** The row the Outliner is asked to show, from a writing screen's Go (from Ken, 13 November). */
+  const [outlineFocus, setOutlineFocus] = useState<{ outlineId: string; itemId: string; token: number } | null>(null);
   /** The Layout room, over the workspace (addendum 20). */
   const [layoutOpen, setLayoutOpen] = useState(false);
   const [sorterOpen, setSorterOpen] = useState(false);
@@ -1403,6 +1406,27 @@ export default function App() {
    * drawn only inside the Write page, so on a book's Outline page a room
    * button set its room open and nothing showed it.
    */
+  /**
+   * **Go** between the Outliner and the writing screen (from Ken, 13
+   * November: *it'll take you to the outliner or the writing screen at that
+   * same point*). Each closes the one it leaves.
+   */
+  const goToWriting = (beatId: string) => {
+    setOutlinerOpen(false);
+    if (view === 'outline') setView('write');
+    setSelectedBeatId(beatId as BeatId);
+    setOpenBeatId(beatId as BeatId);
+  };
+  const goToOutline = (beatId: BeatId) => {
+    const row = outlineRowForBeat(file, beatId);
+    if (!row) return;
+    setOpenBeatId(null);
+    setOutlineFocus({ ...row, token: Date.now() });
+    if (away.has('outliner')) openPane('outliner');
+    else if (isBook) setView('outline');
+    else setOutlinerOpen(true);
+  };
+
   const roomLayer = (
     <>
     {researchWindow}
@@ -1487,6 +1511,8 @@ export default function App() {
       onClose={() => setOutlinerOpen(false)}
       onUpdate={project.update}
       onSaveAs={saveSomewhere}
+      onGoToWriting={goToWriting}
+      focusRow={outlineFocus}
       onPrint={(outlineId) => void print('outline', outlineId)}
       onExport={(outlineId) => void exportPdf('outline', outlineId)}
       onPopOut={() => {
@@ -1773,6 +1799,7 @@ export default function App() {
             onClose={() => setOpenBeatId(null)}
             onUpdate={project.update}
             onSelect={setSelectedBeatId}
+            onGoToOutline={goToOutline}
             onPopOut={(beatId) => {
               setOpenBeatId(null);
               openPane(`beat:${beatId}`);
@@ -1803,6 +1830,8 @@ export default function App() {
               onClose={() => setView('write')}
               onUpdate={project.update}
               onSaveAs={saveSomewhere}
+              onGoToWriting={goToWriting}
+              focusRow={outlineFocus}
               onPrint={(outlineId) => void print('outline', outlineId)}
               onExport={(outlineId) => void exportPdf('outline', outlineId)}
               onPopOut={() => {

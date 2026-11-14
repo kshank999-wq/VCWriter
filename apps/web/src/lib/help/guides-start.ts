@@ -137,6 +137,15 @@ export const GUIDES_START: Guide[] = [
         tip: 'Type INT. or EXT. at the start of a line and it becomes a scene heading on its own.',
       },
       {
+        heading: 'The writing screen: notes and markup',
+        body: [
+          'Double-click a beat or subsection to open its writing screen. **Notes** at the top opens and folds the list of notes filed to it, down the right.',
+          'Press **Mark up** to mark the page without changing it. Select some words, then press **Highlight** (in one of four colours), **Underline**, **Cross out**, **Note** or **Suggest**. Each mark gets a number in a little circle, and the same number in the **Markup notes** list beside the page, where you can write something about it. Put your name on the marks and press **Save as markup draft**.',
+          'Back in the writing screen, **Markup notes** opens and folds the numbered list, and the marks stay circled on the page as you rewrite. Tick **Addressed** when you have dealt with one; with **Hide addressed** on, it leaves the list and the page.',
+        ],
+        tip: 'Markups that come back from the Writers Room are listed with the rest, numbered in the order they arrived.',
+      },
+      {
         heading: 'The bar along the bottom',
         body: [
           'The left of the bar holds the pages: **Home**, **Write**, **Preview** (the pages as they will print), **Editors** (the Daily editor and the Final editor), and **Read back**, which reads your work aloud. An Instructional book also has an **Outline** page.',

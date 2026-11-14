@@ -159,6 +159,7 @@ export * from './note-sorter-suggest.js';
 export * from './entities/note-sorter.js';
 export * from './outline.js';
 export * from './outline-binding.js';
+export * from './outline-go.js';
 export * from './outline-link.js';
 export * from './book-headings.js';
 export * from './beat-plan.js';

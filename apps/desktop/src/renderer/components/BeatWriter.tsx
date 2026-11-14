@@ -1,5 +1,4 @@
 import { BookHeadingLine } from './BookHeadingLine';
-import { BeatPlanPanel } from './BeatPlanPanel';
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import {
   findPassageInDraft,
@@ -10,7 +9,10 @@ import {
   findUnit,
   newId,
   pageBreaks,
-  beatPlan,
+  noteUsed,
+  markupNotesOf,
+  markupNotePlace,
+  setMarkAddressed,
   isProseFormat,
   printsBookHeadings,
   sectionHeading,
@@ -40,6 +42,8 @@ import {
   isMarkupDraft,
 } from '@vcwriter/domain';
 import { ElementNotes } from './ElementNotes';
+import { MarkupNotes } from './MarkupNotes';
+import type { MarkupPlace } from './BeatBody';
 import { NoteRewrite } from './NoteRewrite';
 import { BeatBody } from './BeatBody';
 import { MarkedDraft, MarkedLine, MarkingPage } from './MarkedDraft';
@@ -73,6 +77,11 @@ export interface BeatWriterProps {
    * to *drag it to another screen*, the ⧉ beside this making that window.
    */
   onGrab?(event: ReactPointerEvent<HTMLElement>): void;
+  /**
+   * **Go to the Outliner** at this beat's row (from Ken, 13 November). Absent
+   * where there is no Outliner to open, or the beat has no row in it.
+   */
+  onGoToOutline?(): void;
 }
 
 /**
@@ -92,7 +101,7 @@ export interface BeatWriterProps {
  * about the beat — colour, status, links, what it sets up — is the
  * inspector's business, and stays out of the way of the page.
  */
-export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, onGrab }: BeatWriterProps) {
+export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, onGrab, onGoToOutline }: BeatWriterProps) {
   const unit = findUnit(file, beat.unitId);
   /**
    * The notes for this beat, down the right (from Ken): those filed to it,
@@ -120,9 +129,44 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
   };
   const track = unit ? findTrack(file, unit.trackId) : undefined;
   const [naming, setNaming] = useState(false);
-  /** The beat's plan beside its writing, open or not, remembered on this computer (from Ken). */
-  const [planOpen, setPlanOpen] = usePreference('beatPlanOpen', false);
-  const planCount = useMemo(() => beatPlan(file, beat.id).lines.length, [file, beat.id]);
+  /**
+   * **Notes is the list down the right** (from Ken, 13 November: *when you hit
+   * notes, it just moves the main screen over… if there is a purpose for that,
+   * explain it; if not, fix that*). It used to open a second panel of the
+   * Outliner's plan beside the notes list that already shows the same notes,
+   * squeezing the page between them; now the button and the list's own fold
+   * are one switch, remembered on this computer.
+   */
+  const [planOpen, setPlanOpen] = usePreference('beatNotesOpen', true);
+  const planCount = beatNotes.filter((note) => !noteUsed(file, note)).length;
+
+  /**
+   * **Markup notes** (from Ken, 13 November): every mark on this beat's
+   * markup drafts, numbered, in a margin that opens and folds, each found on
+   * the page as it reads now and circled with its number. Folding the margin
+   * takes the circles off the page too.
+   */
+  const markupNotes = useMemo(() => markupNotesOf(beat), [beat]);
+  const [markupOpen, setMarkupOpen] = usePreference('beatMarkupOpen', true);
+  const [hideAddressed, setHideAddressed] = usePreference('markupHideAddressed', true);
+  const markupFound = useMemo(
+    () => markupNotes.map((note) => ({ note, place: markupNotePlace(beat.manuscript, note) })),
+    [markupNotes, beat.manuscript],
+  );
+  const markupMissing = useMemo(
+    () => new Set(markupFound.filter((one) => !one.place).map((one) => one.note.number)),
+    [markupFound],
+  );
+  const markupPlaces = useMemo<MarkupPlace[]>(
+    () =>
+      markupOpen
+        ? markupFound.flatMap(({ note, place }) =>
+            place && !(hideAddressed && note.mark.addressed) ? [{ number: note.number, kind: note.mark.kind, ranges: place.ranges }] : [],
+          )
+        : [],
+    [markupFound, markupOpen, hideAddressed],
+  );
+  const markupWaiting = markupNotes.filter((one) => !one.mark.addressed).length;
   /** Which draft is being read beside the one being written; null for none. */
   /**
    * The drafts read beside the working one, up to two (from Ken: *see, like,
@@ -183,14 +227,6 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
   const [marking, setMarking] = useState(false);
   /** Whoever marks up on this computer, so their marks carry their name. */
   const [markerName, setMarkerName] = usePreference('markupName', '');
-  /** Set on saving a markup: open it beside the draft as soon as it is there. */
-  const [openNewMarkup, setOpenNewMarkup] = useState<number | null>(null);
-  useEffect(() => {
-    if (openNewMarkup === null || beat.revisions.length <= openNewMarkup) return;
-    const made = beat.revisions[beat.revisions.length - 1];
-    if (made) setComparing(made.id as string);
-    setOpenNewMarkup(null);
-  }, [openNewMarkup, beat.revisions]);
 
   // Where the printed pages break, from the one paginator the exports use.
   // Only this beat's elements are in it; the rest of the map costs nothing.
@@ -302,11 +338,32 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
             type="button"
             className={planOpen ? 'ghost small active' : 'ghost small'}
             aria-pressed={planOpen}
-            title={planOpen ? 'Hide the notes for this beat' : 'Show the notes, characters and ideas planned for this beat'}
+            title={planOpen ? 'Fold the notes list away' : 'Show the notes filed to this part, down the right'}
             onClick={() => setPlanOpen(!planOpen)}
           >
             Notes{planCount > 0 ? ` (${planCount})` : ''}
           </button>
+          {onGoToOutline ? (
+            <button
+              type="button"
+              className="ghost small"
+              title="Open the Outliner at this point"
+              onClick={onGoToOutline}
+            >
+              Outliner ▸
+            </button>
+          ) : null}
+          {markupNotes.length > 0 ? (
+            <button
+              type="button"
+              className={markupOpen ? 'ghost small active' : 'ghost small'}
+              aria-pressed={markupOpen}
+              title={markupOpen ? 'Hide the markup notes and their numbers' : 'Show the markup notes, numbered, in the margin'}
+              onClick={() => setMarkupOpen(!markupOpen)}
+            >
+              Markup notes{markupWaiting > 0 ? ` (${markupWaiting})` : ''}
+            </button>
+          ) : null}
           {/* Mark up this draft (from Ken: *a markup ability … so you can mark
               up your own work, or someone that opens it can*). The page turns
               into a copy that can be marked and not typed in. */}
@@ -535,7 +592,7 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
         className={[
           beside > 0 ? 'writer-body comparing' : 'writer-body',
           beside > 1 ? 'three-across' : '',
-          planOpen ? 'with-plan' : '',
+          beside === 0 && markupNotes.length > 0 ? 'with-markup' : '',
         ]
           .filter(Boolean)
           .join(' ')}
@@ -574,9 +631,9 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
               onSave={(marks) => {
                 onUpdate((current) => addMarkupDraft(current, { beatId: beat.id as string, marks, markedBy: markerName }));
                 setMarking(false);
-                // Open the new markup beside the draft once it exists, so the
-                // marks are in view while the writing goes on.
-                setOpenNewMarkup(beat.revisions.length);
+                // The marks come back as markup notes in the margin, numbered
+                // on the page, while the writing goes on.
+                setMarkupOpen(true);
               }}
             />
           ) : null}
@@ -598,6 +655,7 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
             movable
             placedBlock={placed}
             taskPassage={passageShown ? passage : null}
+            markupPlaces={markupPlaces}
           />}
         </div>
 
@@ -650,14 +708,33 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
             )}
           </div>
         ) : null}
-        {planOpen ? <BeatPlanPanel file={file} beatId={beat.id} onClose={() => setPlanOpen(false)} /> : null}
-        {beside === 0 ? (
+        {beside === 0 && markupNotes.length > 0 && !marking ? (
+          <MarkupNotes
+            notes={markupNotes}
+            open={markupOpen}
+            onOpenChange={setMarkupOpen}
+            hideAddressed={hideAddressed}
+            onHideAddressed={setHideAddressed}
+            missing={markupMissing}
+            onAddressed={(note, addressed) =>
+              onUpdate((current) => setMarkAddressed(current, beat.id as string, note.revisionId, note.mark.id, addressed))
+            }
+            onShow={(note) =>
+              document
+                .querySelector(`.writer-sheet [data-mark-number="${note.number}"]`)
+                ?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+            }
+          />
+        ) : null}
+        {beside === 0 && !marking ? (
           <ElementNotes
             file={file}
             notes={beatNotes}
             rows={beneath}
             placeWord="place its text where your cursor is"
             onOpen={(note) => setRewritingNote(note.id)}
+            open={planOpen}
+            onOpenChange={setPlanOpen}
           />
         ) : null}
       </div>

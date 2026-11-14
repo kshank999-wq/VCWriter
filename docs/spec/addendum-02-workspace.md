@@ -3204,3 +3204,56 @@ vice versa.*
 Driven in a 30-section book: pressing in section 27's words brought *Sub 27*
 into the track's view with the script still; choosing *Sub 3* on the track
 brought it into the script's.
+
+## The writing screen: Notes, markup notes, and Go (November 2026)
+
+From Ken, 13 November, with two screenshots: *in the beat screen or section
+screen… when you hit notes, it just moves the main screen over. I'm not sure
+if there's a purpose for that. If there is, explain it to me. If not, fix
+that.*
+
+**Notes.** The button opened the older *Planned for this beat* panel
+(`BeatPlanPanel`) beside the newer notes list down the right, which already
+lists the same notes, and squeezed the page between them. There was no
+purpose left in it: the panel is gone, and **Notes** now opens and folds the
+right-hand list (`ElementNotes`, controlled by the writer through `open` /
+`onOpenChange`, remembered as `beatNotesOpen`). Its count is the notes not yet
+used.
+
+**Markup** (*there needs to be tools to mark up… when you highlight
+something, it'll add a little one with a circle, and then it'll list that note
+in the margin… collapsible… numbered. And when you address the note, it can be
+hid just like the notes from the research section. They'll be called markup
+notes*).
+
+- *Mark up* shows a toolbar whose buttons look like what they do —
+  **Highlight** (four colours), **Cross out**, **Underline**, **Note**,
+  **Suggest**. Every mark is numbered in a red circle at its end, and listed
+  with the same number in a **Markup notes** margin beside the page, where it
+  can carry a note. The page widens while marking so the script keeps its
+  width. `MARK_KIND_NAMES.strike` is now *Cross out*, Ken's word.
+- Saved, the marks are a markup draft as before (addendum 07 §27.3), and the
+  writing screen lists **every live markup draft's marks** as markup notes,
+  numbered across drafts in the order they were made (`markupNotesOf`). Each
+  is found in the draft as it reads now — words over offsets, as a task's
+  passage is (`markupNotePlace` → `findPassageInDraft`) — lit on the page with
+  the CSS Custom Highlight API by kind, and circled with its number.
+- **Addressed** (`mark.addressed`, `setMarkAddressed`) ticks one off; **Hide
+  addressed** (on by default) takes it off the list and the page. Numbers do
+  not change. The header's **Markup notes (n)** opens and folds the margin,
+  and folding it takes the circles off the page too.
+
+**Go** (*in the outliner, when you select a section, subsection… a beat or a
+scene, it should have a go button next to it that will take you to the
+writing screen exactly where that is. And in the writing screen, the same
+thing… at that same point*).
+
+- The chosen outline row carries **Go ▸** (`writingBeatForRow`): a beat or
+  subsection opens its own writing screen; a scene or section its first beat;
+  a chapter or a plan with rows under it the first row under it that is on the
+  track; a row beneath a beat that beat. Greyed out where nothing near it is
+  on the track.
+- The writing screen's **Outliner ▸** (`outlineRowForBeat`) closes it and
+  opens the Outliner — a room, or a book's *Outline* page — with that row
+  chosen, its parents unfolded and scrolled into view (`focusRow`).
+- Not yet in popped-out windows (the beat's or the Outliner's own window).

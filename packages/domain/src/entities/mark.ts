@@ -11,7 +11,7 @@ export type MarkKind = (typeof MARK_KINDS)[number];
 
 export const MARK_KIND_NAMES: Record<MarkKind, string> = {
   highlight: 'Highlight',
-  strike: 'Strike through',
+  strike: 'Cross out',
   underline: 'Underline',
   note: 'Note',
   suggest: 'Suggest wording',
@@ -34,6 +34,12 @@ export const markSchema = z
     replacement: z.string().max(2000).default(''),
     /** The words the mark was made on, as they read when it was made. */
     quote: z.string().max(2000).default(''),
+    /**
+     * Dealt with (from Ken, 13 November: *when you address the note, it can be
+     * hid just like the notes from the research section*). The mark stays on
+     * the record; the writing screen's *Hide addressed* takes it off the list.
+     */
+    addressed: z.boolean().default(false),
   })
   .refine((mark) => mark.end >= mark.start, { message: 'A mark ends after it starts.' });
 export type Mark = z.infer<typeof markSchema>;

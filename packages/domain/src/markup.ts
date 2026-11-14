@@ -3,7 +3,9 @@ import { seatName, type Seat } from './room.js';
 import { newId } from './ids.js';
 import { nowIso } from './entities/common.js';
 import type { ProjectFile } from './project-file.js';
-import type { BeatRevision } from './entities/structure.js';
+import type { Beat, BeatRevision } from './entities/structure.js';
+import type { ManuscriptSegment } from './entities/manuscript.js';
+import { findPassageInDraft, type PassageInDraft } from './integration.js';
 import type { BeatRevisionId } from './ids.js';
 import { mayEmail, type Notice } from './notify.js';
 
@@ -320,3 +322,94 @@ export const addMarkupDraft = (
   };
 };
 
+
+// ------------------------------------------------------ markup notes, numbered
+
+/**
+ * **Markup notes** (from Ken, 13 November: *when you highlight something, it'll
+ * add a little one with a circle, and then it'll list that note in the margin…
+ * they'll be numbered. And when you address the note, it can be hid just like
+ * the notes from the research section*).
+ *
+ * Every mark on a beat's markup drafts that are not archived, numbered from 1
+ * in the order the drafts were made and the marks within each. The number is
+ * the one the circle on the page and the line in the margin share; it does not
+ * change when a mark is addressed, so a note the writer was told about by
+ * number keeps it.
+ */
+export interface MarkupNote {
+  number: number;
+  revisionId: string;
+  /** "KS markup". */
+  revisionName: string;
+  markedBy: string;
+  mark: Mark;
+  /** The words marked, as they read when the mark was made. */
+  quote: string;
+}
+
+export const markupNotesOf = (beat: Pick<Beat, 'revisions'>): MarkupNote[] => {
+  const out: MarkupNote[] = [];
+  for (const revision of beat.revisions) {
+    if (revision.archived || !isMarkupDraft(revision)) continue;
+    for (const mark of revision.marks) {
+      const line = revision.manuscript.elements.find((one) => (one.id as string) === mark.elementId);
+      const quote = mark.quote || (line ? line.text.slice(mark.start, mark.end) : '');
+      out.push({
+        number: out.length + 1,
+        revisionId: revision.id as string,
+        revisionName: revision.name,
+        markedBy: revision.markedBy ?? '',
+        mark,
+        quote,
+      });
+    }
+  }
+  return out;
+};
+
+/**
+ * Where a markup note's words are in the draft being written now, which may
+ * have moved on since the mark was made: the words are trusted over the
+ * offsets, as a task's passage is (`findPassageInDraft`). Null where they are
+ * gone; a pin with no words stands at its line's place.
+ */
+export const markupNotePlace = (segment: ManuscriptSegment, note: MarkupNote): PassageInDraft | null => {
+  const { mark } = note;
+  if (!note.quote.trim()) {
+    const line = segment.elements.find((one) => (one.id as string) === mark.elementId);
+    if (!line) return null;
+    const at = Math.min(mark.start, line.text.length);
+    return { ranges: [{ elementId: mark.elementId, from: at, to: at }], how: 'exact' };
+  }
+  return findPassageInDraft(segment, {
+    startElementId: mark.elementId,
+    startOffset: mark.start,
+    endElementId: mark.elementId,
+    endOffset: mark.end,
+    quote: note.quote,
+  });
+};
+
+/** Marks one markup note dealt with, or not. Nothing is erased. */
+export const setMarkAddressed = (
+  file: ProjectFile,
+  beatId: string,
+  revisionId: string,
+  markId: string,
+  addressed: boolean,
+): ProjectFile => ({
+  ...file,
+  beats: file.beats.map((beat) =>
+    (beat.id as string) !== beatId
+      ? beat
+      : {
+          ...beat,
+          revisions: beat.revisions.map((revision) =>
+            (revision.id as string) !== revisionId
+              ? revision
+              : { ...revision, marks: revision.marks.map((mark) => (mark.id === markId ? { ...mark, addressed } : mark)) },
+          ),
+        },
+  ),
+});
