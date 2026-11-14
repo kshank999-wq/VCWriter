@@ -3280,3 +3280,15 @@ thing… at that same point*).
   text is black.* The Note / Suggest box on the page is a white card with
   black text and a gold **Add**; the margin's note boxes are light text on
   dark.
+
+### Word count, not pages and time, on a book's track (14 November)
+
+From Ken: *in the instructional book, novel, short story, we're not concerned
+with running time. So pages and time are only for stage plays, screenplays,
+episodics… that will say word count instead… a running word count for each
+chapter and each section.* On a prose format (`isProseFormat`: novel, short
+stories or a collection, instructional) the track's top row is **Word count**:
+each section's own words, the running total to the end of it beneath, the
+book's total at the end of the row, and each chapter's words on its band.
+Only subsections in the book count. Scripts keep **Pages · time**, and short
+form **Time**.

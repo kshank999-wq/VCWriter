@@ -480,3 +480,24 @@ describe('the timeline under a board', () => {
     expect(document.querySelector('.board-frame video')).not.toBeNull();
   });
 });
+
+describe('word count on a book’s track (from Ken, 14 November)', () => {
+  it('says Word count, with each section’s words and the running total, and no pages or time', () => {
+    const base = createProjectFile({ title: 'Villains', format: 'novel' });
+    const beat = base.beats[0]!;
+    const file = {
+      ...base,
+      beats: base.beats.map((one) =>
+        one.id === beat.id
+          ? { ...one, manuscript: { elements: [{ id: 'e1' as never, type: 'paragraph', text: 'One two three four five.', characterId: null, attributes: {} }] } }
+          : one,
+      ),
+    } as ProjectFile;
+    const { container } = timeline(file);
+    expect(screen.getByText('Word count')).toBeDefined();
+    expect(screen.queryByText('Pages · time')).toBeNull();
+    const cell = container.querySelector('.ruler-cell:not(.tail)')!;
+    expect(cell.textContent).toBe('55');
+    expect(container.querySelector('.ruler-cell.tail')?.textContent).toBe('5 words');
+  });
+});

@@ -24282,3 +24282,14 @@ button.mark-num { cursor: pointer; }
   caret-color: var(--text);
   border: 1px solid var(--border);
 }
+
+/* A chapter's word count on its band (from Ken, 14 November). */
+.acts-cell.band .band-words {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 0 6px;
+  font-size: 10px;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+}

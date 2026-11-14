@@ -10,6 +10,7 @@ import {
   unitsJoin,
   joinUnits,
   beatsForUnit,
+  countWords,
   outlineRowForBeat,
   sculptorNodeForBeat,
   moveBeat,
@@ -486,6 +487,23 @@ export function MasterTimeline({
 
   const playhead = (unitId: string) => (unitId === selectedUnitId ? ' playhead' : '');
 
+  /**
+   * **Words, not pages and time, on a book** (from Ken, 14 November: *in the
+   * instructional book, novel, short story, we're not concerned with running
+   * time… that will say word count instead of pages and time, which will give
+   * you a running word count for each chapter and each section*). Each
+   * section's own count, the running total to the end of it, and each
+   * chapter's on its band. Only what is in the book counts.
+   */
+  const byWords = isProseFormat(file.project.format);
+  const unitWords = spans.map((span) =>
+    beatsForUnit(file, span.unit.id)
+      .filter((beat) => beat.inScript !== false)
+      .reduce((total, beat) => total + countWords(beat.manuscript), 0),
+  );
+  const runningWords = unitWords.reduce<number[]>((out, words) => [...out, (out.at(-1) ?? 0) + words], []);
+  const wordsLabel = (count: number) => count.toLocaleString();
+
   return (
     <section className="timeline" aria-label="Master timeline">
       <div className="timeline-scroll" ref={scroller}>
@@ -493,7 +511,7 @@ export function MasterTimeline({
           {/* Pages, and the time they play for: a page is a minute (§5).
               A commercial has no pages, so short form says Time and means it
               (addendum 05 §3a). */}
-          <div className="row-head ruler-head">{shortForm ? 'Time' : 'Pages · time'}</div>
+          <div className="row-head ruler-head">{shortForm ? 'Time' : byWords ? 'Word count' : 'Pages · time'}</div>
           {spans.map((span, index) => (
             <div
               // **The page number is the useful one** (addendum 02 §4d). A
@@ -502,9 +520,20 @@ export function MasterTimeline({
               // dropped rather than clipped, and the cell says both on hover.
               key={span.unit.id}
               className={`ruler-cell${beatsAreChips(widths[index] ?? 0) ? '' : ' compressed'}${playhead(span.unit.id)}`}
-              title={shortForm ? undefined : `Page ${Math.floor(span.startPage) + 1} · ${timecode(span.startPage)}`}
+              title={
+                shortForm
+                  ? undefined
+                  : byWords
+                    ? `${wordsLabel(unitWords[index] ?? 0)} words in this ${nounsFor(file.project.format).unit.toLowerCase()} · ${wordsLabel(runningWords[index] ?? 0)} to the end of it`
+                    : `Page ${Math.floor(span.startPage) + 1} · ${timecode(span.startPage)}`
+              }
             >
-              {shortForm ? (
+              {byWords ? (
+                <>
+                  <span>{wordsLabel(unitWords[index] ?? 0)}</span>
+                  <span className="ruler-time muted">{wordsLabel(runningWords[index] ?? 0)}</span>
+                </>
+              ) : shortForm ? (
                 <span className="ruler-time">
                   {formatRt(
                     spans.slice(0, index).reduce((total, before) => total + secondsOf(before.unit.id), 0),
@@ -522,7 +551,9 @@ export function MasterTimeline({
             <span className="muted">
               {shortForm
                 ? formatRt(sheet?.seconds ?? 0)
-                : layout.totalPages < 0.05
+                : byWords
+                  ? `${wordsLabel(runningWords.at(-1) ?? 0)} words`
+                  : layout.totalPages < 0.05
                   ? ''
                   : `${Math.ceil(layout.totalPages)} pp. · ${timecode(layout.totalPages)}`}
             </span>
@@ -553,7 +584,15 @@ export function MasterTimeline({
               <div className="row-head">
                 {isCollection(file.project.format) ? 'Stories' : `${markerNoun(defaultMarkerKind(file.project.format))}s`}
               </div>
-              <ActsRow layout={layout} widths={widths} playheadUnitId={selectedUnitId} onUpdate={onUpdate} />
+              <ActsRow
+                layout={layout}
+                widths={widths}
+                playheadUnitId={selectedUnitId}
+                onUpdate={onUpdate}
+                {...(byWords
+                  ? { bandWords: (from: number, to: number) => unitWords.slice(from, to + 1).reduce((total, one) => total + one, 0) }
+                  : {})}
+              />
               <div className="acts-cell tail" />
 
               <div className="row-head">Links</div>
@@ -760,7 +799,10 @@ function ActsRow({
   widths,
   playheadUnitId,
   onUpdate,
+  bandWords,
 }: {
+  /** A book's chapter word count, across the sections a band covers. */
+  bandWords?(fromIndex: number, toIndex: number): number;
   layout: ReturnType<typeof storyLayout>;
   /** What each scene column is drawn at, so a band knows how wide it is. */
   widths: readonly number[];
@@ -797,6 +839,11 @@ function ActsRow({
             className="act-title"
             onCommit={(title) => onUpdate((current) => updateMarker(current, band.marker.id, { title }))}
           />
+          {bandWords && !narrow ? (
+            <span className="band-words muted" title="Words in this chapter">
+              {bandWords(band.fromIndex, band.toIndex).toLocaleString()} words
+            </span>
+          ) : null}
           <button
             type="button"
             className="ghost danger"
