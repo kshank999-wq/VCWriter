@@ -43,6 +43,7 @@ import {
   type SyncConflict,
   nounsFor,
   outlineRowForBeat,
+  sculptorNodeForBeat,
 } from '@vcwriter/domain';
 import { DocumentWorkspace } from './document/DocumentWorkspace';
 import { documentCommands } from './document/document-commands';
@@ -242,6 +243,8 @@ export default function App() {
   const [outlinerOpen, setOutlinerOpen] = useState(false);
   /** The row the Outliner is asked to show, from a writing screen's Go (from Ken, 13 November). */
   const [outlineFocus, setOutlineFocus] = useState<{ outlineId: string; itemId: string; token: number } | null>(null);
+  /** The card the Sculptor is asked to show, from a writing screen or the track. */
+  const [sculptorFocus, setSculptorFocus] = useState<{ boardId: string; nodeId: string; token: number } | null>(null);
   /** The Layout room, over the workspace (addendum 20). */
   const [layoutOpen, setLayoutOpen] = useState(false);
   const [sorterOpen, setSorterOpen] = useState(false);
@@ -1188,6 +1191,42 @@ export default function App() {
   const wpDocument = wordProcessor ? mainDocument(file) : null;
   /** On a book the Outliner is a page, elsewhere a room (addendum 19 §5). */
   const isBook = isInstructional(file.project.format);
+  /**
+   * **Go** between the Outliner and the writing screen (from Ken, 13
+   * November: *it'll take you to the outliner or the writing screen at that
+   * same point*). Each closes the one it leaves.
+   */
+  const goToWriting = (beatId: string) => {
+    setOutlinerOpen(false);
+    setSculptorOpen(false);
+    if (view === 'outline') setView('write');
+    setSelectedBeatId(beatId as BeatId);
+    setOpenBeatId(beatId as BeatId);
+  };
+  const goToOutline = (beatId: BeatId) => {
+    const row = outlineRowForBeat(file, beatId);
+    if (!row) return;
+    setOpenBeatId(null);
+    setOutlineFocus({ ...row, token: Date.now() });
+    if (away.has('outliner')) openPane('outliner');
+    else if (isBook) setView('outline');
+    else {
+      setSculptorOpen(false);
+      setOutlinerOpen(true);
+    }
+  };
+  const goToSculptor = (beatId: BeatId) => {
+    const card = sculptorNodeForBeat(file, beatId);
+    if (!card) return;
+    setOpenBeatId(null);
+    setSculptorFocus({ ...card, token: Date.now() });
+    if (away.has('sculptor')) openPane('sculptor');
+    else {
+      setOutlinerOpen(false);
+      setSculptorOpen(true);
+    }
+  };
+
   const focused = focusMode && writing;
   const showBottom = writing && timelineOpen && !focused;
   const showRight = writing && inspectorOpen && !focused;
@@ -1291,6 +1330,8 @@ export default function App() {
         threads={threads ?? undefined}
         selectedBeatId={selectedBeat?.id ?? null}
         onSelectBeat={setSelectedBeatId}
+        onGoToOutline={goToOutline}
+        onGoToSculptor={goToSculptor}
         selectedUnitId={selectedUnitId}
         onSelectUnit={(unitId, trackId) => {
           setSelectedUnitId(unitId);
@@ -1406,27 +1447,6 @@ export default function App() {
    * drawn only inside the Write page, so on a book's Outline page a room
    * button set its room open and nothing showed it.
    */
-  /**
-   * **Go** between the Outliner and the writing screen (from Ken, 13
-   * November: *it'll take you to the outliner or the writing screen at that
-   * same point*). Each closes the one it leaves.
-   */
-  const goToWriting = (beatId: string) => {
-    setOutlinerOpen(false);
-    if (view === 'outline') setView('write');
-    setSelectedBeatId(beatId as BeatId);
-    setOpenBeatId(beatId as BeatId);
-  };
-  const goToOutline = (beatId: BeatId) => {
-    const row = outlineRowForBeat(file, beatId);
-    if (!row) return;
-    setOpenBeatId(null);
-    setOutlineFocus({ ...row, token: Date.now() });
-    if (away.has('outliner')) openPane('outliner');
-    else if (isBook) setView('outline');
-    else setOutlinerOpen(true);
-  };
-
   const roomLayer = (
     <>
     {researchWindow}
@@ -1442,10 +1462,8 @@ export default function App() {
       onRedo={project.redo}
       canUndo={project.canUndo}
       canRedo={project.canRedo}
-      onGoToBeat={(beatId) => {
-        setSculptorOpen(false);
-        setSelectedBeatId(beatId);
-      }}
+      onGoToBeat={goToWriting}
+      focusNode={sculptorFocus}
       onOpenResearch={() => {
         setSculptorOpen(false);
         setResearchOpen(true);
@@ -1800,6 +1818,7 @@ export default function App() {
             onUpdate={project.update}
             onSelect={setSelectedBeatId}
             onGoToOutline={goToOutline}
+            onGoToSculptor={goToSculptor}
             onPopOut={(beatId) => {
               setOpenBeatId(null);
               openPane(`beat:${beatId}`);

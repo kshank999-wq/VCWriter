@@ -82,6 +82,8 @@ export interface BeatWriterProps {
    * where there is no Outliner to open, or the beat has no row in it.
    */
   onGoToOutline?(): void;
+  /** **Go to the Sculptor** at this beat's card; null greys it, where the beat is on no board (from Ken, 14 November). */
+  onGoToSculptor?: (() => void) | null;
 }
 
 /**
@@ -101,7 +103,7 @@ export interface BeatWriterProps {
  * about the beat — colour, status, links, what it sets up — is the
  * inspector's business, and stays out of the way of the page.
  */
-export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, onGrab, onGoToOutline }: BeatWriterProps) {
+export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, onGrab, onGoToOutline, onGoToSculptor }: BeatWriterProps) {
   const unit = findUnit(file, beat.unitId);
   /**
    * The notes for this beat, down the right (from Ken): those filed to it,
@@ -656,6 +658,20 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
             placedBlock={placed}
             taskPassage={passageShown ? passage : null}
             markupPlaces={markupPlaces}
+            menuExtra={[
+              {
+                label: 'Go to the Outliner',
+                note: 'Opens the Outliner at this point.',
+                disabled: onGoToOutline ? null : 'Not in the outline yet',
+                onPick: () => onGoToOutline?.(),
+              },
+              {
+                label: 'Go to the Sculptor',
+                note: 'Opens the Sculptor at this card.',
+                disabled: onGoToSculptor ? null : 'Not in the Sculptor yet',
+                onPick: () => onGoToSculptor?.(),
+              },
+            ]}
           />}
         </div>
 

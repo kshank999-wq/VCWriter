@@ -252,9 +252,10 @@ export const GUIDES_PLANNING: Guide[] = [
         steps: [
           'Click a row: a scene, a section, a beat or a subsection.',
           'Press **Go ▸** beside it. The writing screen opens at that point. A scene or section opens at its first beat; a note or idea under a beat opens that beat.',
-          'In the writing screen, press **Outliner ▸** at the top to come back. The Outliner opens with that row chosen and in view.',
+          'In the writing screen, press **Outliner ▸** at the top, or right-click the page and choose **Go to the Outliner**, to come back. The Outliner opens with that row chosen and in view.',
+          'Right-click a subsection on the track for **Go to the Outliner** and **Go to the Sculptor**. The Sculptor one is greyed out until that part is on a Sculptor map; on a card that is, **Go ▸** opens the writing screen there.',
         ],
-        tip: 'Go is greyed out on a row that is not on the track yet. Add it to the track first.',
+        tip: 'Go on a section with no subsections yet makes its first subsection, with its heading hidden, so you can start writing. Go is greyed out only on a row with nothing on the track.',
       },
       {
         heading: 'Finding rows',

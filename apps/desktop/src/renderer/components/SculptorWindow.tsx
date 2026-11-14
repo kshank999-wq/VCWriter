@@ -157,6 +157,8 @@ interface SculptorWindowProps {
   onGoToBeat?(beatId: BeatId): void;
   /** Open the research room, where the cast and the places are (*Open character*). */
   onOpenResearch?(): void;
+  /** The card to show, from a writing screen's or the track's *Go to the Sculptor* (from Ken, 14 November). */
+  focusNode?: { boardId: string; nodeId: string; token: number } | null;
 }
 
 const MIN_ZOOM = 0.15;
@@ -193,6 +195,7 @@ export function SculptorWindow({
   canRedo,
   onGoToBeat,
   onOpenResearch,
+  focusNode = null,
 }: SculptorWindowProps) {
   const boards = boardsOf(file);
   const [boardId, setBoardId] = useState<string | null>(null);
@@ -325,6 +328,23 @@ export function SculptorWindow({
     // Centred once the canvas has laid the revealed card out.
     window.setTimeout(() => centreOn(nodeId as string), 0);
   };
+
+  // **Shown a card from elsewhere** (Go to the Sculptor): its map, then the
+  // card revealed, chosen and centred once that map is the one drawn.
+  const pendingFocus = useRef<{ boardId: string; nodeId: string } | null>(null);
+  useEffect(() => {
+    if (!open || !focusNode) return;
+    pendingFocus.current = { boardId: focusNode.boardId, nodeId: focusNode.nodeId };
+    setBoardId(focusNode.boardId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, focusNode?.token]);
+  useEffect(() => {
+    const want = pendingFocus.current;
+    if (!want || !board || (board.id as string) !== want.boardId) return;
+    pendingFocus.current = null;
+    reveal(want.nodeId as SculptorNodeId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [board, focusNode?.token]);
 
   // ------------------------------------------------------------ acts
 
@@ -2161,8 +2181,8 @@ function Binding({
         ) : null}
         <div className="sc-row">
           {onGoToBeat && firstBeat ? (
-            <button type="button" className="ghost small" onClick={() => onGoToBeat(firstBeat)}>
-              Open {what}
+            <button type="button" className="small outline-go" title={`Open the writing screen at this ${what}`} onClick={() => onGoToBeat(firstBeat)}>
+              Go ▸
             </button>
           ) : null}
           {offer.refusal === null ? (

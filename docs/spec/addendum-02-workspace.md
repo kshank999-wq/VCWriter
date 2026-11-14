@@ -3257,3 +3257,26 @@ thing… at that same point*).
   opens the Outliner — a room, or a book's *Outline* page — with that row
   chosen, its parents unfolded and scrolled into view (`focusRow`).
 - Not yet in popped-out windows (the beat's or the Outliner's own window).
+
+### Go, round two (14 November)
+
+- *The go button is greyed out* — on a section of Ken's book on the track
+  with no subsection under it. The writing screen writes into a subsection,
+  so there was nowhere to open. **Go now makes the section's first
+  subsection** (`writingPlaceForRow`): titled as the section, its heading
+  hidden so nothing extra prints, then opens it. Go is greyed only where
+  nothing near the row is on the track (`canWriteRow`).
+- *In this menu, put go to outliner… or go to sculptor… If it's not in the
+  sculptor yet, then it'll be grayed out.* The track's right-click on a
+  subsection (and on a section, for its first subsection) and the writing
+  screen's right-click both end with **Go to the Outliner** and **Go to the
+  Sculptor**, greyed with the reason where the beat is in neither
+  (`outlineRowForBeat`, `sculptorNodeForBeat`: the card bound to the beat, or
+  to its scene or section). The Sculptor opens on that card's map with the
+  card revealed, chosen and centred (`focusNode`).
+- The Sculptor's own *Open scene / Open beat* on a bound card is now **Go ▸**,
+  and opens the writing screen there, as the Outliner's does.
+- *When you do the markup and you type in the screen, it's black and the
+  text is black.* The Note / Suggest box on the page is a white card with
+  black text and a gold **Add**; the margin's note boxes are light text on
+  dark.

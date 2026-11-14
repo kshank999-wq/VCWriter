@@ -68,7 +68,8 @@ import {
   statusesIn,
   unpromoteRow,
   updateItem,
-  writingBeatForRow,
+  canWriteRow,
+  writingPlaceForRow,
   updateUnit,
   whatGoesWithRows,
   whyUnnumbered,
@@ -1224,10 +1225,16 @@ export function OutlinerWindow({
               onOpen={onOpenRow ? () => onOpenRow(row.item) : undefined}
               go={
                 onGoToWriting && outline && selected === row.item.id
-                  ? (() => {
-                      const beat = writingBeatForRow(file, outline, row.item.id);
-                      return beat ? () => onGoToWriting(beat.id as string) : null;
-                    })()
+                  ? canWriteRow(file, outline, row.item.id)
+                    ? () => {
+                        // A section with no subsection yet gets its first
+                        // one, heading hidden, to write in (from Ken, 14 November).
+                        const place = writingPlaceForRow(file, outline, row.item.id);
+                        if (!place) return;
+                        if (place.made) onUpdate(() => place.file);
+                        onGoToWriting(place.beatId);
+                      }
+                    : null
                   : undefined
               }
               onEdit={(on) => {

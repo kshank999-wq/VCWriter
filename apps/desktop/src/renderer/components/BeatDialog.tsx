@@ -1,4 +1,4 @@
-import { findBeat, nounsFor, outlineRowForBeat, type BeatId, type ProjectFile } from '@vcwriter/domain';
+import { findBeat, nounsFor, outlineRowForBeat, sculptorNodeForBeat, type BeatId, type ProjectFile } from '@vcwriter/domain';
 import { BeatWriter } from './BeatWriter';
 import { useModal } from '../use-modal';
 import { useMovedDialog } from '../use-moved-dialog';
@@ -14,6 +14,7 @@ interface BeatDialogProps {
   onPopOut?(beatId: BeatId): void;
   /** Go to the Outliner at this beat's row. */
   onGoToOutline?(beatId: BeatId): void;
+  onGoToSculptor?(beatId: BeatId): void;
 }
 
 /**
@@ -38,7 +39,7 @@ interface BeatDialogProps {
  * The moving itself is `useMovedDialog`, which was written out here and is now
  * every dialog's (addendum 28 §6a).
  */
-export function BeatDialog({ file, beatId, onClose, onUpdate, onSelect, onPopOut, onGoToOutline }: BeatDialogProps) {
+export function BeatDialog({ file, beatId, onClose, onUpdate, onSelect, onPopOut, onGoToOutline, onGoToSculptor }: BeatDialogProps) {
   const beat = beatId ? findBeat(file, beatId) : undefined;
   const dialog = useModal(Boolean(beat));
   // A different beat is a fresh screen, so it opens where a dialog opens.
@@ -64,6 +65,7 @@ export function BeatDialog({ file, beatId, onClose, onUpdate, onSelect, onPopOut
           {...(onSelect ? { onSelect } : {})}
           {...(onPopOut ? { onPopOut: () => onPopOut(beat.id) } : {})}
           {...(onGoToOutline && outlineRowForBeat(file, beat.id) ? { onGoToOutline: () => onGoToOutline(beat.id) } : {})}
+          onGoToSculptor={onGoToSculptor && sculptorNodeForBeat(file, beat.id) ? () => onGoToSculptor(beat.id) : null}
         />
       ) : null}
     </dialog>

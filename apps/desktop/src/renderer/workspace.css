@@ -24241,3 +24241,44 @@ button.mark-num { cursor: pointer; }
   width: calc(8.5in * var(--page-zoom) + 290px);
   padding-right: calc(0.5in * var(--page-zoom));
 }
+
+/* The Note / Suggest box sits on the white page: a white note card with
+   black text, not the dark theme's boxes (from Ken, 14 November: *it's
+   black and the text is black… just create a white note screen with black
+   text*). */
+.marking-ask {
+  background: #fffdf3;
+  color: #111;
+  border: 1px solid #c9a45c;
+  border-radius: 4px;
+  padding: 10px 12px;
+}
+.marking-ask .muted,
+.marking-ask label span {
+  color: #5a5040;
+}
+.marking-ask textarea {
+  background: #ffffff;
+  color: #111;
+  caret-color: #111;
+  border: 1px solid #b9ae95;
+  border-radius: 3px;
+  padding: 6px 8px;
+  font-size: 14px;
+}
+.marking-ask textarea::placeholder { color: #8a8170; }
+.marking-ask button.small:not(.ghost) {
+  background: var(--gold);
+  color: #111;
+  border: 1px solid var(--gold);
+  font-weight: 600;
+}
+.marking-ask button.ghost { color: #6b5a2c; }
+
+/* The margin's own boxes, dark on dark no more: light words on the dark card. */
+.markup-note-say {
+  background: var(--ink);
+  color: var(--text);
+  caret-color: var(--text);
+  border: 1px solid var(--border);
+}

@@ -10,6 +10,8 @@ import {
   unitsJoin,
   joinUnits,
   beatsForUnit,
+  outlineRowForBeat,
+  sculptorNodeForBeat,
   moveBeat,
   moveTrack,
   moveUnit,
@@ -127,6 +129,9 @@ interface MasterTimelineProps {
   onOpenUnit?(unitId: StructuralUnitId): void;
   /** A beat row was double-clicked: open the beat pop-up. */
   onOpenBeat?(beatId: BeatId): void;
+  /** *Go to the Outliner / the Sculptor* from a subsection or section's menu (from Ken, 14 November). */
+  onGoToOutline?(beatId: BeatId): void;
+  onGoToSculptor?(beatId: BeatId): void;
 }
 
 const HEAD_WIDTH = 168;
@@ -191,6 +196,8 @@ export function MasterTimeline({
   onOpenTrack,
   onOpenUnit,
   onOpenBeat,
+  onGoToOutline,
+  onGoToSculptor,
 }: MasterTimelineProps) {
   const drag = useDragDrop();
   const layout = useMemo(() => givenLayout ?? storyLayout(file), [givenLayout, file]);
@@ -655,6 +662,8 @@ export function MasterTimeline({
               onOpenTrack={onOpenTrack}
               onOpenUnit={onOpenUnit}
               onOpenBeat={onOpenBeat}
+              {...(onGoToOutline ? { onGoToOutline } : {})}
+              {...(onGoToSculptor ? { onGoToSculptor } : {})}
               onUpdate={onUpdate}
               onDropUnit={dropUnitAt}
               onDropBeat={dropBeatAt}
@@ -870,6 +879,8 @@ function LinksRow({
 // ---------------------------------------------------------------------------
 
 interface TrackRowProps {
+  onGoToOutline?(beatId: BeatId): void;
+  onGoToSculptor?(beatId: BeatId): void;
   file: ProjectFile;
   track: Track;
   trackIndex: number;
@@ -944,6 +955,8 @@ function TrackRow({
   onOpenTrack,
   onOpenUnit,
   onOpenBeat,
+  onGoToOutline,
+  onGoToSculptor,
   onUpdate,
   onDropUnit,
   onDropBeat,
@@ -1058,11 +1071,34 @@ function TrackRow({
     return run.includes(unitId) ? run : [unitId];
   };
 
+  /** Go to where this is in the Outliner and the Sculptor; greyed where it is in neither yet. */
+  const goEntries = (beatId: BeatId): MenuEntry[] => [
+    ...(onGoToOutline
+      ? [
+          {
+            label: 'Go to the Outliner',
+            disabled: outlineRowForBeat(file, beatId) ? null : 'Not in the outline yet',
+            onPick: () => onGoToOutline(beatId),
+          },
+        ]
+      : []),
+    ...(onGoToSculptor
+      ? [
+          {
+            label: 'Go to the Sculptor',
+            disabled: sculptorNodeForBeat(file, beatId) ? null : 'Not in the Sculptor yet',
+            onPick: () => onGoToSculptor(beatId),
+          },
+        ]
+      : []),
+  ];
   const beatMenu = (unitId: StructuralUnitId, beat: Beat, index: number): MenuEntry[] => {
     const run = marked(beat, unitId);
     const offer = beatsJoin(file, run, subWord);
     return [
       ...(onOpenBeat ? [{ label: `Open the ${subWord}`, onPick: () => onOpenBeat(beat.id) }] : []),
+      ...goEntries(beat.id),
+      'rule' as const,
       {
         label: `Split the ${unitWord} before this ${subWord}`,
         disabled: index === 0 ? `It is the first ${subWord} of the ${unitWord} already` : null,
@@ -1102,6 +1138,7 @@ function TrackRow({
         : { may: false as const, why: `It is the first ${unitWord} on the track.` };
     return [
       ...(onOpenUnit ? [{ label: `Open the ${unitWord}`, onPick: () => onOpenUnit(unitId) }] : []),
+      ...(beatsForUnit(file, unitId)[0] ? [...goEntries(beatsForUnit(file, unitId)[0]!.id), 'rule' as const] : []),
       { label: `Add a ${subWord}`, onPick: () => onUpdate((current) => addBeat(current, { unitId, title: `New ${subWord}` }).file) },
       { label: collapsed ? 'Expand' : 'Collapse', onPick: () => onUpdate((current) => updateUnit(current, unitId, { collapsed: !collapsed })) },
       {

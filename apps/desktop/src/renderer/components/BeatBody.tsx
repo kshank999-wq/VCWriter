@@ -196,6 +196,8 @@ interface BeatBodyProps {
    * lit as it was marked, with its number in a little circle at the end.
    */
   markupPlaces?: ReadonlyArray<MarkupPlace>;
+  /** The host's own entries at the foot of the right-click menu: the writing screen's *Go to…* (from Ken, 14 November). */
+  menuExtra?: ReadonlyArray<MenuEntry>;
 }
 
 /** One markup note, found in the draft being written. */
@@ -331,6 +333,7 @@ export function BeatBody({
   placedBlock = [],
   taskPassage = null,
   markupPlaces = NO_PLACES,
+  menuExtra,
 }: BeatBodyProps) {
   const format = file.project.format;
   const layout = layoutForFile(file);
@@ -1609,7 +1612,7 @@ export function BeatBody({
           x={caught.x}
           y={caught.y}
           label="What to do with this writing"
-          entries={[...editingEntries(caught), ...writingMenu(caught)]}
+          entries={[...editingEntries(caught), ...writingMenu(caught), ...(menuExtra && menuExtra.length > 0 ? (['rule', ...menuExtra] as MenuEntry[]) : [])]}
           onClose={() => setCaught(null)}
         />
       ) : null}
