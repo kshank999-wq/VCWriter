@@ -70,6 +70,7 @@ import {
   isCollection,
 } from '@vcwriter/domain';
 import { InlineText } from './InlineText';
+import { usePreference } from '../use-split';
 import { TimelineZoom } from './TimelineZoom';
 import { ContextMenu, type MenuEntry } from './ContextMenu';
 import { STATUS_GLYPH } from './status';
@@ -486,6 +487,8 @@ export function MasterTimeline({
   // --------------------------------------------------------------- render
 
   const playhead = (unitId: string) => (unitId === selectedUnitId ? ' playhead' : '');
+  /** How tall the short-form board is drawn, dragged by its grip. */
+  const [boardHeight, setBoardHeight] = usePreference('boardHeight', 58);
 
   /**
    * **Words, not pages and time, on a book** (from Ken, 14 November: *in the
@@ -507,7 +510,10 @@ export function MasterTimeline({
   return (
     <section className="timeline" aria-label="Master timeline">
       <div className="timeline-scroll" ref={scroller}>
-        <div className="timeline-grid" style={{ gridTemplateColumns: columns }}>
+        <div
+          className="timeline-grid"
+          style={{ gridTemplateColumns: columns, '--board-height': `${boardHeight}px` } as React.CSSProperties}
+        >
           {/* Pages, and the time they play for: a page is a minute (§5).
               A commercial has no pages, so short form says Time and means it
               (addendum 05 §3a). */}
@@ -564,7 +570,33 @@ export function MasterTimeline({
               the cut (addendum 05 §3a). */}
           {shortForm ? (
             <>
-              <div className="row-head">Board</div>
+              {/* **Pull the board taller** (from Ken, 14 November: *the board
+                  screen needs to be stretchable so you can make it taller*):
+                  the grip under its name drags the whole row, remembered. */}
+              <div className="row-head board-head">
+                Board
+                <span
+                  className="board-grip"
+                  role="separator"
+                  aria-orientation="horizontal"
+                  aria-label="Drag to make the board taller or shorter"
+                  title="Drag to make the board taller or shorter"
+                  onPointerDown={(event) => {
+                    event.preventDefault();
+                    const from = event.clientY;
+                    const start = boardHeight;
+                    const move = (moved: PointerEvent) =>
+                      setBoardHeight(Math.round(Math.min(420, Math.max(40, start + moved.clientY - from))));
+                    const up = () => {
+                      window.removeEventListener('pointermove', move);
+                      window.removeEventListener('pointerup', up);
+                    };
+                    window.addEventListener('pointermove', move);
+                    window.addEventListener('pointerup', up);
+                  }}
+                  onDoubleClick={() => setBoardHeight(58)}
+                />
+              </div>
               {spans.map((span) => (
                 <FrameStrip
                   key={span.unit.id}

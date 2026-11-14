@@ -101,7 +101,10 @@ export function PaneFrame({
           title={`Open ${name} in its own window — put it on another monitor`}
           onClick={onDetach}
         >
-          ⧉
+          {/* Said in words as well (from Ken, 14 November: *the whole timeline
+              needs to be able to pop out and move to a different screen* — the
+              bare ⧉ was there and nobody could tell). */}
+          ⧉ Pop out
         </button>
       </header>
 

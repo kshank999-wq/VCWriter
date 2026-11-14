@@ -25,6 +25,7 @@ import {
   type StructuralUnitId,
 } from '@vcwriter/domain';
 import { frameFrom, mediaFrom } from '../frames';
+import { dictationKind, startDictation, systemDictationKey, type DictationSession } from '../dictation';
 import { useBoardPlayer } from '../use-board-player';
 import { NaturalVoicesBox } from './NaturalVoicesBox';
 
@@ -65,6 +66,98 @@ export function AvSheet({ file, onUpdate, onOpenRow, readOnly = false, onPlayhea
   /** The board, laid end to end, and the clock that walks it (§5). */
   const board = boardPlayback(file);
   const player = useBoardPlayer(board);
+
+  /**
+   * **Dictate, fast** (from Ken, 14 November: *a dictate button above the
+   * break line that says shot audio visual, so you can dictate it in, make it
+   * fast*). The words go into the box last clicked — a shot's Audio or Visual —
+   * or the first shot's Audio. Said on their own, *next shot*, *visual* and
+   * *audio* move along without the mouse; *stop dictating* stops.
+   */
+  const [target, setTarget] = useState<{ beatId: BeatId; field: 'audio' | 'visual' } | null>(null);
+  const targetRef = useRef(target);
+  targetRef.current = target;
+  const [listening, setListening] = useState(false);
+  const [guess, setGuess] = useState('');
+  const [said, setSaid] = useState<string | null>(null);
+  const session = useRef<DictationSession | null>(null);
+  useEffect(() => () => session.current?.stop(), []);
+  const firstShot = sheet.segments[0]?.rows[0]?.beatId ?? null;
+  const aimed = target ?? (firstShot ? { beatId: firstShot, field: 'audio' as const } : null);
+  const aimedRef = useRef(aimed);
+  aimedRef.current = aimed;
+  const aimedNumber = aimed
+    ? sheet.segments.flatMap((one) => one.rows).find((row) => row.beatId === aimed.beatId)?.number ?? ''
+    : '';
+
+  const hear = (heard: string) => {
+    const words = heard.trim();
+    if (!words) return;
+    const at = aimedRef.current;
+    if (!at) return;
+    const command = words.toLowerCase().replace(/[.!?,]+$/, '');
+    if (command === 'next shot' || command === 'new shot') {
+      let made: BeatId | null = null;
+      onUpdate((current) => {
+        const beat = current.beats.find((one) => one.id === at.beatId);
+        if (!beat) return current;
+        const added = addRow(current, { unitId: beat.unitId, afterBeatId: at.beatId });
+        made = added.beatId;
+        return added.file;
+      });
+      // The new shot's id is known once the update has run.
+      requestAnimationFrame(() => {
+        if (made) setTarget({ beatId: made, field: 'audio' });
+      });
+      return;
+    }
+    if (command === 'visual' || command === 'go to visual') {
+      setTarget({ beatId: at.beatId, field: 'visual' });
+      return;
+    }
+    if (command === 'audio' || command === 'go to audio') {
+      setTarget({ beatId: at.beatId, field: 'audio' });
+      return;
+    }
+    if (command === 'stop dictating' || command === 'stop dictation') {
+      session.current?.stop();
+      return;
+    }
+    onUpdate((current) => {
+      const beat = current.beats.find((one) => one.id === at.beatId);
+      if (!beat) return current;
+      const was = at.field === 'audio' ? beat.manuscript.elements.map((one) => one.text).join('\n') : (beat.visual ?? '');
+      const joined = `${was}${was.length > 0 && !/\s$/.test(was) ? ' ' : ''}${words}`;
+      return at.field === 'audio' ? setRowAudio(current, at.beatId, joined) : setRowVisual(current, at.beatId, joined);
+    });
+  };
+
+  const toggleDictation = () => {
+    if (listening) {
+      session.current?.stop();
+      return;
+    }
+    setSaid(null);
+    const started = startDictation({
+      onFinal: (text) => {
+        setGuess('');
+        hear(text);
+      },
+      onInterim: setGuess,
+      onError: (why) => setSaid(why),
+      onEnd: () => {
+        session.current = null;
+        setListening(false);
+        setGuess('');
+      },
+    });
+    if (!started) {
+      setSaid(`No speech service here — ${systemDictationKey()} and talk into the box you click.`);
+      return;
+    }
+    session.current = started;
+    setListening(true);
+  };
 
   /** The shot being dragged, so the one under it can show it will take it. */
   const [lifting, setLifting] = useState<BeatId | null>(null);
@@ -228,8 +321,42 @@ export function AvSheet({ file, onUpdate, onOpenRow, readOnly = false, onPlayhea
             )}
           </header>
 
+          {readOnly ? null : (
+            <div className="av-dictate" role="toolbar" aria-label="Dictate">
+              <button
+                type="button"
+                className={listening ? 'av-dictate-go on' : 'av-dictate-go'}
+                aria-pressed={listening}
+                disabled={!aimed && !listening}
+                title={dictationKind() === 'none' ? `Dictation: ${systemDictationKey()}` : 'Dictate into the shot'}
+                onClick={toggleDictation}
+              >
+                {listening ? '■ Stop' : '🎙 Dictate'}
+              </button>
+              <span className="muted small">
+                {aimed
+                  ? `${listening ? 'Into' : 'Goes into'} shot ${aimedNumber} · ${aimed.field === 'audio' ? 'Audio' : 'Visual'}`
+                  : 'Add a shot first'}
+                {listening ? ' — say “visual”, “audio” or “next shot” to move along' : ' — click a box to choose another'}
+              </span>
+              {listening && guess ? <span className="av-dictate-guess">{guess}</span> : null}
+              {said ? <span className="small av-tight">{said}</span> : null}
+            </div>
+          )}
+
           <div className="av-scroll">
             <table className="av-table">
+              {/* Fixed widths, so a long line wraps and the row grows down
+                  rather than the column growing across (from Ken, 14 November). */}
+              <colgroup>
+                <col className="av-col-num" />
+                <col />
+                <col />
+                <col className="av-col-image" />
+                <col className="av-col-time" />
+                <col className="av-col-time" />
+                {readOnly ? null : <col className="av-col-tools" />}
+              </colgroup>
               <thead>
                 <tr>
                   <th scope="col" className="av-num">
@@ -273,6 +400,8 @@ export function AvSheet({ file, onUpdate, onOpenRow, readOnly = false, onPlayhea
                     onLift={setLifting}
                     onOver={setOver}
                     playing={player.playing && player.shot?.beatId === row.beatId}
+                    onAim={(field) => setTarget({ beatId: row.beatId, field })}
+                    aimed={listening && aimed?.beatId === row.beatId ? aimed.field : null}
                     {...(onOpenRow ? { onOpen: onOpenRow } : {})}
                   />
                 ))}
@@ -345,6 +474,10 @@ interface RowProps {
   onOver?(beatId: string | null): void;
   /** Whether the playhead is on this shot, so the sheet shows the read (§5). */
   playing?: boolean;
+  /** A box was clicked: dictation goes there next. */
+  onAim?(field: 'audio' | 'visual'): void;
+  /** The box dictation is writing into now, lit. */
+  aimed?: 'audio' | 'visual' | null;
 }
 
 function Row({
@@ -357,6 +490,8 @@ function Row({
   onLift,
   onOver,
   playing = false,
+  onAim,
+  aimed = null,
 }: RowProps) {
   /**
    * Closing a shot is asked about before it is done. It is the one control
@@ -428,7 +563,9 @@ function Row({
           <Grow
             label={`What is heard in row ${row.number}`}
             placeholder="what is heard"
-            value={row.audio}
+            value={row.audioTyped}
+            onFocus={() => onAim?.('audio')}
+            lit={aimed === 'audio'}
             onChange={(text) => onUpdate((current) => setRowAudio(current, row.beatId, text))}
             spokenKey
           />
@@ -449,6 +586,8 @@ function Row({
             label={`What is seen in row ${row.number}`}
             placeholder="what is seen"
             value={row.visual}
+            onFocus={() => onAim?.('visual')}
+            lit={aimed === 'visual'}
             onChange={(text) => onUpdate((current) => setRowVisual(current, row.beatId, text))}
           />
         )}
@@ -747,11 +886,16 @@ function Grow({
   value,
   onChange,
   spokenKey = false,
+  onFocus,
+  lit = false,
 }: {
   label: string;
   placeholder: string;
   value: string;
   onChange(text: string): void;
+  onFocus?(): void;
+  /** Dictation is writing into this box. */
+  lit?: boolean;
   /** Tab marks the line as spoken, which only the audio column has (§3b). */
   spokenKey?: boolean;
 }) {
@@ -778,7 +922,7 @@ function Grow({
   };
 
   return (
-    <div className="av-grow">
+    <div className={lit ? 'av-grow lit' : 'av-grow'}>
       <div className="av-grow-ink" aria-hidden="true">
         {value.length === 0 ? placeholder : value}
       </div>
@@ -787,6 +931,7 @@ function Grow({
         placeholder={placeholder}
         value={value}
         onKeyDown={speak}
+        onFocus={onFocus}
         onChange={(event) => onChange(event.target.value)}
       />
     </div>

@@ -209,6 +209,17 @@ describe('writing in the sheet', () => {
     expect(avSheet(file).segments[0]?.rows[0]?.words).toBe(8);
   });
 
+  it('hands the box back exactly what was typed: the space, and the new line (from Ken, 14 November)', () => {
+    let file = commercial();
+    const beatId = file.beats[0]!.id;
+    file = setRowAudio(file, beatId, 'Know your ');
+    expect(rowsOf(file)[0]?.audioTyped).toBe('Know your ');
+    file = setRowAudio(file, beatId, 'Know your enemy.\n');
+    expect(rowsOf(file)[0]?.audioTyped).toBe('Know your enemy.\n');
+    // Counting and printing still read it tidied.
+    expect(rowsOf(file)[0]?.audio).toBe('Know your enemy.');
+  });
+
   it('keeps what a line already was when it is edited on the sheet', () => {
     let file = commercial();
     const beatId = file.beats[0]!.id;

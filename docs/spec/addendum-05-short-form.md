@@ -608,3 +608,30 @@ format in hand** — Sheet and Timeline in short form, Manuscript in a novel —
 and offers no viewer where there is none. And **Window → Reset windows to
 default** puts a workspace that has been shuffled about back the way it opens:
 everything docked, in its default place, at its default size, focus mode off.
+
+## The sheet, typed and dictated (14 November)
+
+From Ken: *a dictate button above the break line that says shot audio visual,
+so you can dictate it in, make it fast. Also, when I try to type in the audio…
+spacebar doesn't work… make the text wrap, not stretch the box… the board
+screen needs to be stretchable… the whole timeline needs to be able to pop
+out… there's writing over the scroll bars or the zooms.*
+
+- **Space in Audio.** The Audio box was handed back the tidied audio (each
+  line trimmed, blank lines dropped) on every keystroke, so a space at the end
+  of a word, or a Return, vanished as it was typed. It now gets the text as
+  typed (`AvRow.audioTyped`); counting and printing keep the tidied `audio`.
+- **Wrap, not stretch.** The table is `table-layout: fixed` with set widths for
+  every column but Audio and Visual, which share what is left; a long line
+  wraps and the row grows downward.
+- **Dictate** sits above the rule under *Shot · Audio · Visual*. The words go
+  into the Audio or Visual box last clicked (lit red while dictating), or the
+  first shot's Audio. *Next shot* adds a shot after it and moves there;
+  *visual* and *audio* switch box; *stop dictating* stops.
+- **The board row** has a grip under its name: drag it taller or shorter
+  (40–420 px, remembered; double-click for the old height).
+- **Pop out.** Every panel's ⧉ now reads **⧉ Pop out**; it opens that panel —
+  the Timeline included — in a window of its own for another monitor.
+- **The preview's build label** ("Preview build… · Save .vcw…") sat over every
+  module's zoom row; it now sits in the empty left end of the page bar. It is
+  the browser preview's alone; the desktop app never had it.

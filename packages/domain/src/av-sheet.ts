@@ -62,6 +62,14 @@ export interface AvRow {
   number: string;
   /** What is heard: the beat's manuscript, as plain lines. */
   audio: string;
+  /**
+   * The audio **as typed**, for the box it is typed in (from Ken, 14
+   * November: *spacebar doesn't work* in the audio). `audio` is tidied — each
+   * line trimmed, blank lines dropped — which is right for counting and
+   * printing and wrong for a box being typed in: the box was handed back its
+   * text without the space just typed, or the new line just started.
+   */
+  audioTyped: string;
   /** What is seen: the beat's own second text. */
   visual: string;
   /** Counted from the audio, which is the only thing that is spoken. */
@@ -178,6 +186,7 @@ export const avSheet = (file: ProjectFile): AvSheet => {
         unitId: unit.id,
         number: `${position}.${row + 1}`,
         audio: audioOf(beat.manuscript.elements),
+        audioTyped: beat.manuscript.elements.map((element) => element.text).join('\n'),
         visual: beat.visual ?? '',
         words: rowWords,
         // Sound and picture run together, so the shot is the longer of them.

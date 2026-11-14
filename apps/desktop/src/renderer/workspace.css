@@ -7070,7 +7070,7 @@ input.av-segment-line:focus,
   gap: 2px;
   align-items: stretch;
   padding: 3px 2px;
-  height: 58px;
+  height: var(--board-height, 58px);
   border-bottom: 1px solid var(--border);
   border-right: 1px solid var(--border);
 }
@@ -24293,3 +24293,60 @@ button.mark-num { cursor: pointer; }
   text-transform: none;
   white-space: nowrap;
 }
+
+/* ---- Short form (from Ken, 14 November) ---- */
+/* Fixed columns: a long line wraps and the row grows down, never across. */
+.av-table { table-layout: fixed; }
+.av-table col.av-col-num { width: 92px; }
+.av-table col.av-col-image { width: 220px; }
+.av-table col.av-col-time { width: 132px; }
+.av-table col.av-col-tools { width: 120px; }
+.av-grow-ink,
+.av-grow textarea { overflow-wrap: anywhere; word-break: break-word; }
+
+/* Dictate, above the rule under Shot · Audio · Visual. */
+.av-dictate {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 0 10px;
+}
+.av-dictate-go {
+  padding: 6px 14px;
+  border: 1px solid var(--gold);
+  border-radius: 999px;
+  background: var(--gold);
+  color: var(--ink);
+  font-weight: 600;
+  cursor: pointer;
+}
+.av-dictate-go.on { background: #b4271b; border-color: #b4271b; color: #fff; }
+.av-dictate-go:disabled { opacity: 0.5; cursor: not-allowed; }
+.av-dictate-guess { color: var(--muted); font-style: italic; }
+.av-grow.lit textarea { border-color: #b4271b; box-shadow: 0 0 0 1px #b4271b; }
+
+/* The board's grip: drag the row taller (from Ken, 14 November). */
+.board-head { position: relative; }
+.board-grip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -3px;
+  height: 7px;
+  cursor: ns-resize;
+  z-index: 2;
+}
+.board-grip::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  width: 28px;
+  height: 3px;
+  margin-left: -14px;
+  border-radius: 2px;
+  background: var(--gold-deep);
+}
+.board-grip:hover::after { background: var(--gold); }
+.pane-out { white-space: nowrap; }
