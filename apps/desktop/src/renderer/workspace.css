@@ -24651,3 +24651,9 @@ dialog.shot-dialog > .shot-fields,
   padding: 0 4px;
   min-width: 0;
 }
+
+/* A short-form shot in a window of its own (addendum 05). */
+.shot-window {
+  padding: 16px 18px;
+  overflow-y: auto;
+}

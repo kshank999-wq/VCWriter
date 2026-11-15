@@ -52,6 +52,7 @@ import { BeatWriter } from './components/BeatWriter';
 import { BeatDialog } from './components/BeatDialog';
 import { MarkerDialog } from './components/MarkerDialog';
 import { SceneDialog } from './components/SceneDialog';
+import { SegmentDialog, ShotDialog, ShotFields, shotRow } from './components/ShotFields';
 import { TrackDialog } from './components/TrackDialog';
 
 /**
@@ -243,6 +244,7 @@ function Section({
   const threads = useMemo(() => threadLayout(file, { layout, arcs }), [file, layout, arcs]);
 
   /** A beat opened from here gets its own window too, not a dialog over this one. */
+  const shortForm = file.project.format === 'short_form';
   const openBeatWindow = useCallback((beatId: BeatId) => {
     void window.vcwriter?.panes?.open(`beat:${beatId}`);
   }, []);
@@ -273,6 +275,11 @@ function Section({
   const dialogs = (
     <>
       <TrackDialog file={file} trackId={openTrackId} onClose={() => setOpenTrackId(null)} onUpdate={onUpdate} />
+      {/* Short form's segments and shots open as themselves here too, never as
+          a screenplay's scenes and beats (addendum 05). */}
+      {shortForm ? (
+        <SegmentDialog file={file} unitId={openUnitId} onClose={() => setOpenUnitId(null)} onUpdate={onUpdate} />
+      ) : (
       <SceneDialog
         file={file}
         unitId={openUnitId}
@@ -281,13 +288,18 @@ function Section({
         onOpenBeat={setOpenBeatId}
         onSelectBeat={setSelectedBeatId}
       />
+      )}
       <MarkerDialog file={file} markerId={openMarkerId} onClose={() => setOpenMarkerId(null)} onUpdate={onUpdate} />
+      {shortForm ? (
+        <ShotDialog file={file} beatId={openBeatId} onClose={() => setOpenBeatId(null)} onUpdate={onUpdate} />
+      ) : (
       <BeatDialog
         file={file}
         beatId={openBeatId}
         onClose={() => setOpenBeatId(null)}
         onUpdate={onUpdate}
         onSelect={setSelectedBeatId}
+        onOpenBeat={setOpenBeatId}
         onPopOut={(beatId) => {
           setOpenBeatId(null);
           openBeatWindow(beatId);
@@ -301,6 +313,7 @@ function Section({
           goToSculptor(beatId);
         }}
       />
+      )}
     </>
   );
 
@@ -308,12 +321,22 @@ function Section({
   if (beatId) {
     const beat = findBeat(file, beatId as BeatId);
     if (!beat) return <p className="muted empty-state">This beat is no longer in the project.</p>;
+    // A short-form shot in a window of its own is the shot's fields, as everywhere else.
+    if (shortForm) {
+      const row = shotRow(file, beat.id);
+      return (
+        <div className="satellite-body writer-window shot-window">
+          {row ? <ShotFields row={row} onUpdate={onUpdate} /> : <p className="muted empty-state">This shot is no longer on the sheet.</p>}
+        </div>
+      );
+    }
     return (
       <div className="satellite-body writer-window">
         <BeatWriter
           file={file}
           beat={beat}
           onUpdate={onUpdate}
+          onOpenBeat={(id) => openBeatWindow(id)}
           {...(outlineRowForBeat(file, beat.id) ? { onGoToOutline: () => goToOutline(beat.id) } : {})}
           onGoToSculptor={sculptorNodeForBeat(file, beat.id) ? () => goToSculptor(beat.id) : null}
         />

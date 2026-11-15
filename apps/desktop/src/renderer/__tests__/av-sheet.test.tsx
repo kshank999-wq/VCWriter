@@ -7,6 +7,7 @@ import type { ListeningHandlers } from '../local-dictation';
 /** The microphone and the speech model stand in here: what is tested is where the words go. */
 const listening: { handlers: ListeningHandlers | null; stopped: boolean } = { handlers: null, stopped: false };
 vi.mock('../local-dictation', () => ({
+  speechBridge: () => undefined,
   startListening: (handlers: ListeningHandlers) => {
     listening.handlers = handlers;
     listening.stopped = false;

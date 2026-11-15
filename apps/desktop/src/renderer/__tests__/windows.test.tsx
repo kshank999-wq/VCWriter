@@ -245,6 +245,16 @@ const connect = (initial: ProjectFile) => {
 describe('a beat in a window of its own', () => {
   beforeEach(() => window.localStorage.clear());
 
+  it('is the shot’s own fields in short form, not the screenplay writing screen', async () => {
+    const initial = createProjectFile({ title: 'Spot', format: 'short_form' });
+    const beat = initial.beats[0]!;
+    connect(initial);
+    render(<Satellite pane={`beat:${beat.id}`} />);
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Shot 1.1' })).toBeDefined());
+    expect(screen.getByRole('combobox', { name: 'Shot type of shot 1.1' })).toBeDefined();
+    expect(screen.queryByLabelText('Beat name')).toBeNull();
+  });
+
   it('shows the workspace’s beat and writes back into the workspace’s project', async () => {
     const initial = project();
     const beat = initial.beats[0]!;

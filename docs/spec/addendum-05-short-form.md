@@ -735,3 +735,16 @@ short form only.
 - **The Inspector** in short form shows *Shot 1.1* (the same fields, and
   status) and its *Segment*, with no track, act, setups and payoffs or
   character work.
+
+### Dictate everywhere in the app; shots in their own windows (15 November)
+
+- **Every Dictate in the desktop app listens on the computer.** The writing
+  screen, the Notes sorter and the document page all start dictation through
+  `startDictation`, which now hands it to the speech model wherever the app
+  has one (`local-dictation.ts`) — no more *press Fn twice*, which opens the
+  emoji picker on Ken's Mac. Whisper's noises on silence are dropped; the
+  one-time setup and its thinking show as the greyed guess. The browser
+  preview still uses Chrome's recogniser.
+- **Short form in a popped-out window** opens segments and shots as
+  themselves (`SegmentDialog`, `ShotDialog`), and a shot popped into a window
+  of its own is its fields, not the screenplay writing screen.

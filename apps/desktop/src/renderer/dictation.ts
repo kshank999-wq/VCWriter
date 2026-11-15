@@ -28,6 +28,9 @@
  * become *typed screenplay elements* (`spoken-script.ts`).
  */
 
+import { SPEECH_MODEL, joinDictated } from '@vcwriter/domain';
+import { speechBridge, startListening } from './local-dictation';
+
 export type DictationKind =
   /** There is something to try, and nothing has said otherwise yet. */
   | 'offer'
@@ -85,6 +88,8 @@ let noService = false;
 const inDesktopApp = (): boolean => typeof navigator !== 'undefined' && /\bElectron\//.test(navigator.userAgent);
 
 export const dictationKind = (): DictationKind => {
+  // The desktop app listens for itself (`local-dictation.ts`).
+  if (speechBridge()) return 'offer';
   if (inDesktopApp()) return 'system';
   if (!constructorFor()) return 'none';
   return noService ? 'system' : 'offer';
@@ -126,6 +131,33 @@ export interface DictationSession {
 const FUTILE_RESTARTS = 3;
 
 export const startDictation = (handlers: DictationHandlers): DictationSession | null => {
+  /**
+   * **In the desktop app, the computer listens** (from Ken, 15 November, after
+   * the short-form sheet got it: *do it* for the writing screen too). Every
+   * Dictate in the app — the writing screen, the Notes sorter, the document
+   * page — comes through here, so here is where it goes to the speech model
+   * instead of a Chrome service the app does not have. Whisper's habitual
+   * noises on silence are dropped, and its setup and thinking are shown as
+   * the greyed guess.
+   */
+  if (speechBridge()) {
+    return startListening({
+      onText: (text) => {
+        const words = joinDictated('', text);
+        if (words) handlers.onFinal(words);
+      },
+      onState: (state) =>
+        handlers.onInterim(
+          state.kind === 'getting-ready'
+            ? `Setting up dictation, once only (about ${SPEECH_MODEL.megabytes} MB) — ${Math.round(state.fraction * 100)}%`
+            : state.kind === 'writing'
+              ? '…'
+              : '',
+        ),
+      onError: handlers.onError,
+      onEnd: handlers.onEnd,
+    });
+  }
   if (inDesktopApp() || noService) return null;
   const Recognition = constructorFor();
   if (!Recognition) return null;
