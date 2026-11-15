@@ -312,6 +312,15 @@ export function StoryView({
   // One made here — the cursor is already in it — must not yank the page.
   /** A choice made by a click in this page: the track follows it, and the page stays put. */
   const pickedHere = useRef(false);
+  /**
+   * **Found at a glance** (from Ken, 15 November: *it needs to not just pop to
+   * it, but highlight in the manuscript… or have that little side left hand
+   * gold line*). A beat chosen elsewhere — the plot tracks, the inspector —
+   * is not only scrolled to: it flashes gold as it arrives, and keeps a gold
+   * bar in the margin and a faint gold wash while it is the one selected. The
+   * rest of its scene keeps a thinner line, so the scene's extent shows too.
+   */
+  const [arrived, setArrived] = useState<BeatId | null>(null);
   useEffect(() => {
     if (!selectedBeatId) return;
     if (pickedHere.current) {
@@ -321,7 +330,11 @@ export function StoryView({
     const block = blocks.current.get(selectedBeatId);
     if (!block || block.contains(document.activeElement)) return;
     if (typeof block.scrollIntoView === 'function') block.scrollIntoView({ block: 'center' });
+    setArrived(selectedBeatId);
+    const done = window.setTimeout(() => setArrived(null), 1600);
+    return () => window.clearTimeout(done);
   }, [selectedBeatId, paged]);
+  const selectedUnitId = selectedBeatId ? file.beats.find((one) => one.id === selectedBeatId)?.unitId ?? null : null;
 
   useEffect(() => {
     if (!focusTitleBeatId) return;
@@ -427,6 +440,8 @@ export function StoryView({
       className={[
         'beat-block',
         beat.id === selectedBeatId ? 'selected' : '',
+        beat.id !== selectedBeatId && selectedUnitId !== null && beat.unitId === selectedUnitId ? 'in-selected-scene' : '',
+        beat.id === arrived ? 'arrived' : '',
         beat.color ? 'coloured' : '',
         landingOn === (beat.id as string) ? 'taking-work' : '',
       ]

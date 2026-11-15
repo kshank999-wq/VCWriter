@@ -2336,6 +2336,61 @@ input[type='color'].swatch {
   background: var(--gold);
 }
 
+/* **Found at a glance** (from Ken, 15 November). The selected beat keeps a
+   bold gold bar in the margin and a faint gold wash behind its words — on the
+   dark page and on white paper alike — and the rest of its scene a thinner
+   line, so the scene's extent shows. Arriving from the plot tracks, it
+   flashes brighter and settles. The wash is drawn as a shadow so it pads the
+   words without moving a line of them. */
+.beat-block.selected {
+  background: color-mix(in srgb, var(--gold) 9%, transparent);
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--gold) 9%, transparent);
+  border-radius: 1px;
+}
+
+.beat-block.selected::before {
+  top: -6px;
+  bottom: -6px;
+  width: 4px;
+  border-radius: 2px;
+}
+
+.beat-block.in-selected-scene::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  left: max(8px, calc(50% - 42ch));
+  width: 2px;
+  background: color-mix(in srgb, var(--gold) 55%, transparent);
+}
+
+.beat-block.arrived {
+  animation: beat-arrived 1.6s ease-out;
+}
+
+@keyframes beat-arrived {
+  0%,
+  30% {
+    background: color-mix(in srgb, var(--gold) 32%, transparent);
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--gold) 32%, transparent);
+  }
+}
+
+/* On the sheets the block is the text column itself, so the line sits out in
+   the page's left margin rather than through the words. */
+:is(.script-pages, .sheet-paper) .beat-block.selected::before,
+:is(.script-pages, .sheet-paper) .beat-block.coloured::before,
+:is(.script-pages, .sheet-paper) .beat-block.in-selected-scene::before {
+  left: -22px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .beat-block.arrived {
+    animation: none;
+  }
+}
+
 /* The manuscript is laid out at the real page geometry: a monospace column of
    the layout's width, with each element indented where it prints. */
 .page-column {
@@ -7238,6 +7293,33 @@ video.av-frame {
 /* The shot the playhead is on, on the sheet. */
 .av-row.av-playing > * {
   background: color-mix(in srgb, var(--gold) 10%, transparent);
+}
+
+/* The shot selected in the plot tracks (from Ken, 15 November): a gold bar
+   down its left edge and a faint wash, flashing brighter as it arrives. */
+.av-row.av-selected > * {
+  background: color-mix(in srgb, var(--gold) 9%, transparent);
+}
+
+.av-row.av-selected > :first-child {
+  box-shadow: inset 4px 0 0 0 var(--gold);
+}
+
+.av-row.av-selected.arrived > * {
+  animation: av-arrived 1.6s ease-out;
+}
+
+@keyframes av-arrived {
+  0%,
+  30% {
+    background: color-mix(in srgb, var(--gold) 32%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .av-row.av-selected.arrived > * {
+    animation: none;
+  }
 }
 
 /* The playhead itself, drawn across every track of the timeline. */

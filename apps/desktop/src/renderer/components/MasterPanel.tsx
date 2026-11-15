@@ -50,6 +50,8 @@ export function MasterPanel(props: MasterPanelProps) {
       <AvSheet
         file={props.file}
         onUpdate={props.onUpdate}
+        selectedBeatId={props.selectedBeatId}
+        onSelectRow={props.onSelectBeat}
         {...(props.onOpenBeat ? { onOpenRow: props.onOpenBeat } : {})}
         {...(props.onPlayhead ? { onPlayhead: props.onPlayhead } : {})}
       />

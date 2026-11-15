@@ -3306,3 +3306,23 @@ brings that window forward and tells it over the link what to show
 brought forward. Wired in every satellite: a beat's window (Go to the Outliner
 / Sculptor, header and right-click), the Outliner's Go, the Sculptor's Go, and
 the plot tracks' right-click and their beat dialog.
+
+### The chosen beat, found at a glance (15 November)
+
+From Ken: *when you select a scene, a beat in the scene, it needs to not just
+pop to it, but highlight in the manuscript or script view, so you can see
+what you're looking at, or have that little side left hand gold line.*
+
+- **Script and Manuscript** (`StoryView`, every format with plot tracks): a
+  beat chosen in the tracks or the inspector is scrolled to and **flashes
+  gold** as it arrives (about a second and a half), then keeps a **bold gold
+  bar** in the page's left margin and a faint gold wash behind its words for
+  as long as it is selected. The other beats of its scene, chapter or section
+  keep a thinner gold line, so the extent of the scene shows. On the sheets
+  the bar sits out in the page margin rather than through the words. Picking
+  a scene picks its first beat, so a scene is marked the same way.
+- **Short form's Sheet** (`AvSheet`) now follows the tracks too: the chosen
+  shot is scrolled to, flashes, and keeps a gold bar down its left edge.
+  Clicking into a shot's box selects it in the tracks without moving the
+  sheet.
+- A choice made in the page itself does not flash or move the page.

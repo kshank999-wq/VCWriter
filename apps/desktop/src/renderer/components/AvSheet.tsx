@@ -59,11 +59,37 @@ interface AvSheetProps {
    * sheet moves with it (§5). Null when nothing is playing.
    */
   onPlayhead?(seconds: number | null): void;
+  /** The shot chosen in the plot tracks or the inspector: shown and marked here. */
+  selectedBeatId?: BeatId | null;
+  /** A shot's box clicked here: the tracks follow. */
+  onSelectRow?(beatId: BeatId): void;
 }
 
-export function AvSheet({ file, onUpdate, onOpenRow, readOnly = false, onPlayhead }: AvSheetProps) {
+export function AvSheet({ file, onUpdate, onOpenRow, readOnly = false, onPlayhead, selectedBeatId = null, onSelectRow }: AvSheetProps) {
   const sheet = avSheet(file);
   const rows = sheet.segments.reduce((total, segment) => total + segment.rows.length, 0);
+
+  /**
+   * **Found at a glance** (from Ken, 15 November), as in the Script: a shot
+   * chosen in the plot tracks is scrolled to, flashes gold as it arrives, and
+   * keeps a gold bar down its left edge while it is the one selected. One
+   * chosen here, by clicking into it, does not move the sheet.
+   */
+  const pickedHere = useRef(false);
+  const [arrived, setArrived] = useState<BeatId | null>(null);
+  useEffect(() => {
+    if (!selectedBeatId) return;
+    if (pickedHere.current) {
+      pickedHere.current = false;
+      return;
+    }
+    const row = document.querySelector<HTMLElement>(`tr[data-av-row="${selectedBeatId as string}"]`);
+    if (!row || row.contains(document.activeElement)) return;
+    if (typeof row.scrollIntoView === 'function') row.scrollIntoView({ block: 'center' });
+    setArrived(selectedBeatId);
+    const done = window.setTimeout(() => setArrived(null), 1600);
+    return () => window.clearTimeout(done);
+  }, [selectedBeatId]);
 
   /** The board, laid end to end, and the clock that walks it (§5). */
   const board = boardPlayback(file);
@@ -378,7 +404,15 @@ export function AvSheet({ file, onUpdate, onOpenRow, readOnly = false, onPlayhea
                     onLift={setLifting}
                     onOver={setOver}
                     playing={player.playing && player.shot?.beatId === row.beatId}
-                    onAim={(field) => setTarget({ beatId: row.beatId, field })}
+                    onAim={(field) => {
+                      setTarget({ beatId: row.beatId, field });
+                      if (row.beatId !== selectedBeatId) {
+                        pickedHere.current = true;
+                        onSelectRow?.(row.beatId);
+                      }
+                    }}
+                    selected={row.beatId === selectedBeatId}
+                    arrived={row.beatId === arrived}
                     aimed={listening && aimed?.beatId === row.beatId ? aimed.field : null}
                     {...(onOpenRow ? { onOpen: onOpenRow } : {})}
                   />
@@ -442,6 +476,9 @@ function Figure({ label, value }: { label: string; value: string }) {
 
 interface RowProps {
   row: AvRow;
+  /** The shot selected in the tracks, marked in gold; `arrived` while it flashes. */
+  selected?: boolean;
+  arrived?: boolean;
   readOnly: boolean;
   onUpdate(mutate: (current: ProjectFile) => ProjectFile): void;
   onOpen?(beatId: BeatId): void;
@@ -470,6 +507,8 @@ function Row({
   playing = false,
   onAim,
   aimed = null,
+  selected = false,
+  arrived = false,
 }: RowProps) {
   /**
    * Closing a shot is asked about before it is done. It is the one control
@@ -483,7 +522,11 @@ function Row({
 
   return (
     <tr
-      className={`av-row${lifted ? ' lifted' : ''}${target ? ' av-drop' : ''}${playing ? ' av-playing' : ''}`}
+      data-av-row={row.beatId as string}
+      aria-current={selected ? 'true' : undefined}
+      className={`av-row${lifted ? ' lifted' : ''}${target ? ' av-drop' : ''}${playing ? ' av-playing' : ''}${
+        selected ? ' av-selected' : ''
+      }${arrived ? ' arrived' : ''}`}
       onDragOver={(event) => {
         if (lifting === null || lifted) return;
         event.preventDefault();
