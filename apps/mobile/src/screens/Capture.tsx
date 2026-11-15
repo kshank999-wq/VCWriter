@@ -747,6 +747,61 @@ export function Capture({
       </View>
     );
   }
+  /**
+   * The categories and their gear (§35). In portrait they sit under the note
+   * box, on the line above *Save it*; **turned sideways they go to the
+   * controls' side, above *Save it*** (from Ken, 15 November: *when you turn
+   * it landscape, it ends up on the same side as the note box*), so the split
+   * falls between the note and everything that acts on it.
+   */
+  const categoriesRow = (
+    <>
+        {/* **The categories under the note box, the gear at their right**
+            (§35, from Ken: *the little cog icon will be right under the
+            right-hand corner of the text screen under Enter, next to where
+            the categories are*). They sit on the line above Save it, so a
+            longer list builds up from there and the box above gives way. */}
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6 }}>
+          <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 5 }} accessibilityLabel="Kind of note">
+            {categories.map((one) => (
+              <Pressable
+                key={one.key}
+                onPress={() => setCategory(one.key)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: chosenKey === one.key }}
+                style={[
+                  styles.button,
+                  styles.secondary,
+                  { paddingVertical: 5, paddingHorizontal: 9 },
+                  chosenKey === one.key ? { borderColor: colour.gold } : null,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.buttonText,
+                    styles.secondaryText,
+                    { fontSize: 11, letterSpacing: 0.3 },
+                    chosenKey === one.key ? { color: colour.goldBright } : null,
+                  ]}
+                >
+                  {one.name}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          <Pressable
+            onPress={() => setEditingCategories(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Make, hide or delete categories"
+            hitSlop={10}
+            style={[styles.button, styles.secondary, { paddingVertical: 3, paddingHorizontal: 8 }]}
+          >
+            <Text style={{ color: colour.gold, fontSize: 18, lineHeight: 22 }}>⚙</Text>
+          </Pressable>
+        </View>
+    </>
+  );
+
   return (
     <View style={styles.screen}>
       <View style={styles.bar}>
@@ -867,49 +922,7 @@ export function Capture({
             <Text style={[styles.buttonText, styles.secondaryText]}>Put the old wording back</Text>
           </Pressable>
         ) : null}
-          {/* **The categories under the note box, the gear at their right**
-              (§35, from Ken: *the little cog icon will be right under the
-              right-hand corner of the text screen under Enter, next to where
-              the categories are*). They sit on the line above Save it, so a
-              longer list builds up from there and the box above gives way. */}
-          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6 }}>
-            <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 5 }} accessibilityLabel="Kind of note">
-              {categories.map((one) => (
-                <Pressable
-                  key={one.key}
-                  onPress={() => setCategory(one.key)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: chosenKey === one.key }}
-                  style={[
-                    styles.button,
-                    styles.secondary,
-                    { paddingVertical: 5, paddingHorizontal: 9 },
-                    chosenKey === one.key ? { borderColor: colour.gold } : null,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.buttonText,
-                      styles.secondaryText,
-                      { fontSize: 11, letterSpacing: 0.3 },
-                      chosenKey === one.key ? { color: colour.goldBright } : null,
-                    ]}
-                  >
-                    {one.name}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-            <Pressable
-              onPress={() => setEditingCategories(true)}
-              accessibilityRole="button"
-              accessibilityLabel="Make, hide or delete categories"
-              hitSlop={10}
-              style={[styles.button, styles.secondary, { paddingVertical: 3, paddingHorizontal: 8 }]}
-            >
-              <Text style={{ color: colour.gold, fontSize: 18, lineHeight: 22 }}>⚙</Text>
-            </Pressable>
-          </View>
+          {wide ? null : categoriesRow}
         </View>
 
         <ScrollView
@@ -918,6 +931,7 @@ export function Capture({
           contentContainerStyle={[styles.body, { paddingBottom: 56 }]}
           keyboardShouldPersistTaps="handled"
         >
+          {wide ? categoriesRow : null}
           {onSubscribe ? (
             <Pressable onPress={onSubscribe} style={styles.row}>
               <Text style={[styles.muted, { flex: 1 }]}>

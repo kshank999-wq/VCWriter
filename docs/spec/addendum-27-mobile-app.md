@@ -1281,3 +1281,10 @@ hidden one back rather than making a second.
 **Not yet:** own categories are chosen by tapping, not by voice or in *Hands
 free*, and the list is not shared with the website's notes or a second phone.
 A spoken built-in still files under it even if hidden.
+
+**Turned sideways** (from Ken, 15 November: *when you turn it landscape, it
+ends up on the same side as the note box… I would like it to be above the
+save button, and it'll split at that point*): in landscape the categories and
+their gear move to the top of the controls' half, directly above *Save it*;
+in portrait they stay under the note box, on the line above *Save it*. Either
+way the split falls between the note and what acts on it.
