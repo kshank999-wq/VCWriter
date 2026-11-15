@@ -655,3 +655,15 @@ should find nothing.
   written down, read by `peopleSpeakingIn`, `scriptPresence` and
   `castForNewEpisode`; `cast-script-surfaces.test.ts` walks the three that must
   lose a deleted person and the two that must keep her.
+
+### The card's ×: Move to archive, asked on the card (15 November)
+
+From Ken: *there's a X to delete a note, which is just going to send it to the
+archive. When I click it, it just expands the window a little bit, but doesn't
+really do anything… it should say move to archive, and then you confirm it.*
+The question opened under the card, inside the grid, so the row grew and the
+question was out of sight; and it deleted to the Graveyard. Now the × on a
+note card asks **on the card** — *Move this note to the archive?* —
+and **Move to archive** puts it away (it leaves its folder and waits under
+*Put away*, where it can be brought back). A note already put away is the one
+the × deletes, to the Graveyard, asked the same way.

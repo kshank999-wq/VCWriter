@@ -24348,3 +24348,29 @@ button.mark-num { cursor: pointer; }
 }
 .board-divider:hover::after { background: var(--gold); }
 .pane-out { white-space: nowrap; }
+
+/* The card's own question, over the card rather than under it (from Ken,
+   15 November). */
+.card-ask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  /* At least the card; taller over the card below when a short card needs it. */
+  min-height: 100%;
+  box-sizing: border-box;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px;
+  background: var(--panel);
+  border: 1px solid var(--gold);
+  border-radius: 3px;
+  color: var(--text);
+  text-align: center;
+}
+.card-ask p { margin: 0; }
+.card-ask-buttons { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }

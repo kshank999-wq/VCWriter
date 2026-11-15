@@ -2646,36 +2646,52 @@ function NoteCard({
             {item.archived ? ' · put away' : ''}
           </span>
         </button>
+        {/* **× moves the note to the archive, and asks first, on the card**
+            (from Ken, 15 November: *when I click it, it just expands the
+            window a little bit… it should say move to archive, and then you
+            confirm it*). The question used to open under the card, inside the
+            grid, so the row grew and the question was out of sight. A note
+            already put away is the one the × deletes, to the Graveyard. */}
         <button
           type="button"
           className="ghost small danger card-x"
-          aria-label={`Delete ${item.title}`}
-          title={`Delete ${item.title}`}
+          aria-label={item.archived ? `Delete ${item.title || 'this note'}` : `Move ${item.title || 'this note'} to the archive`}
+          title={item.archived ? 'Delete this note (it goes to the Graveyard)' : 'Move to archive'}
           onClick={() => setAsking(true)}
         >
           ×
         </button>
+        {asking ? (
+          <div className="card-ask" role="alertdialog" aria-label={item.archived ? 'Delete this note?' : 'Move this note to the archive?'}>
+            <p>
+              <strong>{item.archived ? 'Delete this note?' : 'Move this note to the archive?'}</strong>
+            </p>
+            <p className="muted small">
+              {item.archived
+                ? describeDeleting(file, { kind: 'researchItem', id: item.id as string })
+                : 'It leaves this folder and waits under Put away, where you can bring it back.'}
+            </p>
+            <span className="card-ask-buttons">
+              <button
+                type="button"
+                className="small danger"
+                autoFocus
+                onClick={() => {
+                  onUpdate((current) =>
+                    item.archived ? deleteResearchItem(current, item.id) : setResearchArchived(current, item.id, true),
+                  );
+                  setAsking(false);
+                }}
+              >
+                {item.archived ? 'Delete' : 'Move to archive'}
+              </button>
+              <button type="button" className="ghost small" onClick={() => setAsking(false)}>
+                Cancel
+              </button>
+            </span>
+          </div>
+        ) : null}
       </div>
-      {asking ? (
-        <div className="row-ask">
-          <span className="muted small">{describeDeleting(file, { kind: 'researchItem', id: item.id as string })}</span>
-          <span className="row-ask-buttons">
-            <button
-              type="button"
-              className="ghost small danger"
-              onClick={() => {
-                onUpdate((current) => deleteResearchItem(current, item.id));
-                setAsking(false);
-              }}
-            >
-              Delete
-            </button>
-            <button type="button" className="ghost small" onClick={() => setAsking(false)}>
-              Keep
-            </button>
-          </span>
-        </div>
-      ) : null}
     </li>
   );
 }

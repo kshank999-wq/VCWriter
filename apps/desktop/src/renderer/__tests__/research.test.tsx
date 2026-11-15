@@ -182,7 +182,7 @@ describe('the research window', () => {
    * (addendum 24 §5g), which is where a writer looking at the note they want
    * rid of is looking.
    */
-  it('deletes a note from its own card, and Put away stays in the detail', () => {
+  it('moves a note to the archive from its own card, asking on the card; a put-away note is the one deleted', () => {
     let seen: ProjectFile | null = null;
     function Watched() {
       const [file, setFile] = useState(withNotes());
@@ -206,13 +206,15 @@ describe('the research window', () => {
     expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
     expect(within(screen.getByLabelText('Detail')).getByRole('button', { name: /put away/i })).toBeDefined();
 
-    fireEvent.click(screen.getByLabelText('Delete A revolver in the drawer'));
-    expect(screen.getByText(/goes to the graveyard/)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    // From Ken, 15 November: × moves it to the archive, and asks on the card.
+    fireEvent.click(screen.getByLabelText('Move A revolver in the drawer to the archive'));
+    expect(screen.getByRole('alertdialog', { name: 'Move this note to the archive?' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Move to archive' }));
+    expect((seen as unknown as ProjectFile).researchItems.find((one) => one.title === 'A revolver in the drawer')?.archived).toBe(true);
 
-    const after = seen as unknown as ProjectFile;
+    // It has left the notes, and nothing went to the Graveyard.
     expect(notes().queryByText('A revolver in the drawer')).toBeNull();
-    expect(graveyard(after).map((row) => row.word)).toEqual(['Note']);
+    expect(graveyard(seen as unknown as ProjectFile)).toEqual([]);
   });
 
   /**
