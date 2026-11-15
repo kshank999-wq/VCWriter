@@ -182,7 +182,7 @@ describe('the research window', () => {
    * (addendum 24 §5g), which is where a writer looking at the note they want
    * rid of is looking.
    */
-  it('moves a note to the archive from its own card, asking on the card; a put-away note is the one deleted', () => {
+  it('moves a note to the Archive (the old Graveyard) from its own card, asking on the card', () => {
     let seen: ProjectFile | null = null;
     function Watched() {
       const [file, setFile] = useState(withNotes());
@@ -210,11 +210,10 @@ describe('the research window', () => {
     fireEvent.click(screen.getByLabelText('Move A revolver in the drawer to the archive'));
     expect(screen.getByRole('alertdialog', { name: 'Move this note to the archive?' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Move to archive' }));
-    expect((seen as unknown as ProjectFile).researchItems.find((one) => one.title === 'A revolver in the drawer')?.archived).toBe(true);
 
-    // It has left the notes, and nothing went to the Graveyard.
+    // It has left the notes and waits in the Archive, to be restored.
     expect(notes().queryByText('A revolver in the drawer')).toBeNull();
-    expect(graveyard(seen as unknown as ProjectFile)).toEqual([]);
+    expect(graveyard(seen as unknown as ProjectFile).map((row) => row.word)).toEqual(['Note']);
   });
 
   /**
@@ -353,7 +352,7 @@ describe('the cast in the side menu', () => {
     const side = within(screen.getByLabelText('Research folders'));
 
     fireEvent.click(side.getByRole('button', { name: 'Delete MARA' }));
-    expect(screen.getByText(/goes to the graveyard/)).toBeTruthy();
+    expect(screen.getByText(/goes to the Archive/)).toBeTruthy();
 
     // Nothing has gone while the question is on the screen.
     expect(castByCategory(seen as unknown as ProjectFile).flatMap((group) => group.characters)).toHaveLength(2);
@@ -545,7 +544,7 @@ describe('the Character Creator in the menu', () => {
     render(<Harness initial={file} />);
     expect(screen.getByText('Character Creator')).toBeTruthy();
     expect(screen.getByRole('button', { name: '+ New character' })).toBeTruthy();
-    expect(screen.getByText('3 deleted records are in the Graveyard')).toBeTruthy();
+    expect(screen.getByText('3 removed records are in the Archive')).toBeTruthy();
   });
 
   it('puts somebody back from the graveyard, with everything that pointed at them', () => {

@@ -208,7 +208,7 @@ describe('the screen', () => {
     expect(screen.queryByText('Delete this theme')).toBeNull();
     fireEvent.click(screen.getByLabelText('Delete What a town owes its dead'));
 
-    expect(screen.getByText(/goes to the graveyard/)).toBeTruthy();
+    expect(screen.getByText(/goes to the Archive/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
 
     const after = seen as unknown as ProjectFile;
@@ -227,7 +227,7 @@ describe('the screen', () => {
     fireEvent.click(screen.getByRole('tab', { name: /Motifs/ }));
 
     fireEvent.click(screen.getByLabelText('Delete the bell'));
-    expect(screen.getByText(/goes to the graveyard/)).toBeTruthy();
+    expect(screen.getByText(/goes to the Archive/)).toBeTruthy();
     // Keeping it is a real answer: nothing has happened yet.
     fireEvent.click(screen.getByRole('button', { name: 'Keep' }));
     expect(motifsInOrder(seen as unknown as ProjectFile)).toHaveLength(1);

@@ -105,7 +105,7 @@ describe('the library', () => {
     // The scenes keep their headings — this screen's own fact — and where the
     // record goes is the graveyard's sentence, said the same way everywhere.
     expect(screen.getByText(/their headings keep the name/)).toBeTruthy();
-    expect(screen.getByText(/goes to the graveyard/)).toBeTruthy();
+    expect(screen.getByText(/goes to the Archive/)).toBeTruthy();
   });
 
   it('says the defaults are defaults', () => {
@@ -146,7 +146,7 @@ describe('the picker in the scene', () => {
 
     fireEvent.click(screen.getByLabelText('Delete MILLER HOUSE'));
     expect(screen.getByText(/This scene’s heading keeps the name/)).toBeTruthy();
-    expect(screen.getByText(/goes to the graveyard/)).toBeTruthy();
+    expect(screen.getByText(/goes to the Archive/)).toBeTruthy();
 
     fireEvent.click(within(document.querySelector('.scene-location-ask') as HTMLElement).getByText('Delete'));
     const after = seen as unknown as ProjectFile;

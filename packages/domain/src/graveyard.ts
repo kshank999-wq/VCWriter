@@ -236,8 +236,8 @@ export const hangingOn = (file: ProjectFile, ref: BuriedRef): number => {
  */
 export const describeDeleting = (file: ProjectFile, ref: BuriedRef): string =>
   hangingOn(file, ref) > 0
-    ? 'It goes to the graveyard, with what is filed under it, and can be restored from there. Not a word of the writing is cut.'
-    : 'It goes to the graveyard, and can be restored from there. Not a word of the writing is cut.';
+    ? 'It goes to the Archive, with what is filed under it, and can be restored from there. Not a word of the writing is cut.'
+    : 'It goes to the Archive, and can be restored from there. Not a word of the writing is cut.';
 
 /**
  * Empty the graveyard: **the one act in the module that destroys anything**,
@@ -273,7 +273,7 @@ export const forgetOne = (file: ProjectFile, ref: BuriedRef): ProjectFile => {
  */
 export const describeEmptying = (file: ProjectFile): string => {
   const count = graveyardCount(file);
-  if (count === 0) return 'The graveyard is empty.';
+  if (count === 0) return 'The Archive is empty.';
   return count === 1
     ? 'One thing goes for good. This is the only act here that cannot be undone.'
     : `All ${count} go for good. This is the only act here that cannot be undone.`;

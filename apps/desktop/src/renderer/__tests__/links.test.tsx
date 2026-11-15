@@ -226,7 +226,7 @@ describe('a link, opened', () => {
     expect(screen.queryByText('Remove this link')).toBeNull();
 
     fireEvent.click(screen.getByLabelText('Delete The key'));
-    expect(screen.getByText(/goes to the graveyard/)).toBeTruthy();
+    expect(screen.getByText(/goes to the Archive/)).toBeTruthy();
     expect(screen.getByText(/Not a word of the writing is cut/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
 

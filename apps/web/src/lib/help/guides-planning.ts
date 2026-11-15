@@ -110,10 +110,10 @@ export const GUIDES_PLANNING: Guide[] = [
         ],
       },
       {
-        heading: 'The Note Sorter and the Graveyard',
+        heading: 'The Note Sorter and the Archive',
         body: [
           '**Note Sorter**, under **Also**, is for a long page of notes: read it, highlight the pieces that matter, and drop them into categories.',
-          '**Graveyard**, at the very bottom of the side menu, is where deleted notes, folders, characters, places and threads wait. Press **Restore** to put one back. Only **Forget it** and **Empty the graveyard…** destroy anything, and both ask first. Nothing ages out on its own.',
+          '**Archive**, at the very bottom of the side menu, is where removed notes, folders, characters, places and threads wait. The **×** on a note card asks, then moves the note there. Press **Restore** to put one back. Only **Forget it** and **Empty the archive…** destroy anything, and both ask first. Nothing ages out on its own.',
         ],
       },
     ],
@@ -348,7 +348,7 @@ export const GUIDES_PLANNING: Guide[] = [
           'Under **Also** in Research’s side menu, **Character map** draws the cast and the relationships between them, one line per pair with each person’s reading at their end. Click a name to open them in the Creator, or a line to see and edit both readings side by side.',
           '**Character review** reads the whole cast four ways: **In the script**, **In story order**, **Still on deck** and **Arc continuity**.',
         ],
-        tip: 'Deleted a character by mistake? They wait in the **Graveyard** at the bottom of Research’s side menu until you press **Restore**.',
+        tip: 'Deleted a character by mistake? They wait in the **Archive** at the bottom of Research’s side menu until you press **Restore**.',
       },
     ],
     related: ['research', 'story-sculptor', 'outliner'],

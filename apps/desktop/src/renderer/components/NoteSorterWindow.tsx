@@ -2391,7 +2391,7 @@ function RefineTab({
                     return;
                   }
                   onUpdate((current) => mergeCards(current, picked as ResearchItemId[]).file);
-                  onSay(`${picked.length} cards are now one. The rest are in the graveyard if that was wrong.`);
+                  onSay(`${picked.length} cards are now one. The rest are in the Archive if that was wrong.`);
                   onPicked([]);
                 }}
               >

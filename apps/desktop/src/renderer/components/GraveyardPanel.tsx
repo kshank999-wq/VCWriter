@@ -96,7 +96,7 @@ export function GraveyardPanel({
               </span>
             ) : (
               <button type="button" className="ghost small" onClick={() => setEmptying(true)}>
-                Empty the graveyard…
+                Empty the archive…
               </button>
             )}
           </div>

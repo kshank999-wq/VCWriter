@@ -150,7 +150,7 @@ describe('deleting a payoff', () => {
     expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
 
     fireEvent.click(screen.getByLabelText('Delete The gun'));
-    expect(screen.getByText(/goes to the graveyard/)).toBeTruthy();
+    expect(screen.getByText(/goes to the Archive/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
 
     const after = seen as unknown as ProjectFile;

@@ -784,7 +784,7 @@ export function ResearchBody({
       : selection.kind === 'mobile'
       ? 'Mobile App'
       : selection.kind === 'graveyard'
-      ? 'Graveyard'
+      ? 'Archive'
       : selection.kind === 'contents'
       ? 'Table of contents'
       : selection.kind === 'references'
@@ -1252,7 +1252,7 @@ export function ResearchBody({
                   <li>
                     <button type="button" className="folder-row" onClick={() => setSelection({ kind: 'graveyard' })}>
                       <span className="folder-name">
-                        {buried === 1 ? '1 deleted record is in the Graveyard' : `${buried} deleted records are in the Graveyard`}
+                        {buried === 1 ? '1 removed record is in the Archive' : `${buried} removed records are in the Archive`}
                       </span>
                     </button>
                   </li>
@@ -1303,7 +1303,11 @@ export function ResearchBody({
                 title="What has been deleted, and how to put it back"
                 onClick={() => setSelection({ kind: 'graveyard' })}
               >
-                <span className="folder-name">Graveyard</span>
+                {/* **Archive**, not Graveyard (from Ken, 15 November): where a
+                    removed note, folder or character goes and waits to be
+                    brought back. The code keeps its old name; the writer
+                    sees this one. */}
+                <span className="folder-name">Archive</span>
                 {buried > 0 ? <span className="count muted">{buried}</span> : null}
               </button>
             </li>
@@ -2646,44 +2650,38 @@ function NoteCard({
             {item.archived ? ' · put away' : ''}
           </span>
         </button>
-        {/* **× moves the note to the archive, and asks first, on the card**
-            (from Ken, 15 November: *when I click it, it just expands the
-            window a little bit… it should say move to archive, and then you
-            confirm it*). The question used to open under the card, inside the
-            grid, so the row grew and the question was out of sight. A note
-            already put away is the one the × deletes, to the Graveyard. */}
+        {/* **× moves the note to the Archive, and asks first, on the card**
+            (from Ken, 15 November: *it should say move to archive, and then
+            you confirm it* — and then: *I don't see an archive location, but
+            that should be what's called graveyard now… when things get
+            deleted, they get moved there*). The Archive is the old Graveyard,
+            at the foot of the side menu, where Restore brings it back. */}
         <button
           type="button"
           className="ghost small danger card-x"
-          aria-label={item.archived ? `Delete ${item.title || 'this note'}` : `Move ${item.title || 'this note'} to the archive`}
-          title={item.archived ? 'Delete this note (it goes to the Graveyard)' : 'Move to archive'}
+          aria-label={`Move ${item.title || 'this note'} to the archive`}
+          title="Move to archive"
           onClick={() => setAsking(true)}
         >
           ×
         </button>
         {asking ? (
-          <div className="card-ask" role="alertdialog" aria-label={item.archived ? 'Delete this note?' : 'Move this note to the archive?'}>
+          <div className="card-ask" role="alertdialog" aria-label="Move this note to the archive?">
             <p>
-              <strong>{item.archived ? 'Delete this note?' : 'Move this note to the archive?'}</strong>
+              <strong>Move this note to the archive?</strong>
             </p>
-            <p className="muted small">
-              {item.archived
-                ? describeDeleting(file, { kind: 'researchItem', id: item.id as string })
-                : 'It leaves this folder and waits under Put away, where you can bring it back.'}
-            </p>
+            <p className="muted small">{describeDeleting(file, { kind: 'researchItem', id: item.id as string })}</p>
             <span className="card-ask-buttons">
               <button
                 type="button"
                 className="small danger"
                 autoFocus
                 onClick={() => {
-                  onUpdate((current) =>
-                    item.archived ? deleteResearchItem(current, item.id) : setResearchArchived(current, item.id, true),
-                  );
+                  onUpdate((current) => deleteResearchItem(current, item.id));
                   setAsking(false);
                 }}
               >
-                {item.archived ? 'Delete' : 'Move to archive'}
+                Move to archive
               </button>
               <button type="button" className="ghost small" onClick={() => setAsking(false)}>
                 Cancel

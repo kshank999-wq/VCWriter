@@ -667,3 +667,16 @@ note card asks **on the card** — *Move this note to the archive?* —
 and **Move to archive** puts it away (it leaves its folder and waits under
 *Put away*, where it can be brought back). A note already put away is the one
 the × deletes, to the Graveyard, asked the same way.
+
+### Called the Archive (15 November)
+
+From Ken: *when things are removed, they're put into archive. I don't see an
+archive location, but that should be what's called graveyard now. Let's change
+that to archive, and then when things get deleted, they get moved there.* The
+Graveyard is now called **Archive** wherever a writer reads it — the side
+menu, its count, the delete sentences (*It goes to the Archive…*), *Empty the
+archive…*, the help — and the note card's × (*Move this note to the
+archive?*) sends the note there, to be restored. The code keeps the old name
+(`graveyard.ts`, `GraveyardPanel`), which nobody reads. *Put away* is
+unchanged: a note kept, but out of the way. The Note Sorter's *Notes archive*
+folder (notes fully sorted) is a folder of notes, not this.

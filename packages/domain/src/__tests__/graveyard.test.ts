@@ -107,7 +107,7 @@ describe('the graveyard', () => {
     const emptied = emptyGraveyard(gone);
     expect(emptied.locations).toHaveLength(0);
     expect(graveyardCount(emptied)).toBe(0);
-    expect(describeEmptying(emptied)).toBe('The graveyard is empty.');
+    expect(describeEmptying(emptied)).toBe('The Archive is empty.');
   });
 
   it('leaves a record that was never deleted alone, whatever else happens', () => {
@@ -170,7 +170,7 @@ describe('the graveyard', () => {
     let file = addCharacter(project(), { name: 'Mara' });
     const mara = file.characters[file.characters.length - 1]!;
     const alone = describeDeleting(file, { kind: 'character', id: mara.id as string });
-    expect(alone).toContain('graveyard');
+    expect(alone).toContain('Archive');
     expect(alone).toContain('Not a word of the writing is cut');
     expect(alone).not.toContain('filed under it');
 
