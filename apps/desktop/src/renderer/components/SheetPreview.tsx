@@ -143,6 +143,7 @@ export function SheetPreview({ file, onPageSetup, onExportPdf, onPrint, busy, me
                             <Lines text={row.audio} />
                           </td>
                           <td className="sheet-visual">
+                            {row.shot ? <p className="sheet-shot">{row.shot.toUpperCase()}</p> : null}
                             <Lines text={row.visual} />
                           </td>
                           <td className="sheet-image">
@@ -229,7 +230,7 @@ function Strip({ rows, startOf }: { rows: AvRow[]; startOf(row: AvRow): number }
             </div>
             <Plate row={row} />
             <Box label="Dialogue" className="board-dialogue" text={row.audio} />
-            <Box label="Action" className="board-action" text={row.visual} />
+            <Box label="Action" className="board-action" text={[row.shot.toUpperCase(), row.visual].filter(Boolean).join('\n')} />
           </div>
         ))}
       </div>

@@ -73,6 +73,7 @@ import { Welcome } from './components/Welcome';
 import { MasterTimeline } from './components/MasterTimeline';
 import { MasterPanel } from './components/MasterPanel';
 import { Inspector } from './components/Inspector';
+import { SegmentDialog, ShotDialog } from './components/ShotFields';
 import { TimelineViewer } from './components/TimelineViewer';
 import { DEFAULT_SCRIPT_DISPLAY, type ScriptDisplay, type ScriptLayout } from './components/StoryView';
 import { TrackDialog } from './components/TrackDialog';
@@ -1829,6 +1830,15 @@ export default function App() {
             </>
           )}
           <TrackDialog file={file} trackId={openTrackId} onClose={() => setOpenTrackId(null)} onUpdate={project.update} />
+          {/* Short form's segments and shots are not scenes and beats: no
+              slugline, no track, no setups and payoffs (addendum 05). */}
+          {file.project.format === 'short_form' ? (
+            <>
+              <SegmentDialog file={file} unitId={openUnitId} onClose={() => setOpenUnitId(null)} onUpdate={project.update} />
+              <ShotDialog file={file} beatId={openBeatId} onClose={() => setOpenBeatId(null)} onUpdate={project.update} />
+            </>
+          ) : (
+          <>
           <SceneDialog
             file={file}
             unitId={openUnitId}
@@ -1850,6 +1860,8 @@ export default function App() {
               openPane(`beat:${beatId}`);
             }}
           />
+          </>
+          )}
           <FindPanel
             file={file}
             open={finding !== 'off'}

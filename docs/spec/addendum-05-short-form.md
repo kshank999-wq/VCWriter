@@ -703,3 +703,35 @@ also opens the emoji picker on his Mac.
   app's Info.plist (`NSMicrophoneUsageDescription`).
 - The browser preview has no model, so there Dictate uses Chrome's own speech
   recognition.
+
+### Shots are shots: shot type, camera move, description (15 November)
+
+From Ken: *in the visual column, there needs to be a drop down for shot type
+just before the text… you can just type in C and then that shot will come
+up… And also camera move… And then you say what the visual is, and it's
+called description.* And: *when you select the opening scene in the timeline
+view, it adds that as text to the audio… these aren't scenes, these are
+shots… It doesn't need to say main plot or setups and payoffs.* All of it is
+short form only.
+
+- **Shot type and Camera move** sit at the top of the Visual column, above
+  the **description**. Each is a box that finishes the word as it is typed
+  (`ShotPicker`): *c* fills in *Cowboy shot* with the rest selected, the other
+  matches drop down below, arrows or a click choose, Enter or Tab keeps it,
+  Backspace takes the guess off. The lists (`SHOT_TYPES`, `CAMERA_MOVES`) are
+  the standard framings and moves; matching is by the start of the name, a
+  later word (*up* → *Close-up*) or a board's short form (*ECU*). Anything
+  may be typed. Stored on the beat as `shotType` and `cameraMove`.
+- The sheet's print and preview set the two in capitals above the
+  description (*COWBOY SHOT · PUSH IN*), and the storyboard's action box
+  carries them too.
+- **The scene heading is gone from short form.** Double-clicking a segment
+  on the timeline used to open the screenplay's scene pop-up, whose INT./EXT.
+  fields write a scene heading — into the first shot's manuscript, which in
+  short form is its audio. It now opens the **segment** pop-up: its name,
+  what it is for, and every shot in it (1.1, 1.2…) with shot type, camera
+  move, description, audio and times. Double-clicking a shot opens that
+  **shot** alone rather than the screenplay writing screen.
+- **The Inspector** in short form shows *Shot 1.1* (the same fields, and
+  status) and its *Segment*, with no track, act, setups and payoffs or
+  character work.

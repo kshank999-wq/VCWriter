@@ -70,8 +70,13 @@ export interface AvRow {
    * text without the space just typed, or the new line just started.
    */
   audioTyped: string;
-  /** What is seen: the beat's own second text. */
+  /** What is seen: the beat's own second text, the shot's *description*. */
   visual: string;
+  /** The framing — *Close-up*, *Cowboy shot* — and the camera's move. Empty where not chosen. */
+  shotType: string;
+  cameraMove: string;
+  /** The two together, as a sheet prints them above the description: *Close-up · Push in*. */
+  shot: string;
   /** Counted from the audio, which is the only thing that is spoken. */
   words: number;
   /**
@@ -188,6 +193,9 @@ export const avSheet = (file: ProjectFile): AvSheet => {
         audio: audioOf(beat.manuscript.elements),
         audioTyped: beat.manuscript.elements.map((element) => element.text).join('\n'),
         visual: beat.visual ?? '',
+        shotType: beat.shotType ?? '',
+        cameraMove: beat.cameraMove ?? '',
+        shot: [beat.shotType ?? '', beat.cameraMove ?? ''].map((part) => part.trim()).filter(Boolean).join(' · '),
         words: rowWords,
         // Sound and picture run together, so the shot is the longer of them.
         seconds: Math.max(head + dialogue + tail, video),
@@ -317,6 +325,90 @@ export const setRowAudio = (file: ProjectFile, beatId: BeatId, text: string): Pr
 /** What is seen in a row. */
 export const setRowVisual = (file: ProjectFile, beatId: BeatId, visual: string): ProjectFile =>
   updateBeat(file, beatId, { visual });
+
+/** A shot's framing, or its camera move. */
+export const setRowShot = (
+  file: ProjectFile,
+  beatId: BeatId,
+  shot: { shotType?: string; cameraMove?: string },
+): ProjectFile => updateBeat(file, beatId, shot);
+
+/**
+ * The framings a shot is offered (from Ken, 15 November: *you can just type
+ * in C and then that shot will come up*), widest to tightest and then the
+ * special ones, each with the short form a board writes.
+ */
+export const SHOT_TYPES: ReadonlyArray<{ name: string; short: string }> = [
+  { name: 'Establishing shot', short: 'EST' },
+  { name: 'Extreme wide shot', short: 'EWS' },
+  { name: 'Wide shot', short: 'WS' },
+  { name: 'Full shot', short: 'FS' },
+  { name: 'Medium wide shot', short: 'MWS' },
+  { name: 'Cowboy shot', short: 'CS' },
+  { name: 'Medium shot', short: 'MS' },
+  { name: 'Medium close-up', short: 'MCU' },
+  { name: 'Close-up', short: 'CU' },
+  { name: 'Extreme close-up', short: 'ECU' },
+  { name: 'Insert', short: 'INS' },
+  { name: 'Two shot', short: '2S' },
+  { name: 'Over-the-shoulder', short: 'OTS' },
+  { name: 'Point of view', short: 'POV' },
+  { name: 'Aerial shot', short: 'AER' },
+  { name: "Bird's-eye view", short: 'BEV' },
+  { name: 'High angle', short: 'HA' },
+  { name: 'Low angle', short: 'LA' },
+  { name: 'Dutch angle', short: 'DA' },
+];
+
+/** The camera's moves, the still camera first. */
+export const CAMERA_MOVES: ReadonlyArray<{ name: string; short: string }> = [
+  { name: 'Static', short: 'STATIC' },
+  { name: 'Pan left', short: 'PAN L' },
+  { name: 'Pan right', short: 'PAN R' },
+  { name: 'Tilt up', short: 'TILT U' },
+  { name: 'Tilt down', short: 'TILT D' },
+  { name: 'Push in', short: 'PUSH' },
+  { name: 'Pull out', short: 'PULL' },
+  { name: 'Dolly in', short: 'DOLLY IN' },
+  { name: 'Dolly out', short: 'DOLLY OUT' },
+  { name: 'Tracking', short: 'TRACK' },
+  { name: 'Truck left', short: 'TRUCK L' },
+  { name: 'Truck right', short: 'TRUCK R' },
+  { name: 'Pedestal up', short: 'PED U' },
+  { name: 'Pedestal down', short: 'PED D' },
+  { name: 'Crane up', short: 'CRANE U' },
+  { name: 'Crane down', short: 'CRANE D' },
+  { name: 'Zoom in', short: 'ZOOM IN' },
+  { name: 'Zoom out', short: 'ZOOM OUT' },
+  { name: 'Handheld', short: 'HH' },
+  { name: 'Steadicam', short: 'STEADI' },
+  { name: 'Gimbal', short: 'GIMBAL' },
+  { name: 'Whip pan', short: 'WHIP' },
+  { name: 'Rack focus', short: 'RACK' },
+  { name: 'Orbit', short: 'ORBIT' },
+  { name: 'Drone', short: 'DRONE' },
+];
+
+/**
+ * The choices that fit what has been typed, best first: those whose name
+ * starts with it, then those with a later word that does (*up* finds
+ * *Close-up*), then those whose short form does (*ECU*). Case is ignored.
+ * Nothing typed offers the whole list.
+ */
+export const shotChoices = (typed: string, list: ReadonlyArray<{ name: string; short: string }>): string[] => {
+  const want = typed.trim().toLowerCase();
+  if (!want) return list.map((one) => one.name);
+  const starts: string[] = [];
+  const words: string[] = [];
+  const shorts: string[] = [];
+  for (const one of list) {
+    const name = one.name.toLowerCase();
+    if (name.startsWith(want)) starts.push(one.name);
+    else if (name.split(/[\s-]+/).some((word) => word.startsWith(want))) words.push(one.name);
+    else if (one.short.toLowerCase().startsWith(want)) shorts.push(one.name);
+  }
+  return [...starts, ...words, ...shorts];
+};
 
 
 

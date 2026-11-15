@@ -355,6 +355,14 @@ export const beatSchema = z.object({
    */
   visual: z.string().default(''),
   /**
+   * The shot's framing and the camera's move, where the beat is a shot of an
+   * AV sheet (addendum 05, from Ken, 15 November: *we need to know the shot
+   * type. And also camera move*). Free text, offered from a standard list —
+   * *Cowboy shot*, *Push in* — and empty until chosen.
+   */
+  shotType: z.string().default(''),
+  cameraMove: z.string().default(''),
+  /**
    * The storyboard frame beside the row (addendum 05 §3c), by id into the
    * project's own pictures. Null until one is dropped on it.
    */

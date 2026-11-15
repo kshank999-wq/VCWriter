@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  CAMERA_MOVES,
+  SHOT_TYPES,
+  setRowShot,
   SPEECH_MODEL,
   joinDictated,
   addRow,
@@ -30,6 +33,7 @@ import { frameFrom, mediaFrom } from '../frames';
 import { startListening, type Listening, type ListeningState } from '../local-dictation';
 import { useBoardPlayer } from '../use-board-player';
 import { NaturalVoicesBox } from './NaturalVoicesBox';
+import { ShotPicker } from './ShotPicker';
 
 /**
  * The AV sheet (addendum 05 §2), and the place the work happens (§8 stage 2).
@@ -599,18 +603,41 @@ function Row({
         ) : null}
       </td>
 
+      {/* The shot type, the camera's move, and then what is seen — the
+          description (from Ken, 15 November). */}
       <td className="av-visual">
         {readOnly ? (
-          <Lines text={row.visual} />
+          <>
+            {row.shot ? <p className="av-shot-read">{row.shot}</p> : null}
+            <Lines text={row.visual} />
+          </>
         ) : (
-          <Grow
-            label={`What is seen in row ${row.number}`}
-            placeholder="what is seen"
-            value={row.visual}
-            onFocus={() => onAim?.('visual')}
-            lit={aimed === 'visual'}
-            onChange={(typed) => onUpdate((current) => setRowVisual(current, row.beatId, typed))}
-          />
+          <>
+            <div className="av-shot">
+              <ShotPicker
+                label={`Shot type of shot ${row.number}`}
+                placeholder="Shot type"
+                value={row.shotType}
+                list={SHOT_TYPES}
+                onChange={(shotType) => onUpdate((current) => setRowShot(current, row.beatId, { shotType }))}
+              />
+              <ShotPicker
+                label={`Camera move of shot ${row.number}`}
+                placeholder="Camera move"
+                value={row.cameraMove}
+                list={CAMERA_MOVES}
+                onChange={(cameraMove) => onUpdate((current) => setRowShot(current, row.beatId, { cameraMove }))}
+              />
+            </div>
+            <Grow
+              label={`What is seen in row ${row.number}`}
+              placeholder="description"
+              value={row.visual}
+              onFocus={() => onAim?.('visual')}
+              lit={aimed === 'visual'}
+              onChange={(typed) => onUpdate((current) => setRowVisual(current, row.beatId, typed))}
+            />
+          </>
         )}
       </td>
 

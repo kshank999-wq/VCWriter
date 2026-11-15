@@ -7585,6 +7585,11 @@ dialog.preferences .field {
   margin: 0 0 5px;
 }
 
+.sheet-shot {
+  font-weight: bold;
+  letter-spacing: 0.02em;
+}
+
 .sheet-none {
   color: #888;
 }
@@ -24456,3 +24461,142 @@ button.mark-num { cursor: pointer; }
 }
 .card-ask p { margin: 0; }
 .card-ask-buttons { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+
+/* A shot's framing and camera move, above its description (addendum 05, from
+   Ken, 15 November). Two small boxes side by side that finish the word as it
+   is typed, with the other matches dropping down under them. */
+.av-shot {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.shot-picker {
+  position: relative;
+  display: block;
+  min-width: 0;
+}
+
+.shot-picker input {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 3px 5px;
+  color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 6%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+}
+
+.shot-picker input::placeholder {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.shot-picker input:focus {
+  border-color: var(--gold-deep);
+  outline: none;
+}
+
+.shot-picker-list {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 2px);
+  left: 0;
+  min-width: 100%;
+  max-height: 220px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 3px 0;
+  list-style: none;
+  background: var(--panel, #141210);
+  border: 1px solid var(--gold-deep);
+  border-radius: 3px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+
+.shot-picker-list li {
+  padding: 4px 9px;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.shot-picker-list li[aria-selected='true'],
+.shot-picker-list li:hover {
+  background: color-mix(in srgb, var(--gold) 18%, transparent);
+  color: var(--gold);
+}
+
+.av-shot-read {
+  font-weight: 600;
+  color: var(--gold);
+}
+
+/* Short form's shot and segment pop-ups, and the shot in the Inspector
+   (addendum 05, 15 November). */
+.shot-dialog-head h3 {
+  margin: 0;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+dialog.shot-dialog > .shot-fields,
+.shot-dialog-body {
+  padding: 12px 14px 14px;
+  display: grid;
+  gap: 10px;
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
+}
+
+.shot-fields {
+  display: grid;
+  gap: 8px;
+}
+
+.shot-dialog-body .shot-fields {
+  padding: 10px 0 0;
+  border-top: 1px solid var(--border);
+}
+
+.shot-fields-number {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.shot-fields-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.shot-fields .field textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.shot-fields-times {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.shot-time input {
+  width: 64px;
+}
+
+.shot-fields-rt {
+  margin-left: auto;
+}

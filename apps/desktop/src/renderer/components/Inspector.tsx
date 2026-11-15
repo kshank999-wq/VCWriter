@@ -33,6 +33,7 @@ import { RelatedPanel } from './RelatedPanel';
 import { CharacterWorkPanel } from './CharacterWorkPanel';
 import { LearningAidsPanel } from './LearningAidsPanel';
 import { BEAT_STATUSES } from './status';
+import { ShotFields, shotRow } from './ShotFields';
 
 interface InspectorProps {
   file: ProjectFile;
@@ -57,6 +58,50 @@ export function Inspector({ file, selectedBeatId, onUpdate }: InspectorProps) {
         <p className="muted empty-state">
           Select a {nounsFor(file.project.format).sub.toLowerCase()} to see its properties.
         </p>
+      </aside>
+    );
+  }
+
+  // Short form: a shot and its segment, and nothing a screenplay needs —
+  // no track, no act, no setups and payoffs (addendum 05).
+  if (file.project.format === 'short_form') {
+    const row = shotRow(file, beat.id);
+    return (
+      <aside className="inspector" aria-label="Inspector">
+        <Section title={row ? `Shot ${row.number}` : 'Shot'}>
+          {row ? <ShotFields row={row} onUpdate={onUpdate} showNumber={false} /> : null}
+          <label className="field">
+            Status
+            <select
+              value={beat.status}
+              onChange={(event) => onUpdate((current) => updateBeat(current, beat.id, { status: event.target.value as Beat['status'] }))}
+            >
+              {BEAT_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
+          </label>
+        </Section>
+        <Section title="Segment">
+          <label className="field">
+            Name
+            <input
+              value={unit.title}
+              placeholder="Name of the segment"
+              onChange={(event) => onUpdate((current) => updateUnit(current, unit.id, { title: event.target.value }))}
+            />
+          </label>
+          <label className="field">
+            What it is for
+            <textarea
+              rows={2}
+              value={unit.summary}
+              onChange={(event) => onUpdate((current) => updateUnit(current, unit.id, { summary: event.target.value }))}
+            />
+          </label>
+        </Section>
       </aside>
     );
   }

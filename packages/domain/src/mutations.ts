@@ -398,6 +398,8 @@ export const updateBeat = (
       | 'headingShown'
       // A row of an AV sheet: what is seen, and how long it runs (addendum 05).
       | 'visual'
+      | 'shotType'
+      | 'cameraMove'
       | 'seconds'
       | 'headSeconds'
       | 'tailSeconds'

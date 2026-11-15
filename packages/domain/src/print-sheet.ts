@@ -75,7 +75,10 @@ const renderRow = (row: AvRow): string =>
   '<tr class="sheet-row">' +
   `<td class="sheet-no">${escapeHtml(row.number)}</td>` +
   `<td class="sheet-audio">${lines(row.audio) || '<p class="sheet-none">—</p>'}</td>` +
-  `<td class="sheet-visual">${lines(row.visual) || '<p class="sheet-none">—</p>'}</td>` +
+  // The framing and the move head the description, in capitals as a board writes them.
+  `<td class="sheet-visual">${row.shot ? `<p class="sheet-shot">${escapeHtml(row.shot.toUpperCase())}</p>` : ''}${
+    lines(row.visual) || (row.shot ? '' : '<p class="sheet-none">—</p>')
+  }</td>` +
   `<td class="sheet-image">${renderPlate(row)}</td>` +
   '<td class="sheet-duration">' +
   time('Header', formatRt(row.head)) +
@@ -204,6 +207,7 @@ const stylesFor = (page: string, margin: string): string => `
   .sheet-audio, .sheet-visual { width: 22%; }
   .sheet-audio p, .sheet-visual p { margin: 0 0 5pt; }
   .sheet-none { color: #888; }
+  .sheet-shot { font-weight: bold; letter-spacing: 0.02em; }
   .sheet-image { width: 150pt; }
   .sheet-frame { display: block; width: 100%; height: auto; border: 0.5pt solid #999; }
   .sheet-plate {
@@ -445,7 +449,7 @@ const renderPanel = (row: AvRow, at: number): string => {
     '</div>' +
     renderPlate(row) +
     box('Dialogue', 'board-dialogue', row.audio) +
-    box('Action', 'board-action', row.visual) +
+    box('Action', 'board-action', [row.shot.toUpperCase(), row.visual].filter(Boolean).join('\n')) +
     '</div>'
   );
 };
