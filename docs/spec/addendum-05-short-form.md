@@ -635,3 +635,20 @@ out… there's writing over the scroll bars or the zooms.*
 - **The preview's build label** ("Preview build… · Save .vcw…") sat over every
   module's zoom row; it now sits in the empty left end of the page bar. It is
   the browser preview's alone; the desktop app never had it.
+
+### Dictate in the desktop app, and Down (15 November)
+
+- *It does ask to allow for the mic… but it doesn't type anything.* The desktop
+  app is Electron, which carries Chromium's `SpeechRecognition` but not the
+  Google service behind it, so a session asked for the microphone and returned
+  nothing — sometimes without the `network` error that would have said so. The
+  app now knows up front (`dictation.ts`: an Electron user agent is
+  `system`): Dictate puts the cursor at the end of the shot's Audio or Visual
+  box and says to start the computer's own dictation (Fn twice on a Mac,
+  Windows key + H), which types straight in. A browser session that hears
+  nothing through all its restarts is now also called no service, and said.
+- *The down one doesn't do anything.* A commercial's shots are a fixed row, so
+  the lane height changed nothing. On short form **Down is the board's
+  height** — the middle the usual 58 px, the bottom 40, the top 420 — and the
+  **bar between the board and the segments**, across the whole width, drags
+  the same height; the two stay in step. Double-click the bar for the usual.

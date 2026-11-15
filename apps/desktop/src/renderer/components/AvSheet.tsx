@@ -132,19 +132,49 @@ export function AvSheet({ file, onUpdate, onOpenRow, readOnly = false, onPlayhea
     });
   };
 
+  /**
+   * The box dictation is aimed at, with the cursor at its end: where the
+   * computer's own dictation types, when this app has no speech service of
+   * its own (the desktop app, which has none — see `dictation.ts`).
+   */
+  const focusAimed = () => {
+    const at = aimedRef.current;
+    if (!at) return;
+    const row = sheet.segments.flatMap((one) => one.rows).find((one) => one.beatId === at.beatId);
+    if (!row) return;
+    const box = document.querySelector<HTMLTextAreaElement>(
+      `textarea[aria-label="${at.field === 'audio' ? 'What is heard' : 'What is seen'} in row ${row.number}"]`,
+    );
+    if (!box) return;
+    box.focus();
+    box.setSelectionRange(box.value.length, box.value.length);
+  };
+  const systemDictation = () => {
+    focusAimed();
+    setSaid(`Ready in the box — now ${systemDictationKey()} and speak. Your computer's dictation types straight in.`);
+  };
+
   const toggleDictation = () => {
     if (listening) {
       session.current?.stop();
       return;
     }
     setSaid(null);
+    if (dictationKind() !== 'offer') {
+      systemDictation();
+      return;
+    }
     const started = startDictation({
       onFinal: (text) => {
         setGuess('');
         hear(text);
       },
       onInterim: setGuess,
-      onError: (why) => setSaid(why),
+      onError: (why) => {
+        // No service after all: the box is made ready for the system's own.
+        if (dictationKind() !== 'offer') systemDictation();
+        else setSaid(why);
+      },
       onEnd: () => {
         session.current = null;
         setListening(false);
@@ -152,7 +182,7 @@ export function AvSheet({ file, onUpdate, onOpenRow, readOnly = false, onPlayhea
       },
     });
     if (!started) {
-      setSaid(`No speech service here — ${systemDictationKey()} and talk into the box you click.`);
+      systemDictation();
       return;
     }
     session.current = started;

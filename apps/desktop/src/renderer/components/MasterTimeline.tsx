@@ -28,6 +28,8 @@ import {
   beatsAreChips,
   clampLane,
   LANE_DEFAULT,
+  LANE_CEILING,
+  LANE_SLIDER_FLOOR,
   BEAT_CHIP_MAX,
   clampBeatWidth,
   chipWidthAt,
@@ -157,6 +159,27 @@ const THEMATIC_HEIGHT = 18;
  * a beat is drawn, and the lane is as tall as what is in it.
  */
 const BLOCK_PADDING = 12;
+
+/** The short-form board's height: the usual, and how far it goes either way. */
+const BOARD_USUAL = 58;
+const BOARD_LEAST = 40;
+const BOARD_MOST = 420;
+const clampBoard = (height: number): number => Math.round(Math.min(BOARD_MOST, Math.max(BOARD_LEAST, height)));
+/**
+ * The Down slider's lane scale onto the board's: the middle of the slider is
+ * the usual height, the bottom the least, the top the most — so the slider
+ * reads the same on a commercial as anywhere else.
+ */
+const laneAsBoard = (lane: number): number =>
+  clampBoard(
+    lane <= LANE_DEFAULT
+      ? BOARD_LEAST + ((lane - LANE_SLIDER_FLOOR) / (LANE_DEFAULT - LANE_SLIDER_FLOOR)) * (BOARD_USUAL - BOARD_LEAST)
+      : BOARD_USUAL + ((lane - LANE_DEFAULT) / (LANE_CEILING - LANE_DEFAULT)) * (BOARD_MOST - BOARD_USUAL),
+  );
+const boardAsLane = (height: number): number =>
+  height <= BOARD_USUAL
+    ? LANE_SLIDER_FLOOR + ((height - BOARD_LEAST) / (BOARD_USUAL - BOARD_LEAST)) * (LANE_DEFAULT - LANE_SLIDER_FLOOR)
+    : LANE_DEFAULT + ((height - BOARD_USUAL) / (BOARD_MOST - BOARD_USUAL)) * (LANE_CEILING - LANE_DEFAULT);
 
 /**
  * The master timeline (addendum 02 §4): the story in order across the top
@@ -487,8 +510,8 @@ export function MasterTimeline({
   // --------------------------------------------------------------- render
 
   const playhead = (unitId: string) => (unitId === selectedUnitId ? ' playhead' : '');
-  /** How tall the short-form board is drawn, dragged by its grip. */
-  const [boardHeight, setBoardHeight] = usePreference('boardHeight', 58);
+  /** How tall the short-form board is drawn: its divider, or the Down slider. */
+  const [boardHeight, setBoardHeight] = usePreference('boardHeight', BOARD_USUAL);
 
   /**
    * **Words, not pages and time, on a book** (from Ken, 14 November: *in the
@@ -573,30 +596,7 @@ export function MasterTimeline({
               {/* **Pull the board taller** (from Ken, 14 November: *the board
                   screen needs to be stretchable so you can make it taller*):
                   the grip under its name drags the whole row, remembered. */}
-              <div className="row-head board-head">
-                Board
-                <span
-                  className="board-grip"
-                  role="separator"
-                  aria-orientation="horizontal"
-                  aria-label="Drag to make the board taller or shorter"
-                  title="Drag to make the board taller or shorter"
-                  onPointerDown={(event) => {
-                    event.preventDefault();
-                    const from = event.clientY;
-                    const start = boardHeight;
-                    const move = (moved: PointerEvent) =>
-                      setBoardHeight(Math.round(Math.min(420, Math.max(40, start + moved.clientY - from))));
-                    const up = () => {
-                      window.removeEventListener('pointermove', move);
-                      window.removeEventListener('pointerup', up);
-                    };
-                    window.addEventListener('pointermove', move);
-                    window.addEventListener('pointerup', up);
-                  }}
-                  onDoubleClick={() => setBoardHeight(58)}
-                />
-              </div>
+              <div className="row-head board-head">Board</div>
               {spans.map((span) => (
                 <FrameStrip
                   key={span.unit.id}
@@ -605,6 +605,30 @@ export function MasterTimeline({
                 />
               ))}
               <div className="board-cell tail" />
+              {/* **The bar between the board and the segments, pulled down
+                  to see the whole picture** (from Ken, 15 November). Across
+                  the whole width, so it is found where the eye looks. */}
+              <div
+                className="board-divider"
+                role="separator"
+                aria-orientation="horizontal"
+                aria-label="Drag to make the board taller or shorter"
+                title="Drag to make the board taller or shorter · double-click for the usual height"
+                style={{ gridColumn: '1 / -1' }}
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  const from = event.clientY;
+                  const start = boardHeight;
+                  const move = (moved: PointerEvent) => setBoardHeight(clampBoard(start + moved.clientY - from));
+                  const up = () => {
+                    window.removeEventListener('pointermove', move);
+                    window.removeEventListener('pointerup', up);
+                  };
+                  window.addEventListener('pointermove', move);
+                  window.addEventListener('pointerup', up);
+                }}
+                onDoubleClick={() => setBoardHeight(BOARD_USUAL)}
+              />
             </>
           ) : null}
 
@@ -805,7 +829,15 @@ export function MasterTimeline({
           perSecond={shortForm}
           onZoom={onZoom}
           {...(columnBoard ? { fitTo: (room: number) => fitColumnZoom(spans.length, room, beatWidth) } : {})}
-          {...(onLane ? { lane: laneAt, onLane } : {})}
+          {...(shortForm
+            ? // **Down is the board's height on a commercial** (from Ken, 15
+              // November: *the down one doesn't do anything*). Its shots are a
+              // fixed row, so the lane height changed nothing there; what a
+              // producer wants taller is the picture.
+              { lane: boardAsLane(boardHeight), onLane: (lane: number) => setBoardHeight(laneAsBoard(lane)) }
+            : onLane
+              ? { lane: laneAt, onLane }
+              : {})}
         />
         <span className="toolbar-spacer" />
         {inspectorOpen === null ? null : (

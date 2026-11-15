@@ -570,3 +570,23 @@ describe('the sheet and the board on paper', () => {
     expect(document.querySelector('.sheet-plate.clip')).toBeTruthy();
   });
 });
+
+describe('Dictate in the desktop app (from Ken, 15 November: it asked for the mic and typed nothing)', () => {
+  it('puts the cursor in the shot’s box and says to use the computer’s own dictation, without trying the absent service', () => {
+    const real = navigator.userAgent;
+    Object.defineProperty(navigator, 'userAgent', { value: `${real} Electron/33.2.0`, configurable: true });
+    try {
+      panel(commercial());
+      fireEvent.click(screen.getByRole('button', { name: /Dictate/ }));
+      const audio = screen.getByLabelText('What is heard in row 1.1');
+      expect(document.activeElement).toBe(audio);
+      expect(screen.getByText(/now .* and speak/)).toBeTruthy();
+      // Clicking Visual first aims there instead.
+      fireEvent.focus(screen.getByLabelText('What is seen in row 1.2'));
+      fireEvent.click(screen.getByRole('button', { name: /Dictate/ }));
+      expect(document.activeElement).toBe(screen.getByLabelText('What is seen in row 1.2'));
+    } finally {
+      Object.defineProperty(navigator, 'userAgent', { value: real, configurable: true });
+    }
+  });
+});

@@ -72,7 +72,20 @@ const constructorFor = (): RecognitionConstructor | null => {
  */
 let noService = false;
 
+/**
+ * **The desktop app has no speech service, and knows it up front** (from
+ * Ken, 15 November: *it does ask to allow for the mic to be used, but it
+ * doesn't type anything*). Electron carries Chromium's `SpeechRecognition`
+ * but not the Google service behind it, so a session asks for the
+ * microphone, hears, and never returns a word — sometimes without even the
+ * `network` error that would say so. Asking first and failing after was the
+ * worst of both, so in the app the answer is the system's own dictation from
+ * the start; the browser preview still tries Chrome's.
+ */
+const inDesktopApp = (): boolean => typeof navigator !== 'undefined' && /\bElectron\//.test(navigator.userAgent);
+
 export const dictationKind = (): DictationKind => {
+  if (inDesktopApp()) return 'system';
   if (!constructorFor()) return 'none';
   return noService ? 'system' : 'offer';
 };
@@ -113,6 +126,7 @@ export interface DictationSession {
 const FUTILE_RESTARTS = 3;
 
 export const startDictation = (handlers: DictationHandlers): DictationSession | null => {
+  if (inDesktopApp() || noService) return null;
   const Recognition = constructorFor();
   if (!Recognition) return null;
 
@@ -123,9 +137,12 @@ export const startDictation = (handlers: DictationHandlers): DictationSession | 
 
   let finished = false;
   let futile = 0;
+  /** Whether a single word ever came back: a session that heard nothing at all, ever, had no service. */
+  let everHeard = false;
 
   recognition.onresult = (event) => {
     futile = 0;
+    everHeard = true;
     let interim = '';
     for (let index = event.resultIndex; index < event.results.length; index += 1) {
       const result = event.results[index];
@@ -168,6 +185,12 @@ export const startDictation = (handlers: DictationHandlers): DictationSession | 
     }
     futile += 1;
     if (futile > FUTILE_RESTARTS) {
+      // Never a word in all those tries: the quiet way an engine with no
+      // service fails. Said, rather than a button that simply goes out.
+      if (!everHeard) {
+        noService = true;
+        handlers.onError(`No speech service here — ${systemDictationKey()} and dictate into the box.`);
+      }
       handlers.onEnd();
       return;
     }
