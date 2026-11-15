@@ -652,3 +652,23 @@ out… there's writing over the scroll bars or the zooms.*
   height** — the middle the usual 58 px, the bottom 40, the top 420 — and the
   **bar between the board and the segments**, across the whole width, drags
   the same height; the two stay in step. Double-click the bar for the usual.
+
+### Dictate with the computer's own dictation; one link per tab (15 November)
+
+- *The dictate function still doesn't record any audio.* Chromium's speech
+  recognition has no service in the desktop app and proved unreliable in the
+  browser, while the computer's own dictation (Fn twice on a Mac, Windows key +
+  H) works everywhere and keeps the voice off Google's servers. So **Dictate**
+  now puts the cursor in the shot's Audio or Visual box and turns on
+  *steering*: the computer's dictation types, and while steering is on a box
+  whose text ends with a command said aloud has it taken back out and the
+  cursor moved — **next shot** (a new shot after this one, its Audio), **go to
+  visual** / **go to audio**, and a bare **visual** / **audio** said on its own
+  (after a full stop or at the start). A line that merely ends with the word is
+  left alone. **Done** turns steering off.
+- *I popped out the window… it took the writer's track from another project
+  that's open at the same time.* In the browser every tab shared one link
+  channel and one name per pop-out window, so a popped-out section joined
+  whichever project spoke last. Each workspace tab now has a key of its own
+  (`browser-bridge.ts`), carried in its windows' address (`&link=`), the
+  channel's name and the windows' names.

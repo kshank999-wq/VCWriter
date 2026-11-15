@@ -511,6 +511,22 @@ export interface BrowserBridge extends VcWriterApi {
  * them is a `BroadcastChannel` rather than an IPC relay — the protocol above
  * it (`link.ts`) does not know or care which.
  */
+/**
+ * **This tab's own link** (from Ken, 15 November: *I have them open at the
+ * same time, but it took the writer's track from another project that's
+ * open*). Every tab of the site shares one origin, so a single channel name
+ * joined every project open in the browser into one conversation, and a
+ * popped-out window showed whichever workspace spoke last; its window name
+ * was shared too, so a second tab's pop-out could land in the first's window.
+ * So each workspace tab has a key of its own, its windows are opened with it
+ * in their address, and the channel and the window names carry it.
+ */
+const linkKey: string = (() => {
+  const given = typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('link');
+  if (given && /^[a-z0-9]{6,32}$/.test(given)) return given;
+  return Math.random().toString(36).slice(2, 12);
+})();
+
 const createPaneWindows = (): VcWriterApi['panes'] => {
   const popups = new Map<string, Window>();
   const listeners = new Set<(panes: string[]) => void>();
@@ -536,7 +552,10 @@ const createPaneWindows = (): VcWriterApi['panes'] => {
         return ok(true as const);
       }
       const url = new URL(window.location.href);
-      url.search = `?pane=${encodeURIComponent(pane)}`;
+      // The rest of the address is kept (a room's ?room=…), and this tab's key
+      // goes with the window so it talks to this tab's project and no other.
+      url.searchParams.set('pane', pane);
+      url.searchParams.set('link', linkKey);
       // The same proportions the desktop's registry gives each kind: a page
       // is tall, a board is wide, an outline is between the two.
       const shape =
@@ -547,7 +566,7 @@ const createPaneWindows = (): VcWriterApi['panes'] => {
             : pane === 'outliner'
               ? 'width=1040,height=940'
               : 'width=1280,height=860';
-      const popup = window.open(url.toString(), `vcwriter-${pane}`, `popup=yes,${shape}`);
+      const popup = window.open(url.toString(), `vcwriter-${linkKey}-${pane}`, `popup=yes,${shape}`);
       if (!popup) return fail<true>('The browser blocked the new window — allow pop-ups for this site.');
       popups.set(pane, popup);
       announce();
@@ -571,7 +590,7 @@ const createPaneWindows = (): VcWriterApi['panes'] => {
 };
 
 const createLink = (): VcWriterApi['link'] => {
-  const channel = typeof BroadcastChannel === 'function' ? new BroadcastChannel('vcwriter-link') : null;
+  const channel = typeof BroadcastChannel === 'function' ? new BroadcastChannel(`vcwriter-link-${linkKey}`) : null;
   return {
     send: (message) => channel?.postMessage(message),
     subscribe(handler) {

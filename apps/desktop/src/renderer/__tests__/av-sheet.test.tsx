@@ -571,22 +571,27 @@ describe('the sheet and the board on paper', () => {
   });
 });
 
-describe('Dictate in the desktop app (from Ken, 15 November: it asked for the mic and typed nothing)', () => {
-  it('puts the cursor in the shot’s box and says to use the computer’s own dictation, without trying the absent service', () => {
-    const real = navigator.userAgent;
-    Object.defineProperty(navigator, 'userAgent', { value: `${real} Electron/33.2.0`, configurable: true });
-    try {
-      panel(commercial());
-      fireEvent.click(screen.getByRole('button', { name: /Dictate/ }));
-      const audio = screen.getByLabelText('What is heard in row 1.1');
-      expect(document.activeElement).toBe(audio);
-      expect(screen.getByText(/now .* and speak/)).toBeTruthy();
-      // Clicking Visual first aims there instead.
-      fireEvent.focus(screen.getByLabelText('What is seen in row 1.2'));
-      fireEvent.click(screen.getByRole('button', { name: /Dictate/ }));
-      expect(document.activeElement).toBe(screen.getByLabelText('What is seen in row 1.2'));
-    } finally {
-      Object.defineProperty(navigator, 'userAgent', { value: real, configurable: true });
-    }
+describe('Dictate with the computer’s own dictation (from Ken, 15 November)', () => {
+  it('puts the cursor in the shot’s box, and while on, takes a spoken command out of the text and moves on', () => {
+    panel(commercial());
+    fireEvent.click(screen.getByRole('button', { name: /Dictate/ }));
+    const audio = screen.getByLabelText('What is heard in row 1.1') as HTMLTextAreaElement;
+    expect(document.activeElement).toBe(audio);
+    expect(screen.getByText(/Now .* and speak/)).toBeTruthy();
+
+    // The computer's dictation types into the box; "visual" said on its own
+    // is taken back out and the cursor goes to the Visual box.
+    fireEvent.change(audio, { target: { value: 'Sun Tzu said know your enemy. Visual.' } });
+    expect((screen.getByLabelText('What is heard in row 1.1') as HTMLTextAreaElement).value).toBe('Sun Tzu said know your enemy.');
+
+    // A line that only ends with the word is left alone.
+    const visual = screen.getByLabelText('What is seen in row 1.1') as HTMLTextAreaElement;
+    fireEvent.change(visual, { target: { value: 'Close on the mixing desk audio' } });
+    expect((screen.getByLabelText('What is seen in row 1.1') as HTMLTextAreaElement).value).toBe('Close on the mixing desk audio');
+
+    // Done puts it away: a command is just words again.
+    fireEvent.click(screen.getByRole('button', { name: /Done/ }));
+    fireEvent.change(visual, { target: { value: 'Wide. Audio.' } });
+    expect((screen.getByLabelText('What is seen in row 1.1') as HTMLTextAreaElement).value).toBe('Wide. Audio.');
   });
 });
