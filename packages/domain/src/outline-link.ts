@@ -1,7 +1,8 @@
 import { initialOrderKeys } from './ordering.js';
 import { beatsForUnit, unitsInStoryOrder } from './selectors.js';
 import { divisionSpan } from './outline-binding.js';
-import { madeItem, outlineChildren, sectionRowOf } from './outline.js';
+import { madeItem, outlineChildren, sectionRowOf, trackLevelOf } from './outline.js';
+import { addBeat, moveBeat, removeUnit } from './mutations.js';
 import type { Outline, OutlineItem } from './entities/outline.js';
 import type { ProjectFile } from './project-file.js';
 import type { OutlineItemId, StructuralUnitId } from './ids.js';
@@ -49,13 +50,76 @@ const sameIds = (a: readonly { id: string }[], b: readonly { id: string }[]): bo
 // ---------------------------------------------------------- track follows outline
 
 /**
+ * **A subsection that went onto the track as a section of its own** (from
+ * Ken, 15 November: *2.2 is the section, then 2.2.2 is the subsection…
+ * anything that is a subcategory from there is held within the subsection*).
+ *
+ * A row's place on the track is read from its depth (`trackLevelOf`), but a
+ * row added before that rule — or a *Section*-kind row sitting at subsection
+ * depth — could be bound to a section box of its own: 2.2.1 and 2.2.4 stood
+ * beside 2.2 on the track rather than in it, and the rows under them, which
+ * are their passages, read as passages of whatever came before.
+ *
+ * Each such row is made what its depth says: a subsection of its section,
+ * carrying the box's summary, with every beat the box held moved into the
+ * section (the writing kept, in its order — the alignment that follows puts it
+ * under the row). The emptied box is then removed. Only where the section above
+ * is itself on the track, so there is somewhere to put it.
+ */
+const subsectionsOutOfSections = (file: ProjectFile): ProjectFile => {
+  let current = file;
+  for (const outline of file.outlines ?? []) {
+    for (const row of outline.items) {
+      if (!row.boundUnitId || trackLevelOf(outline, row) !== 'beat') continue;
+      const box = current.units.find((unit) => unit.id === row.boundUnitId);
+      const sectionUnitId = sectionRowOf(outline, row)?.boundUnitId ?? null;
+      if (!box || !sectionUnitId || sectionUnitId === box.id || !current.units.some((unit) => unit.id === sectionUnitId)) continue;
+      // The box's own first piece of writing, if no other row claims it, is
+      // the subsection itself; otherwise one is made.
+      const claimed = new Set(
+        (current.outlines ?? []).flatMap((one) => one.items.map((item) => item.boundBeatId as string | null)).filter(Boolean) as string[],
+      );
+      const own = beatsForUnit(current, box.id).find((beat) => !claimed.has(beat.id as string)) ?? null;
+      let subsectionId = own?.id ?? null;
+      if (!subsectionId) {
+        const made = addBeat(current, { unitId: sectionUnitId, title: row.title.trim() || box.title });
+        current = made.file;
+        subsectionId = made.beat.id;
+      }
+      current = {
+        ...current,
+        beats: current.beats.map((beat) =>
+          beat.id === subsectionId
+            ? { ...beat, title: row.title.trim() || beat.title, summary: beat.summary.trim() ? beat.summary : box.summary }
+            : beat,
+        ),
+      };
+      for (const beat of beatsForUnit(current, box.id)) {
+        current = moveBeat(current, { beatId: beat.id, toUnitId: sectionUnitId, index: beatsForUnit(current, sectionUnitId).length });
+      }
+      const made = { beat: { id: subsectionId } };
+      current = {
+        ...current,
+        outlines: (current.outlines ?? []).map((one) =>
+          one.id === outline.id
+            ? { ...one, items: one.items.map((item) => (item.id === row.id ? { ...item, boundUnitId: null, boundBeatId: made.beat.id } : item)) }
+            : one,
+        ),
+      };
+      current = removeUnit(current, box.id);
+    }
+  }
+  return current;
+};
+
+/**
  * The track put in the outline's order: sections in the order their rows read,
  * subsections in the order their rows read under their section (at any depth),
  * a subsection whose row now stands in another section moved into it, and each
  * chapter starting on the first of its sections.
  */
 export const alignScriptToOutline = (file: ProjectFile): ProjectFile => {
-  let current = file;
+  let current = subsectionsOutOfSections(file);
   for (const outline of current.outlines ?? []) {
     const rows = reading(outline);
     const unitIds = new Set(current.units.map((unit) => unit.id as string));

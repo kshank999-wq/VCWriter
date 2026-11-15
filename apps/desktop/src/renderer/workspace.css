@@ -24611,7 +24611,7 @@ dialog.shot-dialog > .shot-fields,
 
 .element-notes-rows.passages li.passage {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 4px;
 }
@@ -24640,4 +24640,14 @@ dialog.shot-dialog > .shot-fields,
   align-items: center;
   gap: 8px;
   margin: 0 0 10px;
+}
+
+.passage-move {
+  display: inline-flex;
+  gap: 1px;
+}
+
+.passage-move button {
+  padding: 0 4px;
+  min-width: 0;
 }

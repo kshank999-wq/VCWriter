@@ -42,6 +42,7 @@ import {
   isMarkupDraft,
   addPassage,
   canAddPassage,
+  nudgeItem,
   isInstructional,
   passageBeatIds,
   promoteRow,
@@ -143,6 +144,31 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
             if (row.boundBeatId) onOpenBeat?.(row.boundBeatId);
           },
           place: (row: OutlineItem) => onUpdate((current) => promoteRow(current, row.outlineId, row.id).file),
+          // Reordered among the passages beside it, in the outline — and the
+          // page follows, as every move in the outline does (from Ken, 15
+          // November: *those passages can be reordered within the subsection
+          // from the right menu*).
+          canMove: (row: OutlineItem, direction: -1 | 1) => {
+            const siblings = beneath.filter((one) => one.parentId === row.parentId);
+            const at = siblings.findIndex((one) => one.id === row.id);
+            return at + direction >= 0 && at + direction < siblings.length;
+          },
+          move: (row: OutlineItem, direction: -1 | 1) => {
+            const siblings = beneath.filter((one) => one.parentId === row.parentId);
+            const at = siblings.findIndex((one) => one.id === row.id);
+            if (at + direction < 0 || at + direction >= siblings.length) return;
+            onUpdate((current) => nudgeItem(current, row.outlineId, row.id, direction));
+          },
+          depthOf: (row: OutlineItem) => {
+            let depth = 0;
+            for (let at = row.parentId; at; ) {
+              const parent = beneath.find((one) => one.id === at);
+              if (!parent) break;
+              depth += 1;
+              at = parent.parentId;
+            }
+            return depth;
+          },
           ...(canAddPassage(file, beat.id)
             ? { add: () => onUpdate((current) => addPassage(current, beat.id)?.file ?? current) }
             : {}),

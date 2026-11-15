@@ -54,6 +54,11 @@ export function ElementNotes({
     place(row: OutlineItem): void;
     /** A new passage at the end of this subsection; absent where there is no outline row to hang it on. */
     add?(): void;
+    /** Move a passage up or down among the passages beside it; null where it cannot go that way. */
+    canMove(row: OutlineItem, direction: -1 | 1): boolean;
+    move(row: OutlineItem, direction: -1 | 1): void;
+    /** How far under the subsection a passage sits, for its indent: 0 for one directly under it. */
+    depthOf(row: OutlineItem): number;
   };
 }) {
   const [ownOpen, setOwnOpen] = useState(() => read('vcw-element-notes-open', true));
@@ -170,7 +175,33 @@ export function ElementNotes({
             {rows.map((row) => {
               const inPage = row.boundBeatId !== null && file.beats.some((beat) => beat.id === row.boundBeatId);
               return (
-                <li key={row.id} className={inPage ? 'passage in-page' : 'passage'}>
+                <li
+                  key={row.id}
+                  className={inPage ? 'passage in-page' : 'passage'}
+                  style={{ paddingLeft: `${passages.depthOf(row) * 12}px` }}
+                >
+                  <span className="passage-move">
+                    <button
+                      type="button"
+                      className="ghost small"
+                      aria-label={`Move ${row.title || 'passage'} up`}
+                      title="Earlier in the subsection"
+                      disabled={!passages.canMove(row, -1)}
+                      onClick={() => passages.move(row, -1)}
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      className="ghost small"
+                      aria-label={`Move ${row.title || 'passage'} down`}
+                      title="Later in the subsection"
+                      disabled={!passages.canMove(row, 1)}
+                      onClick={() => passages.move(row, 1)}
+                    >
+                      ↓
+                    </button>
+                  </span>
                   <input
                     aria-label="Passage name"
                     value={row.title}

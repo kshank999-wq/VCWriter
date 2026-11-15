@@ -2,7 +2,7 @@ import { addBeat, markResearchUsed, setResearchArchived, updateBeat } from './mu
 import { beatsForUnit, noteOnTrack, shelvedItems } from './selectors.js';
 import { onlyLiving } from './graveyard.js';
 import { outlineNumbers } from './numbering.js';
-import { addItem, findOutline, findOutlineItem, outlineRows, outlineSubtree, rowTitle, updateItem } from './outline.js';
+import { addItem, findOutline, findOutlineItem, outlineRows, outlineChildren, rowTitle, updateItem } from './outline.js';
 import { canPromote, divisionSpan, promoteRow } from './outline-binding.js';
 import { defaultElementType } from './editing.js';
 import { contentsShelf, placeKey, placeNow, placeOf, placeStillThere, type NotePlace } from './chapter-notes.js';
@@ -392,7 +392,19 @@ export const notesForBeat = (file: ProjectFile, beatId: string): ResearchItem[] 
  * beat or subsection writing screen*).
  */
 export const rowsBeneathBeat = (file: ProjectFile, beatId: string): OutlineItem[] =>
-  rowsBoundToBeat(file, beatId).flatMap(({ outline, item }) => outlineSubtree(outline, item.id).filter((one) => one.id !== item.id));
+  rowsBoundToBeat(file, beatId).flatMap(({ outline, item }) => {
+    // In reading order, each row followed by the rows under it — the order
+    // they print in, and the order the Passages list moves them in.
+    const out: OutlineItem[] = [];
+    const walk = (parentId: OutlineItem['id']): void => {
+      for (const child of outlineChildren(outline, parentId)) {
+        out.push(child);
+        walk(child.id);
+      }
+    };
+    walk(item.id);
+    return out;
+  });
 
 /**
  * **Place text**, in a beat or subsection's writing screen (from Ken: *the

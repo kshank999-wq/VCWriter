@@ -981,3 +981,21 @@ page, with no heading**.
   of the subsection before them as they stand. A subsection row that is not on
   the track yet should be added (*Add all to track* puts it in front of its
   passages).
+
+#### Subsections that stood as sections; reordering passages (15 November)
+
+Ken's book showed 2.2.1 and 2.2.4 (and 2.1.3) as section boxes beside 2.2 on
+the track, though each is a subsection in the outline — rows put on the
+track before depth decided what a row is. Their passages then read as
+passages of the subsection before them.
+
+- `alignScriptToOutline` (run on every outline change and by *Add all to
+  track*) now first makes each such row what its depth says: a subsection
+  of its section. The box's own first unclaimed piece of writing becomes the
+  subsection (renamed to the row), anything else it held moves into the
+  section, the box's summary is kept, and the emptied box is removed. The
+  alignment then puts the passages under it.
+- The *Passages* list beside a subsection's page has **↑ ↓** to reorder a
+  passage among those beside it; the outline row moves and the page follows,
+  as every outline move does. Nested passages are indented, and the list is
+  in reading order (`rowsBeneathBeat`).
