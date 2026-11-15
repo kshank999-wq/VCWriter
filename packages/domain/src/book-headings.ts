@@ -51,6 +51,8 @@ export interface BookHeading {
   number: string;
   title: string;
   shown: boolean;
+  /** A passage of a subsection: no heading at all, not even a hidden one to switch on. */
+  passage?: boolean;
 }
 
 /** A section's heading: its number and its title in title case. */
@@ -62,12 +64,17 @@ export const sectionHeading = (file: ProjectFile, unit: StructuralUnit, numbers 
 });
 
 /** A subsection's heading: its number and its title in title case. */
-export const subsectionHeading = (file: ProjectFile, beat: Beat, numbers = structureNumbers(file)): BookHeading => ({
-  level: 'subsection',
-  number: numbers.subs.get(beat.id as string) ?? '',
-  title: titleCase(beat.title),
-  shown: beat.headingShown !== false && beat.title.trim().length > 0,
-});
+export const subsectionHeading = (file: ProjectFile, beat: Beat, numbers = structureNumbers(file)): BookHeading => {
+  const passage = numbers.passages.has(beat.id as string);
+  return {
+    level: 'subsection',
+    number: passage ? '' : (numbers.subs.get(beat.id as string) ?? ''),
+    title: titleCase(beat.title),
+    // A passage runs on from its subsection untitled (from Ken, 15 November).
+    shown: !passage && beat.headingShown !== false && beat.title.trim().length > 0,
+    ...(passage ? { passage: true } : {}),
+  };
+};
 
 /** The heading as the manuscript carries it, the number bold: `**1.1** Why Do You Want to Write?` */
 export const headingLine = (heading: BookHeading): string =>

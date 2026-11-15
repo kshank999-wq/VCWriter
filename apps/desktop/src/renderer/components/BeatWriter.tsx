@@ -40,6 +40,14 @@ import {
   archiveRevision,
   editDraft,
   isMarkupDraft,
+  addPassage,
+  canAddPassage,
+  isInstructional,
+  passageBeatIds,
+  promoteRow,
+  subsectionOfPassage,
+  updateItem,
+  type OutlineItem,
 } from '@vcwriter/domain';
 import { ElementNotes } from './ElementNotes';
 import { MarkupNotes } from './MarkupNotes';
@@ -84,6 +92,8 @@ export interface BeatWriterProps {
   onGoToOutline?(): void;
   /** **Go to the Sculptor** at this beat's card; null greys it, where the beat is on no board (from Ken, 14 November). */
   onGoToSculptor?: (() => void) | null;
+  /** Open another beat in this screen: a passage from its subsection's list, or back to the subsection. */
+  onOpenBeat?(beatId: BeatId): void;
 }
 
 /**
@@ -103,7 +113,7 @@ export interface BeatWriterProps {
  * about the beat — colour, status, links, what it sets up — is the
  * inspector's business, and stays out of the way of the page.
  */
-export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, onGrab, onGoToOutline, onGoToSculptor }: BeatWriterProps) {
+export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, onGrab, onGoToOutline, onGoToSculptor, onOpenBeat }: BeatWriterProps) {
   const unit = findUnit(file, beat.unitId);
   /**
    * The notes for this beat, down the right (from Ken): those filed to it,
@@ -117,6 +127,27 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
     return [...mine, ...scene];
   })();
   const beneath = rowsBeneathBeat(file, beat.id as string);
+  /**
+   * **Passages** (from Ken, 15 November): in a book, the rows beneath a
+   * subsection are its passages, printed under it untitled. Listed beside the
+   * page to rename, open, put in the page and add to; a passage's own screen
+   * says whose it is and goes back to it.
+   */
+  const passageIds = passageBeatIds(file);
+  const ownerSubsection = subsectionOfPassage(file, beat.id, passageIds);
+  const passageList =
+    isInstructional(file.project.format) && !passageIds.has(beat.id as string)
+      ? {
+          rename: (row: OutlineItem, title: string) => onUpdate((current) => updateItem(current, row.outlineId, row.id, { title })),
+          open: (row: OutlineItem) => {
+            if (row.boundBeatId) onOpenBeat?.(row.boundBeatId);
+          },
+          place: (row: OutlineItem) => onUpdate((current) => promoteRow(current, row.outlineId, row.id).file),
+          ...(canAddPassage(file, beat.id)
+            ? { add: () => onUpdate((current) => addPassage(current, beat.id)?.file ?? current) }
+            : {}),
+        }
+      : undefined;
   const [rewritingNote, setRewritingNote] = useState<ResearchItemId | null>(null);
   /** The line the cursor was last in, where placed text goes. */
   const cursorLine = useRef<ManuscriptElementId | null>(null);
@@ -617,7 +648,17 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
               onToggle={(shown) => onUpdate((current) => updateUnit(current, unit.id, { headingShown: shown }))}
             />
           ) : null}
-          {headed ? (
+          {ownerSubsection ? (
+            <p className="passage-of muted small">
+              A passage of <strong>{ownerSubsection.title || 'its subsection'}</strong> — printed under it with no heading.
+              {onOpenBeat ? (
+                <button type="button" className="ghost small" onClick={() => onOpenBeat(ownerSubsection.id)}>
+                  ‹ Back to the subsection
+                </button>
+              ) : null}
+            </p>
+          ) : null}
+          {headed && !ownerSubsection ? (
             <BookHeadingLine
               heading={subsectionHeading(file, beat)}
               untitled="Untitled subsection"
@@ -747,6 +788,7 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
             file={file}
             notes={beatNotes}
             rows={beneath}
+            {...(passageList ? { passages: passageList } : {})}
             placeWord="place its text where your cursor is"
             onOpen={(note) => setRewritingNote(note.id)}
             open={planOpen}

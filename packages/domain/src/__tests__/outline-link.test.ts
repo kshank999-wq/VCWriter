@@ -56,17 +56,41 @@ const outlineOrder = (file: ProjectFile, id: ReturnType<typeof book>['id']) =>
     ({ item, depth }) => `${'  '.repeat(depth)}${item.title}`,
   );
 
-describe('rows deeper than a subsection stay off the track (from Ken, 11 November)', () => {
-  it('puts the chapter, sections and subsections in the track, and keeps deeper rows in their subsection’s list', async () => {
-    const { rowsBeneathBeat, trackLevelOf } = await import('../index.js');
+describe('rows deeper than a subsection are its passages (from Ken, 11 and 15 November)', () => {
+  it('puts them in the page under their subsection, untitled and unnumbered, and off the track', async () => {
+    const { rowsBeneathBeat, trackLevelOf, trackBeatsForUnit, passagesOf, structureNumbers, subsectionHeading } = await import('../index.js');
     const made = book();
     const outline = findOutline(made.file, made.id)!;
     const row = (key: string) => outline.items.find((one) => one.id === made.rows[key])!;
     expect(['c1', 's1', 'b1', 'bb1'].map((key) => trackLevelOf(outline, row(key)))).toEqual(['chapter', 'unit', 'beat', 'beneath']);
-    expect(titlesOfUnit(made.file, 'Publishers')).toEqual(['Big boys', 'Independents']);
-    expect(isPromoted(row('bb1'))).toBe(false);
+    // In the book, in reading order: each subsection followed by its passages.
+    expect(titlesOfUnit(made.file, 'Publishers')).toEqual(['Big boys', 'Major houses', 'Major studios', 'Independents']);
+    expect(isPromoted(row('bb1'))).toBe(true);
+    const publishers = unitsInStoryOrder(made.file).find((unit) => unit.title === 'Publishers')!;
+    // The track draws the subsections only.
+    expect(trackBeatsForUnit(made.file, publishers.id).map((beat) => beat.title)).toEqual(['Big boys', 'Independents']);
     const bigBoys = made.file.beats.find((beat) => beat.title === 'Big boys')!;
+    expect(passagesOf(made.file, bigBoys.id).map((beat) => beat.title)).toEqual(['Major houses', 'Major studios']);
     expect(rowsBeneathBeat(made.file, bigBoys.id as string).map((one) => one.title)).toEqual(['Major houses', 'Major studios']);
+    // No number and no heading for a passage; the subsections count on as if it were not there.
+    const numbers = structureNumbers(made.file);
+    const houses = made.file.beats.find((beat) => beat.title === 'Major houses')!;
+    const independents = made.file.beats.find((beat) => beat.title === 'Independents')!;
+    expect(numbers.subs.get(houses.id as string)).toBeUndefined();
+    expect(numbers.subs.get(independents.id as string)).toBe('1.1.2');
+    expect(subsectionHeading(made.file, houses, numbers)).toMatchObject({ shown: false, passage: true, number: '' });
+  });
+
+  it('adds a passage at the end of its subsection, and moves a subsection with its passages', async () => {
+    const { addPassage, passagesOf, moveTrackBeat, trackBeatsForUnit } = await import('../index.js');
+    const made = book();
+    const bigBoys = made.file.beats.find((beat) => beat.title === 'Big boys')!;
+    const added = addPassage(made.file, bigBoys.id, 'Scam presses')!;
+    expect(passagesOf(added.file, bigBoys.id).map((beat) => beat.title)).toEqual(['Major houses', 'Major studios', 'Scam presses']);
+    const publishers = unitsInStoryOrder(added.file).find((unit) => unit.title === 'Publishers')!;
+    const moved = moveTrackBeat(added.file, { beatId: bigBoys.id, toUnitId: publishers.id, index: 1 });
+    expect(titlesOfUnit(moved, 'Publishers')).toEqual(['Independents', 'Big boys', 'Major houses', 'Major studios', 'Scam presses']);
+    expect(trackBeatsForUnit(moved, publishers.id).map((beat) => beat.title)).toEqual(['Independents', 'Big boys']);
   });
 
   it('makes a subsection-kind row at the section level a section on the track', async () => {

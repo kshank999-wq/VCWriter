@@ -1647,16 +1647,6 @@ function Promotion({
     [file, outline, item],
   );
 
-  if (kind === null && trackLevelOf(outline, item) === 'beneath') {
-    const nouns = nounsFor(file.project.format);
-    return (
-      <p className="muted small outline-promotion">
-        Below a {nouns.sub.toLowerCase()}, so it is not a box on the track: it is listed beside the page when its{' '}
-        {nouns.sub.toLowerCase()} is open, ready to be written into the {nouns.manuscript.toLowerCase()}.
-      </p>
-    );
-  }
-
   if (kind === null) {
     return (
       <p className="muted small outline-promotion">
@@ -1667,7 +1657,8 @@ function Promotion({
   }
 
   const nouns = nounsFor(file.project.format);
-  const what = (kind === 'unit' ? nouns.unit : kind === 'chapter' ? 'Chapter' : nouns.sub).toLowerCase();
+  const passage = trackLevelOf(outline, item) === 'beneath';
+  const what = (kind === 'unit' ? nouns.unit : kind === 'chapter' ? 'Chapter' : passage ? 'passage' : nouns.sub).toLowerCase();
   const subs = nouns.subPlural.toLowerCase();
   const sub = nouns.sub.toLowerCase();
   const units = nouns.unitPlural.toLowerCase();
@@ -1933,7 +1924,8 @@ function Row({
 }) {
   const { item, depth, childCount } = row;
   /** Whether this kind of row can go on the track at all, and so carries a dot. */
-  const canGo = level === undefined ? promoteKindOf(item) !== null : level !== null && level !== 'beneath';
+  // A row below a subsection goes into the book too, as a passage of it (from Ken, 15 November).
+  const canGo = level === undefined ? promoteKindOf(item) !== null : level !== null;
   const beneath = level === 'beneath';
   /** A row folds where it has rows under it, or words of its own. */
   const foldable = childCount > 0 || item.body.trim().length > 0;
@@ -2073,11 +2065,18 @@ function Row({
           it's in the track, it turns green*). Every row that can go on the
           track carries a dot: red while it is a plan, green once it is in.
           Notes and ideas cannot go, and carry none. */}
-      {beneath && !promoted ? (
+      {beneath ? (
+        // **A passage** (from Ken, 15 November): printed under its subsection
+        // with no heading, listed beside the page when the subsection is open,
+        // and never a box on the track.
         <span
-          className="outline-real beneath"
-          title="Below a subsection: not on the track, but listed beside the page when its subsection is open"
-          aria-label="In its subsection's list"
+          className={`outline-real beneath${promoted ? ' in' : ' out'}`}
+          title={
+            promoted
+              ? 'A passage: in the page under its subsection, with no heading, and listed beside it when the subsection is open'
+              : 'A passage, not in the page yet — Add to track puts it under its subsection, with no heading'
+          }
+          aria-label={promoted ? 'A passage, in the page' : 'A passage, not in the page yet'}
         >
           ↳
         </span>

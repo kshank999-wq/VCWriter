@@ -18,6 +18,8 @@ export function BookHeadingLine({
   untitled: string;
   onToggle?(shown: boolean): void;
 }) {
+  // A passage runs on from its subsection: no heading, not even a hidden one.
+  if (heading.passage) return null;
   const on = heading.shown;
   const Tag = heading.level === 'section' ? 'h2' : 'h3';
   return (

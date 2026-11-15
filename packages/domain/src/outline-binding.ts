@@ -6,7 +6,8 @@ import { orderKeyBetween } from './ordering.js';
 import { holdsWholeWorks, isCollection, isInstructional, nounsFor } from './formats.js';
 import { defaultMarkerKind } from './markers.js';
 import { nowIso } from './entities/common.js';
-import { findOutline, findOutlineItem, outlineChildren, outlineParent, outlinesOf, sectionRowOf, trackLevelOf } from './outline.js';
+import { addItem, findOutline, findOutlineItem, outlineChildren, outlineParent, outlinesOf, sectionRowOf, trackLevelOf } from './outline.js';
+import { passagesOf } from './passages.js';
 import { claimedInScript, retitleScript } from './planning.js';
 import { alignScriptToOutline } from './outline-link.js';
 import type { Outline, OutlineItem } from './entities/outline.js';
@@ -51,7 +52,10 @@ export const promoteKindOf = (item: OutlineItem): PromoteKind =>
  */
 export const promoteKindIn = (outline: Outline, item: OutlineItem): PromoteKind => {
   const level = trackLevelOf(outline, item);
-  return level === 'chapter' ? 'chapter' : level === 'unit' ? 'unit' : level === 'beat' ? 'beat' : null;
+  // A row deeper than a subsection is a **passage** of it (from Ken, 15
+  // November, `passages.ts`): it goes into the book as a beat straight after
+  // its subsection, untitled and unnumbered, and is not a box on the track.
+  return level === 'chapter' ? 'chapter' : level === 'unit' ? 'unit' : level === 'beat' || level === 'beneath' ? 'beat' : null;
 };
 
 export const isPromoted = (item: OutlineItem): boolean =>
@@ -103,9 +107,7 @@ const sectionsUnder = (outline: Outline, item: OutlineItem): OutlineItem[] =>
  */
 export const canPromote = (file: ProjectFile, outline: Outline, item: OutlineItem): Refusal | null => {
   const kind = promoteKindIn(outline, item);
-  if (kind === null) {
-    return trackLevelOf(outline, item) === 'beneath' ? 'it belongs in its subsection, not on the track' : 'nothing to promote';
-  }
+  if (kind === null) return 'nothing to promote';
   if (isPromoted(item)) return 'already in the script';
   if (kind === 'unit') return tracksInOrder(file).length === 0 ? 'there is no track to put a scene in' : null;
   if (kind === 'chapter') {
@@ -199,15 +201,18 @@ const beatPlaces = (order: readonly Beat[]): PlaceOf => (other) => {
   return position === -1 ? null : { first: position, last: position };
 };
 
-/** The subsection rows a section holds, at any depth, in reading order. */
+/**
+ * The subsection rows a section holds, and the passages under them, at any
+ * depth, in reading order — each subsection followed by its passages.
+ */
 const beatRowsIn = (outline: Outline, sectionId: OutlineItemId): OutlineItem[] => {
   const out: OutlineItem[] = [];
   const walk = (parentId: OutlineItemId): void => {
     for (const child of outlineChildren(outline, parentId)) {
       const level = trackLevelOf(outline, child);
-      if (level === 'unit' || level === 'beneath') continue;
-      if (level === 'beat') out.push(child);
-      else walk(child.id);
+      if (level === 'unit') continue;
+      if (level === 'beat' || level === 'beneath') out.push(child);
+      walk(child.id);
     }
   };
   walk(sectionId);
@@ -1049,3 +1054,36 @@ export const sceneCardOf = (file: ProjectFile, outline: Outline, item: OutlineIt
     beats,
   };
 };
+
+/**
+ * **A new passage in a subsection** (from Ken, 15 November: *you can edit
+ * those and add them just like normal*). A row under the subsection's row in
+ * the outline, and a beat bound to it straight after the subsection's last
+ * passage, so its words go into the book at the end of the subsection,
+ * untitled. Null where the subsection has no row in an outline to hang one on.
+ */
+export const addPassage = (
+  file: ProjectFile,
+  subsectionBeatId: BeatId,
+  title = 'New passage',
+): { file: ProjectFile; beatId: BeatId } | null => {
+  const beat = file.beats.find((one) => one.id === subsectionBeatId);
+  if (!beat) return null;
+  for (const outline of outlinesOf(file)) {
+    const row = outline.items.find((item) => item.boundBeatId === beat.id);
+    if (!row || trackLevelOf(outline, row) !== 'beat') continue;
+    const added = addItem(file, outline.id, { parentId: row.id, kind: 'beat', title });
+    if (!added.itemId) return null;
+    const order = beatsForUnit(added.file, beat.unitId);
+    const index = order.findIndex((one) => one.id === beat.id) + 1 + passagesOf(added.file, beat.id).length;
+    const made = addBeat(added.file, { unitId: beat.unitId, title, index });
+    return { file: writeRow(made.file, outline.id, added.itemId, { boundBeatId: made.beat.id }), beatId: made.beat.id };
+  }
+  return null;
+};
+
+/** Whether a subsection can take a new passage: it has a row in an outline. */
+export const canAddPassage = (file: ProjectFile, subsectionBeatId: BeatId | string): boolean =>
+  outlinesOf(file).some((outline) =>
+    outline.items.some((item) => (item.boundBeatId as string | null) === (subsectionBeatId as string) && trackLevelOf(outline, item) === 'beat'),
+  );

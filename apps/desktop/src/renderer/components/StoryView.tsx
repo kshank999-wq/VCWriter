@@ -666,7 +666,8 @@ export function StoryView({
                   ) : item.kind === 'scene' ? (
                     sceneHeader(item.unit)
                   ) : item.kind === 'beatName' ? (
-                    beatHeader(item.beat)
+                    // A passage runs on from its subsection, unnamed (from Ken, 15 November).
+                    numbers.passages.has(item.beat.id as string) ? null : beatHeader(item.beat)
                   ) : (
                     beatBody(item.beat, item.only, item.lead)
                   )}
@@ -737,7 +738,7 @@ export function StoryView({
                       onSelectBeat(beat.id);
                     }}
                   >
-                    {display.beatNames ? beatHeader(beat) : null}
+                    {display.beatNames && !numbers.passages.has(beat.id as string) ? beatHeader(beat) : null}
                     {headed ? (
                       <BookHeadingLine
                         heading={subsectionHeading(file, beat, numbers)}

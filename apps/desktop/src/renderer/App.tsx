@@ -1853,6 +1853,7 @@ export default function App() {
             onClose={() => setOpenBeatId(null)}
             onUpdate={project.update}
             onSelect={setSelectedBeatId}
+            onOpenBeat={setOpenBeatId}
             onGoToOutline={goToOutline}
             onGoToSculptor={goToSculptor}
             onPopOut={(beatId) => {

@@ -24600,3 +24600,46 @@ dialog.shot-dialog > .shot-fields,
 .shot-fields-rt {
   margin-left: auto;
 }
+
+/* A subsection's passages, beside its page (from Ken, 15 November): each a
+   name to rename and a way to open it, and a way to add one. */
+.element-notes-rows.passages ul {
+  display: grid;
+  gap: 4px;
+  padding: 0;
+  margin: 6px 0;
+  list-style: none;
+}
+
+.element-notes-rows.passages li.passage {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 4px;
+}
+
+.element-notes-rows.passages li.passage input {
+  min-width: 0;
+  font: inherit;
+  font-size: 12px;
+  padding: 3px 6px;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+}
+
+.element-notes-rows.passages li.passage:not(.in-page) input {
+  border-style: dashed;
+}
+
+.element-notes-rows.passages li.passage .element-note-body {
+  grid-column: 1 / -1;
+}
+
+.passage-of {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+}

@@ -946,3 +946,38 @@ subsection that came from a row carries that row's number on the track, in
 the book and in the Outliner alike: CRAFT is chapter 7 everywhere, its first
 section 7.1. What was made on the track with no row is counted on from the
 number before it.
+
+### Passages: what sits under a subsection (15 November)
+
+From Ken: *the only thing that'll show up in the script view is the
+chapters, the sections, and then the subsections. Anything under a
+subsection would just be considered a passage of that section. And so when
+you write it, it doesn't title it… these passages will show up in the
+right-hand note screen in the subsection… And you can edit those and add
+them just like normal.* Asked where a passage's words go, he chose **in the
+page, with no heading**.
+
+- A row deeper than a subsection (`trackLevelOf` → `beneath`) is a
+  **passage** (`passages.ts`). *Add to track* and *Add all to track* now put
+  it in the book (it was refused since 11 November): a beat straight after
+  its subsection, in reading order, so its words print in the manuscript
+  under that subsection — **no heading, no number** (`subsectionHeading`
+  marks it `passage`; `structureNumbers` leaves it out, and the subsections
+  after it count on as if it were not there).
+- **Not a box on the track.** The track draws a section's subsections only
+  (`trackBeatsForUnit`); a passage chosen in the page lights its subsection
+  there. Moving a subsection on the track moves its passages with it
+  (`moveTrackBeat`).
+- **The subsection's writing screen lists them** beside the page, under
+  *Passages*: each to rename (renaming the row renames the passage), **Open**
+  to write it, or **Put in page** for one still only in the outline, and
+  **+ Passage** adds one at the end of the subsection (`addPassage`). A
+  passage's own screen says whose it is and goes back to it.
+- Nothing is stored to say a beat is a passage: it is read from where its row
+  sits, so indenting or outdenting the row in the outline turns a subsection
+  into a passage or back.
+- Rows deeper than a subsection that were put on the track as numbered
+  subsections before 11 November (2.2.4.1.3.1 and the like) become passages
+  of the subsection before them as they stand. A subsection row that is not on
+  the track yet should be added (*Add all to track* puts it in front of its
+  passages).

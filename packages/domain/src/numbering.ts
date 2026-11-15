@@ -1,6 +1,7 @@
 import { nowIso } from './entities/common.js';
 import { isInstructional, nounsFor } from './formats.js';
 import { outlineChildren } from './outline.js';
+import { passageBeatIds } from './passages.js';
 import { beatsForUnit, unitsInStoryOrder } from './selectors.js';
 import type { BeatId, StoryMarkerId, StructuralUnitId } from './ids.js';
 import type { Outline, OutlineItem } from './entities/outline.js';
@@ -56,9 +57,14 @@ export interface StructureNumbers {
   units: ReadonlyMap<string, string>;
   /** Beat id → `"1.1"`, `"1.2"` — or `"1.1.1"` under a chapter. Empty when the scheme is `none`. */
   subs: ReadonlyMap<string, string>;
+  /**
+   * The beats that are passages of a subsection rather than subsections
+   * (`passages.ts`): never numbered, never headed, not drawn on the track.
+   */
+  passages: ReadonlySet<string>;
 }
 
-const EMPTY: StructureNumbers = { chapters: new Map(), units: new Map(), subs: new Map() };
+const EMPTY: StructureNumbers = { chapters: new Map(), units: new Map(), subs: new Map(), passages: new Set() };
 
 /**
  * Whether this project numbers its divisions at all.
@@ -92,7 +98,8 @@ export const numbersDivisions = (file: ProjectFile): boolean => {
  * book, and inventing one would collide with the sections that have.
  */
 export const structureNumbers = (file: ProjectFile): StructureNumbers => {
-  if (!numbersDivisions(file)) return EMPTY;
+  const passages = passageBeatIds(file);
+  if (!numbersDivisions(file)) return passages.size > 0 ? { ...EMPTY, passages } : EMPTY;
 
   const chapters = new Map<string, string>();
   const units = new Map<string, string>();
@@ -157,6 +164,8 @@ export const structureNumbers = (file: ProjectFile): StructureNumbers => {
     units.set(unit.id as string, number);
     let under = 0;
     beatsForUnit(file, unit.id).forEach((beat) => {
+      // A passage is part of the subsection before it, and is not counted.
+      if (passages.has(beat.id as string)) return;
       const plannedSub = fromOutline.get(beat.id as string);
       if (plannedSub) {
         under = lastPart(plannedSub);
@@ -168,7 +177,7 @@ export const structureNumbers = (file: ProjectFile): StructureNumbers => {
     });
   });
 
-  return { chapters, units, subs };
+  return { chapters, units, subs, passages };
 };
 
 /** One chapter's number, or `''` where this book does not number, or has no chapters. */

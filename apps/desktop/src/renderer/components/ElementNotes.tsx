@@ -25,6 +25,7 @@ export function ElementNotes({
   onOpen,
   open: shownFromOutside,
   onOpenChange,
+  passages,
 }: {
   file: ProjectFile;
   notes: ReadonlyArray<ResearchItem>;
@@ -40,6 +41,20 @@ export function ElementNotes({
    */
   open?: boolean;
   onOpenChange?(open: boolean): void;
+  /**
+   * **Passages** (from Ken, 15 November): where the rows beneath are a book
+   * subsection's passages — printed in the page under it, untitled — they are
+   * listed to rename, open, put in the page, and add to.
+   */
+  passages?: {
+    rename(row: OutlineItem, title: string): void;
+    /** Open a passage that is in the page, to write it. */
+    open(row: OutlineItem): void;
+    /** Put a passage still only in the outline into the page. */
+    place(row: OutlineItem): void;
+    /** A new passage at the end of this subsection; absent where there is no outline row to hang it on. */
+    add?(): void;
+  };
 }) {
   const [ownOpen, setOwnOpen] = useState(() => read('vcw-element-notes-open', true));
   const open = shownFromOutside ?? ownOpen;
@@ -147,7 +162,42 @@ export function ElementNotes({
           ) : null}
         </>
       )}
-      {rows.length > 0 ? (
+      {passages ? (
+        <section className="element-notes-rows passages">
+          <h5>Passages</h5>
+          <p className="muted small">In the page under this subsection, with no heading.</p>
+          <ul>
+            {rows.map((row) => {
+              const inPage = row.boundBeatId !== null && file.beats.some((beat) => beat.id === row.boundBeatId);
+              return (
+                <li key={row.id} className={inPage ? 'passage in-page' : 'passage'}>
+                  <input
+                    aria-label="Passage name"
+                    value={row.title}
+                    placeholder="Untitled passage"
+                    onChange={(event) => passages.rename(row, event.target.value)}
+                  />
+                  {inPage ? (
+                    <button type="button" className="ghost small" onClick={() => passages.open(row)} title="Write this passage">
+                      Open
+                    </button>
+                  ) : (
+                    <button type="button" className="ghost small" onClick={() => passages.place(row)} title="Put this passage in the page">
+                      Put in page
+                    </button>
+                  )}
+                  {!inPage && row.body.trim() ? <span className="element-note-body">{row.body.trim()}</span> : null}
+                </li>
+              );
+            })}
+          </ul>
+          {passages.add ? (
+            <button type="button" className="ghost small" onClick={passages.add}>
+              + Passage
+            </button>
+          ) : null}
+        </section>
+      ) : rows.length > 0 ? (
         <section className="element-notes-rows">
           <h5>Beneath this in the outline</h5>
           <ul>

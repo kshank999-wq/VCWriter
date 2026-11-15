@@ -10,6 +10,10 @@ import {
   unitsJoin,
   joinUnits,
   beatsForUnit,
+  moveTrackBeat,
+  passageBeatIds,
+  subsectionOfPassage,
+  trackBeatsForUnit,
   countWords,
   outlineRowForBeat,
   sculptorNodeForBeat,
@@ -256,6 +260,13 @@ export function MasterTimeline({
       return next;
     });
 
+  /** A book's passages: on the track inside their subsections, never boxes of their own. */
+  const passages = useMemo(() => passageBeatIds(file), [file]);
+  // A passage chosen in the page lights its subsection, which is what the track draws.
+  const onTrackBeatId =
+    selectedBeatId && passages.has(selectedBeatId as string)
+      ? (subsectionOfPassage(file, selectedBeatId, passages)?.id ?? selectedBeatId)
+      : selectedBeatId;
   const selectedBeat = selectedBeatId ? file.beats.find((beat) => beat.id === selectedBeatId) : undefined;
   // What was clicked wins; otherwise the scene being written in.
   const selectedUnitId = givenSelectedUnitId ?? selectedBeat?.unitId ?? null;
@@ -367,7 +378,7 @@ export function MasterTimeline({
     sheet?.segments.find((segment) => segment.unitId === unitId)?.seconds ?? 0;
 
   const widths = spans.map((span) => {
-    const beats = beatsForUnit(file, span.unit.id);
+    const beats = trackBeatsForUnit(file, span.unit.id, passages);
     if (shortForm) {
       // **The floor scales with the zoom as well.** A fixed minimum swallowed
       // every short segment whole, so dragging the zoom moved nothing until it
@@ -427,10 +438,11 @@ export function MasterTimeline({
   const dropBeatAt = (toUnitId: StructuralUnitId, targetIndex: number) => {
     const payload = drag.payload;
     if (payload?.kind !== 'beat') return;
-    const siblings = beatsForUnit(file, toUnitId);
+    const siblings = trackBeatsForUnit(file, toUnitId, passages);
     const currentIndex = payload.fromUnitId === toUnitId ? siblings.findIndex((beat) => beat.id === payload.id) : null;
+    // A subsection takes its passages with it.
     onUpdate((current) =>
-      moveBeat(current, {
+      moveTrackBeat(current, {
         beatId: payload.id,
         toUnitId,
         index: adjustForSameList(targetIndex, currentIndex === -1 ? null : currentIndex),
@@ -485,18 +497,18 @@ export function MasterTimeline({
 
   const moveBeatByKeyboard = (beat: Beat, direction: -1 | 1, crossContainer: boolean) => {
     const unitIndex = storyIndex(beat.unitId);
-    const siblings = beatsForUnit(file, beat.unitId);
+    const siblings = trackBeatsForUnit(file, beat.unitId, passages);
     const position = siblings.findIndex((candidate) => candidate.id === beat.id);
     if (crossContainer) {
       const target = spans[unitIndex + direction]?.unit;
       if (!target) return;
-      const index = direction === 1 ? 0 : beatsForUnit(file, target.id).length;
-      onUpdate((current) => moveBeat(current, { beatId: beat.id, toUnitId: target.id, index }));
+      const index = direction === 1 ? 0 : trackBeatsForUnit(file, target.id, passages).length;
+      onUpdate((current) => moveTrackBeat(current, { beatId: beat.id, toUnitId: target.id, index }));
       return;
     }
     const nextPosition = position + direction;
     if (nextPosition < 0 || nextPosition >= siblings.length) return;
-    onUpdate((current) => moveBeat(current, { beatId: beat.id, toUnitId: beat.unitId, index: nextPosition }));
+    onUpdate((current) => moveTrackBeat(current, { beatId: beat.id, toUnitId: beat.unitId, index: nextPosition }));
   };
 
   const reorderKeys =
@@ -740,7 +752,7 @@ export function MasterTimeline({
               noun={noun}
               shortForm={shortForm}
               rowsFor={(unitId) => sheet?.segments.find((segment) => segment.unitId === unitId)?.rows ?? []}
-              selectedBeatId={selectedBeatId}
+              selectedBeatId={onTrackBeatId}
               selectedUnitId={selectedUnitId}
               laneAt={laneAt}
               chipsFor={chipsFor}
@@ -1083,6 +1095,7 @@ function TrackRow({
   // And, on a book that numbers them, the numbers each card would print
   // (addendum 16 §15) — counted, so dragging a card across renumbers both.
   const numbers = structureNumbers(file);
+  const passages = numbers.passages;
   /** The right-click on a scene or a beat (addendum 02 §6a): one menu for both, at the pointer. */
   const [menu, setMenu] = useState<{ x: number; y: number; label: string; entries: MenuEntry[] } | null>(null);
   const [askingRemove, setAskingRemove] = useState(false);
@@ -1453,7 +1466,8 @@ function TrackRow({
             </div>
           );
         }
-        const beats = beatsForUnit(file, unit.id);
+        // Subsections only: a book's passages run on inside them, off the track (from Ken, 15 November).
+        const beats = trackBeatsForUnit(file, unit.id, passages);
         const collapsed = unit.collapsed || track.collapsed;
         const off = unit.inScript ? '' : ' off';
         const chosen = unit.id === selectedUnitId ? ' selected' : '';
