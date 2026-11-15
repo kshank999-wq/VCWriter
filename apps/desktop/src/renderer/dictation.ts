@@ -185,12 +185,14 @@ export const startDictation = (handlers: DictationHandlers): DictationSession | 
     }
     futile += 1;
     if (futile > FUTILE_RESTARTS) {
-      // Never a word in all those tries: the quiet way an engine with no
-      // service fails. Said, rather than a button that simply goes out.
-      if (!everHeard) {
-        noService = true;
-        handlers.onError(`No speech service here — ${systemDictationKey()} and dictate into the box.`);
-      }
+      // Never a word in all those tries. **Not proof there is no service**
+      // (from Ken, 15 November: Dictate in the sheet then said it needed the
+      // app, while the writing screen's worked): a writer who pressed it and
+      // paused to think gets here too, and marking the service missing for
+      // the rest of the visit refused every Dictate after. So it is said, and
+      // the next press simply tries again; only a network error, which is
+      // what a build with no service actually returns, marks it.
+      if (!everHeard) handlers.onError('Nothing was heard. Press Dictate and speak — the words appear as you finish each phrase.');
       handlers.onEnd();
       return;
     }

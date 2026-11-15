@@ -1,4 +1,5 @@
-import { useId, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { shotChoices } from '@vcwriter/domain';
 
 /**
@@ -36,7 +37,55 @@ export function ShotPicker({
   const [active, setActive] = useState(0);
   const pendingSelection = useRef<[number, number] | null>(null);
 
-  const choices = open ? shotChoices(typed, list).slice(0, 8) : [];
+  // Every match, scrolled within the list (from Ken: *it stops at medium
+  // close-up*), rather than the first eight.
+  const choices = open ? shotChoices(typed, list) : [];
+
+  /**
+   * **Drawn over the page, not inside the row** (from Ken, 15 November: *it
+   * pops underneath the shot below it*). The sheet's rows clip and stack
+   * their contents, so the list is placed on the page itself, under the box —
+   * or above it where there is no room below — and follows it as the sheet
+   * scrolls.
+   */
+  const [place, setPlace] = useState<{ left: number; top: number; width: number; maxHeight: number } | null>(null);
+  useEffect(() => {
+    if (choices.length === 0) {
+      setPlace(null);
+      return;
+    }
+    const measure = (event?: Event) => {
+      // Scrolling the list itself moves nothing.
+      if (event && listRef.current && event.target instanceof Node && listRef.current.contains(event.target)) return;
+      const box = input.current?.getBoundingClientRect();
+      if (!box) return;
+      const below = window.innerHeight - box.bottom - 12;
+      const above = box.top - 12;
+      const roomBelow = below >= 180 || below >= above;
+      const maxHeight = Math.max(120, Math.min(300, roomBelow ? below : above));
+      const next = {
+        left: box.left,
+        width: box.width,
+        maxHeight,
+        top: roomBelow ? box.bottom + 2 : box.top - 2 - Math.min(maxHeight, choices.length * 30 + 8),
+      };
+      setPlace((was) =>
+        was && was.left === next.left && was.top === next.top && was.width === next.width && was.maxHeight === next.maxHeight ? was : next,
+      );
+    };
+    measure();
+    window.addEventListener('scroll', measure, true);
+    window.addEventListener('resize', measure);
+    return () => {
+      window.removeEventListener('scroll', measure, true);
+      window.removeEventListener('resize', measure);
+    };
+  }, [choices.length]);
+  const listRef = useRef<HTMLUListElement>(null);
+  // The highlighted one kept in view as the arrows move through a long list.
+  useEffect(() => {
+    listRef.current?.querySelector<HTMLElement>('[data-active="true"]')?.scrollIntoView?.({ block: 'nearest' });
+  }, [active]);
 
   useLayoutEffect(() => {
     const range = pendingSelection.current;
@@ -92,7 +141,7 @@ export function ShotPicker({
         }}
         onKeyDown={(event) => {
           if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-            const all = shotChoices(typed, list).slice(0, 8);
+            const all = shotChoices(typed, list);
             if (all.length === 0) return;
             event.preventDefault();
             setOpen(true);
@@ -112,25 +161,37 @@ export function ShotPicker({
           }
         }}
       />
-      {choices.length > 0 ? (
-        <ul className="shot-picker-list" id={listId} role="listbox" aria-label={`${label}: choices`}>
-          {choices.map((name, index) => (
-            <li
-              key={name}
-              role="option"
-              aria-selected={index === active || name === value}
-              className={name === value ? 'on' : undefined}
-              // Before the box loses focus, or the click lands on nothing.
-              onMouseDown={(event) => {
-                event.preventDefault();
-                choose(name);
-              }}
+      {choices.length > 0 && place
+        ? createPortal(
+            <ul
+              ref={listRef}
+              className="shot-picker-list"
+              id={listId}
+              role="listbox"
+              aria-label={`${label}: choices`}
+              style={{ position: 'fixed', left: place.left, top: place.top, width: place.width, maxHeight: place.maxHeight }}
             >
-              {name}
-            </li>
-          ))}
-        </ul>
-      ) : null}
+              {choices.map((name, index) => (
+                <li
+                  key={name}
+                  role="option"
+                  data-active={index === active}
+                  aria-selected={index === active || name === value}
+                  className={name === value ? 'on' : undefined}
+                  // Before the box loses focus, or the click lands on nothing.
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    choose(name);
+                  }}
+                >
+                  {name}
+                </li>
+              ))}
+            </ul>,
+            // Inside a pop-up, into it: a modal dialog sits above the page itself.
+            input.current?.closest('dialog') ?? document.body,
+          )
+        : null}
     </span>
   );
 }

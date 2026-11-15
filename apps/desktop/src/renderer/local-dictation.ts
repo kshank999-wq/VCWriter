@@ -31,7 +31,7 @@ export const speechBridge = (): SpeechBridge | undefined =>
 export type ListeningState =
   /** Fetching the speech model, the first time only: 0–1. */
   | { kind: 'getting-ready'; fraction: number }
-  | { kind: 'listening' }
+  | { kind: 'listening'; heard?: string }
   /** Speech heard, being turned into words. */
   | { kind: 'writing' };
 
@@ -152,12 +152,15 @@ export const startListening = (handlers: ListeningHandlers): Listening => {
     // The browser preview: Chrome's own recogniser.
     const session = startDictation({
       onFinal: (text) => handlers.onText(text),
-      onInterim: () => undefined,
+      // What Chrome is hearing, before it commits: shown, so the writer can see it working.
+      onInterim: (heard) => handlers.onState({ kind: 'listening', heard }),
       onError: handlers.onError,
       onEnd: handlers.onEnd,
     });
     if (!session) {
-      handlers.onError('Dictation needs the VC Writer app, or Chrome.');
+      handlers.onError(
+        'This browser has no speech recognition, or it could not be reached. Use Chrome, or the VC Writer desktop app, which listens on the computer itself.',
+      );
       handlers.onEnd();
       return { stop: () => undefined };
     }

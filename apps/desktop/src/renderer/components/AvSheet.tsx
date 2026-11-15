@@ -341,9 +341,11 @@ export function AvSheet({ file, onUpdate, onOpenRow, readOnly = false, onPlayhea
                   ? `Setting up dictation, once only (about ${SPEECH_MODEL.megabytes} MB, kept on this computer)… ${Math.round(listening.fraction * 100)}%`
                   : listening?.kind === 'writing'
                     ? 'Writing…'
-                    : listening
-                      ? 'Listening — speak'
-                      : ''}
+                    : listening?.kind === 'listening' && listening.heard
+                      ? `Hearing: “${listening.heard}”`
+                      : listening
+                        ? 'Listening — speak'
+                        : ''}
                 {listening?.kind === 'getting-ready' ? '' : aimed
                   ? `${listening ? ' · into' : 'Goes into'} shot ${aimedNumber} · ${aimed.field === 'audio' ? 'Audio' : 'Visual'} — click a box to choose another`
                   : 'Add a shot first'}
