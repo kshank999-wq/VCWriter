@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  SPEECH_MODEL,
+  joinDictated,
   addRow,
   addUnit,
   avSheet,
@@ -25,7 +27,7 @@ import {
   type StructuralUnitId,
 } from '@vcwriter/domain';
 import { frameFrom, mediaFrom } from '../frames';
-import { systemDictationKey } from '../dictation';
+import { startListening, type Listening, type ListeningState } from '../local-dictation';
 import { useBoardPlayer } from '../use-board-player';
 import { NaturalVoicesBox } from './NaturalVoicesBox';
 
@@ -68,24 +70,18 @@ export function AvSheet({ file, onUpdate, onOpenRow, readOnly = false, onPlayhea
   const player = useBoardPlayer(board);
 
   /**
-   * **Dictate, fast** (from Ken, 14 November: *a dictate button above the
-   * break line that says shot audio visual, so you can dictate it in, make it
-   * fast*) — **with the computer's own dictation** (15 November: *the dictate
-   * function still doesn't record any audio*). Chromium's speech recognition
-   * has no service in the desktop app and proved unreliable in the browser,
-   * while the computer's own dictation works everywhere and never sends the
-   * voice to Google. So Dictate puts the cursor in the box last clicked — a
-   * shot's Audio or Visual — or the first shot's Audio, and the writer starts
-   * their computer's dictation. While Dictate is on, a box that ends with a
-   * command said aloud — *next shot*, *visual*, *audio* — has the command taken
-   * back out and the cursor moved on, so dictation carries on into the next
-   * box without the mouse.
+   * **Dictate** (addendum 05 §dictation; from Ken, 15 November: *select a
+   * box, either the audio or the visual, click dictate, and it will type what
+   * you're saying*). The box last clicked — a shot's Audio or Visual, or the
+   * first shot's Audio — takes what is said; clicking another box while
+   * listening sends the words there instead. Nothing to press but Dictate and
+   * Stop, nothing to say but the words: the listening is done on the
+   * computer (`local-dictation.ts`).
    */
   const [target, setTarget] = useState<{ beatId: BeatId; field: 'audio' | 'visual' } | null>(null);
-  const [steering, setSteering] = useState(false);
-  const steeringRef = useRef(steering);
-  steeringRef.current = steering;
+  const [listening, setListening] = useState<ListeningState | null>(null);
   const [said, setSaid] = useState<string | null>(null);
+  const session = useRef<{ listening: Listening } | null>(null);
   const firstShot = sheet.segments[0]?.rows[0]?.beatId ?? null;
   const aimed = target ?? (firstShot ? { beatId: firstShot, field: 'audio' as const } : null);
   const aimedRef = useRef(aimed);
@@ -94,75 +90,47 @@ export function AvSheet({ file, onUpdate, onOpenRow, readOnly = false, onPlayhea
     ? sheet.segments.flatMap((one) => one.rows).find((row) => row.beatId === aimed.beatId)?.number ?? ''
     : '';
 
-  /** The box dictation is aimed at, with the cursor at its end, where the computer's dictation types. */
-  const focusAimed = () => {
+  /** Words heard go on the end of the box dictation is aimed at now. */
+  const write = (heard: string) => {
     const at = aimedRef.current;
     if (!at) return;
-    const row = sheet.segments.flatMap((one) => one.rows).find((one) => one.beatId === at.beatId);
-    if (!row) return;
-    const box = document.querySelector<HTMLTextAreaElement>(
-      `textarea[aria-label="${at.field === 'audio' ? 'What is heard' : 'What is seen'} in row ${row.number}"]`,
-    );
-    if (!box) return;
-    box.focus();
-    box.setSelectionRange(box.value.length, box.value.length);
+    onUpdate((current) => {
+      const row = avSheet(current)
+        .segments.flatMap((one) => one.rows)
+        .find((one) => one.beatId === at.beatId);
+      if (!row) return current;
+      return at.field === 'audio'
+        ? setRowAudio(current, at.beatId, joinDictated(row.audioTyped, heard))
+        : setRowVisual(current, at.beatId, joinDictated(row.visual, heard));
+    });
   };
-  // Moved on by a command: the cursor follows, so the dictation does.
-  const [moved, setMoved] = useState(0);
-  useEffect(() => {
-    if (moved > 0) requestAnimationFrame(focusAimed);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [moved]);
+  const writeRef = useRef(write);
+  writeRef.current = write;
 
   const toggleDictation = () => {
-    if (steering) {
-      setSteering(false);
-      setSaid(null);
+    if (session.current) {
+      session.current.listening.stop();
       return;
     }
-    setSteering(true);
-    focusAimed();
-    setSaid(
-      `Now ${systemDictationKey()} and speak. Say “visual”, “audio” or “next shot” to move along; press Done when you have finished.`,
-    );
+    const entry: { listening: Listening } = { listening: { stop: () => undefined } };
+    const mine = () => session.current === entry;
+    session.current = entry;
+    setSaid(null);
+    setListening({ kind: 'listening' });
+    entry.listening = startListening({
+      onText: (text) => writeRef.current(text),
+      onState: (state) => {
+        if (mine()) setListening(state);
+      },
+      onError: (message) => setSaid(message),
+      onEnd: () => {
+        if (!mine()) return;
+        session.current = null;
+        setListening(null);
+      },
+    });
   };
-
-  /**
-   * A box's new text while Dictate is on: a command said at its end is taken
-   * back out and acted on. Returns the text to keep.
-   */
-  const steer = (beatId: BeatId, field: 'audio' | 'visual', text: string): string => {
-    if (!steeringRef.current) return text;
-    // *Next shot* and *go to …* anywhere at the end; a bare *visual* or
-    // *audio* only said on its own, so a line that ends with the word is
-    // left alone.
-    const found =
-      /(^|[\s,.;:!?-])(next shot|new shot|go to visual|go to audio)[.!?,]?\s*$/i.exec(text) ??
-      /(^|[.!?\n]\s*)(visual|audio)[.!?,]?\s*$/i.exec(text);
-    if (!found) return text;
-    const keep = text.slice(0, found.index + found[1]!.length).replace(/[\s,]+$/, '');
-    const command = found[2]!.toLowerCase();
-    if (command === 'next shot' || command === 'new shot') {
-      let made: BeatId | null = null;
-      onUpdate((current) => {
-        const beat = current.beats.find((one) => one.id === beatId);
-        if (!beat) return current;
-        const added = addRow(current, { unitId: beat.unitId, afterBeatId: beatId });
-        made = added.beatId;
-        return added.file;
-      });
-      requestAnimationFrame(() => {
-        if (made) {
-          setTarget({ beatId: made, field: 'audio' });
-          setMoved((n) => n + 1);
-        }
-      });
-    } else {
-      setTarget({ beatId, field: command.endsWith('visual') ? 'visual' : 'audio' });
-      setMoved((n) => n + 1);
-    }
-    return keep;
-  };
+  useEffect(() => () => session.current?.listening.stop(), []);
 
   /** The shot being dragged, so the one under it can show it will take it. */
   const [lifting, setLifting] = useState<BeatId | null>(null);
@@ -330,19 +298,25 @@ export function AvSheet({ file, onUpdate, onOpenRow, readOnly = false, onPlayhea
             <div className="av-dictate" role="toolbar" aria-label="Dictate">
               <button
                 type="button"
-                className={steering ? 'av-dictate-go on' : 'av-dictate-go'}
-                aria-pressed={steering}
-                disabled={!aimed && !steering}
-                title={`Dictate into the shot with your computer's dictation (${systemDictationKey()})`}
+                className={listening ? 'av-dictate-go on' : 'av-dictate-go'}
+                aria-pressed={listening !== null}
+                disabled={!aimed && !listening}
+                title={listening ? 'Stop dictating' : 'Speak, and it types into the box you clicked'}
                 onClick={toggleDictation}
               >
-                {steering ? '■ Done' : '🎙 Dictate'}
+                {listening ? '■ Stop' : '🎙 Dictate'}
               </button>
               <span className="muted small">
-                {aimed
-                  ? `${steering ? 'Into' : 'Goes into'} shot ${aimedNumber} · ${aimed.field === 'audio' ? 'Audio' : 'Visual'}`
+                {listening?.kind === 'getting-ready'
+                  ? `Setting up dictation, once only (about ${SPEECH_MODEL.megabytes} MB, kept on this computer)… ${Math.round(listening.fraction * 100)}%`
+                  : listening?.kind === 'writing'
+                    ? 'Writing…'
+                    : listening
+                      ? 'Listening — speak'
+                      : ''}
+                {listening?.kind === 'getting-ready' ? '' : aimed
+                  ? `${listening ? ' · into' : 'Goes into'} shot ${aimedNumber} · ${aimed.field === 'audio' ? 'Audio' : 'Visual'} — click a box to choose another`
                   : 'Add a shot first'}
-                {steering ? '' : ' — click a box to choose another'}
               </span>
               {said ? <span className="small av-tight">{said}</span> : null}
             </div>
@@ -405,8 +379,7 @@ export function AvSheet({ file, onUpdate, onOpenRow, readOnly = false, onPlayhea
                     onOver={setOver}
                     playing={player.playing && player.shot?.beatId === row.beatId}
                     onAim={(field) => setTarget({ beatId: row.beatId, field })}
-                    aimed={steering && aimed?.beatId === row.beatId ? aimed.field : null}
-                    steer={steer}
+                    aimed={listening && aimed?.beatId === row.beatId ? aimed.field : null}
                     {...(onOpenRow ? { onOpen: onOpenRow } : {})}
                   />
                 ))}
@@ -483,8 +456,6 @@ interface RowProps {
   onAim?(field: 'audio' | 'visual'): void;
   /** The box dictation is writing into now, lit. */
   aimed?: 'audio' | 'visual' | null;
-  /** While Dictate is on: a spoken command at the end of the text is taken out and acted on. */
-  steer?(beatId: BeatId, field: 'audio' | 'visual', text: string): string;
 }
 
 function Row({
@@ -499,7 +470,6 @@ function Row({
   playing = false,
   onAim,
   aimed = null,
-  steer,
 }: RowProps) {
   /**
    * Closing a shot is asked about before it is done. It is the one control
@@ -574,10 +544,7 @@ function Row({
             value={row.audioTyped}
             onFocus={() => onAim?.('audio')}
             lit={aimed === 'audio'}
-            onChange={(typed) => {
-              const text = steer ? steer(row.beatId, 'audio', typed) : typed;
-              onUpdate((current) => setRowAudio(current, row.beatId, text));
-            }}
+            onChange={(typed) => onUpdate((current) => setRowAudio(current, row.beatId, typed))}
             spokenKey
           />
         )}
@@ -599,10 +566,7 @@ function Row({
             value={row.visual}
             onFocus={() => onAim?.('visual')}
             lit={aimed === 'visual'}
-            onChange={(typed) => {
-              const text = steer ? steer(row.beatId, 'visual', typed) : typed;
-              onUpdate((current) => setRowVisual(current, row.beatId, text));
-            }}
+            onChange={(typed) => onUpdate((current) => setRowVisual(current, row.beatId, typed))}
           />
         )}
       </td>

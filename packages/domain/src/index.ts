@@ -220,5 +220,6 @@ export * from './editor-daily.js';
 export * from './editor-final.js';
 export * from './voice.js';
 export * from './natural-voices.js';
+export * from './speech-recognition.js';
 export * from './writing-type.js';
 export * from './timeline-view.js';

@@ -672,3 +672,34 @@ out… there's writing over the scroll bars or the zooms.*
   whichever project spoke last. Each workspace tab now has a key of its own
   (`browser-bridge.ts`), carried in its windows' address (`&link=`), the
   channel's name and the windows' names.
+
+### Dictate that listens for itself (15 November)
+
+From Ken: *Now gives an instruction to push the FN key. You shouldn't have to
+say visual, audio, next, or any of that… select a box, either the audio or
+the visual, click dictate, and it will type what you're saying.* The Fn key
+also opens the emoji picker on his Mac.
+
+- **The app listens for itself.** In the desktop app Dictate opens the
+  microphone and the words are heard on the computer by a small Whisper model
+  (`whisper-base.en`, quantized, about 80 MB, `speech-recognition.ts` in the
+  domain, `main/speech-engine.ts`), run in a utility process of its own
+  (`main/speech-worker.ts`) on the same ONNX runtime as the natural voices.
+  The model is fetched once, on the first press, into the app's data folder,
+  with its progress shown beside the button; a manifest written last means a
+  cut-off download is fetched again. The voice never leaves the machine.
+- **Click a box, click Dictate, speak.** The words go on the end of the box
+  last clicked (or the first shot's Audio); clicking another box while
+  listening sends them there. **Stop** ends it, and what was said just before
+  Stop is still written. No Fn key, no system dictation, no spoken commands —
+  the steering above is gone.
+- **Cut at the pauses.** Whisper hears a stretch at a time, so the sound is
+  handed over after about a second of quiet, or every twenty seconds
+  (`createSpeechSegmenter`). Quiet is measured against the room. What was
+  said earlier in the same go is given to Whisper as its prompt, so a short
+  phrase after a pause is heard in context. Whisper's habitual noises on
+  silence (*[BLANK_AUDIO]*, a lone *you*) are dropped (`joinDictated`).
+- On a Mac the system asks once for the microphone, with the reason in the
+  app's Info.plist (`NSMicrophoneUsageDescription`).
+- The browser preview has no model, so there Dictate uses Chrome's own speech
+  recognition.

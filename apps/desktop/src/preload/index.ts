@@ -500,6 +500,21 @@ export interface VcWriterApi {
     speak(input: { text: string; voice: string; speed: number }): Promise<DesktopApiResult<{ samples: Float32Array; sampleRate: number }>>;
   };
 
+  /**
+   * Dictation heard on this computer (addendum 05): whether the speech model
+   * is installed, fetching it with progress, removing it, asking for the
+   * microphone, and turning a stretch of 16 kHz mono sound into words.
+   * Absent in the browser preview.
+   */
+  speech?: {
+    status(): Promise<DesktopApiResult<{ installed: boolean; installing: boolean }>>;
+    install(onProgress: (progress: { fraction: number; file: string }) => void): Promise<DesktopApiResult<{ installed: boolean; installing: boolean }>>;
+    remove(): Promise<DesktopApiResult<{ installed: boolean; installing: boolean }>>;
+    microphone(): Promise<DesktopApiResult<boolean>>;
+    /** `fresh` starts a new go at dictating, so what was said before is not taken as context. */
+    transcribe(samples: Float32Array, fresh?: boolean): Promise<DesktopApiResult<string>>;
+  };
+
   /** Sections in windows of their own, and the link between them (§8). */
   panes: PaneApi;
   link: LinkApi;
@@ -678,6 +693,22 @@ const api: VcWriterApi = {
     },
     remove: () => ipcRenderer.invoke('naturalVoices:remove'),
     speak: (input) => ipcRenderer.invoke('naturalVoices:speak', input),
+  },
+
+  speech: {
+    status: () => ipcRenderer.invoke('speech:status'),
+    async install(onProgress) {
+      const listener = (_event: unknown, progress: { fraction: number; file: string }) => onProgress(progress);
+      ipcRenderer.on('speech:progress', listener);
+      try {
+        return await ipcRenderer.invoke('speech:install');
+      } finally {
+        ipcRenderer.off('speech:progress', listener);
+      }
+    },
+    remove: () => ipcRenderer.invoke('speech:remove'),
+    microphone: () => ipcRenderer.invoke('speech:microphone'),
+    transcribe: (samples, fresh) => ipcRenderer.invoke('speech:transcribe', samples, fresh === true),
   },
 
   link: {

@@ -24,6 +24,8 @@ export default defineConfig(({ mode }) => {
             index: resolve(__dirname, 'src/main/index.ts'),
             // The natural voices run in a utility process of their own (addendum 45).
             'natural-voices-worker': resolve(__dirname, 'src/main/natural-voices-worker.ts'),
+            // So is dictation (addendum 05).
+            'speech-worker': resolve(__dirname, 'src/main/speech-worker.ts'),
           },
         },
       },

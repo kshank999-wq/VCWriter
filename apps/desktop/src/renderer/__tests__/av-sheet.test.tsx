@@ -1,7 +1,22 @@
 // @vitest-environment jsdom
 import { useState } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import type { ListeningHandlers } from '../local-dictation';
+
+/** The microphone and the speech model stand in here: what is tested is where the words go. */
+const listening: { handlers: ListeningHandlers | null; stopped: boolean } = { handlers: null, stopped: false };
+vi.mock('../local-dictation', () => ({
+  startListening: (handlers: ListeningHandlers) => {
+    listening.handlers = handlers;
+    listening.stopped = false;
+    return {
+      stop: () => {
+        listening.stopped = true;
+      },
+    };
+  },
+}));
 import {
   addBeat,
   createProjectFile,
@@ -571,27 +586,38 @@ describe('the sheet and the board on paper', () => {
   });
 });
 
-describe('Dictate with the computer’s own dictation (from Ken, 15 November)', () => {
-  it('puts the cursor in the shot’s box, and while on, takes a spoken command out of the text and moves on', () => {
+describe('Dictate: select a box, click Dictate, and it types (from Ken, 15 November)', () => {
+  it('writes what is heard into the box last clicked, with no Fn key and no spoken commands', () => {
+    panel(commercial());
+    const visual = screen.getByLabelText('What is seen in row 1.1') as HTMLTextAreaElement;
+    fireEvent.focus(visual);
+    fireEvent.click(screen.getByRole('button', { name: /Dictate/ }));
+    expect(screen.queryByText(/Fn/)).toBeNull();
+    expect(listening.handlers).not.toBeNull();
+    expect(screen.getByText(/Listening — speak/)).toBeTruthy();
+
+    act(() => listening.handlers!.onText(' Close on his sneakers. Visual.'));
+    expect((screen.getByLabelText('What is seen in row 1.1') as HTMLTextAreaElement).value).toBe(
+      'nerdy kid walking down the street Close on his sneakers. Visual.',
+    );
+
+    // Another box clicked while listening: the words go there now.
+    fireEvent.focus(screen.getByLabelText('What is heard in row 1.2'));
+    act(() => listening.handlers!.onText('Even your friends.'));
+    expect((screen.getByLabelText('What is heard in row 1.2') as HTMLTextAreaElement).value).toBe(
+      'In this era - almost everyone is the enemy... Even your friends.',
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Stop/ }));
+    expect(listening.stopped).toBe(true);
+    act(() => listening.handlers!.onEnd());
+    expect(screen.getByRole('button', { name: /Dictate/ })).toBeTruthy();
+  });
+
+  it('shows the one-time setup with its progress', () => {
     panel(commercial());
     fireEvent.click(screen.getByRole('button', { name: /Dictate/ }));
-    const audio = screen.getByLabelText('What is heard in row 1.1') as HTMLTextAreaElement;
-    expect(document.activeElement).toBe(audio);
-    expect(screen.getByText(/Now .* and speak/)).toBeTruthy();
-
-    // The computer's dictation types into the box; "visual" said on its own
-    // is taken back out and the cursor goes to the Visual box.
-    fireEvent.change(audio, { target: { value: 'Sun Tzu said know your enemy. Visual.' } });
-    expect((screen.getByLabelText('What is heard in row 1.1') as HTMLTextAreaElement).value).toBe('Sun Tzu said know your enemy.');
-
-    // A line that only ends with the word is left alone.
-    const visual = screen.getByLabelText('What is seen in row 1.1') as HTMLTextAreaElement;
-    fireEvent.change(visual, { target: { value: 'Close on the mixing desk audio' } });
-    expect((screen.getByLabelText('What is seen in row 1.1') as HTMLTextAreaElement).value).toBe('Close on the mixing desk audio');
-
-    // Done puts it away: a command is just words again.
-    fireEvent.click(screen.getByRole('button', { name: /Done/ }));
-    fireEvent.change(visual, { target: { value: 'Wide. Audio.' } });
-    expect((screen.getByLabelText('What is seen in row 1.1') as HTMLTextAreaElement).value).toBe('Wide. Audio.');
+    act(() => listening.handlers!.onState({ kind: 'getting-ready', fraction: 0.42 }));
+    expect(screen.getByText(/Setting up dictation, once only .* 42%/)).toBeTruthy();
   });
 });

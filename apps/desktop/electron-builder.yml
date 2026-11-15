@@ -98,6 +98,10 @@ mac:
   gatekeeperAssess: false
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
+  # Dictation listens through the microphone (addendum 05); macOS shows this
+  # line when it asks the writer's permission.
+  extendInfo:
+    NSMicrophoneUsageDescription: VC Writer listens while you dictate, and turns what you say into text on this computer.
 
 # Notarization is switched on from the command line rather than here, because a
 # build machine without Apple credentials must still be able to produce an
