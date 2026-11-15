@@ -53,7 +53,7 @@ import { useBuildStanding } from './use-build-standing';
 import { useWritingAccess } from './use-writing-access';
 import { useRoom } from './room';
 import { usePreference, useSplit } from './use-split';
-import { createHub, createTransport, everyFew, type DocumentHub } from './link';
+import { createHub, createTransport, everyFew, type DocumentHub, type GoTarget } from './link';
 import { addBeatAfter, addSceneAfter } from './structure';
 import {
   DEFAULT_ARRANGEMENT,
@@ -427,6 +427,8 @@ export default function App() {
    * close over a callback that is rebuilt as the project changes.
    */
   const fromRoom = useRef<(name: 'saveAs' | 'saveCopy') => void>(() => undefined);
+  /** A Go pressed in a window of its own (from Ken, 15 November), kept current as `fromRoom` is. */
+  const goFromRoom = useRef<(to: GoTarget, beatId: string) => void>(() => undefined);
 
   useEffect(() => {
     const made = createHub({
@@ -437,6 +439,7 @@ export default function App() {
       onProposal: (next) => project.replace(next),
       current: () => latest.current,
       onCommand: (name) => fromRoom.current(name),
+      onGo: (to, beatId) => goFromRoom.current(to, beatId),
     });
     hub.current = made;
     return () => {
@@ -1197,6 +1200,12 @@ export default function App() {
    * same point*). Each closes the one it leaves.
    */
   const goToWriting = (beatId: string) => {
+    // A beat already out in a window of its own is that window, brought forward.
+    if (away.has(`beat:${beatId}`)) {
+      openPane(`beat:${beatId}`);
+      return;
+    }
+    void window.vcwriter?.panes?.focusWorkspace?.();
     setOutlinerOpen(false);
     setSculptorOpen(false);
     if (view === 'outline') setView('write');
@@ -1207,9 +1216,16 @@ export default function App() {
     const row = outlineRowForBeat(file, beatId);
     if (!row) return;
     setOpenBeatId(null);
-    setOutlineFocus({ ...row, token: Date.now() });
-    if (away.has('outliner')) openPane('outliner');
-    else if (isBook) setView('outline');
+    const token = Date.now();
+    setOutlineFocus({ ...row, token });
+    if (away.has('outliner')) {
+      // The Outliner is out on its own: it is told over the link where to look.
+      openPane('outliner');
+      hub.current?.show({ kind: 'show', pane: 'outliner', outlineId: row.outlineId, itemId: row.itemId, token });
+      return;
+    }
+    void window.vcwriter?.panes?.focusWorkspace?.();
+    if (isBook) setView('outline');
     else {
       setSculptorOpen(false);
       setOutlinerOpen(true);
@@ -1219,13 +1235,23 @@ export default function App() {
     const card = sculptorNodeForBeat(file, beatId);
     if (!card) return;
     setOpenBeatId(null);
-    setSculptorFocus({ ...card, token: Date.now() });
-    if (away.has('sculptor')) openPane('sculptor');
-    else {
+    const token = Date.now();
+    setSculptorFocus({ ...card, token });
+    if (away.has('sculptor')) {
+      openPane('sculptor');
+      hub.current?.show({ kind: 'show', pane: 'sculptor', boardId: card.boardId, nodeId: card.nodeId, token });
+    } else {
+      void window.vcwriter?.panes?.focusWorkspace?.();
       setOutlinerOpen(false);
       setSculptorOpen(true);
     }
   };
+  goFromRoom.current = (to, beatId) => {
+    if (to === 'writing') goToWriting(beatId);
+    else if (to === 'outline') goToOutline(beatId as BeatId);
+    else goToSculptor(beatId as BeatId);
+  };
+
 
   const focused = focusMode && writing;
   const showBottom = writing && timelineOpen && !focused;

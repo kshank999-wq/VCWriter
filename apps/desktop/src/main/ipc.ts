@@ -384,6 +384,19 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
 
     ipcMain.handle('panes:list', (): DesktopApiResult<string[]> => ok(panes.list()));
 
+    // The workspace forward, for a Go pressed in a window of its own: the
+    // writing screen or a room it opens is in the workspace, which may be
+    // behind, or minimised, on the other monitor.
+    ipcMain.handle('panes:focusWorkspace', (): DesktopApiResult<true> => {
+      const workspace = getWindow();
+      if (workspace && !workspace.isDestroyed()) {
+        if (workspace.isMinimized()) workspace.restore();
+        workspace.show();
+        workspace.focus();
+      }
+      return ok(true as const);
+    });
+
     /**
      * The document link (addendum 02 §8). The main process relays and does
      * not read: the message is whatever the windows agreed between them, and

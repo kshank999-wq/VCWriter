@@ -7,6 +7,8 @@ import {
   beatsForUnit,
   beatsInStoryOrder,
   findBeat,
+  outlineRowForBeat,
+  sculptorNodeForBeat,
   storyLayout,
   threadLayout,
   timelineArcs,
@@ -18,7 +20,8 @@ import {
   type SaveKind,
   type ResearchCategoryId,
 } from '@vcwriter/domain';
-import { useLinkedProject } from './use-linked-project';
+import { useLinkedProject, type LinkedProject } from './use-linked-project';
+import type { GoTarget } from './link';
 import { useBuildStanding } from './use-build-standing';
 import { useWritingAccess } from './use-writing-access';
 import { StaleBuildNotice } from './components/StaleBuildNotice';
@@ -154,7 +157,7 @@ export default function Satellite({ pane }: { pane: PaneKey }) {
           panel it came out of (§8), so the hover is here too. */}
       <BeatPeekLayer file={file} />
       <TextMenu words={[...file.characters.map((one) => one.name), ...(file.locations ?? []).map((one) => one.name)]} />
-      <Section pane={pane} file={file} onUpdate={project.update} onSaveAs={saveFromHere} />
+      <Section pane={pane} file={file} onUpdate={project.update} onSaveAs={saveFromHere} go={project.go} shown={project.shown} />
     </div>
   );
 }
@@ -164,6 +167,8 @@ function Section({
   file,
   onUpdate,
   onSaveAs,
+  go,
+  shown,
 }: {
   pane: PaneKey;
   file: ProjectFile;
@@ -174,7 +179,28 @@ function Section({
    * the file** (§7): this relays the ask and the workspace acts.
    */
   onSaveAs(kind: SaveKind): void;
+  /** Go, asked of the workspace from here (from Ken, 15 November). */
+  go(to: GoTarget, beatId: string): void;
+  /** What the workspace asked this room to show. */
+  shown: LinkedProject['shown'];
 }) {
+  /**
+   * **Go from a window of its own** (from Ken, 15 November: *do the Go buttons
+   * in popped-out windows*). The writing screen, the Outliner and the Sculptor
+   * are the workspace's, so a Go here asks the workspace to go — and where
+   * the place is a room out in a window of its own (this one, perhaps), the
+   * workspace says so over the link and that window shows it.
+   */
+  const goToOutline = (beatId: BeatId) => go('outline', beatId as string);
+  const goToSculptor = (beatId: BeatId) => go('sculptor', beatId as string);
+  const outlineFocus =
+    shown && shown.pane === 'outliner' && shown.outlineId && shown.itemId
+      ? { outlineId: shown.outlineId, itemId: shown.itemId, token: shown.token }
+      : null;
+  const sculptorFocus =
+    shown && shown.pane === 'sculptor' && shown.boardId && shown.nodeId
+      ? { boardId: shown.boardId, nodeId: shown.nodeId, token: shown.token }
+      : null;
   const beats = useMemo(() => beatsInStoryOrder(file), [file]);
   const [selectedBeatId, setSelectedBeatId] = useState<BeatId | null>(null);
   const [focusTitleBeatId, setFocusTitleBeatId] = useState<BeatId | null>(null);
@@ -266,6 +292,14 @@ function Section({
           setOpenBeatId(null);
           openBeatWindow(beatId);
         }}
+        onGoToOutline={(beatId) => {
+          setOpenBeatId(null);
+          goToOutline(beatId);
+        }}
+        onGoToSculptor={(beatId) => {
+          setOpenBeatId(null);
+          goToSculptor(beatId);
+        }}
       />
     </>
   );
@@ -276,7 +310,13 @@ function Section({
     if (!beat) return <p className="muted empty-state">This beat is no longer in the project.</p>;
     return (
       <div className="satellite-body writer-window">
-        <BeatWriter file={file} beat={beat} onUpdate={onUpdate} />
+        <BeatWriter
+          file={file}
+          beat={beat}
+          onUpdate={onUpdate}
+          {...(outlineRowForBeat(file, beat.id) ? { onGoToOutline: () => goToOutline(beat.id) } : {})}
+          onGoToSculptor={sculptorNodeForBeat(file, beat.id) ? () => goToSculptor(beat.id) : null}
+        />
       </div>
     );
   }
@@ -379,7 +419,17 @@ function Section({
   // is the same component with nothing under it, and closing is closing the
   // window rather than uncovering the script.
   if (pane === 'sculptor') {
-    return <SculptorWindow file={file} open onClose={closeSelf} onUpdate={onUpdate} onSaveAs={onSaveAs} />;
+    return (
+      <SculptorWindow
+        file={file}
+        open
+        onClose={closeSelf}
+        onUpdate={onUpdate}
+        onSaveAs={onSaveAs}
+        onGoToBeat={(beatId) => go('writing', beatId as string)}
+        focusNode={sculptorFocus}
+      />
+    );
   }
 
   // The book, set (addendum 20): the same shape again. There is no File menu
@@ -414,6 +464,8 @@ function Section({
         // the other monitor is not a room that can do less.
         onPrint={(outlineId) => void printing.print('outline', outlineId)}
         onExport={(outlineId) => void printing.exportPdf('outline', outlineId)}
+        onGoToWriting={(beatId) => go('writing', beatId)}
+        focusRow={outlineFocus}
       />
     );
   }
@@ -494,6 +546,8 @@ function Section({
         onOpenTrack={setOpenTrackId}
         onOpenUnit={setOpenUnitId}
         onOpenBeat={setOpenBeatId}
+        onGoToOutline={goToOutline}
+        onGoToSculptor={goToSculptor}
       />
       {dialogs}
     </div>

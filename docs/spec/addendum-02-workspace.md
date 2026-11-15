@@ -3292,3 +3292,17 @@ each section's own words, the running total to the end of it beneath, the
 book's total at the end of the row, and each chapter's words on its band.
 Only subsections in the book count. Scripts keep **Pages · time**, and short
 form **Time**.
+
+### Go from a window of its own (15 November)
+
+From Ken: *do the Go buttons in popped-out windows.* The writing screen and
+the rooms are the workspace's, so a Go pressed in a window of its own asks the
+workspace over the document link (`link.ts`: `{ kind: 'go', to, beatId }`, a
+place and never a document), and the workspace goes — bringing itself forward
+(`panes.focusWorkspace`) when the place is its own. Where the place is a room
+that is itself out in a window — the Outliner or the Sculptor — the workspace
+brings that window forward and tells it over the link what to show
+(`{ kind: 'show', pane, … }`); a beat already in its own window is that window,
+brought forward. Wired in every satellite: a beat's window (Go to the Outliner
+/ Sculptor, header and right-click), the Outliner's Go, the Sculptor's Go, and
+the plot tracks' right-click and their beat dialog.

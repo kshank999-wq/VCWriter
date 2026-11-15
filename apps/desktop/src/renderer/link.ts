@@ -46,8 +46,24 @@ export type LinkMessage =
    * does nothing at all.
    */
   | { kind: 'command'; name: 'saveAs' | 'saveCopy' }
+  /**
+   * **Go**, asked from a window of its own (from Ken, 15 November: *do the Go
+   * buttons in popped-out windows*). A room cannot open the workspace's
+   * writing screen or its rooms, so it asks, and the workspace goes — to the
+   * writing screen at this beat, or the Outliner or Sculptor at it. It names a
+   * place, never a document.
+   */
+  | { kind: 'go'; to: GoTarget; beatId: string }
+  /**
+   * The workspace telling a room that is out in its own window what to show:
+   * an Outliner row, or a Sculptor card. Every window hears it; only the one
+   * whose pane it names acts.
+   */
+  | { kind: 'show'; pane: 'outliner' | 'sculptor'; outlineId?: string; itemId?: string; boardId?: string; nodeId?: string; token: number }
   /** The hub is going away: its windows are on their own. */
   | { kind: 'closing' };
+
+export type GoTarget = 'writing' | 'outline' | 'sculptor';
 
 export interface LinkTransport {
   send(message: LinkMessage): void;
@@ -91,6 +107,8 @@ export const createTransport = (): LinkTransport => {
 export interface DocumentHub {
   /** The document changed here. Publishes it, under a new version. */
   publish(file: ProjectFile, path: string | null): void;
+  /** Tell a room in its own window what to show. */
+  show(message: Extract<LinkMessage, { kind: 'show' }>): void;
   /** Tell the other windows this one is closing, and stop listening. */
   stop(): void;
 }
@@ -107,6 +125,8 @@ export interface HubOptions {
    * command is better than one that half does.
    */
   onCommand?(name: 'saveAs' | 'saveCopy'): void;
+  /** Go where a room asked: the writing screen, the Outliner or the Sculptor at a beat. */
+  onGo?(to: GoTarget, beatId: string): void;
   /**
    * When to actually put a message on the wire. The default is at once, which
    * is what a test wants; the workspace coalesces, so that a held-down key
@@ -142,6 +162,7 @@ export const createHub = ({
   onProposal,
   current,
   onCommand,
+  onGo,
   schedule = AT_ONCE,
 }: HubOptions): DocumentHub => {
   let version = 0;
@@ -184,6 +205,10 @@ export const createHub = ({
       onCommand?.(message.name);
       return;
     }
+    if (message.kind === 'go') {
+      onGo?.(message.to, message.beatId);
+      return;
+    }
 
     if (message.kind !== 'propose') return;
 
@@ -202,6 +227,9 @@ export const createHub = ({
 
   return {
     publish,
+    show(message) {
+      transport.send(message);
+    },
     stop() {
       unsubscribe();
       transport.send({ kind: 'closing' });
@@ -225,6 +253,8 @@ export interface DocumentClient {
    * or its path arrives as the ordinary `doc` that follows.
    */
   ask(name: 'saveAs' | 'saveCopy'): void;
+  /** Ask the workspace to go somewhere (a Go pressed in this window). */
+  go(to: GoTarget, beatId: string): void;
   stop(): void;
 }
 
@@ -236,6 +266,8 @@ export interface ClientOptions {
   onDocument(next: { file: ProjectFile; path: string | null }): void;
   /** The workspace window closed; this window can no longer save. */
   onHubGone?(): void;
+  /** The workspace asked a room to show something. */
+  onShow?(message: Extract<LinkMessage, { kind: 'show' }>): void;
   /** As on the hub: how often a proposal actually goes out. */
   schedule?: Scheduler;
 }
@@ -249,6 +281,7 @@ export const createClient = ({
   self,
   onDocument,
   onHubGone,
+  onShow,
   schedule = AT_ONCE,
 }: ClientOptions): DocumentClient => {
   let version = 0;
@@ -271,6 +304,10 @@ export const createClient = ({
   const unsubscribe = transport.subscribe((message) => {
     if (message.kind === 'closing') {
       onHubGone?.();
+      return;
+    }
+    if (message.kind === 'show') {
+      onShow?.(message);
       return;
     }
     if (message.kind !== 'doc') return;
@@ -307,6 +344,7 @@ export const createClient = ({
       schedule(flush);
     },
     ask: (name) => transport.send({ kind: 'command', name }),
+    go: (to, beatId) => transport.send({ kind: 'go', to, beatId }),
     stop: unsubscribe,
   };
 };

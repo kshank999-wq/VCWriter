@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { keepLinked, type ProjectFile } from '@vcwriter/domain';
-import { createClient, createTransport, everyFew, linkId, type DocumentClient } from './link';
+import { createClient, createTransport, everyFew, linkId, type DocumentClient, type GoTarget, type LinkMessage } from './link';
 
 /**
  * A window that is not the workspace, editing the workspace's project
@@ -32,6 +32,10 @@ export interface LinkedProject {
    * be added for a room to end up in the right place.
    */
   askToSave(kind: 'saveAs' | 'saveCopy'): void;
+  /** Ask the workspace to go somewhere: Go pressed in this window. */
+  go(to: GoTarget, beatId: string): void;
+  /** The last thing the workspace asked this kind of room to show. */
+  shown: Extract<LinkMessage, { kind: 'show' }> | null;
 }
 
 /** How often a window that is being typed in sends the document on. */
@@ -50,6 +54,7 @@ export const useLinkedProject = (writable = true): LinkedProject => {
   const [file, setFile] = useState<ProjectFile | null>(null);
   const [path, setPath] = useState<string | null>(null);
   const [hubGone, setHubGone] = useState(false);
+  const [shown, setShown] = useState<Extract<LinkMessage, { kind: 'show' }> | null>(null);
   const fileRef = useRef<ProjectFile | null>(null);
   const client = useRef<DocumentClient | null>(null);
 
@@ -65,6 +70,7 @@ export const useLinkedProject = (writable = true): LinkedProject => {
         setHubGone(false);
       },
       onHubGone: () => setHubGone(true),
+      onShow: setShown,
     });
     client.current = connection;
     connection.hello();
@@ -99,5 +105,9 @@ export const useLinkedProject = (writable = true): LinkedProject => {
     client.current?.ask(kind);
   }, []);
 
-  return { file, path, connected: file !== null, hubGone, update, askToSave };
+  const go = useCallback((to: GoTarget, beatId: string) => {
+    client.current?.go(to, beatId);
+  }, []);
+
+  return { file, path, connected: file !== null, hubGone, update, askToSave, go, shown };
 };

@@ -212,3 +212,33 @@ describe('the document link', () => {
     expect((sent[0] as { seq: number }).seq).toBe(10);
   });
 });
+
+describe('Go from a window of its own (from Ken, 15 November)', () => {
+  it('carries a Go to the workspace, and a Show back to the rooms, with no document in either', () => {
+    const bus = wire();
+    const gone: Array<[string, string]> = [];
+    const hub = createHub({
+      transport: bus.endpoint().transport,
+      onProposal: () => undefined,
+      current: () => ({ file: null, path: null }),
+      onGo: (to, beatId) => gone.push([to, beatId]),
+    });
+    const shown: LinkMessage[] = [];
+    const room = createClient({
+      transport: bus.endpoint().transport,
+      self: 'room',
+      onDocument: () => undefined,
+      onShow: (message) => shown.push(message),
+    });
+
+    room.go('outline', 'b1');
+    room.go('writing', 'b2');
+    expect(gone).toEqual([
+      ['outline', 'b1'],
+      ['writing', 'b2'],
+    ]);
+
+    hub.show({ kind: 'show', pane: 'outliner', outlineId: 'o1', itemId: 'i1', token: 7 });
+    expect(shown).toEqual([{ kind: 'show', pane: 'outliner', outlineId: 'o1', itemId: 'i1', token: 7 }]);
+  });
+});

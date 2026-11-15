@@ -532,6 +532,8 @@ export interface PaneApi {
   onChanged(handler: (panes: string[]) => void): () => void;
   /** Which section this window *is*, or null in the workspace itself. */
   self(): string | null;
+  /** Bring the workspace window forward: a Go pressed on another monitor lands where it can be seen. */
+  focusWorkspace?(): Promise<DesktopApiResult<true>>;
 }
 
 /**
@@ -628,6 +630,7 @@ const api: VcWriterApi = {
     open: (pane) => ipcRenderer.invoke('panes:open', pane),
     close: (pane) => ipcRenderer.invoke('panes:close', pane),
     list: () => ipcRenderer.invoke('panes:list'),
+    focusWorkspace: () => ipcRenderer.invoke('panes:focusWorkspace'),
     onChanged(handler) {
       const listener = (_event: unknown, panes: string[]) => handler(panes);
       ipcRenderer.on('panes:changed', listener);
