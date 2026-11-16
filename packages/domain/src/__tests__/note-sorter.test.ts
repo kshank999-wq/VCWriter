@@ -351,7 +351,27 @@ describe('the note sorter', () => {
 });
 
 describe('the notes archive (from Ken, 11 November)', () => {
-  it('keeps a source, whole and once, in Research’s Notes archive when every word of it is sorted', async () => {
+  it('is renamed Sorted notes as an older project opens, unless the writer renamed it', async () => {
+    const { createProjectFile, parseProjectFile, renameSortedNotesFolder, researchCategorySchema } = await import('../index.js');
+    const base = createProjectFile({ title: 'Notes', format: 'screenplay' });
+    const folder = (name: string) =>
+      researchCategorySchema.parse({
+        id: crypto.randomUUID(),
+        projectId: base.project.id,
+        name,
+        systemKey: 'notes_archive',
+        orderKey: 'z',
+        createdAt: base.project.createdAt,
+        updatedAt: base.project.createdAt,
+      });
+    const old = { ...base, researchCategories: [...base.researchCategories, folder('Notes archive')] };
+    const opened = parseProjectFile(JSON.parse(JSON.stringify(old)));
+    expect(opened.researchCategories.find((one) => one.systemKey === 'notes_archive')!.name).toBe('Sorted notes');
+    const mine = { ...base, researchCategories: [...base.researchCategories, folder('Done pile')] };
+    expect(renameSortedNotesFolder(mine)).toBe(mine);
+  });
+
+  it('keeps a source, whole and once, in Research’s Sorted notes when every word of it is sorted', async () => {
     const d = await import('../index.js');
     let file = d.createProjectFile({ title: 'Villains', format: 'instructional' });
     const begun = d.beginSession(file, 'Villains');
@@ -369,7 +389,7 @@ describe('the notes archive (from Ken, 11 November)', () => {
 
     const archived = d.archiveSortedSources(file);
     const folder = d.notesArchiveFolder(archived)!;
-    expect(folder.name).toBe('Notes archive');
+    expect(folder.name).toBe('Sorted notes');
     const kept = archived.researchItems.filter((item) => item.categoryId === folder.id);
     expect(kept.map((item) => [item.title, item.body])).toEqual([['Notebook 1', text]]);
     expect(d.archiveSortedSources(archived)).toBe(archived);

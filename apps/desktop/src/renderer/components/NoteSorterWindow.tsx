@@ -1143,7 +1143,7 @@ function SortTab({
       onSay(offer.says);
       return;
     }
-    // A source sorted to its last word goes to Research's Notes archive (from Ken, 11 November).
+    // A source sorted to its last word goes to Research's Sorted notes (from Ken, 11 and 16 November).
     onUpdate((current) => archiveSortedSources(extractToCategory(current, { sourceId: source.id, ...where, categoryId: into }).file));
     onSay(offer.says);
     setRange(null);
@@ -2920,9 +2920,10 @@ function SourcePicker({
   const wanted = query.trim().toLowerCase();
   const matching = wanted ? sources.filter((one) => one.name.toLowerCase().includes(wanted)) : sources;
   /**
-   * **Sorted to the last word, archived** (from Ken, 11 November): a source
-   * that is 100% sorted greys out and moves to the Archive at the foot of the
-   * list, and is kept whole in Research's Notes archive.
+   * **Sorted to the last word** (from Ken, 11 November): a source that is
+   * 100% sorted greys out and moves to *Fully sorted* at the foot of the
+   * list, and is kept whole in Research's **Sorted notes** — no longer called
+   * an archive (16 November), because the Archive is where deleted things go.
    */
   const archived = (one: NoteSource) => sourceFullySorted(file, one);
   const working = matching.filter((one) => !archived(one));
@@ -2939,7 +2940,7 @@ function SourcePicker({
           role="option"
           aria-selected={on}
           className={['ns-src-option', on ? 'on' : '', done ? 'archived' : ''].filter(Boolean).join(' ')}
-          title={done ? 'Every word sorted — kept whole in Research, Notes archive' : undefined}
+          title={done ? 'Every word sorted — kept whole in Research, in Sorted notes' : undefined}
           onClick={() => {
             onSource(one.id);
             setOpen(false);
@@ -2947,7 +2948,7 @@ function SourcePicker({
           }}
         >
           <span className="ns-src-name">{one.name}</span>
-          <span className="ns-src-share">{done ? 'Archived' : sorted(share)}</span>
+          <span className="ns-src-share">{done ? 'Sorted' : sorted(share)}</span>
           <span className="ns-src-bar" aria-hidden="true">
             <span style={{ width: `${Math.round(share * 100)}%` }} />
           </span>
@@ -2993,7 +2994,7 @@ function SourcePicker({
             {finished.length > 0 ? (
               <li className="ns-src-archive-head">
                 <button type="button" className="ns-src-archive-toggle" aria-expanded={showArchive || Boolean(wanted)} onClick={() => setShowArchive(!showArchive)}>
-                  {showArchive || wanted ? '▾' : '▸'} Archive — fully sorted <span className="muted">{finished.length}</span>
+                  {showArchive || wanted ? '▾' : '▸'} Fully sorted <span className="muted">{finished.length}</span>
                 </button>
               </li>
             ) : null}

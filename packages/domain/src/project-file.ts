@@ -342,6 +342,30 @@ export const migrateProjectFile = (raw: unknown): Record<string, unknown> => {
   return doc;
 };
 
+/**
+ * **Sorted notes**, once *Notes archive* (from Ken, 16 November: *definitely
+ * need to do the notes archive folder*). Research's folder of Note Sorter
+ * sources sorted to the last word was called *Notes archive* — and since the
+ * Graveyard became the **Archive**, where deleted things go, the two read as
+ * one place. Nothing in it is deleted, so it is *Sorted notes*. The folder is
+ * found by its key, never by its name; a project still carrying the old name
+ * has it renamed as it opens, and one the writer renamed themselves is left as
+ * they named it.
+ */
+export const SORTED_NOTES_NAME = 'Sorted notes';
+export const SORTED_NOTES_DESCRIPTION = 'Note Sorter sources, kept whole once every word of them is sorted.';
+const OLD_SORTED_NOTES_NAME = 'Notes archive';
+
+export const renameSortedNotesFolder = (file: ProjectFile): ProjectFile =>
+  file.researchCategories.some((one) => one.systemKey === 'notes_archive' && one.name === OLD_SORTED_NOTES_NAME)
+    ? {
+        ...file,
+        researchCategories: file.researchCategories.map((one) =>
+          one.systemKey === 'notes_archive' && one.name === OLD_SORTED_NOTES_NAME ? { ...one, name: SORTED_NOTES_NAME } : one,
+        ),
+      }
+    : file;
+
 /** Migrate then validate. This is the only supported way to load a project. */
 export const parseProjectFile = (raw: unknown): ProjectFile => {
   const migrated = migrateProjectFile(raw);
@@ -354,7 +378,7 @@ export const parseProjectFile = (raw: unknown): ProjectFile => {
   }
   // Story Sculptor 2.0 (addendum 03 v2 §13): version-1 boards upgraded once,
   // the old board kept whole beside the new one.
-  return upgradeBoards(result.data).file;
+  return renameSortedNotesFolder(upgradeBoards(result.data).file);
 };
 
 export const serializeProjectFile = (file: ProjectFile): string =>

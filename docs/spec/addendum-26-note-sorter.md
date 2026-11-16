@@ -929,3 +929,18 @@ own personal templates.*
   - Using one (`applyCategoryTemplate`) adds the categories that are missing,
     with their colours and descriptions; those already there stay, with what
     is filed in them.
+
+### Sorted notes, not Notes archive (16 November)
+
+From Ken: *definitely need to do the notes archive folder.* Since the
+Graveyard became the **Archive** (where deleted things go), Research's
+*Notes archive* read as the same place, though nothing in it is deleted.
+
+- The folder is now **Sorted notes** (`SORTED_NOTES_NAME`). It is still found
+  by its key, `notes_archive`, so nothing that looks for it changes.
+- A project still carrying the old name has it renamed as it opens
+  (`renameSortedNotesFolder`, in `parseProjectFile`); a folder the writer
+  renamed themselves keeps their name.
+- In the Note Sorter's source list the section at the foot is **Fully
+  sorted** (was *Archive — fully sorted*), and a finished source reads
+  **Sorted** (was *Archived*).

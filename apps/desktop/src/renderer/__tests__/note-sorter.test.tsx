@@ -591,7 +591,7 @@ describe('Shift and drag carries a passage (from Ken, 11 November)', () => {
 });
 
 describe('a source sorted to its last word (from Ken, 11 November)', () => {
-  it('moves to the Archive in the list, greyed, and is kept whole in Research’s Notes archive', async () => {
+  it('moves to Fully sorted in the list, greyed, and is kept whole in Research’s Sorted notes', async () => {
     const d = await import('@vcwriter/domain');
     let file = sorting();
     const session = sortingSessions(file)[0]!;
@@ -606,10 +606,10 @@ describe('a source sorted to its last word (from Ken, 11 November)', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Source: / }));
     const list = screen.getByRole('listbox', { name: 'Sources' });
     expect(within(list).queryByRole('option', { name: /Short note/ })).toBeNull();
-    fireEvent.click(within(list).getByRole('button', { name: /Archive — fully sorted/ }));
+    fireEvent.click(within(list).getByRole('button', { name: /Fully sorted/ }));
     const done = within(list).getByRole('option', { name: /Short note/ });
     expect(done.className).toContain('archived');
-    expect(done.textContent).toContain('Archived');
+    expect(done.textContent).toContain('Sorted');
   });
 });
 

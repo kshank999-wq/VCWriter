@@ -1,3 +1,4 @@
+import { SORTED_NOTES_DESCRIPTION, SORTED_NOTES_NAME } from './project-file.js';
 import { noteSessionSchema, noteSourceSchema, type NoteSession, type NoteSource, type NoteSourceKind } from './entities/note-sorter.js';
 import { researchCategorySchema, researchItemSchema, type ResearchCategory, type ResearchItem } from './entities/research.js';
 import { nowIso } from './entities/common.js';
@@ -1057,7 +1058,9 @@ export const notesArchiveFolder = (file: ProjectFile): ResearchCategory | null =
   file.researchCategories.find((one) => one.systemKey === 'notes_archive') ?? null;
 
 /**
- * Keep every fully sorted source, whole, in Research's **Notes archive**
+ * Keep every fully sorted source, whole, in Research's **Sorted notes** (once
+ * *Notes archive*; renamed 16 November so it is not confused with the
+ * Archive, where deleted things go)
  * (from Ken, 11 November). The folder is made the first time it is needed;
  * each source goes in once, as a note named after it carrying its words, and
  * is not put in again. Nothing else changes: the source stays in the sitting,
@@ -1077,9 +1080,9 @@ export const archiveSortedSources = (file: ProjectFile): ProjectFile => {
     folder = researchCategorySchema.parse({
       id: newId<ResearchCategoryId>(),
       projectId: current.project.id,
-      name: 'Notes archive',
+      name: SORTED_NOTES_NAME,
       systemKey: 'notes_archive',
-      description: 'Note Sorter sources, kept whole once every word of them is sorted.',
+      description: SORTED_NOTES_DESCRIPTION,
       orderKey: orderKeyForIndex(sortByOrderKey(top), top.length),
       createdAt: timestamp,
       updatedAt: timestamp,
