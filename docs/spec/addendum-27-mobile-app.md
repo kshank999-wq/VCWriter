@@ -1288,3 +1288,24 @@ save button, and it'll split at that point*): in landscape the categories and
 their gear move to the top of the controls' half, directly above *Save it*;
 in portrait they stay under the note box, on the line above *Save it*. Either
 way the split falls between the note and what acts on it.
+
+### Own categories by voice, and kept with the account (16 November)
+
+From Ken: *do the phone categories by voice and sync.*
+
+- **By voice.** Saying an own category's name files a note there, as
+  *idea* does (`spokenVocabulary`: the format's categories less the hidden
+  ones, then the writer's own, each heard by its name). *Command new category
+  Mara* makes one and *command delete category Mara* takes it off — in the
+  hands-free walk (`hear`, with the list on the sitting as `categories` and
+  `categoriesChanged` telling the host to keep it) and in the note screen's
+  own dictation (`readCategoryCommand`, `applyCategoryCommand`). A name a
+  built-in already answers to stays the built-in's, and the last category
+  cannot be taken off.
+- **Synced.** The list is kept per writer and project in
+  `note_category_choices` (migration 0089, row-level security to the writer),
+  read and written through `/api/notes/projects/[id]/categories`. The phone
+  keeps its own copy for no signal and loads it first; then the account's
+  list wins, unless this phone has a change it has not sent yet, which is
+  sent. A list made on a phone before syncing existed is sent up rather than
+  lost. Notes already carry their category, so nothing about them changed.

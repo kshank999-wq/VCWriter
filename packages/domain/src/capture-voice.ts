@@ -1,4 +1,4 @@
-import { captureKeyName, captureVocabulary, type CaptureKey } from './capture-vocabulary.js';
+import { captureKeyName, captureVocabulary, spokenVocabulary, type CaptureKey, type CategoryChoices } from './capture-vocabulary.js';
 import type { ProjectFormat } from './entities/project.js';
 
 /**
@@ -133,7 +133,7 @@ export const nameAfterTheCategory = (
  * says *the idea is that she never drives* is dictating, not filing, and a
  * parser that hunted for keywords anywhere would file half their notes for them.
  */
-export const readSpoken = (transcript: string, format: ProjectFormat): SpokenCommand => {
+export const readSpoken = (transcript: string, format: ProjectFormat, choices?: CategoryChoices): SpokenCommand => {
   const said = transcript.trim();
   if (said.length === 0) return { kind: 'none', text: '' };
 
@@ -144,7 +144,8 @@ export const readSpoken = (transcript: string, format: ProjectFormat): SpokenCom
 
   // Longest first, so *plot point* is not read as *plot* with *point* left
   // standing at the head of the note.
-  const words = captureVocabulary(format)
+  // The writer's own categories are heard too, and hidden ones are not (§35).
+  const words = spokenVocabulary(format, choices)
     .flatMap((one) => one.spoken.map((phrase) => ({ one, phrase })))
     .sort((a, b) => b.phrase.length - a.phrase.length);
 

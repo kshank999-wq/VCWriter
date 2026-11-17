@@ -53,7 +53,9 @@ export type CaptureKey =
   | 'dialogue'
   | 'scene'
   | 'unit'
-  | 'sub';
+  | 'sub'
+  /** One of the writer's own (§35), `my:` and its name. */
+  | `my:${string}`;
 
 export interface SpokenCategory {
   key: CaptureKey;
@@ -256,6 +258,33 @@ export const removeNoteCategory = (format: ProjectFormat, choices: CategoryChoic
 
 /** Puts the format's own categories back, keeping the writer's. */
 export const restoreBuiltInCategories = (choices: CategoryChoices): CategoryChoices => ({ ...choices, hidden: [] });
+
+/**
+ * **The categories a writer can say** (from Ken, 16 November: *do the phone
+ * categories by voice*): the format's own, less those hidden from the list,
+ * then the writer's own, each heard by its name — *Mara*, *Act two* — so
+ * saying it files a note there just as saying *idea* does. Never empty, for
+ * `categoryChoices`'s reason.
+ */
+export const spokenVocabulary = (format: ProjectFormat, choices: CategoryChoices = NO_CATEGORY_CHOICES): SpokenCategory[] => {
+  const builtIn = captureVocabulary(format).filter((one) => !choices.hidden.includes(one.key));
+  const taken = new Set(builtIn.flatMap((one) => one.spoken));
+  const own = categoryChoices(format, choices)
+    .filter((one) => one.own)
+    .map((one) => ({ key: one.key as CaptureKey, name: one.name, spoken: [spokenForm(one.name)], takesName: false }))
+    // A name a built-in already answers to is the built-in's.
+    .filter((one) => one.spoken[0] && !taken.has(one.spoken[0] as string));
+  const all = [...builtIn, ...own];
+  return all.length > 0 ? all : captureVocabulary(format);
+};
+
+/** A name as a recogniser writes it back: lower case, letters, digits and single spaces. */
+export const spokenForm = (name: string): string =>
+  name
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}' ]+/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 
 /** Reads what was kept, tolerating anything malformed. */
 export const parseCategoryChoices = (raw: string | null | undefined): CategoryChoices => {

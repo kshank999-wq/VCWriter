@@ -19,11 +19,13 @@ import {
   projectMade,
   projectNamed,
   readSpoken,
+  readCategoryCommand,
+  applyCategoryCommand,
   sayBack,
   type ProjectFormat,
   type Sitting,
 } from '@vcwriter/domain';
-import { makeProject, type ProjectSummary, type StoryChoice } from '../host/api';
+import { getCategories, makeProject, putCategories, type ProjectSummary, type StoryChoice } from '../host/api';
 import { StoryPicker } from './StoryPicker';
 import { CategoryEditor } from './CategoryEditor';
 import { file as fileNote, newClientCaptureId, pendingCaptures } from '../host/queue';
@@ -73,18 +75,60 @@ export function Capture({
    * draw from.
    */
   const categoriesKey = `vcwriter-notes-categories:${project.id}`;
+  /** Set while a change made here has not reached the account yet. */
+  const pendingKey = `vcwriter-notes-categories-pending:${project.id}`;
   const [choices, setChoices] = useState<CategoryChoices>(NO_CATEGORY_CHOICES);
+  const choicesRef = useRef<CategoryChoices>(NO_CATEGORY_CHOICES);
   const [editingCategories, setEditingCategories] = useState(false);
+  /**
+   * **Kept with the account, and on the phone** (from Ken, 16 November: *do the
+   * phone categories by voice and sync*). The phone's own copy comes first,
+   * so the list is there without signal; then the account's. A change this
+   * phone has not managed to send yet wins and is sent; otherwise the
+   * account's list is the list. A list made before syncing existed, with none
+   * on the account yet, is sent up rather than lost.
+   */
+  const keep = (next: CategoryChoices) => {
+    choicesRef.current = next;
+    setChoices(next);
+    walk.current = { ...walk.current, categories: next };
+  };
+  const send = (next: CategoryChoices) =>
+    void putCategories(project.id, next).then((said) =>
+      said.ok
+        ? AsyncStorage.removeItem(pendingKey).catch(() => undefined)
+        : AsyncStorage.setItem(pendingKey, '1').catch(() => undefined),
+    );
   useEffect(() => {
-    setChoices(NO_CATEGORY_CHOICES);
-    void AsyncStorage.getItem(categoriesKey)
-      .then((kept) => setChoices(parseCategoryChoices(kept)))
-      .catch(() => undefined);
+    let live = true;
+    keep(NO_CATEGORY_CHOICES);
+    void (async () => {
+      const local = parseCategoryChoices(await AsyncStorage.getItem(categoriesKey).catch(() => null));
+      const pending = (await AsyncStorage.getItem(pendingKey).catch(() => null)) === '1';
+      if (live) keep(local);
+      const account = await getCategories(project.id);
+      if (!live || !account.ok) return;
+      const madeHere = local.own.length > 0 || local.hidden.length > 0;
+      if (pending || (!account.data.kept && madeHere)) {
+        send(local);
+        return;
+      }
+      if (account.data.kept) {
+        const theirs = { own: account.data.own, hidden: account.data.hidden };
+        keep(theirs);
+        void AsyncStorage.setItem(categoriesKey, JSON.stringify(theirs)).catch(() => undefined);
+      }
+    })();
+    return () => {
+      live = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project.id]);
   const changeChoices = (next: CategoryChoices) => {
-    setChoices(next);
+    keep(next);
     void AsyncStorage.setItem(categoriesKey, JSON.stringify(next)).catch(() => undefined);
+    void AsyncStorage.setItem(pendingKey, '1').catch(() => undefined);
+    send(next);
   };
   const categories = categoryChoices(format, choices);
   /**
@@ -436,7 +480,15 @@ export function Capture({
       aim('body');
       return;
     }
-    const command = readSpoken(chunk, formatNow());
+    // *New category Mara*, *delete category Mara* (from Ken, 16 November).
+    const categoryCommand = readCategoryCommand(chunk);
+    if (categoryCommand) {
+      const done = applyCategoryCommand(formatNow(), choicesRef.current, categoryCommand);
+      if (done.choices !== choicesRef.current) changeChoices(done.choices);
+      setHeard(done.said);
+      return;
+    }
+    const command = readSpoken(chunk, formatNow(), choicesRef.current);
     if (command.kind === 'category') {
       setCategory(command.category);
       if (command.subjectName) putTitle(command.subjectName);
@@ -519,9 +571,11 @@ export function Capture({
 
   const heardHandsFree = (chunk: string) => {
     const before = walk.current;
-    const after = hear(before, chunk, formatNow());
+    const after = hear({ ...before, categories: choicesRef.current }, chunk, formatNow());
     walk.current = after;
     setSitting(after);
+    // A category made or deleted by voice is kept and synced like one from the gear.
+    if (after.categoriesChanged && after.categories) changeChoices(after.categories);
 
     // Every note this phrase closed goes to the phone **and is sent** at once
     // (addendum 09 §13).
@@ -579,7 +633,7 @@ export function Capture({
       return;
     }
     // **A walk that asks** (addendum 27 §18): the first question is the kind.
-    walk.current = startGuided(formatNow());
+    walk.current = { ...startGuided(formatNow()), categories: choicesRef.current };
     setSitting(walk.current);
     session.current = startDictation(
       {

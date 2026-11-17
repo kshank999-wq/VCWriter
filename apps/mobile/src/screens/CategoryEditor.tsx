@@ -102,13 +102,17 @@ export function CategoryEditor({
             </View>
 
             {!removable ? <Text style={styles.muted}>One category has to stay, so a note always has somewhere to go.</Text> : null}
+            <Text style={styles.muted}>
+              By voice: say “command new category Mara” to add one, “command Mara” to file a note in it, and “command delete
+              category Mara” to take it off.
+            </Text>
             {choices.hidden.length > 0 ? (
               <Pressable onPress={() => onChange(restoreBuiltInCategories(choices))} accessibilityRole="button" style={styles.linkTap}>
                 <Text style={styles.link}>Put back the standard ones</Text>
               </Pressable>
             ) : null}
             <Text style={styles.muted}>
-              These are for this project, on this phone. Notes you have already saved keep their category, even if you delete it here.
+              These are for this project, kept with your account, so every phone or tablet you sign in on has the same list. Notes you have already saved keep their category, even if you delete it here.
             </Text>
           </ScrollView>
         </View>

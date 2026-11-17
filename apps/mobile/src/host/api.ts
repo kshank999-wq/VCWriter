@@ -115,6 +115,27 @@ export const addStory = async (projectId: string, title: string): Promise<Answer
 };
 
 /**
+ * **The writer's own categories for a project, kept with their account**
+ * (addendum 27 §35, from Ken, 16 November: *sync*). `kept` is false where none
+ * has been saved yet, so a list made on this phone before syncing existed is
+ * sent up rather than replaced by an empty one.
+ */
+export interface KeptCategories {
+  kept: boolean;
+  own: string[];
+  hidden: string[];
+}
+
+export const getCategories = async (projectId: string): Promise<Answer<KeptCategories>> =>
+  ask<KeptCategories>(`/api/notes/projects/${encodeURIComponent(projectId)}/categories`);
+
+export const putCategories = async (projectId: string, choices: { own: string[]; hidden: string[] }): Promise<Answer<KeptCategories>> =>
+  ask<KeptCategories>(`/api/notes/projects/${encodeURIComponent(projectId)}/categories`, {
+    method: 'PUT',
+    body: JSON.stringify({ own: choices.own, hidden: choices.hidden }),
+  });
+
+/**
  * Send notes, as the documented route takes them.
  *
  * `captureUploadBatchSchema` is the one definition of what a phone may send,

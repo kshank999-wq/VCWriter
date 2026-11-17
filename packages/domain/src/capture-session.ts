@@ -1,5 +1,12 @@
 import {
+  addOwnCategory,
   captureVocabulary,
+  categoryChoices,
+  removeNoteCategory,
+  spokenForm,
+  spokenVocabulary,
+  tidyOwnCategoryName,
+  type CategoryChoices,
   formatNamed,
   formatSpokenName,
   spokenFormatNames,
@@ -61,6 +68,10 @@ export type SpokenTurn =
   | { kind: 'group'; name: string }
   /** *dictate no group* — come back out of it. */
   | { kind: 'ungroup' }
+  /** *command new category Mara* — one of the writer's own (from Ken, 16 November). */
+  | { kind: 'newCategory'; name: string }
+  /** *command delete category Mara* — off the list; notes filed under it keep it. */
+  | { kind: 'dropCategory'; name: string }
   /** *dictate new project The Lamp* — begin making one. Nothing is made yet. */
   | { kind: 'making'; name: string }
   /** *dictate yes* — the one word that makes it (§11). */
@@ -163,6 +174,24 @@ const TO_TITLE = ['title', 'the title', 'back to the title', 'go to the title', 
 
 /** Fillers a writer says before a category and means nothing by. */
 const FILLER = ['new', 'a new', 'another', 'a'];
+/**
+ * Making and deleting the writer's own categories by voice (from Ken, 16
+ * November: *do the phone categories by voice*). Checked before the filler is
+ * stripped, so *new category* is never read as the category *category*.
+ */
+const NEW_CATEGORY = [
+  'new category',
+  'a new category',
+  'add category',
+  'add a category',
+  'add a new category',
+  'make a category',
+  'make a new category',
+  'create category',
+  'create a category',
+  'create a new category',
+];
+const DROP_CATEGORY = ['delete category', 'delete the category', 'remove category', 'remove the category', 'take off category'];
 
 /** Leading punctuation and spacing a recogniser leaves behind a command word. */
 const tidy = (text: string): string => text.replace(/^[\s,.:;—–-]+/, '').trim();
@@ -190,6 +219,35 @@ const opensWithAny = (said: string, phrases: readonly string[]): string | null =
     if (rest !== null) return tidy(rest);
   }
   return null;
+};
+
+/**
+ * *New category Mara*, *delete category Mara* — with or without the command
+ * word, for the note screen's own dictation (from Ken, 16 November). Null for
+ * anything else.
+ */
+export const readCategoryCommand = (said: string): { kind: 'new' | 'drop'; name: string } | null => {
+  const text = said.trim();
+  const after0 = WAKE_WORDS.map((word) => opensWith(text, word)).find((rest) => rest !== null) ?? null;
+  const body = after0 === null ? text : tidy(after0);
+  const made = opensWithAny(body, NEW_CATEGORY);
+  if (made !== null) return { kind: 'new', name: made.replace(/[.!?,]+$/, '').trim() };
+  const dropped = opensWithAny(body, DROP_CATEGORY);
+  if (dropped !== null) return { kind: 'drop', name: dropped.replace(/[.!?,]+$/, '').trim() };
+  return null;
+};
+
+/**
+ * What a spoken *new category* or *delete category* does to the list, and
+ * what to say: the same rules as the hands-free walk, for the note screen.
+ */
+export const applyCategoryCommand = (
+  format: ProjectFormat,
+  choices: CategoryChoices,
+  command: { kind: 'new' | 'drop'; name: string },
+): { choices: CategoryChoices; said: string } => {
+  const sitting = hear({ ...emptySitting(), categories: choices }, `${COMMAND_WORD} ${command.kind === 'new' ? 'new category' : 'delete category'} ${command.name}`, format);
+  return { choices: sitting.categories ?? choices, said: sitting.said };
 };
 
 /** A category named at the opening of `said`, or null. */
@@ -223,12 +281,13 @@ const categoryAt = (said: string, vocabulary: readonly SpokenCategory[]): Spoken
  */
 export const readTurn = (
   said: string,
-  where: { open: boolean; format: ProjectFormat; onTitle?: boolean },
+  where: { open: boolean; format: ProjectFormat; onTitle?: boolean; choices?: CategoryChoices },
 ): SpokenTurn => {
   const text = said.trim();
   if (text.length === 0) return { kind: 'words', text: '' };
 
-  const vocabulary = captureVocabulary(where.format);
+  // The writer's own categories are heard by name, and hidden ones are not.
+  const vocabulary = spokenVocabulary(where.format, where.choices);
   const after0 = WAKE_WORDS.map((word) => opensWith(text, word)).find((rest) => rest !== null) ?? null;
   const after = after0 === null ? null : tidy(after0);
 
@@ -253,6 +312,11 @@ export const readTurn = (
     if (opensWithAny(after, FINISH) !== null) return { kind: 'finish' };
     if (opensWithAny(after, SCRATCH) !== null) return { kind: 'scratch' };
     if (opensWithAny(after, YES) !== null) return { kind: 'yes' };
+
+    const newCategory = opensWithAny(after, NEW_CATEGORY);
+    if (newCategory !== null) return { kind: 'newCategory', name: newCategory };
+    const dropCategory = opensWithAny(after, DROP_CATEGORY);
+    if (dropCategory !== null) return { kind: 'dropCategory', name: dropCategory };
 
     // Before `project`: *dictate new project Jinn* makes one, *dictate project
     // Jinn* moves to one, and the filler stripper below would otherwise turn
@@ -373,6 +437,7 @@ const isTitle = (words: string): boolean => words.trim().split(/\s+/).filter(Boo
 const hasTitle = (key: CaptureKey | null, format: ProjectFormat): boolean => {
   if (key === null) return false;
   if (key === 'unit' || key === 'sub' || key === 'scene') return true;
+  if (key.startsWith('my:')) return false;
   return captureVocabulary(format).find((one) => one.key === key)?.takesName ?? false;
 };
 
@@ -446,6 +511,15 @@ export interface Sitting {
   speak?: string | null;
   /** The command word was said on its own, so the next phrase is the command. */
   armed?: boolean;
+  /**
+   * **The writer's own categories, and the hidden ones** (§35), as the host
+   * keeps them: what a category word is heard against. A category made or
+   * deleted by voice changes it here, and `categoriesChanged` tells the host
+   * to keep the new list — `hear` stores nothing itself.
+   */
+  categories?: CategoryChoices;
+  /** Set for exactly the turn that changed `categories`. */
+  categoriesChanged?: boolean;
 }
 
 /**
@@ -514,7 +588,9 @@ const MAX_GROUP_LENGTH = 60;
 const nameOf = (key: CaptureKey | null, format: ProjectFormat): string =>
   key === null
     ? 'Note'
-    : (captureVocabulary(format).find((one) => one.key === key)?.name ?? 'Note');
+    : key.startsWith('my:')
+      ? key.slice(3)
+      : (captureVocabulary(format).find((one) => one.key === key)?.name ?? 'Note');
 
 /**
  * What the phone asks next about a project being made (§11).
@@ -559,7 +635,7 @@ export const hear = (sitting: Sitting, said0: string, format: ProjectFormat): Si
     return { ...sitting, opened: false, wants: null, makes: null, armed: true, said: 'Command?', speak: sitting.guided ? 'Yes?' : null };
   }
   if (sitting.guided) return hearGuided(sitting, said, format);
-  const turns = splitTurns(said, format, sitting.open !== null);
+  const turns = splitTurns(said, format, sitting.open !== null, sitting.categories);
   if (turns.length <= 1) return hearOne(sitting, said, format);
   // Several commands in one breath (addendum 27 §16, from Ken: *command erase word
   // command erase word*): each is heard in turn, and what the host is told is
@@ -580,7 +656,7 @@ export const hear = (sitting: Sitting, said0: string, format: ProjectFormat): Si
  * by a command it knows stays part of the sentence — *I command you* is a
  * line of dialogue.
  */
-export const splitTurns = (said: string, format: ProjectFormat, open: boolean): string[] => {
+export const splitTurns = (said: string, format: ProjectFormat, open: boolean, choices?: CategoryChoices): string[] => {
   const text = said.trim();
   const at: number[] = [];
   const wake = new RegExp(`\\b(?:${WAKE_WORDS.join('|')})\\b`, 'gi');
@@ -593,7 +669,7 @@ export const splitTurns = (said: string, format: ProjectFormat, open: boolean): 
     const next = at.find((one) => one > cut) ?? text.length;
     const candidate = text.slice(cut, next);
     // A cut only where what follows is a command this build knows.
-    if (readTurn(candidate, { open, format }).kind === 'unknown' && readTurn(piece, { open, format }).kind === 'unknown') continue;
+    if (readTurn(candidate, { open, format, ...(choices ? { choices } : {}) }).kind === 'unknown' && readTurn(piece, { open, format, ...(choices ? { choices } : {}) }).kind === 'unknown') continue;
     pieces.push(text.slice(from, cut).trim());
     from = cut;
   }
@@ -602,8 +678,13 @@ export const splitTurns = (said: string, format: ProjectFormat, open: boolean): 
 };
 
 const hearOne = (sitting: Sitting, said: string, format: ProjectFormat): Sitting => {
-  const turn = readTurn(said, { open: sitting.open !== null, format, onTitle: sitting.open?.on === 'title' });
-  const base: Sitting = { ...sitting, opened: false, wants: null, makes: null, undone: sitting.undone };
+  const turn = readTurn(said, {
+    open: sitting.open !== null,
+    format,
+    onTitle: sitting.open?.on === 'title',
+    ...(sitting.categories ? { choices: sitting.categories } : {}),
+  });
+  const base: Sitting = { ...sitting, opened: false, wants: null, makes: null, undone: sitting.undone, categoriesChanged: false };
 
   /**
    * While a project is being described the phone is **not taking notes**, and
@@ -744,6 +825,37 @@ const hearOne = (sitting: Sitting, said: string, format: ProjectFormat): Sitting
 
     case 'project':
       return { ...base, wants: turn.name, said: `Project: ${turn.name}.` };
+
+    case 'newCategory': {
+      const name = tidyOwnCategoryName(turn.name.replace(/[.!?,]+$/, ''));
+      if (!name) return { ...base, said: 'Say the name after it — “command new category Mara”.' };
+      const had = sitting.categories ?? { own: [], hidden: [] };
+      const known = spokenVocabulary(format, had).find((one) => one.spoken.includes(spokenForm(name)));
+      if (known && !had.hidden.includes(known.key)) return { ...base, said: `${known.name} is already a category.` };
+      const next = addOwnCategory(format, had, name);
+      return {
+        ...base,
+        categories: next,
+        categoriesChanged: true,
+        said: `New category: ${name}. Say “${COMMAND_WORD} ${name}” to file a note there.`,
+      };
+    }
+
+    case 'dropCategory': {
+      const had = sitting.categories ?? { own: [], hidden: [] };
+      const wanted = spokenForm(turn.name.replace(/[.!?,]+$/, ''));
+      if (!wanted) return { ...base, said: 'Say which one — “command delete category Mara”.' };
+      const found = categoryChoices(format, had).find((one) => spokenForm(one.name) === wanted);
+      if (!found) return { ...base, said: `There is no category called ${turn.name.trim()}.` };
+      const next = removeNoteCategory(format, had, found.key);
+      if (next === had) return { ...base, said: `${found.name} is the last category, so it stays.` };
+      return {
+        ...base,
+        categories: next,
+        categoriesChanged: true,
+        said: `${found.name} is off the list. Notes already in it keep it.`,
+      };
+    }
 
     case 'group': {
       // No name is somebody who has not finished the sentence, so it says where
@@ -1141,13 +1253,18 @@ const questionFor = (ask: GuidedStep, open: OpenNote | null, format: ProjectForm
  * command words of §16 still work at any point, for a writer who knows them.
  */
 const hearGuided = (sitting: Sitting, said: string, format: ProjectFormat): Sitting => {
-  const base: Sitting = { ...sitting, opened: false, wants: null, makes: null, speak: null };
+  const base: Sitting = { ...sitting, opened: false, wants: null, makes: null, speak: null, categoriesChanged: false };
   const text = said.trim();
   if (text.length === 0) return base;
 
   // The command words (§16) still work, guided or not. On a segment's visual
   // they work on the visual: it is handed in as the text and handed back.
-  const turn = readTurn(text, { open: sitting.open !== null, format, onTitle: sitting.ask === 'title' });
+  const turn = readTurn(text, {
+    open: sitting.open !== null,
+    format,
+    onTitle: sitting.ask === 'title',
+    ...(sitting.categories ? { choices: sitting.categories } : {}),
+  });
   if (WAKE_WORDS.some((word) => opensWith(text, word) !== null) && turn.kind !== 'words' && turn.kind !== 'unknown') {
     const onVisual = sitting.ask === 'visual' && sitting.open !== null;
     const given: Sitting = onVisual && sitting.open
@@ -1172,7 +1289,7 @@ const hearGuided = (sitting: Sitting, said: string, format: ProjectFormat): Sitt
 
   switch (sitting.ask ?? 'kind') {
     case 'kind': {
-      const vocabulary = captureVocabulary(format);
+      const vocabulary = spokenVocabulary(format, sitting.categories);
       // Lead words alone — *it's a*, with the kind still to come in the next
       // breath — are somebody mid-answer, and the walk waits for the rest.
       if (kindWords(text).length === 0) return base;
