@@ -40,6 +40,7 @@ import { ResearchBody } from './components/ResearchWindow';
 import { ResearchFolderView } from './components/ResearchFolderView';
 import { SculptorWindow } from './components/SculptorWindow';
 import { TextMenu } from './components/TextMenu';
+import { VerbDictionary } from './components/VerbDictionary';
 import { LayoutWindow } from './components/LayoutWindow';
 import { NoteSorterWindow } from './components/NoteSorterWindow';
 import { NarrativeMapWindow } from './components/NarrativeMapWindow';
@@ -158,6 +159,7 @@ export default function Satellite({ pane }: { pane: PaneKey }) {
           panel it came out of (§8), so the hover is here too. */}
       <BeatPeekLayer file={file} />
       <TextMenu words={[...file.characters.map((one) => one.name), ...(file.locations ?? []).map((one) => one.name)]} />
+      <VerbDictionary />
       <Section pane={pane} file={file} onUpdate={project.update} onSaveAs={saveFromHere} go={project.go} shown={project.shown} />
     </div>
   );

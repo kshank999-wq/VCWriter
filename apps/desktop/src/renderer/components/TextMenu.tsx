@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ContextMenu, type MenuEntry } from './ContextMenu';
-import { addToDictionary, checkWord, ignoreWord, setProjectWords, synonymsOf, warmSpelling } from '../spelling';
+import { addToDictionary, checkWord, ignoreWord, setProjectWords, strongerVerbsOf, synonymsOf, verbEntry, warmSpelling } from '../spelling';
+import { openVerbDictionary } from './VerbDictionary';
 import { offsetAtPoint, wordAt } from '../writing-edit';
 
 /** `document.execCommand`, where the browser has it (a test DOM does not). */
@@ -27,6 +28,21 @@ export const wordEntries = (word: string, replace: (text: string) => void, optio
     );
     return entries;
   }
+  /**
+   * **Stronger verbs** (editor spec §4, from Ken, 19 November: *right-click on
+   * a word and open up a verb dictionary or thesaurus to replace weak verbs*):
+   * the more specific ways of doing it, in the word's own tense, first; then
+   * the thesaurus. Picking one changes that word and nothing else.
+   */
+  const stronger = strongerVerbsOf(word, 6);
+  if (stronger.length > 0) {
+    entries.push({ heading: `Stronger verbs for “${word}”` });
+    for (const one of stronger) entries.push({ label: one, onPick: () => replace(one) });
+  }
+  if (verbEntry(word)) {
+    entries.push({ label: 'Verb dictionary…', note: 'Every meaning, with its stronger verbs', onPick: () => openVerbDictionary(word, replace) });
+  }
+  if (stronger.length > 0 || verbEntry(word)) entries.push('rule');
   const alike = synonymsOf(word, 8);
   if (alike.length > 0) {
     entries.push({ heading: `Synonyms for “${word}”` });

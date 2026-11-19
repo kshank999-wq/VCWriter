@@ -1,4 +1,5 @@
 import nspell from 'nspell';
+import { lookUpVerb, strongerVerbsFor, type VerbData } from '@vcwriter/domain';
 import aff from './dictionary/en.aff?raw';
 import dic from './dictionary/en.dic?raw';
 
@@ -62,6 +63,33 @@ export const loadThesaurus = (): Promise<void> => {
   return loadingThesaurus;
 };
 
+/**
+ * **The verb dictionary** (editor spec §4, from Ken, 19 November): WordNet's
+ * verbs, with the stronger verbs for each sense (`verb-dictionary.ts`). Read
+ * from its own file the first time it is wanted, like the thesaurus.
+ */
+let verbs: VerbData | null = null;
+let loadingVerbs: Promise<void> | null = null;
+export const loadVerbs = (): Promise<void> => {
+  if (verbs) return Promise.resolve();
+  loadingVerbs ??= import('./dictionary/verbs.json').then((module) => {
+    verbs = (module.default ?? module) as unknown as VerbData;
+  });
+  return loadingVerbs;
+};
+
+/** Stronger verbs for a word, in its own form: *walked* → *paced, staggered*. Empty until the data has loaded. */
+export const strongerVerbsOf = (word: string, limit = 8): string[] => {
+  if (!verbs) {
+    void loadVerbs().catch(() => undefined);
+    return [];
+  }
+  return strongerVerbsFor(verbs, word, limit);
+};
+
+/** Everything the verb dictionary has for a word, for its panel; null where the word is not a verb it knows. */
+export const verbEntry = (word: string) => (verbs ? lookUpVerb(verbs, word) : null);
+
 /** Build the dictionary and read the thesaurus while nothing else is happening, so the first right-click is instant. */
 export const warmSpelling = (): void => {
   const go = () => {
@@ -71,6 +99,7 @@ export const warmSpelling = (): void => {
       // A menu asked later builds it then.
     }
     void loadThesaurus().catch(() => undefined);
+    void loadVerbs().catch(() => undefined);
   };
   const idle = (window as unknown as { requestIdleCallback?: (run: () => void) => void }).requestIdleCallback;
   if (idle) idle(go);

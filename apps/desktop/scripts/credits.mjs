@@ -105,6 +105,14 @@ const EXTRA = [
     url: 'https://www.gutenberg.org/ebooks/3202',
     note: 'The thesaurus, by Grady Ward.',
   },
+  {
+    name: 'WordNet',
+    version: '3.1',
+    licence: 'WordNet License (BSD-style)',
+    url: 'https://wordnet.princeton.edu',
+    note: 'The verb dictionary: meanings and stronger verbs (scripts/build-verbs.mjs). WordNet 3.0 Copyright 2006 by Princeton University. All rights reserved.',
+    text: readFileSync(join(desktop, 'src', 'renderer', 'dictionary', 'LICENSE-wordnet'), 'utf8').trim(),
+  },
 ];
 
 const missing = [...seen.values()].filter((one) => !one.text).map((one) => one.name);

@@ -82,6 +82,7 @@ import { ResearchWindow } from './components/ResearchWindow';
 import { ProjectHomePanel } from './components/ProjectHomePanel';
 import { SculptorWindow } from './components/SculptorWindow';
 import { TextMenu } from './components/TextMenu';
+import { VerbDictionary } from './components/VerbDictionary';
 import { LayoutWindow } from './components/LayoutWindow';
 import { NoteSorterWindow } from './components/NoteSorterWindow';
 import { NarrativeMapWindow } from './components/NarrativeMapWindow';
@@ -1639,6 +1640,7 @@ export default function App() {
       <BeatPeekLayer file={file} />
       {/* Spelling, synonyms and editing on a right-click over any text (from Ken). */}
       <TextMenu words={[...file.characters.map((one) => one.name), ...(file.locations ?? []).map((one) => one.name)]} />
+      <VerbDictionary />
       <TitleBar
         menu={
           <MenuBar

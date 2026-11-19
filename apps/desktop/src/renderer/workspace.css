@@ -24657,3 +24657,60 @@ dialog.shot-dialog > .shot-fields,
   padding: 16px 18px;
   overflow-y: auto;
 }
+
+/* The verb dictionary (editor spec §4): each meaning, its stronger verbs and
+   its synonyms, a click putting one word in place of the one clicked. */
+dialog.verb-dictionary {
+  width: min(560px, calc(100vw - 48px));
+}
+
+dialog.verb-dictionary > header h3 {
+  margin: 0;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.verb-dictionary-body {
+  padding: 12px 16px 14px;
+  max-height: calc(100vh - 160px);
+  overflow-y: auto;
+}
+
+.verb-senses {
+  margin: 8px 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 12px;
+}
+
+.verb-meaning {
+  margin: 0 0 6px;
+}
+
+.verb-words {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 4px 0;
+}
+
+.verb-words-label {
+  min-width: 96px;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.verb-credit {
+  margin-top: 10px;
+}
+
+.verb-words .chip {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 12.5px;
+}
