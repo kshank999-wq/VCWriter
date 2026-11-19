@@ -48,6 +48,8 @@ export * from './print-one-sheet.js';
 export * from './numbering.js';
 export * from './passages.js';
 export * from './verb-dictionary.js';
+export * from './edit-rules.js';
+export * from './edit-check.js';
 export * from './narrative.js';
 export * from './narrative-eval.js';
 export * from './narrative-check.js';

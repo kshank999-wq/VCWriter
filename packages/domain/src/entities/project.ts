@@ -300,6 +300,17 @@ export const projectSettingsSchema = z.object({
   book: z.record(z.unknown()).default({}),
   /** How citations, notes and the bibliography are written (addendum 43); read through `citationSettingsOf`. */
   citations: z.record(z.unknown()).default({}),
+  /**
+   * The editor's profile for this project (editor spec §3): prose or
+   * screenplay rules, point of view, tense, the viewpoint characters and
+   * overrides per section. Read through `editorProfileOf`.
+   */
+  editor: z.record(z.unknown()).default({}),
+  /**
+   * The last Edit Check and what the writer decided about each finding
+   * (editor spec §6). Never manuscript content. Read through `editReviewOf`.
+   */
+  editorReview: z.record(z.unknown()).default({}),
 });
 export type ProjectSettings = z.infer<typeof projectSettingsSchema>;
 
