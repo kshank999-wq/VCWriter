@@ -4,7 +4,7 @@
  *
  *   node scripts/deep-check/measure.ts [effort…]
  *
- * The key is read from VCW_ANTHROPIC_KEY (a cloud session keeps the name
+ * The key is read from VCW_ANTHROPIC_API_KEY or VCW_ANTHROPIC_KEY (a cloud session keeps the name
  * ANTHROPIC_API_KEY for its own use and does not pass it on), or from
  * ANTHROPIC_API_KEY where that is set.
  *
@@ -43,9 +43,9 @@ const planted: Record<string, { check: string; quote: string; what: string }[]> 
 const flat = (text: string) => text.replace(/[‘’]/g, "'").replace(/\s+/g, ' ').toLowerCase();
 
 const efforts = (process.argv.slice(2).length ? process.argv.slice(2) : ['medium']) as NonNullable<DeepCheckRequest['effort']>[];
-const apiKey = process.env.VCW_ANTHROPIC_KEY || process.env.ANTHROPIC_API_KEY;
+const apiKey = process.env.VCW_ANTHROPIC_API_KEY || process.env.VCW_ANTHROPIC_KEY || process.env.ANTHROPIC_API_KEY;
 if (!apiKey) {
-  console.error('Neither VCW_ANTHROPIC_KEY nor ANTHROPIC_API_KEY is set.');
+  console.error('None of VCW_ANTHROPIC_API_KEY, VCW_ANTHROPIC_KEY or ANTHROPIC_API_KEY is set.');
   process.exit(1);
 }
 const client = new Anthropic({ apiKey });

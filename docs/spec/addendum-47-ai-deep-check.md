@@ -35,4 +35,4 @@ cheaters.**
 passages (Great Expectations ch. 1, Joyce's *Eveline* plain and with five
 planted slips listed in `planted.json`, the Night of the Living Dead sample)
 and reports cost per 1,000 words, the half-price batch cost, and which planted
-slips were caught. Needs the key as `VCW_ANTHROPIC_KEY` in the cloud environment (a session does not pass `ANTHROPIC_API_KEY` on).
+slips were caught. Needs the key as `VCW_ANTHROPIC_API_KEY` (or `VCW_ANTHROPIC_KEY`) in the cloud environment (a session does not pass `ANTHROPIC_API_KEY` on).
