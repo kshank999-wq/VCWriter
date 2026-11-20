@@ -24,8 +24,19 @@ cheaters.**
 
 - Packs of **$5, $10 and $20**, one-time Stripe payments, bought from the
   account page and from **Edit → Buy edit credits…** in the app.
-- Priced at **no less than $0.25 per 1,000 words** checked, against a cost
-  measured at a few cents. The app shows an estimate before each run.
+- Set by Ken, 20 November 2026, after the measurement below (round numbers;
+  this replaces the earlier floor of $0.25 per 1,000 words):
+
+  | Pack | Words checked | Per 1,000 words |
+  | --- | --- | --- |
+  | $5 | 20,000 | $0.25 |
+  | $10 | 50,000 | $0.20 |
+  | $20 | 100,000 | $0.20 |
+
+- A credit is 1,000 words checked. Each run is charged at least 1,000 words,
+  then rounded up to the next 250, which covers the fixed instructions every
+  run carries (about 1,900 tokens, $0.008). The app shows an estimate before
+  each run.
 - The check runs on the server (the key never ships in an installer), opt-in,
   with a plain statement that the passage is sent to Anthropic for the check.
 
@@ -36,3 +47,34 @@ passages (Great Expectations ch. 1, Joyce's *Eveline* plain and with five
 planted slips listed in `planted.json`, the Night of the Living Dead sample)
 and reports cost per 1,000 words, the half-price batch cost, and which planted
 slips were caught. Needs the key as `VCW_ANTHROPIC_API_KEY` (or `VCW_ANTHROPIC_KEY`) in the cloud environment (a session does not pass `ANTHROPIC_API_KEY` on).
+
+### Measured, 20 November 2026
+
+Opus 5.5 at list price ($4 / $20 per million tokens), one run per passage:
+
+| Passage | Words | Low | Medium |
+| --- | --- | --- | --- |
+| Great Expectations ch. 1 | 1,815 | $0.0103 | $0.0103 |
+| Eveline | 1,818 | $0.0153 | $0.0216 |
+| Eveline, planted | 1,886 | $0.0159 | $0.0207 |
+| Night of the Living Dead | 398 | $0.0614 | $0.0743 |
+
+Cost per 1,000 words; batch is half. Prose runs about 2¢ per 1,000 words at
+medium, so even the $0.20 packs are about ten times cost. Short passages cost
+more per word because of the fixed instructions, hence the per-run minimum.
+
+Planted slips: 4 of 5 caught at both efforts, all at high confidence — the
+three point-of-view slips and the morning sun. The planted pronoun ("He would
+read it in the morning") was missed both times; the check instead flagged a
+real ambiguity in Joyce's own text ("Whenever he showed the photograph…").
+Nothing was flagged in Dickens; nothing was dropped by the no-rewrite guard.
+In the screenplay it caught the television that was never set up.
+
+Weak spots: pronouns; notes that complain of where an excerpt ends (Johnny's
+fate, the cemetery man); Dickens came back with 10 output tokens in a second,
+so it barely thought before finding nothing. Low effort adds noise for little
+saving. **Default effort: medium.** Four passages and five plants is a small
+sample: add more before quoting a catch rate.
+
+`costOf` prices cache reads at 0.1× input; Opus 5.5 charges 0.05×. No run used
+the cache, so these figures stand, but fix it before caching is turned on.
