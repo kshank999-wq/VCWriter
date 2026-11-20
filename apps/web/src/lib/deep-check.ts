@@ -248,7 +248,8 @@ export const costOf = (usage: DeepCheckUsage): number =>
   1_000_000;
 
 export const runDeepCheck = async (request: DeepCheckRequest, client = new Anthropic()): Promise<DeepCheckResult> => {
-  const response = await client.messages.create({
+  // Streamed: the SDK refuses a non-streaming call whose max_tokens could outlast ten minutes.
+  const response = await client.messages.stream({
     model: DEEP_CHECK_MODEL,
     max_tokens: 32000,
     system: SYSTEM,
@@ -258,7 +259,7 @@ export const runDeepCheck = async (request: DeepCheckRequest, client = new Anthr
       format: { type: 'json_schema', schema: OUTPUT_SCHEMA as unknown as Record<string, unknown> },
     },
     messages: [{ role: 'user', content: `${describe(request)}\n\n${passageText(request)}` }],
-  });
+  }).finalMessage();
   if (response.stop_reason === 'refusal') throw new DeepCheckError('The check was declined for this passage.');
   if (response.stop_reason === 'max_tokens') throw new DeepCheckError('The check ran long and was cut off. Try a shorter passage.');
   const text = response.content.find((block) => block.type === 'text');
