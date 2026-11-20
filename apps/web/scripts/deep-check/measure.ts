@@ -2,7 +2,11 @@
  * Measures the AI deep check (addendum 47): what it costs per 1,000 words
  * and whether its findings are worth it, on public-domain passages.
  *
- *   ANTHROPIC_API_KEY=… node scripts/deep-check/measure.ts [effort…]
+ *   node scripts/deep-check/measure.ts [effort…]
+ *
+ * The key is read from VCW_ANTHROPIC_KEY (a cloud session keeps the name
+ * ANTHROPIC_API_KEY for its own use and does not pass it on), or from
+ * ANTHROPIC_API_KEY where that is set.
  *
  * Effort defaults to medium; pass `low medium` to compare. Writes
  * `results-<date>.json` beside this file (not committed) and prints a table.
@@ -12,6 +16,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import Anthropic from '@anthropic-ai/sdk';
 import { DEEP_CHECK_MODEL, runDeepCheck, type DeepCheckLine, type DeepCheckRequest } from '../../src/lib/deep-check.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -38,16 +43,18 @@ const planted: Record<string, { check: string; quote: string; what: string }[]> 
 const flat = (text: string) => text.replace(/[‘’]/g, "'").replace(/\s+/g, ' ').toLowerCase();
 
 const efforts = (process.argv.slice(2).length ? process.argv.slice(2) : ['medium']) as NonNullable<DeepCheckRequest['effort']>[];
-if (!process.env.ANTHROPIC_API_KEY) {
-  console.error('ANTHROPIC_API_KEY is not set.');
+const apiKey = process.env.VCW_ANTHROPIC_KEY || process.env.ANTHROPIC_API_KEY;
+if (!apiKey) {
+  console.error('Neither VCW_ANTHROPIC_KEY nor ANTHROPIC_API_KEY is set.');
   process.exit(1);
 }
+const client = new Anthropic({ apiKey });
 
 const results = [];
 for (const effort of efforts) {
   for (const one of CASES) {
     const started = Date.now();
-    const result = await runDeepCheck({ ...one.request, effort });
+    const result = await runDeepCheck({ ...one.request, effort }, client);
     const seconds = (Date.now() - started) / 1000;
     const per1000 = (result.costDollars / result.words) * 1000;
     const plants = planted[one.name] ?? [];
