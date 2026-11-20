@@ -1,0 +1,34 @@
+scene_heading: EXT. COUNTRY ROAD - DUSK
+action: A car winds along an empty road through the Pennsylvania hills. Late afternoon light. Inside, JOHNNY (20s) drives; his sister BARBRA (20s) sits beside him.
+scene_heading: EXT. CEMETERY - DUSK
+action: The car pulls up at the gates of a hillside cemetery. Wind in the trees. Johnny and Barbra walk between the graves carrying a small wreath.
+action: They kneel at their father's grave. Barbra bows her head. Johnny fidgets.
+action: Across the cemetery, a lone MAN in a dark suit walks slowly between the stones.
+character: JOHNNY
+dialogue: They're coming to get you, Barbra.
+character: BARBRA
+dialogue: Stop it. You're ignorant.
+character: JOHNNY
+parenthetical: (pointing at the man, in a ghoul's voice)
+dialogue: They're coming for you, Barbra. Look! There comes one of them now!
+action: Barbra hurries away, embarrassed. The man is closer now. He staggers. He reaches for her.
+action: Johnny pulls him off her. They grapple. Johnny falls and strikes his head on a gravestone, and lies still.
+action: Barbra runs.
+scene_heading: EXT. FARMHOUSE - NIGHT
+action: A lone farmhouse at the end of a dirt track. Barbra stumbles up the porch steps and through the door, slamming it behind her.
+scene_heading: INT. FARMHOUSE - LIVING ROOM - CONTINUOUS
+action: Dark. Silent. Barbra backs against the wall, breathing hard. Outside, the man from the cemetery stands at the edge of the yard, watching the house.
+action: Headlights sweep the windows. A pickup truck skids to a stop. BEN (30s) bursts in carrying a tyre iron.
+action: He checks the windows, finds the doors, and starts tearing up a table to board them shut.
+scene_heading: INT. FARMHOUSE - LIVING ROOM - LATER
+action: The windows are boarded. A radio crackles on the mantel. Ben turns it up. A NEWSCASTER reports killings in towns across the eastern states, by people the authorities cannot identify.
+scene_heading: EXT. OPEN FIELD - DAY (NEWS FOOTAGE)
+action: On the television: a posse of armed men and dogs sweeps a field. A reporter catches up with SHERIFF McCLELLAN.
+character: SHERIFF MCCLELLAN
+dialogue: Yeah, they're dead. They're all messed up.
+character: SHERIFF MCCLELLAN
+dialogue: Beat 'em or burn 'em. They go up pretty easy.
+transition: CUT TO:
+scene_heading: INT. FARMHOUSE - CELLAR DOOR - NIGHT
+action: The cellar door opens. HARRY COOPER (40s) climbs up into the light. Behind him, his wife HELEN, and the young couple TOM and JUDY.
+action: Ben and Harry face each other across the room: one wants the house above ground, the other the cellar below it. Outside, the dead gather at the windows.

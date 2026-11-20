@@ -35,3 +35,4 @@ coverage/
 # local supabase
 supabase/.temp/
 
+apps/web/scripts/deep-check/results-*.json

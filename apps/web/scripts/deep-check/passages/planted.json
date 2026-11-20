@@ -1,0 +1,29 @@
+{
+  "eveline-planted.txt": [
+    {
+      "check": "pov",
+      "quote": "Across the avenue, Mrs Dunn watched her at the window and decided the girl was getting above herself.",
+      "what": "Mrs Dunn's private judgement, in a story told from inside Eveline"
+    },
+    {
+      "check": "pronoun",
+      "quote": "He would read it in the morning and be angry.",
+      "what": "'He' could be Harry or her father"
+    },
+    {
+      "check": "continuity",
+      "quote": "The morning sun lay warm across the floorboards.",
+      "what": "Morning sun, though the scene is evening going into night"
+    },
+    {
+      "check": "pov",
+      "quote": "Frank, for his part, already suspected she would never come, but he kept the thought to himself.",
+      "what": "Frank's private thought, which Eveline cannot know"
+    },
+    {
+      "check": "pov",
+      "quote": "She could not know that the boat would founder off Cape Finisterre within the year.",
+      "what": "Narrator's foreknowledge: omniscient drift"
+    }
+  ]
+}
