@@ -1,33 +1,24 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  allowWord,
-  applyFinding,
-  applyFindings,
-  findBeat,
-  findUnit,
-  groupFindings,
   hasBookIndex,
   polarityGraph,
   isProseFormat,
   gridFromRead,
-  runDailyEditor,
-  setEditorRule,
   setSceneGrid,
   setSceneRead,
-  FINDING_LABELS,
   runFinalEditor,
   sceneTextForReview,
   storyGridStatus,
-  summariseFindings,
   type BeatId,
-  type EditorFinding,
-  type FindingKind,
   type ProjectFile,
   type SceneGrid,
   type SceneVerdict,
   type StructuralUnitId,
   nounsFor,
+  editReviewOf,
+  tallyReview,
 } from '@vcwriter/domain';
+import { EditCheckPanel } from './EditCheckPanel';
 import { IndexPanel } from './IndexPanel';
 import { PopOutButton } from './PopOutButton';
 import { PolarityGraph } from './PolarityGraph';
@@ -56,6 +47,10 @@ interface EditorPanelProps {
    * manuscript on the other is the whole shape of a revision pass.
    */
   onPopOut?(): void;
+  /** The beat the writer is in, for checking only it. */
+  currentBeatId?: BeatId | null;
+  /** The Edit Check's *Return to writing*. */
+  onReturnToWriting?(): void;
 }
 
 /**
@@ -107,6 +102,8 @@ export function EditorPanel({
   busy = false,
   exportMessage = null,
   onPopOut,
+  currentBeatId = null,
+  onReturnToWriting,
 }: EditorPanelProps) {
   const indexed = hasBookIndex(file.project.format);
   // A tab that is not there cannot be the one that is open: closing a project
@@ -120,9 +117,8 @@ export function EditorPanel({
   useEffect(() => {
     if (openOn) setTab(openOn);
   }, [openOn]);
-  const [scope, setScope] = useState<'project' | 'scene'>('project');
-  const [includeStyle, setIncludeStyle] = useState(true);
-  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  // What the Edit Check has left to review, for the tab.
+  const reviewLeft = useMemo(() => tallyReview(editReviewOf(file)).open, [file]);
   const [reading, setReading] = useState<string | null>(null);
   /** Whether a read can be asked for at all, and what to say when it cannot. */
   const [readable, setReadable] = useState<{ available: boolean; reason: string | null }>({
@@ -130,52 +126,6 @@ export function EditorPanel({
     reason: null,
   });
   const [error, setError] = useState<string | null>(null);
-  /** The rule being worked through; null shows the list of rules. */
-  const [rule, setRule] = useState<FindingKind | null>(null);
-
-  const findings = useMemo(
-    () =>
-      runDailyEditor(file, {
-        includeStyle,
-        ...(scope === 'scene' && currentUnitId ? { unitId: currentUnitId } : {}),
-      }),
-    [file, includeStyle, scope, currentUnitId],
-  );
-
-  // Dismissals are keyed by what the finding is about, not by its generated id,
-  // so re-running the pass does not resurrect something already considered.
-  const keyOf = (finding: EditorFinding) => `${finding.elementId}:${finding.kind}:${finding.excerpt}`;
-  const visible = findings.filter((finding) => !dismissed.has(keyOf(finding)));
-  const summary = summariseFindings(visible);
-
-  const groups = useMemo(() => groupFindings(visible), [visible]);
-  const showing = rule === null ? visible : visible.filter((finding) => finding.kind === rule);
-  const fixableHere = showing.filter((finding) => finding.replacement !== undefined).length;
-
-  /** The offending text with a little of what is around it, marked. */
-  const context = (finding: EditorFinding) => {
-    const beat = findBeat(file, finding.beatId);
-    const element = beat?.manuscript.elements.find((candidate) => candidate.id === finding.elementId);
-    if (!element) return `“${finding.excerpt.trim() || '␣'}”`;
-    const before = element.text.slice(Math.max(0, finding.start - 30), finding.start);
-    const after = element.text.slice(finding.end, finding.end + 30);
-    return (
-      <>
-        {finding.start > 30 ? '…' : ''}
-        {before}
-        <mark>{finding.excerpt || '␣'}</mark>
-        {after}
-        {finding.end + 30 < element.text.length ? '…' : ''}
-      </>
-    );
-  };
-
-  /** Where in the script it is, in the words the writer names things by. */
-  const whereIs = (finding: EditorFinding) => {
-    const unit = findUnit(file, finding.unitId);
-    const beat = findBeat(file, finding.beatId);
-    return [unit?.sequenceLabel || unit?.title || 'Scene', beat?.title].filter(Boolean).join(' · ') || 'Go to it';
-  };
 
   // Reads the document keeps. Nothing is held in this component: a read cost
   // money, so it belongs in the manuscript, not in a panel that closes.
@@ -231,7 +181,7 @@ export function EditorPanel({
             className={openTab === 'daily' ? 'tab selected' : 'tab'}
             onClick={() => setTab('daily')}
           >
-            Daily ({summary.errors + summary.style})
+            Edit Check{reviewLeft > 0 ? ` (${reviewLeft})` : ''}
           </button>
           <button
             type="button"
@@ -299,25 +249,6 @@ export function EditorPanel({
           </>
         ) : null}
 
-        {openTab === 'daily' ? (
-          <>
-            <select value={scope} onChange={(event) => setScope(event.target.value as 'project' | 'scene')}>
-              <option value="project">Whole project</option>
-              <option value="scene" disabled={!currentUnitId}>
-                Current scene
-              </option>
-            </select>
-            <label className="toggle">
-              <input
-                type="checkbox"
-                checked={includeStyle}
-                onChange={(event) => setIncludeStyle(event.target.checked)}
-              />
-              Include style notes
-            </label>
-          </>
-        ) : null}
-
         {onPopOut ? <PopOutButton what="the editors" onPopOut={onPopOut} /> : null}
         </div>
       </div>
@@ -329,149 +260,14 @@ export function EditorPanel({
       ) : null}
 
       {openTab === 'daily' ? (
-        <div className="editing-mode">
-          {/* The rules, with what each one found. Working through a
-              manuscript one rule at a time is how it is actually done: the
-              eye stays on one kind of mistake instead of switching. */}
-          <nav className="rule-list" aria-label="What to work through">
-            <button
-              type="button"
-              className={rule === null ? 'rule-row current' : 'rule-row'}
-              onClick={() => setRule(null)}
-            >
-              <span className="rule-name">Everything</span>
-              <span className="count muted">{visible.length}</span>
-            </button>
-
-            {groups.length === 0 ? (
-              <p className="muted small">
-                {findings.length === 0 ? 'Nothing to flag.' : 'Everything here has been considered.'}
-              </p>
-            ) : (
-              groups.map((group) => (
-                <div key={group.kind} className="rule-line">
-                  <button
-                    type="button"
-                    className={rule === group.kind ? 'rule-row current' : 'rule-row'}
-                    aria-current={rule === group.kind ? 'true' : undefined}
-                    onClick={() => setRule(group.kind)}
-                  >
-                    <span className={group.severity === 'error' ? 'chip' : 'chip suggested'}>
-                      {group.severity === 'error' ? 'error' : 'style'}
-                    </span>
-                    <span className="rule-name">{group.label}</span>
-                    <span className="count muted">{group.findings.length}</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="ghost small"
-                    aria-label={`Stop checking: ${group.label}`}
-                    title="Stop checking this, in this project"
-                    onClick={() => {
-                      onUpdate((current) => setEditorRule(current, group.kind, false));
-                      if (rule === group.kind) setRule(null);
-                    }}
-                  >
-                    ×
-                  </button>
-                </div>
-              ))
-            )}
-
-            {(file.settings.editorIgnoredRules ?? []).length > 0 ? (
-              <details className="rules-off">
-                <summary className="muted small">
-                  {(file.settings.editorIgnoredRules ?? []).length} switched off
-                </summary>
-                {(file.settings.editorIgnoredRules ?? []).map((kind) => (
-                  <button
-                    key={kind}
-                    type="button"
-                    className="ghost small"
-                    onClick={() => onUpdate((current) => setEditorRule(current, kind, true))}
-                  >
-                    ↩ {FINDING_LABELS[kind as FindingKind] ?? kind}
-                  </button>
-                ))}
-              </details>
-            ) : null}
-          </nav>
-
-          <div className="findings">
-            {showing.length > 0 && fixableHere > 0 ? (
-              <header className="findings-head">
-                <span className="muted small">
-                  {showing.length} {showing.length === 1 ? 'thing' : 'things'}
-                  {rule ? ` · ${FINDING_LABELS[rule]}` : ''}
-                </span>
-                {/* Every one of a kind at once. The pass re-runs from the
-                    changed document, so the offsets are never stale. */}
-                <button
-                  type="button"
-                  className="primary"
-                  onClick={() => onUpdate((current) => applyFindings(current, showing))}
-                >
-                  Fix all {fixableHere}
-                </button>
-              </header>
-            ) : null}
-
-            {showing.length === 0 ? (
-              <p className="muted empty">
-                {findings.length === 0 ? 'Nothing to flag.' : 'Everything here has been considered.'}
-              </p>
-            ) : (
-              <ul>
-                {showing.map((finding) => (
-                  <li key={finding.id} className={`finding ${finding.severity}`}>
-                    <div className="finding-body">
-                      <p className="finding-message">{finding.message}</p>
-                      <p className="finding-excerpt muted">
-                        {context(finding)}
-                      </p>
-                      <button
-                        type="button"
-                        className="link finding-where"
-                        onClick={() => onGoTo?.(finding.beatId)}
-                        title="Go to it in the script"
-                      >
-                        {whereIs(finding)}
-                      </button>
-                    </div>
-                    <div className="finding-actions">
-                      {finding.replacement !== undefined ? (
-                        <button
-                          type="button"
-                          className="primary"
-                          onClick={() => onUpdate((current) => applyFinding(current, finding))}
-                        >
-                          Fix
-                        </button>
-                      ) : null}
-                      {finding.kind === 'likely_typo' ? (
-                        <button
-                          type="button"
-                          className="ghost"
-                          title="It is a word. Never ask again."
-                          onClick={() => onUpdate((current) => allowWord(current, finding.excerpt))}
-                        >
-                          It’s a word
-                        </button>
-                      ) : null}
-                      <button
-                        type="button"
-                        className="ghost"
-                        onClick={() => setDismissed((current) => new Set(current).add(keyOf(finding)))}
-                      >
-                        Leave it
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
+        <EditCheckPanel
+          file={file}
+          onUpdate={onUpdate}
+          currentUnitId={currentUnitId}
+          currentBeatId={currentBeatId ?? null}
+          onGoTo={(beatId) => onGoTo?.(beatId as BeatId)}
+          {...(onReturnToWriting ? { onReturnToWriting } : {})}
+        />
       ) : openTab === 'grid' ? (
         <>
           {exportMessage ? (

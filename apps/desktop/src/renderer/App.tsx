@@ -44,6 +44,8 @@ import {
   nounsFor,
   outlineRowForBeat,
   sculptorNodeForBeat,
+  editReviewOf,
+  tallyReview,
 } from '@vcwriter/domain';
 import { DocumentWorkspace } from './document/DocumentWorkspace';
 import { documentCommands } from './document/document-commands';
@@ -176,6 +178,8 @@ export default function App() {
    */
   const [imported, setImported] = useState<{ file: ProjectFile; names: string[] } | null>(null);
   const [editorTab, setEditorTab] = useState<'daily' | 'final' | 'grid' | 'index' | 'polarity'>('daily');
+  /** Asked once per project per visit: *Resume review*, or start writing. */
+  const [resumeDismissed, setResumeDismissed] = useState(false);
   const [account, setAccount] = useState<AccountStatus>({ configured: false, signedIn: false, email: null });
   /**
    * Activating this computer (addendum 41 §10). It opens by itself once, the
@@ -372,6 +376,18 @@ export default function App() {
   const room = useRoom();
   const beats = useMemo(() => (file ? beatsInStoryOrder(file) : []), [file]);
   const selectedBeat = beats.find((beat) => beat.id === selectedBeatId) ?? beats[0] ?? null;
+  /**
+   * What the last Edit Check left open, read **as the project opens** — the
+   * next session's reminder (editor spec §6.3), not a count that follows the
+   * writer around while they work through it.
+   */
+  const [resumeReview, setResumeReview] = useState(0);
+  const openedProjectId = file?.project.id ?? null;
+  useEffect(() => {
+    setResumeDismissed(false);
+    setResumeReview(file ? tallyReview(editReviewOf(file)).open : 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openedProjectId]);
 
   // Opened from a task in the Writers Room (addendum 07 §31): the beat it is
   // about opens straight away, once. `?beat=` names it, or `?scene=` its scene
@@ -1736,6 +1752,29 @@ export default function App() {
           path as the host gave it — a shortened one is a path you cannot search
           your own disk for — and is dismissed rather than timed out, since it
           is the only place the location is said. */}
+      {/* **Resume review** (editor spec §6.3): the last Edit Check's open items,
+          offered when a project opens — never in the way of writing, and gone
+          with one click for the rest of the visit. */}
+      {resumeReview > 0 && !resumeDismissed && view !== 'editor' ? (
+        <p className="notice banner resume-review" role="status">
+          Resume review: {resumeReview} unresolved {resumeReview === 1 ? 'item' : 'items'} from the last Edit Check.
+          <button
+            type="button"
+            className="primary small"
+            onClick={() => {
+              setResumeDismissed(true);
+              setEditorTab('daily');
+              closeRooms();
+              setView('editor');
+            }}
+          >
+            Continue review
+          </button>
+          <button type="button" className="ghost small" onClick={() => setResumeDismissed(true)}>
+            Start writing
+          </button>
+        </p>
+      ) : null}
       {savedWhere ? (
         <p className="notice banner" role="status">
           {savedWhere}
@@ -1935,6 +1974,8 @@ export default function App() {
             <EditorPanel
               file={file}
               currentUnitId={selectedBeat?.unitId ?? null}
+              currentBeatId={selectedBeat?.id ?? null}
+              onReturnToWriting={() => setView('write')}
               openOn={editorTab}
               onGoTo={(beatId) => {
                 setSelectedBeatId(beatId);

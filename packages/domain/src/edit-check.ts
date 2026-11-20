@@ -1,6 +1,7 @@
 import { isProseFormat } from './formats.js';
 import { beatsForUnit, unitsInStoryOrder } from './selectors.js';
 import { updateBeat } from './mutations.js';
+import { FINDING_LABELS, runDailyEditor, type FindingKind } from './editor-daily.js';
 import { nowIso } from './entities/common.js';
 import {
   checkLine,
@@ -46,6 +47,8 @@ export interface EditorProfile {
   viewpoint: string[];
   /** Words the Edit Check takes as right in this project. */
   dictionary: string[];
+  /** Whose spelling: *colour* is right in a British book. */
+  dialect: 'american' | 'british' | 'canadian' | 'australian';
   /** A section's or beat's own point of view, tense or viewpoint (§3.2). */
   overrides: Record<string, { pov?: PointOfView; tense?: NarrativeTense; viewpoint?: string[] }>;
 }
@@ -72,6 +75,7 @@ export const editorProfileOf = (file: ProjectFile): EditorProfile => {
     tense: TENSES.includes(raw['tense'] as NarrativeTense) ? (raw['tense'] as NarrativeTense) : 'unspecified',
     viewpoint: strings(raw['viewpoint']),
     dictionary: strings(raw['dictionary']),
+    dialect: ['british', 'canadian', 'australian'].includes(raw['dialect'] as string) ? (raw['dialect'] as EditorProfile['dialect']) : 'american',
     overrides,
   };
 };
@@ -200,7 +204,10 @@ export const runEditCheck = (file: ProjectFile, options: { scope?: EditScope; ou
   const profile = editorProfileOf(file);
   const mode = editModeOf(file);
   const characters = file.characters.map((one) => one.name).filter(Boolean);
-  const dictionary = new Set(profile.dictionary.map((one) => one.toLowerCase()));
+  // The project's dictionary is the Editors' own list (*It's a word*), and the profile's.
+  const dictionary = new Set([...profile.dictionary, ...(file.settings.editorAllowedWords ?? [])].map((one) => one.toLowerCase()));
+  // Rules the writer switched off stay off, whichever checker has them.
+  const ignored = new Set(file.settings.editorIgnoredRules ?? []);
   const lines = linesInScope(file, scope);
   const inScope = new Set(lines.map((one) => one.elementId));
   const textOf = new Map(lines.map((one) => [one.elementId, one.text]));
@@ -212,12 +219,12 @@ export const runEditCheck = (file: ProjectFile, options: { scope?: EditScope; ou
       raw.push({ ...one, beatId: line.beatId, elementId: line.elementId, source: 'rules' });
     }
   }
-  for (const one of options.outside ?? []) {
+  for (const one of [...dailyHits(file, scope), ...(options.outside ?? [])]) {
     if (!inScope.has(one.elementId)) continue;
     const word = (textOf.get(one.elementId) ?? '').slice(one.start, one.end).toLowerCase();
     // The project's own words are right, whatever the grammar checker's dictionary says.
     if (one.category === 'spelling' && (dictionary.has(word) || characters.some((name) => name.toLowerCase().split(/\s+/).includes(word)))) continue;
-    raw.push({ ...one, source: 'grammar' });
+    raw.push({ ...one, source: one.ruleId.startsWith('daily-') ? 'rules' : 'grammar' });
   }
 
   // Overlapping hits of one rule are one finding; each is numbered among its
@@ -226,9 +233,11 @@ export const runEditCheck = (file: ProjectFile, options: { scope?: EditScope; ou
   const findings: EditFinding[] = [];
   const seenSpan = new Set<string>();
   raw
-    .sort((a, b) => (a.elementId < b.elementId ? -1 : a.elementId > b.elementId ? 1 : a.start - b.start))
+    .filter((one) => !ignored.has(one.ruleId) && !ignored.has(one.ruleId.replace(/^daily-/, '')))
+    // Where two checkers flag the very same words for the same kind of thing, one finding — the one with a fix.
+    .sort((a, b) => (a.elementId < b.elementId ? -1 : a.elementId > b.elementId ? 1 : a.start - b.start || (b.fix ? 1 : 0) - (a.fix ? 1 : 0)))
     .forEach((one) => {
-      const span = `${one.elementId}:${one.start}:${one.end}:${one.ruleId}`;
+      const span = `${one.elementId}:${one.start}:${one.end}:${one.category}`;
       if (seenSpan.has(span)) return;
       seenSpan.add(span);
       const quote = (textOf.get(one.elementId) ?? '').slice(one.start, one.end);
@@ -335,15 +344,76 @@ export const applyFix = (file: ProjectFile, key: string): { file: ProjectFile; d
 export const addToEditorDictionary = (file: ProjectFile, word: string): ProjectFile => {
   const clean = word.trim();
   if (!clean) return file;
-  const profile = editorProfileOf(file);
-  if (profile.dictionary.some((one) => one.toLowerCase() === clean.toLowerCase())) return file;
-  const next = setEditorProfile(file, { dictionary: [...profile.dictionary, clean] });
+  const allowed = file.settings.editorAllowedWords ?? [];
+  const next = allowed.some((one) => one.toLowerCase() === clean.toLowerCase())
+    ? file
+    : { ...file, settings: { ...file.settings, editorAllowedWords: [...allowed, clean] }, project: { ...file.project, updatedAt: nowIso() } };
   const review = editReviewOf(next);
   return withReview(next, {
     ...review,
     findings: review.findings.filter((one) => !(one.category === 'spelling' && one.quote.toLowerCase() === clean.toLowerCase())),
   });
 };
+
+/** Stop checking a rule in this project (the Editors' *×* on a rule); its findings leave the review. */
+export const switchOffRule = (file: ProjectFile, ruleId: string): ProjectFile => {
+  const ignored = file.settings.editorIgnoredRules ?? [];
+  const id = ruleId.replace(/^daily-/, '');
+  const next = ignored.includes(id) ? file : { ...file, settings: { ...file.settings, editorIgnoredRules: [...ignored, id] } };
+  const review = editReviewOf(next);
+  return withReview(next, { ...review, findings: review.findings.filter((one) => one.ruleId.replace(/^daily-/, '') !== id) });
+};
+
+// --------------------------------------------------------------- the Daily Editor's rules
+
+/**
+ * **The Daily Editor's rules, in the same review** (spec: *a refinement of the
+ * existing editor, not a replacement*). Its checks this module does not make
+ * itself — filter words, hedged action, camera directions, common
+ * misspellings, *should of*, a script's shape — become findings here, so the
+ * writer works through one list. The ones both have (doubled spaces, passive
+ * voice, long sentences) come once, from the rules above.
+ */
+const DAILY: Partial<Record<FindingKind, { category: EditCategory; severity: EditSeverity }>> = {
+  repeated_word: { category: 'grammar', severity: 'error' },
+  trailing_space: { category: 'punctuation', severity: 'error' },
+  unbalanced_bracket: { category: 'punctuation', severity: 'error' },
+  straight_quote: { category: 'punctuation', severity: 'info' },
+  spaced_hyphen: { category: 'punctuation', severity: 'error' },
+  adverb_pileup: { category: 'verbs', severity: 'concern' },
+  filter_word: { category: 'style', severity: 'info' },
+  hedged_action: { category: 'clarity', severity: 'info' },
+  camera_direction: { category: 'format', severity: 'concern' },
+  unknown_character_cue: { category: 'format', severity: 'concern' },
+  misspelling: { category: 'spelling', severity: 'error' },
+  modal_of: { category: 'grammar', severity: 'error' },
+  orphan_dialogue: { category: 'format', severity: 'error' },
+  cue_without_speech: { category: 'format', severity: 'error' },
+  slug_without_time: { category: 'format', severity: 'concern' },
+  long_parenthetical: { category: 'format', severity: 'concern' },
+};
+
+export const dailyHits = (file: ProjectFile, scope: EditScope): OutsideHit[] =>
+  runDailyEditor(file, {
+    includeStyle: true,
+    ...(scope.kind === 'unit' ? { unitId: scope.id as StructuralUnitId } : {}),
+    ...(scope.kind === 'beat' ? { beatId: scope.id as BeatId } : {}),
+  }).flatMap((finding) => {
+    const placed = DAILY[finding.kind];
+    if (!placed) return [];
+    return [{
+      beatId: finding.beatId as string,
+      elementId: finding.elementId as string,
+      ruleId: `daily-${finding.kind}`,
+      ...placed,
+      confidence: finding.severity === 'error' ? 'high' : 'medium',
+      start: finding.start,
+      end: finding.end,
+      message: finding.message,
+      rule: FINDING_LABELS[finding.kind],
+      ...(finding.replacement !== undefined && placed.severity === 'error' ? { fix: finding.replacement } : {}),
+    } satisfies OutsideHit];
+  });
 
 // --------------------------------------------------------------- the queue
 

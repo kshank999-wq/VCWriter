@@ -353,6 +353,12 @@
     "url": "https://github.com/planttheidea/fast-equals#readme"
   },
   {
+    "name": "fflate",
+    "version": "0.8.3",
+    "licence": "MIT",
+    "url": "https://101arrowz.github.io/fflate"
+  },
+  {
     "name": "global-agent",
     "version": "3.0.0",
     "licence": "BSD-3-Clause",
@@ -369,6 +375,12 @@
     "version": "1.2.0",
     "licence": "MIT",
     "url": "https://github.com/ljharb/gopd#readme"
+  },
+  {
+    "name": "harper.js",
+    "version": "3.2.0",
+    "licence": "Apache-2.0",
+    "url": "https://writewithharper.com"
   },
   {
     "name": "has-property-descriptors",

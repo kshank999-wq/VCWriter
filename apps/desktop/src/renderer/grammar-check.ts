@@ -26,25 +26,29 @@ import {
  */
 
 type Linter = import('harper.js').LocalLinter;
-let linter: Promise<Linter> | null = null;
+type Dialect = 'american' | 'british' | 'canadian' | 'australian';
+const linters = new Map<Dialect, Promise<Linter>>();
 
 /** Rules the Edit Check already has, or that are a house style rather than an error. */
 const OFF = ['LongSentences', 'Spaces', 'UnclosedQuotes', 'OxfordComma', 'NoOxfordComma', 'UseEllipsisCharacter'];
 
-const harper = (): Promise<Linter> => {
-  linter ??= (async () => {
-    const [{ LocalLinter }, { binaryInlined }] = await Promise.all([import('harper.js'), import('harper.js/binaryInlined')]);
-    const made = new LocalLinter({ binary: binaryInlined });
-    await made.setup();
-    const config = await made.getLintConfig();
+/** One Harper per spelling dialect, made the first time it is wanted. */
+const harper = (dialect: Dialect = 'american'): Promise<Linter> => {
+  const made = linters.get(dialect);
+  if (made) return made;
+  const making = (async () => {
+    const [{ LocalLinter, Dialect: Dialects }, { binaryInlined }] = await Promise.all([import('harper.js'), import('harper.js/binaryInlined')]);
+    const choice = { american: Dialects.American, british: Dialects.British, canadian: Dialects.Canadian, australian: Dialects.Australian }[dialect];
+    const one = new LocalLinter({ binary: binaryInlined, dialect: choice });
+    await one.setup();
+    const config = await one.getLintConfig();
     for (const rule of OFF) if (rule in config) config[rule] = false;
-    await made.setLintConfig(config);
-    return made;
+    await one.setLintConfig(config);
+    return one;
   })();
-  linter.catch(() => {
-    linter = null;
-  });
-  return linter;
+  making.catch(() => linters.delete(dialect));
+  linters.set(dialect, making);
+  return making;
 };
 
 /** Harper's kinds of note, as the Edit Check's categories. */
@@ -105,7 +109,7 @@ export const grammarHits = async (
   options: { onProgress?(progress: GrammarProgress): void; signal?: AbortSignal; words?: readonly string[] } = {},
 ): Promise<OutsideHit[]> => {
   const lines = linesInScope(file, scope).filter((line) => line.text.trim() && !SKIP_TYPES.has(line.type));
-  const lint = await harper();
+  const lint = await harper(editorProfileOf(file).dialect);
   const words = [
     ...editorProfileOf(file).dictionary,
     ...(options.words ?? []),
@@ -129,17 +133,35 @@ export const grammarHits = async (
       // Grammar is the character's in speech: only spelling and doubled words there.
       if (!mechanical && !inNarration(span.start, span.end)) continue;
       const suggestion = one.suggestions()[0];
-      const fix = suggestion ? suggestion.get_replacement_text() : undefined;
+      let fix = suggestion ? suggestion.get_replacement_text() : undefined;
+      let placedHere = where;
+      let message = one.message().replace(/`/g, '“').replace(/“([^“]*)“/g, '“$1”');
+      const word = line.text.slice(span.start, span.end);
+      // **A capitalised word the dictionary lacks is most often a name** —
+      // Pirrip, Gargery — and offering *Cirri* in its place would be wrong:
+      // it is asked about, never corrected.
+      if (where.category === 'spelling' && /^[A-Z]/.test(word)) {
+        fix = undefined;
+        placedHere = { category: 'spelling', severity: 'concern', confidence: 'low' };
+        message = `“${word}” is not in the dictionary — a name? If it is right, add it to the project dictionary.`;
+      }
+      // **In speech, a spelling is often the character's voice** (*wittles*,
+      // *partickler*): asked about, with the fix still offered, never called an error.
+      else if (where.category === 'spelling' && !inNarration(span.start, span.end)) {
+        placedHere = { category: 'spelling', severity: 'concern', confidence: 'low' };
+        message = `${message} In speech, this may be the character’s own way of saying it — mark it intentional if so.`;
+        fix = undefined;
+      }
       out.push({
         beatId: line.beatId,
         elementId: line.elementId,
         ruleId: `harper-${kind.toLowerCase()}`,
-        ...where,
+        ...placedHere,
         start: span.start,
         end: span.end,
-        message: one.message().replace(/`/g, '“').replace(/“([^“]*)“/g, '“$1”'),
-        rule: RULE_TEXT[where.category] ?? 'A note from the grammar checker.',
-        ...(fix !== undefined && where.severity === 'error' && isNarrowFix(fix) ? { fix } : {}),
+        message,
+        rule: RULE_TEXT[placedHere.category] ?? 'A note from the grammar checker.',
+        ...(fix !== undefined && placedHere.severity === 'error' && isNarrowFix(fix) ? { fix } : {}),
       });
     }
     if (index % 10 === 9) {
@@ -154,5 +176,5 @@ export const grammarHits = async (
 
 /** Start Harper early, so the first check does not wait for it. */
 export const warmGrammar = (): void => {
-  void harper().catch(() => undefined);
+  void harper('american').catch(() => undefined);
 };

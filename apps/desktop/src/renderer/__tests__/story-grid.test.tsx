@@ -61,7 +61,7 @@ describe('the Story Grid tab', () => {
     // Scene polarity joined the page (addendum 13); the index is a book's only,
     // and this fixture is a screenplay.
     expect(tabs.map((tab) => tab.textContent)).toEqual([
-      'Daily (0)',
+      'Edit Check',
       'Final (2)',
       'Story Grid (0/0)',
       'Polarity (0 flat)',
@@ -358,7 +358,7 @@ describe('printing the grid', () => {
   it('does not offer them on the other two editors', () => {
     bridge();
     panel([]);
-    fireEvent.click(screen.getByRole('tab', { name: /Daily/i }));
+    fireEvent.click(screen.getByRole('tab', { name: /Edit Check/i }));
     expect(screen.queryByRole('button', { name: 'Print…' })).toBeNull();
   });
 });

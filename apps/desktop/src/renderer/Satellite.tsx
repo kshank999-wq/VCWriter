@@ -501,6 +501,7 @@ function Section({
         <EditorPanel
           file={file}
           currentUnitId={selectedUnitId ?? selectedBeat?.unitId ?? null}
+          currentBeatId={selectedBeat?.id ?? null}
           onUpdate={onUpdate}
           // There is no Write page over here to send somebody to, so a finding
           // opens the beat it is about in a window of its own — which is the

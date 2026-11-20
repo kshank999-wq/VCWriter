@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { addCharacter, createProjectFile, updateBeat, type ProjectFile } from '@vcwriter/domain';
+import { addCharacter, createProjectFile, editReviewOf, runEditCheck, updateBeat, type ProjectFile } from '@vcwriter/domain';
 import { EditorPanel } from '../components/EditorPanel';
 import { ReadBackPanel } from '../components/ReadBackPanel';
 
@@ -100,100 +100,66 @@ const scriptWithMany = (): ProjectFile => {
   });
 };
 
-describe('daily editor panel', () => {
-  it('shows a mechanical finding and fixes it in place', () => {
-    render(<EditorHarness initial={scriptWithProblems()} />);
-
-    expect(screen.getByText(/"the" is repeated/i)).toBeDefined();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Fix' }));
-
-    expect(screen.queryByText(/"the" is repeated/i)).toBeNull();
+/**
+ * The Editors' first tab is the Edit Check now (VC Writer Editor Refinement
+ * spec v1.0), with the Daily Editor's rules in its review. What the Daily tab
+ * did, it still does — save fixing everything at once, which the spec rules
+ * out: every fix is the writer's, one at a time.
+ */
+describe('the Edit Check tab', () => {
+  it('shows a mechanical finding and fixes it in place, once accepted', () => {
+    let latest = runEditCheck(scriptWithProblems());
+    render(<EditorHarness initial={latest} onFile={(file) => (latest = file)} />);
+    const repeated = screen.getAllByRole('button').find((one) => /repeated/i.test(one.textContent ?? ''))!;
+    fireEvent.click(repeated);
+    fireEvent.click(screen.getByRole('button', { name: /Accept fix/ }));
+    expect(latest.beats[0]!.manuscript.elements.some((one) => /the the/i.test(one.text))).toBe(false);
   });
 
-  it('keeps a dismissed finding dismissed when the pass re-runs', () => {
-    render(<EditorHarness initial={scriptWithProblems()} />);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Leave it' }));
-    expect(screen.queryByText(/"the" is repeated/i)).toBeNull();
-
-    // Toggling an option re-runs the pass; the dismissal must survive it.
-    fireEvent.click(screen.getByLabelText(/include style notes/i));
-    fireEvent.click(screen.getByLabelText(/include style notes/i));
-    expect(screen.queryByText(/"the" is repeated/i)).toBeNull();
+  it('keeps a dismissed finding dismissed when the check runs again', () => {
+    let latest = runEditCheck(scriptWithMany());
+    render(<EditorHarness initial={latest} onFile={(file) => (latest = file)} />);
+    const before = editReviewOf(latest).findings.length;
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+    const again = editReviewOf(runEditCheck(latest));
+    expect(again.findings).toHaveLength(before);
+    expect(Object.values(again.decisions).map((one) => one.status)).toEqual(['dismissed']);
   });
 
-  it('lists the rules with what each one found, worst first', () => {
-    render(<EditorHarness initial={scriptWithMany()} />);
-
-    const rules = [...document.querySelectorAll('.rule-row')].map((node) => node.textContent);
-    expect(rules[0]).toContain('Everything');
-    expect(rules.join(' ')).toContain('A space before punctuation');
-    expect(rules.join(' ')).toContain('“of” where “have” belongs');
-  });
-
-  it('works through one rule at a time, and fixes every one of them at once', () => {
-    let latest = scriptWithMany();
-    render(<EditorHarness initial={scriptWithMany()} onFile={(file) => (latest = file)} />);
-
-    // Choosing a rule shows only that rule's findings.
-    fireEvent.click(screen.getByText('A space before punctuation'));
-    expect(document.querySelectorAll('.finding')).toHaveLength(3);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Fix all 3' }));
-    expect(latest.beats[0]!.manuscript.elements[0]!.text).toBe('She climbs, slowly, then stops, breathing.');
-    // The other rule's finding is untouched.
-    expect(latest.beats[0]!.manuscript.elements[1]!.text).toBe('She could of stayed.');
-  });
-
-  it('shows the offending text in the line it is in', () => {
-    render(<EditorHarness initial={scriptWithMany()} />);
-    const marked = [...document.querySelectorAll('.finding-excerpt mark')].map((node) => node.textContent);
-    expect(marked.length).toBeGreaterThan(0);
-    expect(document.querySelector('.finding-excerpt')?.textContent).toContain('She climbs');
+  it('carries the Daily Editor’s rules, and offers no way to fix them all at once', () => {
+    render(<EditorHarness initial={runEditCheck(scriptWithMany())} />);
+    expect(screen.getAllByText(/should of|“of” where “have”|could of/i).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: /Fix all/ })).toBeNull();
   });
 
   it('goes to the beat a finding is in', () => {
     const went: string[] = [];
-    render(<EditorHarness initial={scriptWithMany()} onGoTo={(beatId) => went.push(beatId)} />);
-
-    fireEvent.click(document.querySelector('.finding-where') as HTMLElement);
+    render(<EditorHarness initial={runEditCheck(scriptWithMany())} onGoTo={(beatId) => went.push(beatId)} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Go to manuscript' }));
     expect(went).toHaveLength(1);
   });
 
   it('switches a rule off for the project, and back on', () => {
-    let latest = scriptWithMany();
-    render(<EditorHarness initial={scriptWithMany()} onFile={(file) => (latest = file)} />);
-
-    fireEvent.click(screen.getByLabelText('Stop checking: “of” where “have” belongs'));
+    let latest = runEditCheck(scriptWithMany());
+    render(<EditorHarness initial={latest} onFile={(file) => (latest = file)} />);
+    const modal = screen.getAllByRole('button').find((one) => /could of/i.test(one.textContent ?? ''))!;
+    fireEvent.click(modal);
+    fireEvent.click(screen.getByRole('button', { name: 'Stop checking this rule' }));
     expect(latest.settings.editorIgnoredRules).toContain('modal_of');
-    expect(screen.queryByText('“of” where “have” belongs')).toBeNull();
-
-    // And it can be put back, from the list of what is switched off.
+    expect(editReviewOf(latest).findings.some((one) => one.ruleId === 'daily-modal_of')).toBe(false);
     fireEvent.click(screen.getByText('1 switched off'));
     fireEvent.click(screen.getByRole('button', { name: /“of” where “have” belongs/ }));
     expect(latest.settings.editorIgnoredRules).toEqual([]);
   });
 
-  it('marks opinions as style rather than errors', () => {
-    // An action line whose only problem is a matter of taste.
+  it('marks opinions as possible concerns or notes, with nothing to accept', () => {
     const base = createProjectFile({ title: 'Lighthouse', format: 'screenplay' });
     const styled = updateBeat(base, base.beats[0]!.id, {
-      manuscript: {
-        elements: [
-          {
-            id: 'e3333333-3333-4333-8333-333333333333' as never,
-            type: 'action',
-            text: 'He begins to walk away.',
-            characterId: null,
-            attributes: {},
-          },
-        ],
-      },
+      manuscript: { elements: [{ id: 'e3333333-3333-4333-8333-333333333333' as never, type: 'action', text: 'He begins to walk away.', characterId: null, attributes: {} }] },
     });
-    render(<EditorHarness initial={styled} />);
-    expect(screen.getByText('style')).toBeDefined();
-    expect(screen.queryByRole('button', { name: 'Fix' })).toBeNull();
+    render(<EditorHarness initial={runEditCheck(styled)} />);
+    expect(document.querySelector('.edit-check-weight')?.textContent).toMatch(/Possible concern|Note/);
+    expect(screen.queryByRole('button', { name: /Accept fix/ })).toBeNull();
   });
 });
 
