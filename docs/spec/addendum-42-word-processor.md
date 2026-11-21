@@ -1049,3 +1049,19 @@ alignments, line and paragraph spacing), **Styles** (a gallery showing each
 style in itself, with every style under its arrow), **Editing** (Find,
 Replace) and **Voice** (Dictate). Menus drop over the page. Shading and
 borders are left off until the page can do them (§14).
+
+## Every tab with pictures (21 November 2026)
+
+From Ken: *clean up the document heading bars and make them more stylish than
+the ones from Word, but with all the same functionality… make the icons
+different. Also add standard icons to the file menu. Also the view menu.*
+
+File, Insert, Layout, References, Review and View now follow Word's layout:
+big buttons with the picture over the name where Word has them, small ones
+stacked three to a column, and menus under an arrow (Table and its tools,
+Shapes and their fill, Page Number, Link, Symbol; Margins with presets and
+your own, Orientation, Size, Breaks; Accept and Reject with *all*; Zoom).
+The View tab's switches are tick boxes, as Word's are. The pictures are VC
+Writer's own (`BIG` in `document/icons.tsx`): two-tone line drawings over a
+soft blue panel, not copies of Word's. Nothing that worked before was taken
+away.

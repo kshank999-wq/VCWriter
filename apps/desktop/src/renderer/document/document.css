@@ -1719,3 +1719,115 @@
 .wp-group-tools:has(.wp-gallery) {
   max-width: none;
 }
+
+/* The two-tone icons: a line drawing over a soft accent panel. */
+.wp-duo .wp-tint {
+  fill: var(--wp-tint, color-mix(in srgb, var(--gold, #c9a45c) 28%, transparent));
+}
+
+.workspace.wp-mode .wp-duo .wp-tint {
+  fill: #c6dafa;
+}
+
+.workspace.wp-mode .wp-duo {
+  color: #24324a;
+}
+
+.workspace.wp-mode .wp-tool.active .wp-duo .wp-tint,
+.workspace.wp-mode .wp-tool:hover .wp-duo .wp-tint {
+  fill: #a9c6f5;
+}
+
+.wp-tool.big .wp-caption {
+  max-width: 64px;
+  text-align: center;
+  white-space: normal;
+}
+
+.wp-tool.big {
+  min-width: 56px;
+}
+
+.wp-hundred {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 26px;
+  border-radius: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #fff;
+  background: linear-gradient(135deg, #3b7be0, #1f5cc4);
+}
+
+/* The View tab's ticks, as Word draws them. */
+.wp-tick {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 24px;
+  padding: 0 6px;
+  font-size: 12.5px;
+  border-radius: 5px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.wp-tick:hover {
+  background: var(--hover, rgba(255, 255, 255, 0.06));
+}
+
+.workspace.wp-mode .wp-tick {
+  color: #2b2b2b;
+}
+
+.workspace.wp-mode .wp-tick:hover {
+  background: #edf1f7;
+}
+
+.wp-tick input {
+  pointer-events: none;
+  margin: 0;
+  accent-color: #1f5cc4;
+}
+
+.wp-stack .wp-ribbon-note,
+.wp-stack .wp-count {
+  font-size: 11.5px;
+  padding: 0 6px;
+  line-height: 20px;
+}
+
+.wp-margin-fields {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 6px 10px;
+  padding: 4px 10px 6px;
+}
+
+.wp-menu .wp-inline-form {
+  display: flex;
+  gap: 6px;
+  padding: 4px;
+}
+
+.wp-menu .wp-inline-form input {
+  width: 240px;
+}
+
+.wp-menu .wp-shapes,
+.wp-menu .wp-symbols {
+  display: grid;
+  grid-template-columns: repeat(8, auto);
+  gap: 2px;
+  max-width: 320px;
+}
+
+.wp-stack .wp-drop .wp-drop-arrow {
+  justify-content: flex-start;
+  height: 24px;
+  gap: 5px;
+  padding: 0 6px;
+}

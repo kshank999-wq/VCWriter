@@ -76,10 +76,12 @@ describe('headers, footers and page numbers', () => {
   it('puts page numbers where the gallery says, and takes them out again', () => {
     open();
     tab('Insert');
-    fireEvent.change(screen.getByLabelText('Page numbers'), { target: { value: 'bottom-right-of' } });
+    press('Page numbers');
+    fireEvent.mouseDown(screen.getByRole('menuitem', { name: 'Bottom of page, right: Page 1 of 3' }));
     expect(doc().headerFooter.footer.right).toBe('Page {page} of {pages}');
     expect(within(screen.getByLabelText('Footer')).getByText('Page 1 of 1')).toBeTruthy();
-    fireEvent.change(screen.getByLabelText('Page numbers'), { target: { value: 'none' } });
+    press('Page numbers');
+    fireEvent.mouseDown(screen.getByRole('menuitem', { name: 'None' }));
     expect(doc().headerFooter.footer.right).toBe('');
     expect(screen.queryByLabelText('Footer')).toBeNull();
   });

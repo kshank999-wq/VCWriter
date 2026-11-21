@@ -84,7 +84,7 @@ describe('citing in a document', () => {
     expect(keysNow()).toEqual([citation!.key]);
     expect(editorOf().getText()).toBe('Tides follow the moon.');
     expect(document.querySelector('sup.wp-cite')!.getAttribute('data-marker')).toBe('1');
-    expect(screen.getByText(/1 citation · 1 source in the library/)).toBeTruthy();
+    expect(screen.getByText(/1 citation · 1 source/)).toBeTruthy();
   });
 
   it('numbers by place, opens on Ctrl+Shift+C, and puts a bibliography that fills itself where the cursor is', () => {
