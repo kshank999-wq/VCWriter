@@ -10,6 +10,7 @@ until these existed.
 | --- | --- | --- | --- |
 | `VC-Writer-Horizontal-Transparent.png` | 1983 × 793 | 1841 × 571 at (72, 72) | site header, email header |
 | `VC-Writer-Stacked-Transparent.png` | 1254 × 1254 | 1235 × 966 at (10, 118) | **the main logo**: landing hero, desktop welcome screen |
+| `VC-Writers-Room-1024x1024.png` | 1024 × 1024 | full bleed | the Writers Room page (`/rooms`), as `apps/web/public/writers-room-logo.webp` at 640 px. VC Writer's square app icon with VC WRITERS ROOM set on the plaque in Josefin Sans 700, in the original lettering's gold; the same mark vc-software.com shows for the room |
 
 Both are RGBA with genuine transparency — all four corners measure alpha 0,
 and a little over half of each canvas is fully transparent.

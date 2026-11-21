@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { ROLE_NAMES } from '@vcwriter/domain';
 import { currentUser } from '@/lib/supabase';
@@ -7,6 +8,23 @@ import { StartRoom } from './start-room';
 
 export const metadata: Metadata = { title: 'Writers Room' };
 export const dynamic = 'force-dynamic';
+
+/**
+ * The room's heading, with its mark beside it as the home page has VC
+ * Writer's: VC Writer's artwork with VC WRITERS ROOM on the plaque
+ * (brand/logo/VC-Writers-Room-1024x1024.png).
+ */
+function RoomsHero({ children }: { children: ReactNode }) {
+  return (
+    <div className="hero hero-split">
+      <div>
+        <h1>Writers Room</h1>
+        {children}
+      </div>
+      <img src="/writers-room-logo.webp" width={640} height={640} alt="VC Writers Room" className="emblem" fetchPriority="high" />
+    </div>
+  );
+}
 
 /**
  * The front door (addendum 07 §5).
@@ -20,15 +38,12 @@ export default async function RoomsPage() {
   const user = await currentUser();
   if (!user) {
     return (
-      <>
-        <div className="hero">
-          <h1>Writers Room</h1>
-          <p>Sign in to see the rooms you are in.</p>
-        </div>
+      <RoomsHero>
+        <p>Sign in to see the rooms you are in.</p>
         <Link href="/signin?next=%2Frooms" className="button">
           Sign in
         </Link>
-      </>
+      </RoomsHero>
     );
   }
 
@@ -36,10 +51,9 @@ export default async function RoomsPage() {
 
   return (
     <>
-      <div className="hero">
-        <h1>Writers Room</h1>
+      <RoomsHero>
         <p>{user.email}</p>
-      </div>
+      </RoomsHero>
 
       <section>
         <h2>Your rooms</h2>
