@@ -1,7 +1,8 @@
-import { Extension, Mark, Node, mergeAttributes } from '@tiptap/core';
+import { Extension, InputRule, Mark, Node, mergeAttributes } from '@tiptap/core';
+import { readPreference } from '../use-split';
 import type { Node as PmNode } from '@tiptap/pm/model';
 import { Plugin, PluginKey, TextSelection, type EditorState, type Transaction } from '@tiptap/pm/state';
-import { headingNumbers, type DocNode, type HeadingNumbering } from '@vcwriter/domain';
+import { autocorrectWord, headingNumbers, type DocNode, type HeadingNumbering } from '@vcwriter/domain';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import StarterKit from '@tiptap/starter-kit';
 import { DeletionMark, InsertionMark, TrackChanges } from './track-changes';
@@ -1097,6 +1098,36 @@ export const ListLevels = Extension.create({
   },
 });
 
+/**
+ * **AutoCorrect in a document** (from Ken, 21 November): the word just
+ * finished, put right where it is a common slip — the same list as the
+ * manuscript's (`autocorrectWord`). An input rule, so Backspace straight after
+ * takes it back, as Word's does; off in Preferences or on Review's Proofing.
+ */
+export const AutoCorrect = Extension.create({
+  name: 'autoCorrect',
+  addInputRules() {
+    return [
+      new InputRule({
+        find: /([\p{L}]+)([\s.,;:!?)"”’\]])$/u,
+        handler: ({ state, range, match }) => {
+          if (!readPreference('autocorrect', true)) return null;
+          const word = match[1] ?? '';
+          const end = match[2] ?? '';
+          const $from = state.doc.resolve(range.from);
+          const before = range.from > $from.start() ? state.doc.textBetween(range.from - 1, range.from) : '';
+          if (before && !/[\s("“‘[—–-]/.test(before)) return null;
+          if (word === 'i' && end === '.') return null;
+          const fixed = autocorrectWord(word);
+          if (!fixed || fixed === word) return null;
+          state.tr.insertText(fixed + end, range.from, range.to);
+          return undefined;
+        },
+      }),
+    ];
+  },
+});
+
 /** Everything the document editor is built from. */
 export const documentExtensions = () => [
   StarterKit.configure({
@@ -1114,6 +1145,7 @@ export const documentExtensions = () => [
   Placeholder.configure({ placeholder: 'Start typing…' }),
   BlockFormat,
   ListLevels,
+  AutoCorrect,
   PageBreak,
   Search,
   ExtractMark,

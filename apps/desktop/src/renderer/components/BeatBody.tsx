@@ -1,6 +1,7 @@
 import { offsetAtPoint, replaceRange, wordAt } from '../writing-edit';
 import { wordEntries } from './TextMenu';
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { readPreference } from '../use-split';
 import { createPortal } from 'react-dom';
 import { WritingToolbar } from './WritingToolbar';
 import { ContextMenu, type MenuEntry } from './ContextMenu';
@@ -80,6 +81,7 @@ import {
   subHeadingsUnder,
   toggleInline,
   splitInlineAt,
+  autocorrectAt,
   lineTypeOf,
   setByWriter,
   withLineType,
@@ -972,6 +974,9 @@ export function BeatBody({
     if (input) setSelection({ id: element.id, start: input.selectionStart, end: input.selectionEnd });
   };
 
+  /** The last AutoCorrect, so Backspace straight after can take it back. */
+  const corrected = useRef<{ id: ManuscriptElementId; text: string; caret: number; from: number; to: number; was: string } | null>(null);
+
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>, element: ManuscriptElement, index: number) => {
     const input = event.currentTarget;
     const empty = element.text.trim().length === 0;
@@ -1009,6 +1014,25 @@ export function BeatBody({
     }
 
     if (readOnly) return;
+
+    // Backspace straight after an AutoCorrect takes it back, as Word's does.
+    const fix = corrected.current;
+    corrected.current = null;
+    if (
+      event.key === 'Backspace' &&
+      fix &&
+      fix.id === element.id &&
+      input.selectionStart === fix.caret &&
+      input.selectionEnd === fix.caret &&
+      element.text === fix.text
+    ) {
+      event.preventDefault();
+      const back = element.text.slice(0, fix.from) + fix.was + element.text.slice(fix.to);
+      const caret = fix.caret - (fix.to - fix.from) + fix.was.length;
+      updateElement(element.id, { text: back });
+      setSelection({ id: element.id, start: caret, end: caret });
+      return;
+    }
 
     // Return continues what you are doing.
     if (event.key === 'Enter' && !event.shiftKey) {
@@ -1295,7 +1319,25 @@ export function BeatBody({
                 if (element.type !== 'character' || element.text.trim().length === 0) return;
                 onUpdate((current) => notedCast(current));
               }}
-              onChange={(event) => writeText(element, event.target.value)}
+              onChange={(event) => {
+                const box = event.target;
+                /**
+                 * **AutoCorrect** (from Ken, 21 November: *correct common
+                 * words without asking — but this feature can be turned
+                 * off*): a slip put right as its word is finished. Typing
+                 * only, never a paste or dictation; Backspace straight after
+                 * takes it back. Off in Preferences.
+                 */
+                const typed = (event.nativeEvent as InputEvent).inputType === 'insertText';
+                const fixed = typed && box.selectionStart === box.selectionEnd && readPreference('autocorrect', true) ? autocorrectAt(box.value, box.selectionStart) : null;
+                if (fixed) {
+                  corrected.current = { id: element.id, ...fixed };
+                  writeText(element, fixed.text);
+                  setSelection({ id: element.id, start: fixed.caret, end: fixed.caret });
+                  return;
+                }
+                writeText(element, box.value);
+              }}
               // A click on a citation's marker opens it (spec §4: *click
               // marker … Edit Source or Change Source*). The marker is drawn
               // under the box, so the click lands in the box, inside the token.

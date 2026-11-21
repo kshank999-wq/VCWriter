@@ -99,6 +99,18 @@ const pressReturn = (node: HTMLElement) => {
 };
 
 describe('writing keyboard flow', () => {
+  it('puts a common slip right as its word is finished, and Backspace takes it back', () => {
+    render(<Harness initial={screenplayWithAction()} />);
+    const action = screen.getByDisplayValue('Rain hammers the glass.') as HTMLTextAreaElement;
+    const value = 'Rain hammers teh ';
+    fireEvent.input(action, { target: { value }, inputType: 'insertText', data: ' ' });
+    const box = () => document.querySelector('textarea') as HTMLTextAreaElement;
+    expect(box().value).toBe('Rain hammers the ');
+    box().setSelectionRange(17, 17);
+    fireEvent.keyDown(box(), { key: 'Backspace' });
+    expect(box().value).toBe('Rain hammers teh ');
+  });
+
   it('cuts a line in two when Return is pressed in the middle of it, as a word processor does', () => {
     render(<Harness initial={screenplayWithAction()} />);
     const action = screen.getByDisplayValue('Rain hammers the glass.') as HTMLTextAreaElement;

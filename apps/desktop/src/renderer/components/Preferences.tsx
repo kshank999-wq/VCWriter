@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { isProseFormat, nounsFor, type ProjectFormat } from '@vcwriter/domain';
 import { SCHEMES, type SchemeId } from '../themes';
+import { usePreference } from '../use-split';
 
 interface PreferencesProps {
   open: boolean;
@@ -36,6 +37,7 @@ export function Preferences({
   format = null,
 }: PreferencesProps) {
   const dialog = useRef<HTMLDialogElement>(null);
+  const [autocorrect, setAutocorrect] = usePreference('autocorrect', true);
 
   /**
    * **The projects folder** (addendum 34 §9, from Ken: *in the preferences,
@@ -128,6 +130,18 @@ export function Preferences({
             </button>
           ))}
         </div>
+      </section>
+
+      {/* **AutoCorrect, and the way to turn it off** (from Ken, 21 November:
+          *correct common words without asking — but this feature can be
+          turned off*). Read each time a word is finished, so this takes hold
+          at once, in every window. */}
+      <section>
+        <h3>Spelling</h3>
+        <label className="toggle">
+          <input type="checkbox" checked={autocorrect} onChange={(event) => setAutocorrect(event.target.checked)} />
+          AutoCorrect: put common misspellings right as I type (teh → the, dont → don’t). Backspace straight after undoes one.
+        </label>
       </section>
 
       <section>

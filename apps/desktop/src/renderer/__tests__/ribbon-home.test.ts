@@ -74,3 +74,29 @@ describe('outline lists, as Word has them', () => {
     expect(e.getHTML()).not.toContain('data-bare');
   });
 });
+
+describe('AutoCorrect in a document', () => {
+  const type = (e: Editor, text: string) => {
+    for (const ch of text) {
+      const { from, to } = e.state.selection;
+      const handled = e.view.someProp('handleTextInput', (f) => f(e.view, from, to, ch, () => e.state.tr.insertText(ch, from, to)));
+      if (!handled) e.view.dispatch(e.state.tr.insertText(ch, from, to));
+    }
+  };
+
+  it('puts a common slip right as its word is finished, and leaves real words alone', () => {
+    localStorage.removeItem('vcwriter.autocorrect');
+    const e = make('<p></p>');
+    e.commands.focus();
+    type(e, 'teh window dont leak ');
+    expect(e.state.doc.textContent).toBe("the window don't leak ");
+  });
+
+  it('does nothing when switched off', () => {
+    localStorage.setItem('vcwriter.autocorrect', 'false');
+    const e = make('<p></p>');
+    type(e, 'teh ');
+    expect(e.state.doc.textContent).toBe('teh ');
+    localStorage.removeItem('vcwriter.autocorrect');
+  });
+});

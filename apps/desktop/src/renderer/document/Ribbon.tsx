@@ -5,6 +5,7 @@ import { useFontLibrary } from './fonts';
 import { NO_FILL, SHAPES, SHAPE_FILLS, insertShape, shapeSvg, type ShapeId } from './shapes';
 import type { DocumentSpeech } from './speech';
 import { BIG, Chevron, HighlightIcon, ICONS, InkIcon } from './icons';
+import { usePreference } from '../use-split';
 
 /**
  * **The ribbon** (addendum 42 §3): Word's tabs of grouped controls, over the
@@ -1311,6 +1312,7 @@ function ReferencesTab({ references }: TabProps) {
 
 function ReviewTab({ view, onView, words, characters, speech, comments, changes }: TabProps) {
   const none = changes.count === 0;
+  const [autocorrect, setAutocorrect] = usePreference('autocorrect', true);
   return (
     <>
       {/* Word's Review tab: comments first (addendum 42 §20). */}
@@ -1396,6 +1398,13 @@ function ReviewTab({ view, onView, words, characters, speech, comments, changes 
       </Group>
       <Group label="Proofing">
         <BigTool label="Spelling" title="Underline misspelled words as you type" icon={BIG.spelling} active={view.spelling} onPress={() => onView({ spelling: !view.spelling })} />
+        <BigTool
+          label="AutoCorrect"
+          title="Put common misspellings right as you type (teh → the). Backspace straight after undoes one. Also in Preferences."
+          icon={BIG.accept}
+          active={autocorrect}
+          onPress={() => setAutocorrect(!autocorrect)}
+        />
         <div className="wp-stack">
           <span className="wp-count">{words.toLocaleString()} words</span>
           <span className="wp-count muted">{characters.toLocaleString()} characters</span>

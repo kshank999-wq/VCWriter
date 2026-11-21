@@ -88,3 +88,17 @@ offers **Continue review** or **Start writing**.
 The optional AI check; pacing advisories beyond scene-length and long-action
 rules; per-section overrides in the screen itself (the profile holds them);
 review reporting.
+
+## AutoCorrect (21 November 2026)
+
+From Ken: *the spell checker needs to automatically correct common words
+without asking — but this feature can be turned off.* When a word is finished
+(a space or punctuation typed after it), a common slip is put right where it
+stands: *teh* → *the*, *dont* → *don't*, *recieved* → *received*, a lone *i* →
+*I* (`autocorrect.ts`, about 300 slips). Only slips that are never words of
+their own are listed, so nothing a writer meant is changed; the rest is the
+spell checker's to underline. The writer's capitals carry over. Typing only —
+never a paste or dictation — and Backspace straight after takes a correction
+back, as Word's does. On by default; off in Preferences → Spelling, or with
+AutoCorrect on the document's Review tab. Works in the manuscript (every
+format) and in documents.

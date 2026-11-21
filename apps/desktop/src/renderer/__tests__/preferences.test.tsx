@@ -133,7 +133,7 @@ describe('preferences panel', () => {
     fireEvent.click(screen.getByRole('radio', { name: /Windows style/ }));
     expect(onScheme).toHaveBeenCalledWith('windows');
 
-    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.click(screen.getByRole('checkbox', { name: /white paper/ }));
     expect(onPaper).toHaveBeenCalledWith(false);
   });
 });
