@@ -235,7 +235,12 @@ export const outlineNumbers = (file: ProjectFile, outline: Outline): ReadonlyMap
   const numbers = new Map<string, string>();
   if (!numbersDivisions(file)) return numbers;
 
-  const numbered = (item: OutlineItem): boolean => item.kind === 'scene' || item.kind === 'beat';
+  // A row bound to a subsection whose heading is off is the section's own
+  // words or text run on (from Ken, 21 November): it takes no number, so the
+  // headed subsections after it count from 1.
+  const hidden = new Set(file.beats.filter((beat) => beat.headingShown === false).map((beat) => beat.id as string));
+  const numbered = (item: OutlineItem): boolean =>
+    item.kind === 'scene' || (item.kind === 'beat' && !(item.boundBeatId && hidden.has(item.boundBeatId as string)));
 
   const walk = (parentId: OutlineItem['parentId'], prefix: string): void => {
     let at = 0;

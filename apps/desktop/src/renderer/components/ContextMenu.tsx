@@ -179,6 +179,24 @@ export function ContextMenu({ x, y, label, entries, onClose }: ContextMenuProps)
         ),
       )}
     </div>,
-    document.body,
+    menuHost(),
   );
 }
+
+/**
+ * **Where the menu is drawn: in the open modal window, if there is one** (from
+ * Ken, 21 November: *the right click spell correction is not working*). A
+ * subsection's writing screen is a modal `<dialog>`, which the browser draws
+ * in its top layer, above everything in the page whatever its z-index. A menu
+ * drawn in the page's body opened *behind* it: the spelling suggestions and
+ * Add to Dictionary were there, out of sight under the writing. Drawn inside
+ * the top-most modal it stands over the writing, where the pointer is.
+ */
+const menuHost = (): HTMLElement => {
+  try {
+    const modals = Array.from(document.querySelectorAll('dialog[open]')).filter((one) => one.matches(':modal'));
+    return (modals[modals.length - 1] as HTMLElement | undefined) ?? document.body;
+  } catch {
+    return document.body;
+  }
+};

@@ -487,3 +487,13 @@ subsections, not beats.*
 - The writing screen names the section text by its section (*Section 1.1*,
   the name field renames the section) and says *Start writing this section*
   or *…this subsection*, never *beat*.
+
+**Fixes the same day.** The right-click menu (spelling, Add to Dictionary)
+opened *behind* the subsection writing screen, a modal window the browser
+draws above everything; it now opens inside whichever modal is open
+(`ContextMenu`'s `menuHost`). A section the track gave the outline went to the
+top of the outline, outside every chapter, so it numbered 3.3 or nothing; it
+now joins its own chapter, matched by link, then name, then order. A section's
+text never becomes an outline row, and a row whose subsection has its heading
+off takes no number. *Heading in the book* is a tick in the Inspector, and the
+*Heading on / off* switch on the page is always shown.

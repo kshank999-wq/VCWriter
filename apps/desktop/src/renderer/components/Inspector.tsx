@@ -154,6 +154,20 @@ function BeatSection({
           onChange={(event) => onUpdate((current) => updateBeat(current, beat.id, { title: event.target.value }))}
         />
       </label>
+      {/* **Its heading in the book, on or off** (from Ken, 21 November: *where
+          can I turn on and off the sub headings*). Off, its words run on as
+          paragraphs with no heading and no number; the first one in a
+          section, off, is the section's own text. */}
+      {isInstructional(file.project.format) ? (
+        <label className="toggle heading-toggle-field" title="Off: no heading and no number in the book; the words run on from what comes before">
+          <input
+            type="checkbox"
+            checked={beat.headingShown !== false}
+            onChange={(event) => onUpdate((current) => updateBeat(current, beat.id, { headingShown: event.target.checked }))}
+          />
+          Heading in the book
+        </label>
+      ) : null}
       <label className="field">
         Status
         <select

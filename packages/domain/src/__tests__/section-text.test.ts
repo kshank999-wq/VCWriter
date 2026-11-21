@@ -1,8 +1,11 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   addBeat,
   createProjectFile,
   isSectionText,
+  keepLinked,
+  unitsInStoryOrder,
   parseProjectFile,
   sectionTextOf,
   serializeProjectFile,
@@ -53,5 +56,30 @@ describe('a section’s own text', () => {
     expect(subs.sort()).toEqual(['1.1', '1.2']);
     // Asking again gives the same place.
     expect(writeSectionText(file, unit.id).beatId).toBe(made.beatId);
+  });
+});
+
+describe('the outline and a section’s text', () => {
+  const sample = () =>
+    parseProjectFile(JSON.parse(readFileSync(new URL('../../../../apps/desktop/src/renderer/samples/instructional.vcw', import.meta.url), 'utf8')));
+
+  it('keeps a section in its own chapter when the track gives the outline something new', () => {
+    const file = sample();
+    const unit = unitsInStoryOrder(file)[0]!;
+    const linked = keepLinked(file, writeSectionText(file, unit.id).file);
+    const numbers = structureNumbers(linked);
+    // Chapter 1's section stays in chapter 1, chapter 2's in chapter 2 (they were 3.3 and 3.4).
+    expect(numbers.units.get(unit.id as string)?.startsWith('1.')).toBe(true);
+    expect(numbers.units.get(unitsInStoryOrder(linked)[1]!.id as string)?.startsWith('2.')).toBe(true);
+  });
+
+  it('gives the section text no row of its own, and its subsections count from 1', () => {
+    const file = sample();
+    const unit = unitsInStoryOrder(file)[0]!;
+    const made = writeSectionText(file, unit.id);
+    const linked = keepLinked(file, made.file);
+    expect(linked.outlines![0]!.items.some((row) => row.boundBeatId === made.beatId)).toBe(false);
+    const sub = linked.beats.find((one) => one.unitId === unit.id && one.id !== made.beatId)!;
+    expect(structureNumbers(linked).subs.get(sub.id as string)?.endsWith('.1')).toBe(true);
   });
 });

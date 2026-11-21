@@ -1,4 +1,5 @@
-import { initialOrderKeys } from './ordering.js';
+import { initialOrderKeys, sortByOrderKey } from './ordering.js';
+import { isSectionText } from './section-text.js';
 import { beatsForUnit, unitsInStoryOrder } from './selectors.js';
 import { divisionSpan } from './outline-binding.js';
 import { madeItem, outlineChildren, sectionRowOf, trackLevelOf } from './outline.js';
@@ -321,7 +322,10 @@ export const adoptScriptIntoOutline = (file: ProjectFile): ProjectFile => {
     );
   const seed = new Set(story.filter((unit) => !boundUnits.has(unit.id as string) && seeded(unit)).map((unit) => unit.id as string));
   const missingUnits = story.filter((unit) => !boundUnits.has(unit.id as string) && !seed.has(unit.id as string));
-  const missingBeats = file.beats.filter((beat) => !boundBeats.has(beat.id as string) && !seed.has(beat.unitId as string));
+  // A section's own text is the section row's words, not a row of its own (from Ken, 21 November).
+  const missingBeats = file.beats.filter(
+    (beat) => !boundBeats.has(beat.id as string) && !seed.has(beat.unitId as string) && !isSectionText(file, beat),
+  );
   if (missingUnits.length === 0 && missingBeats.length === 0) return file;
 
   const items = [...outline.items];
@@ -329,6 +333,25 @@ export const adoptScriptIntoOutline = (file: ProjectFile): ProjectFile => {
   for (const chapter of items.filter((row) => row.kind === 'chapter' && row.boundMarkerId)) {
     for (const unit of divisionSpan(file, chapter.boundMarkerId!)) chapterOfUnit.set(unit.id as string, chapter.id);
   }
+  /**
+   * **A section joins its own chapter, even where the chapter row is not
+   * linked to the track's chapter** (from Ken, 21 November: his 1.1 lost its
+   * number). It used to go to the top of the outline, after every chapter —
+   * so it numbered 3.3, or, sorted to the front, nothing at all. The track's
+   * chapters and the outline's are matched by name, then by order.
+   */
+  const chapterRows = sortByOrderKey(items.filter((row) => row.kind === 'chapter' && row.parentId === null));
+  const chapterMarkers = file.markers.filter((marker) => marker.kind === 'chapter');
+  const markerOrder = unitsInStoryOrder(file).flatMap((unit) => chapterMarkers.filter((marker) => marker.unitId === unit.id));
+  const plain = (text: string) => text.trim().toLowerCase().replace(/^chapter\s+\d+\s*[:.\-–—]?\s*/, '');
+  markerOrder.forEach((marker, index) => {
+    const row =
+      chapterRows.find((one) => one.boundMarkerId === marker.id) ??
+      chapterRows.find((one) => !one.boundMarkerId && plain(one.title) !== '' && plain(one.title) === plain(marker.title)) ??
+      (chapterRows.length === markerOrder.length ? chapterRows[index] : undefined);
+    if (!row) return;
+    for (const unit of divisionSpan(file, marker.id)) if (!chapterOfUnit.has(unit.id as string)) chapterOfUnit.set(unit.id as string, row.id);
+  });
   const sectionOfUnit = new Map<string, OutlineItemId>();
   for (const one of file.outlines ?? []) {
     for (const row of one.items) if (row.kind === 'scene' && row.boundUnitId) sectionOfUnit.set(row.boundUnitId as string, row.id);

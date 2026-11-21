@@ -22845,7 +22845,9 @@ dialog.research-folder-box > header {
 .book-heading-toggle {
   margin-left: auto;
   font-size: 10px;
-  opacity: 0;
+  /* Always there, quietly (from Ken, 21 November: *where can I turn on and
+     off the sub headings*): it used to appear only under the pointer. */
+  opacity: 0.55;
   font-family: var(--ui-font, inherit);
 }
 
