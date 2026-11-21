@@ -525,3 +525,10 @@ subsection heading is not drawn at all — no struck-through "Untitled
 subsection". The writing window's top bar has a **Heading** tick beside *In
 book*: on a section's own text it is the section's heading, on a subsection
 its own. A section's text never shows a subsection heading line.
+
+**How the writing window opens** (from Ken, 21 November, with the screen he
+wants). Nearly the whole window, the page in the middle and the notes folded
+to their tab down the right, every time a section or subsection is opened;
+the corner grip's size, once set, is kept. Mark up puts its tools in the
+toolbar row just under the top bar, where B, I and U stand while writing,
+rather than on the page.

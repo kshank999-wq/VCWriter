@@ -3108,8 +3108,10 @@ dialog.writer-dialog:has(.writer-body.comparing) {
 }
 
 dialog.writer-dialog {
-  width: min(1180px, calc(100vw - 40px));
-  height: min(880px, calc(100vh - 40px));
+  /* Nearly the whole window by default (from Ken, 21 November); the corner
+     grip sizes it otherwise, and that size is remembered. */
+  width: calc(100vw - 32px);
+  height: calc(100vh - 32px);
   max-width: none;
   max-height: none;
   padding: 0;
@@ -25142,4 +25144,15 @@ dialog.writer-dialog {
   width: auto;
   flex: none;
   margin: 0;
+}
+
+/* The markup tools in the writing screen's toolbar row, under the top bar,
+   where B, I and U stand while writing (from Ken, 21 November). */
+.writer-tools > .marking-tools {
+  position: static;
+  margin-right: auto;
+  padding: 6px 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
 }

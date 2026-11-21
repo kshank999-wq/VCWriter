@@ -199,7 +199,14 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
    * squeezing the page between them; now the button and the list's own fold
    * are one switch, remembered on this computer.
    */
-  const [planOpen, setPlanOpen] = usePreference('beatNotesOpen', true);
+  /**
+   * **The notes start folded, every time** (from Ken, 21 November, with the
+   * screen he wants: *I want the default to look like this when you open up a
+   * beat or a section to write it* — the page, and the notes a tab down the
+   * right). Opened with the tab or Notes, for this visit.
+   */
+  const [planOpen, setPlanOpen] = useState(false);
+  useEffect(() => setPlanOpen(false), [beat.id]);
   const planCount = beatNotes.filter((note) => !noteUsed(file, note)).length;
 
   /**
@@ -731,6 +738,7 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
           ) : null}
           {marking ? (
             <MarkingPage
+              toolsSlot={tools}
               manuscript={beat.manuscript}
               name={markerName}
               onName={setMarkerName}

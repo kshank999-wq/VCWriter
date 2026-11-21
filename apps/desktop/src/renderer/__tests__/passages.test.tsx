@@ -85,6 +85,8 @@ describe('passages of a subsection', () => {
 
   it('are listed beside the subsection’s page, to open, rename and add to', () => {
     render(<Writer initial={book()} title="Big boys" />);
+    // The notes start folded (from Ken, 21 November): opened as a writer opens them.
+    fireEvent.click(screen.getByRole('button', { name: /^Notes/ }));
     expect(screen.getByRole('heading', { name: 'Passages' })).toBeTruthy();
     fireEvent.change(screen.getByDisplayValue('Major houses'), { target: { value: 'The Big Five' } });
     expect(screen.getByTestId('passages').textContent).toBe('The Big Five|Major studios');

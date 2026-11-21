@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   MARK_COLOURS,
   MARK_KIND_NAMES,
@@ -170,8 +171,16 @@ export const MarkingPage = ({
   onName,
   onSave,
   onCancel,
+  toolsSlot = null,
 }: {
   manuscript: ManuscriptSegment;
+  /**
+   * **Where the tools go: just under the top bar** (from Ken, 21 November:
+   * *the markup tools come into the middle of the page. It should just be
+   * open something just under the top bar*) — the writing screen's toolbar
+   * row, where B, I and U stand while writing. Absent, they draw in place.
+   */
+  toolsSlot?: HTMLElement | null;
   /** Whoever is marking, remembered on this computer. */
   name: string;
   onName(name: string): void;
@@ -232,8 +241,7 @@ export const MarkingPage = ({
     window.getSelection()?.removeAllRanges();
   };
 
-  return (
-    <div className="marking">
+  const tools = (
       <div className="marking-tools" role="toolbar" aria-label="Markup tools">
         {TOOLS.map((kind) => (
           <button
@@ -266,6 +274,11 @@ export const MarkingPage = ({
           ))}
         </span>
       </div>
+  );
+
+  return (
+    <div className="marking">
+      {toolsSlot ? createPortal(tools, toolsSlot) : tools}
 
       {asking ? (
         <div className="marking-ask">
