@@ -1,9 +1,10 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Editor } from '@tiptap/core';
 import { PAGE_NUMBER_PRESETS, PAPER_SIZES, type DocumentPageSetup, type PageNumberPreset, type PaperSize } from '@vcwriter/domain';
 import { useFontLibrary } from './fonts';
 import { NO_FILL, SHAPES, SHAPE_FILLS, insertShape, shapeSvg, type ShapeId } from './shapes';
 import type { DocumentSpeech } from './speech';
+import { Chevron, HighlightIcon, ICONS, InkIcon } from './icons';
 
 /**
  * **The ribbon** (addendum 42 §3): Word's tabs of grouped controls, over the
@@ -180,6 +181,7 @@ function Tool({
   onPress,
   children,
   wide,
+  big,
 }: {
   label: string;
   title?: string;
@@ -188,11 +190,13 @@ function Tool({
   onPress(): void;
   children?: ReactNode;
   wide?: boolean;
+  /** Word's large buttons: the picture over its name. */
+  big?: boolean;
 }) {
   return (
     <button
       type="button"
-      className={`wp-tool${active ? ' active' : ''}${wide ? ' wide' : ''}`}
+      className={`wp-tool${active ? ' active' : ''}${wide ? ' wide' : ''}${big ? ' big' : ''}`}
       aria-label={label}
       aria-pressed={active === undefined ? undefined : active}
       title={title ?? label}
@@ -219,53 +223,6 @@ function Group({ label, children }: { label: string; children: ReactNode }) {
     <div className="wp-group" role="group" aria-label={label}>
       <div className="wp-group-tools">{children}</div>
       <div className="wp-group-label">{label}</div>
-    </div>
-  );
-}
-
-function Swatches({
-  label,
-  colours,
-  onPick,
-  onClear,
-  clearLabel,
-}: {
-  label: string;
-  colours: string[];
-  onPick(colour: string): void;
-  onClear(): void;
-  clearLabel: string;
-}) {
-  return (
-    <div className="wp-swatches" role="group" aria-label={label}>
-      {colours.map((colour) => (
-        <button
-          key={colour}
-          type="button"
-          className="wp-swatch"
-          style={{ background: colour }}
-          aria-label={`${label} ${colour}`}
-          title={colour}
-          tabIndex={-1}
-          onMouseDown={(event) => {
-            event.preventDefault();
-            onPick(colour);
-          }}
-        />
-      ))}
-      <button
-        type="button"
-        className="wp-swatch none"
-        aria-label={clearLabel}
-        title={clearLabel}
-        tabIndex={-1}
-        onMouseDown={(event) => {
-          event.preventDefault();
-          onClear();
-        }}
-      >
-        ∅
-      </button>
     </div>
   );
 }
@@ -339,218 +296,606 @@ function FileTab({ file }: TabProps) {
   );
 }
 
-function HomeTab({ editor, onFind, painting, onPaint, fonts, onSay }: TabProps) {
+/** Word's Change Case. */
+type Case = 'sentence' | 'lower' | 'upper' | 'title' | 'toggle';
+const CASES: { id: Case; label: string }[] = [
+  { id: 'sentence', label: 'Sentence case.' },
+  { id: 'lower', label: 'lowercase' },
+  { id: 'upper', label: 'UPPERCASE' },
+  { id: 'title', label: 'Capitalize Each Word' },
+  { id: 'toggle', label: 'tOGGLE cASE' },
+];
+
+const recase = (text: string, how: Case, startsSentence: boolean): string => {
+  switch (how) {
+    case 'lower':
+      return text.toLowerCase();
+    case 'upper':
+      return text.toUpperCase();
+    case 'title':
+      return text.toLowerCase().replace(/(^|[^\p{L}\p{N}'’])(\p{L})/gu, (_, before: string, letter: string) => before + letter.toUpperCase());
+    case 'toggle':
+      return [...text].map((one) => (one === one.toUpperCase() ? one.toLowerCase() : one.toUpperCase())).join('');
+    case 'sentence': {
+      let start = startsSentence;
+      return [...text.toLowerCase()]
+        .map((one) => {
+          if (start && /\p{L}/u.test(one)) {
+            start = false;
+            return one.toUpperCase();
+          }
+          if (/[.!?]/.test(one)) start = true;
+          return one;
+        })
+        .join('');
+    }
+  }
+};
+
+/**
+ * **Change case** over the selection, keeping every word's formatting: each
+ * run of text is re-cased where it stands, last first so positions hold.
+ */
+export const changeCase = (editor: Editor, how: Case): void => {
+  const { from, to, empty } = editor.state.selection;
+  if (empty) return;
+  const runs: { from: number; to: number; text: string; marks: readonly import('@tiptap/pm/model').Mark[] }[] = [];
+  editor.state.doc.nodesBetween(from, to, (node, pos) => {
+    if (!node.isText || !node.text) return;
+    const a = Math.max(from, pos);
+    const b = Math.min(to, pos + node.text.length);
+    if (a < b) runs.push({ from: a, to: b, text: node.text.slice(a - pos, b - pos), marks: node.marks });
+  });
+  const before = editor.state.doc.textBetween(Math.max(0, from - 3), from, '\n', ' ');
+  const tr = editor.state.tr;
+  let startsSentence = from <= 1 || /(^|[.!?]\s*|\n\s*)$/.test(before) || before.trim() === '';
+  const recased = runs.map((run) => {
+    const text = recase(run.text, how, startsSentence);
+    startsSentence = /[.!?]\s*$/.test(run.text) || (startsSentence && !/\p{L}/u.test(run.text));
+    return { ...run, text };
+  });
+  for (const run of [...recased].reverse()) {
+    tr.replaceWith(run.from, run.to, editor.schema.text(run.text, run.marks));
+  }
+  editor.view.dispatch(tr);
+  editor.commands.focus();
+};
+
+/** Word's Sort: the selected paragraphs, A to Z by their words. Nothing changes for fewer than two. */
+export const sortParagraphs = (editor: Editor, descending = false): boolean => {
+  const { from, to } = editor.state.selection;
+  const doc = editor.state.doc;
+  const blocks: { node: import('@tiptap/pm/model').Node; pos: number }[] = [];
+  doc.forEach((node, pos) => {
+    if (pos + node.nodeSize > from && pos < to && node.type.name === 'paragraph') blocks.push({ node, pos });
+  });
+  if (blocks.length < 2) return false;
+  // Only a run of paragraphs side by side is sorted; anything else in between is left alone.
+  const first = blocks[0]!.pos;
+  const last = blocks[blocks.length - 1]!;
+  let expected = first;
+  for (const one of blocks) {
+    if (one.pos !== expected) return false;
+    expected = one.pos + one.node.nodeSize;
+  }
+  const sorted = [...blocks]
+    .map((one) => one.node)
+    .sort((a, b) => a.textContent.localeCompare(b.textContent, undefined, { sensitivity: 'base', numeric: true }) * (descending ? -1 : 1));
+  editor.view.dispatch(editor.state.tr.replaceWith(first, last.pos + last.node.nodeSize, sorted));
+  editor.commands.focus();
+  return true;
+};
+
+/**
+ * A button with a menu under it — Word's split buttons (the colour under the
+ * A, the list kinds beside Numbering). With `onPress` the face does the
+ * last-used thing and the arrow opens the menu; without, the whole button
+ * opens it. Pressed on mouse-down, like every ribbon tool, so the page keeps
+ * its selection.
+ */
+function Drop({
+  label,
+  title,
+  face,
+  onPress,
+  active,
+  big,
+  caption,
+  children,
+}: {
+  label: string;
+  title?: string;
+  face: ReactNode;
+  onPress?(): void;
+  active?: boolean;
+  big?: boolean;
+  caption?: string;
+  children(close: () => void): ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const [at, setAt] = useState<{ top: number; left: number } | null>(null);
+  const box = useRef<HTMLDivElement>(null);
+  // The menu is placed against the window, not the ribbon, so it drops over the page as Word's do instead of being cut off at the ribbon's edge.
+  useEffect(() => {
+    if (!open || !box.current) return;
+    const rect = box.current.getBoundingClientRect();
+    setAt({ top: rect.bottom + 4, left: Math.min(rect.left, window.innerWidth - 240) });
+  }, [open]);
+  useEffect(() => {
+    if (!open) return;
+    const away = (event: MouseEvent) => {
+      if (!box.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const escape = (event: KeyboardEvent) => event.key === 'Escape' && setOpen(false);
+    const shut = () => setOpen(false);
+    window.addEventListener('mousedown', away);
+    window.addEventListener('keydown', escape);
+    window.addEventListener('resize', shut);
+    return () => {
+      window.removeEventListener('mousedown', away);
+      window.removeEventListener('keydown', escape);
+      window.removeEventListener('resize', shut);
+    };
+  }, [open]);
+  const press = (action: () => void) => (event: { preventDefault(): void }) => {
+    event.preventDefault();
+    action();
+  };
+  return (
+    <div className={`wp-drop${big ? ' big' : ''}${onPress ? ' split' : ''}${open ? ' open' : ''}`} ref={box}>
+      {onPress ? (
+        <button type="button" className={`wp-tool wp-drop-face${active ? ' active' : ''}`} aria-label={label} title={title ?? label} tabIndex={-1} onMouseDown={press(onPress)}>
+          {face}
+          {big && caption ? <span className="wp-caption">{caption}</span> : null}
+        </button>
+      ) : null}
+      <button
+        type="button"
+        className={`wp-tool wp-drop-arrow${!onPress && active ? ' active' : ''}`}
+        aria-label={onPress ? `${label} options` : label}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        title={onPress ? `${label}: more` : (title ?? label)}
+        tabIndex={-1}
+        onMouseDown={press(() => setOpen((was) => !was))}
+      >
+        {onPress ? null : face}
+        {!onPress && big && caption ? <span className="wp-caption">{caption}</span> : null}
+        <Chevron />
+      </button>
+      {open ? (
+        <div
+          className="wp-menu"
+          role="menu"
+          aria-label={label}
+          style={at ? { position: 'fixed', top: at.top, left: at.left } : { visibility: 'hidden' }}
+          onMouseDown={(event) => event.preventDefault()}
+        >
+          {children(() => setOpen(false))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function MenuItem({ label, onPick, active, children }: { label: string; onPick(): void; active?: boolean; children?: ReactNode }) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      className={`wp-menu-item${active ? ' active' : ''}`}
+      tabIndex={-1}
+      onMouseDown={(event) => {
+        event.preventDefault();
+        onPick();
+      }}
+    >
+      {children ?? label}
+    </button>
+  );
+}
+
+/** A colour grid for a menu, and the way back to none. */
+function Palette({ colours, onPick, none, onNone, close }: { colours: string[]; onPick(colour: string): void; none: string; onNone(): void; close(): void }) {
+  return (
+    <>
+      <div className="wp-palette">
+        {colours.map((colour) => (
+          <button
+            key={colour}
+            type="button"
+            className="wp-swatch"
+            style={{ background: colour }}
+            aria-label={colour}
+            title={colour}
+            tabIndex={-1}
+            onMouseDown={(event) => {
+              event.preventDefault();
+              onPick(colour);
+              close();
+            }}
+          />
+        ))}
+      </div>
+      <MenuItem
+        label={none}
+        onPick={() => {
+          onNone();
+          close();
+        }}
+      />
+    </>
+  );
+}
+
+const STYLE_TILES = ['normal', 'title', 'h1', 'h2', 'h3', 'quote'];
+
+/**
+ * **Home**, laid out as Word lays it out (from Ken, 21 November: *I want the
+ * tool bar to look similar to MS Word so it is familiar with the same
+ * functions*): Clipboard, Font, Paragraph, Styles, Editing, Voice — the same
+ * groups in the same order, the same pictures, two rows of small tools and a
+ * big one where Word has a big one.
+ */
+function HomeTab({ editor, onFind, painting, onPaint, fonts, onSay, view, onView, speech }: TabProps) {
   const style = editor.getAttributes('textStyle');
   const family = typeof style['fontFamily'] === 'string' ? String(style['fontFamily']).split(',')[0]?.replace(/["']/g, '').trim() : '';
   const size = typeof style['fontSize'] === 'string' ? String(style['fontSize']).replace(/pt$/, '') : '';
   const chain = () => editor.chain().focus();
   const listType = editor.getAttributes('orderedList')['type'];
+  const [ink, setInk] = useState('#c00000');
+  const [marker, setMarker] = useState('#ffff00');
+  const block = editor.isActive('heading') ? 'heading' : 'paragraph';
+  const lineHeight = editor.getAttributes(block)['lineHeight'];
+  const spaceAfter = editor.getAttributes(block)['spaceAfter'];
+  const styleNow = currentStyle(editor);
+
+  const stepSize = (by: 1 | -1) => {
+    const now = Number(size || 11);
+    const next = by > 0 ? SIZES.find((one) => one > now) : [...SIZES].reverse().find((one) => one < now);
+    if (next) chain().setFontSize(`${next}pt`).run();
+  };
+
+  const paste = async (plain: boolean) => {
+    const asText = (text: string) =>
+      chain()
+        .insertContent(text.replace(/\r\n?/g, '\n').split('\n').map((line) => ({ type: 'paragraph', content: line ? [{ type: 'text', text: line }] : [] })))
+        .run();
+    try {
+      if (!plain && navigator.clipboard?.read) {
+        for (const item of await navigator.clipboard.read()) {
+          if (item.types.includes('text/html')) {
+            const html = await (await item.getType('text/html')).text();
+            // Through the page's own paste handling, so Word's formatting comes in as a paste from Word does.
+            editor.view.pasteHTML(html);
+            return;
+          }
+        }
+      }
+      const text = await navigator.clipboard.readText();
+      if (text) asText(text);
+    } catch {
+      onSay('The clipboard could not be read here. Press Ctrl+V to paste.');
+    }
+  };
+
+  const clip = (command: 'cut' | 'copy') => {
+    editor.commands.focus();
+    if (!document.execCommand(command)) onSay(`Press Ctrl+${command === 'cut' ? 'X' : 'C'} to ${command}.`);
+  };
+
+  const listKind = (type: 'a' | 'i' | null) =>
+    editor.isActive('orderedList')
+      ? chain().updateAttributes('orderedList', { type }).run()
+      : type
+        ? chain().toggleOrderedList().updateAttributes('orderedList', { type }).run()
+        : chain().toggleOrderedList().run();
+
   return (
     <>
       <Group label="Clipboard">
-        <Tool label="Format painter" title="Copy the formatting here, then select text to paint it on" active={painting} onPress={onPaint} wide />
-        <Tool
-          label="Paste as text"
-          title="Paste the clipboard's words without their formatting"
-          onPress={() => {
-            void navigator.clipboard?.readText?.().then((text) => {
-              if (text) editor.chain().focus().insertContent(text.replace(/\r\n?/g, '\n').split('\n').map((line) => ({ type: 'paragraph', content: line ? [{ type: 'text', text: line }] : [] }))).run();
-            });
-          }}
-          wide
-        />
+        <div className="wp-stack-row">
+          <Drop label="Paste" title="Paste (Ctrl+V)" face={ICONS.paste} caption="Paste" big onPress={() => void paste(false)}>
+            {(close) => (
+              <>
+                <MenuItem label="Keep source formatting" onPick={() => (close(), void paste(false))} />
+                <MenuItem label="Keep text only" onPick={() => (close(), void paste(true))} />
+              </>
+            )}
+          </Drop>
+          <div className="wp-stack">
+            <Tool label="Cut" title="Cut (Ctrl+X)" onPress={() => clip('cut')}>
+              {ICONS.cut}
+            </Tool>
+            <Tool label="Copy" title="Copy (Ctrl+C)" onPress={() => clip('copy')}>
+              {ICONS.copy}
+            </Tool>
+            <Tool label="Format painter" title="Format Painter: copy the formatting here, then select text to paint it on" active={painting} onPress={onPaint}>
+              {ICONS.painter}
+            </Tool>
+          </div>
+        </div>
       </Group>
+
       <Group label="Font">
-        <select
-          className="wp-select font"
-          aria-label="Font"
-          value={family}
-          onChange={(event) => {
-            const chosen = event.target.value;
-            if (chosen === MORE_FONTS) {
-              void fonts.askLocal().then((why) => why && onSay(why));
-              return;
-            }
-            if (chosen) chain().setFontFamily(chosen).run();
-            else chain().unsetFontFamily().run();
-          }}
-        >
-          <option value="">Calibri (Body)</option>
-          {/* The face in use stays offered, even if this computer lacks it. */}
-          {family && !fonts.groups.some((group) => group.fonts.includes(family)) && !fonts.local?.includes(family) ? (
-            <option value={family}>{family}</option>
-          ) : null}
-          {fonts.groups.map((group) => (
-            <optgroup key={group.label} label={group.label}>
-              {group.fonts
-                .filter((font) => font !== 'Calibri')
-                .map((font) => (
-                  <option key={font} value={font} style={{ fontFamily: font }}>
-                    {font}
-                  </option>
-                ))}
-            </optgroup>
-          ))}
-          {fonts.local ? (
-            <optgroup label="On this computer">
-              {fonts.local.map((font) => (
-                <option key={`local-${font}`} value={font} style={{ fontFamily: font }}>
-                  {font}
+        <div className="wp-rows">
+          <div className="wp-row">
+            <select
+              className="wp-select font"
+              aria-label="Font"
+              value={family}
+              onChange={(event) => {
+                const chosen = event.target.value;
+                if (chosen === MORE_FONTS) {
+                  void fonts.askLocal().then((why) => why && onSay(why));
+                  return;
+                }
+                if (chosen) chain().setFontFamily(chosen).run();
+                else chain().unsetFontFamily().run();
+              }}
+            >
+              <option value="">Calibri (Body)</option>
+              {family && !fonts.groups.some((group) => group.fonts.includes(family)) && !fonts.local?.includes(family) ? (
+                <option value={family}>{family}</option>
+              ) : null}
+              {fonts.groups.map((group) => (
+                <optgroup key={group.label} label={group.label}>
+                  {group.fonts
+                    .filter((font) => font !== 'Calibri')
+                    .map((font) => (
+                      <option key={font} value={font} style={{ fontFamily: font }}>
+                        {font}
+                      </option>
+                    ))}
+                </optgroup>
+              ))}
+              {fonts.local ? (
+                <optgroup label="On this computer">
+                  {fonts.local.map((font) => (
+                    <option key={`local-${font}`} value={font} style={{ fontFamily: font }}>
+                      {font}
+                    </option>
+                  ))}
+                </optgroup>
+              ) : fonts.canAskLocal ? (
+                <option value={MORE_FONTS}>All fonts on this computer…</option>
+              ) : null}
+            </select>
+            <select
+              className="wp-select size"
+              aria-label="Font size"
+              value={size}
+              onChange={(event) => (event.target.value ? chain().setFontSize(`${event.target.value}pt`).run() : chain().unsetFontSize().run())}
+            >
+              <option value="">11</option>
+              {SIZES.filter((one) => one !== 11).map((one) => (
+                <option key={one} value={String(one)}>
+                  {one}
                 </option>
               ))}
-            </optgroup>
-          ) : fonts.canAskLocal ? (
-            <option value={MORE_FONTS}>All fonts on this computer…</option>
-          ) : null}
-        </select>
-        <select
-          className="wp-select size"
-          aria-label="Font size"
-          value={size}
-          onChange={(event) => (event.target.value ? chain().setFontSize(`${event.target.value}pt`).run() : chain().unsetFontSize().run())}
-        >
-          <option value="">11</option>
-          {SIZES.filter((one) => one !== 11).map((one) => (
-            <option key={one} value={String(one)}>
-              {one}
-            </option>
-          ))}
-        </select>
-        <Tool label="Bold" title="Bold (Ctrl+B)" active={editor.isActive('bold')} onPress={() => chain().toggleBold().run()}>
-          <b>B</b>
-        </Tool>
-        <Tool label="Italic" title="Italic (Ctrl+I)" active={editor.isActive('italic')} onPress={() => chain().toggleItalic().run()}>
-          <i>I</i>
-        </Tool>
-        <Tool label="Underline" title="Underline (Ctrl+U)" active={editor.isActive('underline')} onPress={() => chain().toggleUnderline().run()}>
-          <u>U</u>
-        </Tool>
-        <Tool label="Strikethrough" active={editor.isActive('strike')} onPress={() => chain().toggleStrike().run()}>
-          <s>ab</s>
-        </Tool>
-        <Tool label="Subscript" active={editor.isActive('subscript')} onPress={() => chain().unsetSuperscript().toggleSubscript().run()}>
-          x<sub>2</sub>
-        </Tool>
-        <Tool label="Superscript" active={editor.isActive('superscript')} onPress={() => chain().unsetSubscript().toggleSuperscript().run()}>
-          x<sup>2</sup>
-        </Tool>
-        <Tool label="Clear formatting" title="Clear all formatting from the selection" onPress={() => chain().unsetAllMarks().run()}>
-          A⌫
-        </Tool>
-        <Swatches
-          label="Font colour"
-          colours={INKS}
-          onPick={(colour) => chain().setColor(colour).run()}
-          onClear={() => chain().unsetColor().run()}
-          clearLabel="Automatic colour"
-        />
-        <Swatches
-          label="Highlight"
-          colours={HIGHLIGHTS}
-          onPick={(colour) => chain().setHighlight({ color: colour }).run()}
-          onClear={() => chain().unsetHighlight().run()}
-          clearLabel="No highlight"
-        />
+            </select>
+            <Tool label="Increase font size" title="Grow font (Ctrl+])" onPress={() => stepSize(1)}>
+              {ICONS.grow}
+            </Tool>
+            <Tool label="Decrease font size" title="Shrink font (Ctrl+[)" onPress={() => stepSize(-1)}>
+              {ICONS.shrink}
+            </Tool>
+            <Drop label="Change case" face={<span className="wp-face-text">Aa</span>}>
+              {(close) =>
+                CASES.map((one) => (
+                  <MenuItem
+                    key={one.id}
+                    label={one.label}
+                    onPick={() => {
+                      close();
+                      changeCase(editor, one.id);
+                    }}
+                  />
+                ))
+              }
+            </Drop>
+            <Tool label="Clear formatting" title="Clear all formatting from the selection" onPress={() => chain().unsetAllMarks().run()}>
+              {ICONS.clear}
+            </Tool>
+          </div>
+          <div className="wp-row">
+            <Tool label="Bold" title="Bold (Ctrl+B)" active={editor.isActive('bold')} onPress={() => chain().toggleBold().run()}>
+              <b className="wp-face-text">B</b>
+            </Tool>
+            <Tool label="Italic" title="Italic (Ctrl+I)" active={editor.isActive('italic')} onPress={() => chain().toggleItalic().run()}>
+              <i className="wp-face-text serif">I</i>
+            </Tool>
+            <Tool label="Underline" title="Underline (Ctrl+U)" active={editor.isActive('underline')} onPress={() => chain().toggleUnderline().run()}>
+              <u className="wp-face-text">U</u>
+            </Tool>
+            <Tool label="Strikethrough" active={editor.isActive('strike')} onPress={() => chain().toggleStrike().run()}>
+              <s className="wp-face-text small">ab</s>
+            </Tool>
+            <Tool label="Subscript" title="Subscript (Ctrl+=)" active={editor.isActive('subscript')} onPress={() => chain().unsetSuperscript().toggleSubscript().run()}>
+              <span className="wp-face-text small">
+                x<sub>2</sub>
+              </span>
+            </Tool>
+            <Tool label="Superscript" title="Superscript (Ctrl+Shift+=)" active={editor.isActive('superscript')} onPress={() => chain().unsetSubscript().toggleSuperscript().run()}>
+              <span className="wp-face-text small">
+                x<sup>2</sup>
+              </span>
+            </Tool>
+            <span className="wp-divider" />
+            <Drop label="Text highlight colour" face={<HighlightIcon colour={marker} />} onPress={() => chain().setHighlight({ color: marker }).run()}>
+              {(close) => (
+                <Palette
+                  colours={HIGHLIGHTS}
+                  onPick={(colour) => {
+                    setMarker(colour);
+                    chain().setHighlight({ color: colour }).run();
+                  }}
+                  none="No colour"
+                  onNone={() => chain().unsetHighlight().run()}
+                  close={close}
+                />
+              )}
+            </Drop>
+            <Drop label="Font colour" face={<InkIcon colour={ink} />} onPress={() => chain().setColor(ink).run()}>
+              {(close) => (
+                <Palette
+                  colours={INKS}
+                  onPick={(colour) => {
+                    setInk(colour);
+                    chain().setColor(colour).run();
+                  }}
+                  none="Automatic"
+                  onNone={() => chain().unsetColor().run()}
+                  close={close}
+                />
+              )}
+            </Drop>
+          </div>
+        </div>
       </Group>
+
       <Group label="Paragraph">
-        <Tool label="Bullets" active={editor.isActive('bulletList')} onPress={() => chain().toggleBulletList().run()}>
-          •≡
-        </Tool>
-        <Tool
-          label="Numbering"
-          active={editor.isActive('orderedList') && !listType}
-          onPress={() =>
-            editor.isActive('orderedList') && listType
-              ? chain().updateAttributes('orderedList', { type: null }).run()
-              : chain().toggleOrderedList().run()
-          }
-        >
-          1.≡
-        </Tool>
-        <Tool
-          label="Lettered list"
-          active={editor.isActive('orderedList') && listType === 'a'}
-          onPress={() =>
-            editor.isActive('orderedList')
-              ? chain().updateAttributes('orderedList', { type: listType === 'a' ? null : 'a' }).run()
-              : chain().toggleOrderedList().updateAttributes('orderedList', { type: 'a' }).run()
-          }
-        >
-          a.≡
-        </Tool>
-        <Tool
-          label="Roman numbered list"
-          active={editor.isActive('orderedList') && listType === 'i'}
-          onPress={() =>
-            editor.isActive('orderedList')
-              ? chain().updateAttributes('orderedList', { type: listType === 'i' ? null : 'i' }).run()
-              : chain().toggleOrderedList().updateAttributes('orderedList', { type: 'i' }).run()
-          }
-        >
-          i.≡
-        </Tool>
-        <Tool
-          label="Decrease indent"
-          onPress={() => (editor.isActive('listItem') ? chain().liftListItem('listItem').run() : chain().indentBlocks(-1).run())}
-        >
-          ⇤
-        </Tool>
-        <Tool
-          label="Increase indent"
-          onPress={() => (editor.isActive('listItem') ? chain().sinkListItem('listItem').run() : chain().indentBlocks(1).run())}
-        >
-          ⇥
-        </Tool>
-        {(['left', 'center', 'right', 'justify'] as const).map((align) => (
-          <Tool
-            key={align}
-            label={`Align ${align === 'center' ? 'centre' : align}`}
-            active={editor.isActive({ textAlign: align })}
-            onPress={() => chain().setTextAlign(align).run()}
-          >
-            {align === 'left' ? '⫷' : align === 'center' ? '≡' : align === 'right' ? '⫸' : '☰'}
-          </Tool>
-        ))}
-        <select
-          className="wp-select spacing"
-          aria-label="Line spacing"
-          value={String(editor.getAttributes(editor.isActive('heading') ? 'heading' : 'paragraph')['lineHeight'] ?? '')}
-          onChange={(event) => chain().setBlockAttribute('lineHeight', event.target.value ? Number(event.target.value) : null).run()}
-        >
-          <option value="">Line spacing</option>
-          <option value="1">1.0</option>
-          <option value="1.15">1.15</option>
-          <option value="1.5">1.5</option>
-          <option value="2">2.0</option>
-          <option value="2.5">2.5</option>
-          <option value="3">3.0</option>
-        </select>
-        <select
-          className="wp-select spacing"
-          aria-label="Space after paragraph"
-          value={String(editor.getAttributes(editor.isActive('heading') ? 'heading' : 'paragraph')['spaceAfter'] ?? '')}
-          onChange={(event) => chain().setBlockAttribute('spaceAfter', event.target.value ? Number(event.target.value) : null).run()}
-        >
-          <option value="">Space after</option>
-          <option value="0">0 pt</option>
-          <option value="6">6 pt</option>
-          <option value="12">12 pt</option>
-          <option value="18">18 pt</option>
-          <option value="24">24 pt</option>
-        </select>
+        <div className="wp-rows">
+          <div className="wp-row">
+            <Tool label="Bullets" active={editor.isActive('bulletList')} onPress={() => chain().toggleBulletList().run()}>
+              {ICONS.bullets}
+            </Tool>
+            <Drop label="Numbering" face={ICONS.numbering} active={editor.isActive('orderedList')} onPress={() => (editor.isActive('orderedList') && !listType ? chain().toggleOrderedList().run() : listKind(null))}>
+              {(close) => (
+                <>
+                  <MenuItem label="1. 2. 3." active={editor.isActive('orderedList') && !listType} onPick={() => (close(), listKind(null))} />
+                  <MenuItem label="a. b. c." active={editor.isActive('orderedList') && listType === 'a'} onPick={() => (close(), listKind('a'))} />
+                  <MenuItem label="i. ii. iii." active={editor.isActive('orderedList') && listType === 'i'} onPick={() => (close(), listKind('i'))} />
+                </>
+              )}
+            </Drop>
+            <Tool label="Decrease indent" onPress={() => (editor.isActive('listItem') ? chain().liftListItem('listItem').run() : chain().indentBlocks(-1).run())}>
+              {ICONS.outdent}
+            </Tool>
+            <Tool label="Increase indent" onPress={() => (editor.isActive('listItem') ? chain().sinkListItem('listItem').run() : chain().indentBlocks(1).run())}>
+              {ICONS.indent}
+            </Tool>
+            <span className="wp-divider" />
+            <Tool label="Sort" title="Sort the selected paragraphs A to Z" onPress={() => sortParagraphs(editor) || onSay('Select two or more paragraphs to sort.')}>
+              {ICONS.sort}
+            </Tool>
+            <Tool label="Show formatting marks" title="Show ¶ and other formatting marks (Ctrl+*)" active={view.marks} onPress={() => onView({ marks: !view.marks })}>
+              {ICONS.pilcrow}
+            </Tool>
+          </div>
+          <div className="wp-row">
+            {(['left', 'center', 'right', 'justify'] as const).map((align) => (
+              <Tool
+                key={align}
+                label={align === 'justify' ? 'Justify' : `Align ${align === 'center' ? 'centre' : align}`}
+                title={`${align === 'justify' ? 'Justify' : `Align ${align === 'center' ? 'centre' : align}`} (Ctrl+${{ left: 'L', center: 'E', right: 'R', justify: 'J' }[align]})`}
+                active={editor.isActive({ textAlign: align })}
+                onPress={() => chain().setTextAlign(align).run()}
+              >
+                {ICONS[align === 'left' ? 'alignLeft' : align === 'center' ? 'alignCenter' : align === 'right' ? 'alignRight' : 'justify']}
+              </Tool>
+            ))}
+            <span className="wp-divider" />
+            <Drop label="Line and paragraph spacing" face={ICONS.spacing}>
+              {(close) => (
+                <>
+                  <div className="wp-menu-head">Line spacing</div>
+                  {[1, 1.15, 1.5, 2, 2.5, 3].map((one) => (
+                    <MenuItem
+                      key={one}
+                      label={one.toFixed(one === 1.15 ? 2 : 1)}
+                      active={Number(lineHeight) === one}
+                      onPick={() => {
+                        close();
+                        chain().setBlockAttribute('lineHeight', one).run();
+                      }}
+                    />
+                  ))}
+                  <div className="wp-menu-head">Space after paragraph</div>
+                  {[0, 6, 12, 18, 24].map((one) => (
+                    <MenuItem
+                      key={one}
+                      label={`${one} pt`}
+                      active={spaceAfter !== null && spaceAfter !== undefined && Number(spaceAfter) === one}
+                      onPick={() => {
+                        close();
+                        chain().setBlockAttribute('spaceAfter', one).run();
+                      }}
+                    />
+                  ))}
+                  <MenuItem
+                    label="Back to the style's spacing"
+                    onPick={() => {
+                      close();
+                      chain().setBlockAttribute('lineHeight', null).setBlockAttribute('spaceAfter', null).run();
+                    }}
+                  />
+                </>
+              )}
+            </Drop>
+          </div>
+        </div>
       </Group>
+
       <Group label="Styles">
-        <select className="wp-select style" aria-label="Style" value={currentStyle(editor)} onChange={(event) => applyStyle(editor, event.target.value)}>
-          {STYLES.map((one) => (
-            <option key={one.id} value={one.id}>
-              {one.label}
-            </option>
-          ))}
-        </select>
+        <div className="wp-gallery" role="listbox" aria-label="Styles">
+          {STYLE_TILES.map((id) => {
+            const one = STYLES.find((each) => each.id === id)!;
+            return (
+              <button
+                key={id}
+                type="button"
+                role="option"
+                aria-selected={styleNow === id}
+                className={`wp-style-tile${styleNow === id ? ' active' : ''}`}
+                title={one.label}
+                tabIndex={-1}
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  applyStyle(editor, id);
+                }}
+              >
+                <span className={`wp-style-sample ${id}`}>AaBbCc</span>
+                <span className="wp-style-name">{one.label}</span>
+              </button>
+            );
+          })}
+          <Drop label="All styles" face={null}>
+            {(close) =>
+              STYLES.map((one) => (
+                <MenuItem
+                  key={one.id}
+                  label={one.label}
+                  active={styleNow === one.id}
+                  onPick={() => {
+                    close();
+                    applyStyle(editor, one.id);
+                  }}
+                />
+              ))
+            }
+          </Drop>
+        </div>
       </Group>
+
       <Group label="Editing">
-        <Tool label="Find" title="Find (Ctrl+F)" onPress={() => onFind('find')} wide />
-        <Tool label="Replace" title="Find and replace (Ctrl+H)" onPress={() => onFind('replace')} wide />
+        <div className="wp-stack">
+          <Tool label="Find" title="Find (Ctrl+F)" onPress={() => onFind('find')} wide>
+            {ICONS.find}
+            <span>Find</span>
+          </Tool>
+          <Tool label="Replace" title="Find and replace (Ctrl+H)" onPress={() => onFind('replace')} wide>
+            {ICONS.replace}
+            <span>Replace</span>
+          </Tool>
+        </div>
+      </Group>
+
+      <Group label="Voice">
+        <Tool label={speech.dictating ? 'Stop dictating' : 'Dictate'} title="Speak, and the words are typed at the cursor" active={speech.dictating} onPress={speech.dictate} big>
+          {ICONS.dictate}
+          <span className="wp-caption">{speech.dictating ? 'Stop' : 'Dictate'}</span>
+        </Tool>
       </Group>
     </>
   );

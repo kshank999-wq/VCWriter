@@ -138,12 +138,12 @@ describe('the page', () => {
     expect(editorOf().state.selection.from).toBe(6);
   });
 
-  it('applies a heading from the Styles box', () => {
+  it('applies a heading from the Styles gallery', () => {
     render(<Harness start={start('Chapter')} />);
     act(() => {
       editorOf().commands.setTextSelection(2);
     });
-    fireEvent.change(screen.getByLabelText('Style', { selector: 'select' }), { target: { value: 'h2' } });
+    fireEvent.mouseDown(screen.getByRole('option', { name: /Heading 2/ }));
     expect(editorOf().getHTML()).toContain('<h2');
   });
 

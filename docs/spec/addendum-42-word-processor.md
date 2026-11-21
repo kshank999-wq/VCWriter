@@ -1030,3 +1030,22 @@ note. In a word processor the rewrite screen (`NoteRewrite`) now offers
   note says so and stays unused.
 
 Story projects keep *Place on the track* unchanged.
+
+## The Home tab as Word lays it out (21 November 2026)
+
+From Ken: *I want the tool bar to look similar to MS Word so it is familiar
+with the same functions — it should look more stylish than Word but the basic
+functions of a word processor so they do not have to change their working
+style.*
+
+Home now has Word's groups in Word's order, with Word's pictures
+(`document/icons.tsx`): **Clipboard** (a big Paste with *Keep source
+formatting* / *Keep text only*; Cut, Copy, Format Painter), **Font** (font,
+size, Grow and Shrink, Change Case with Word's five cases, Clear formatting;
+B, I, U, strikethrough, sub- and superscript, highlighter and font colour as
+split buttons that remember the last colour), **Paragraph** (bullets,
+numbering with 1. / a. / i., indents, Sort A to Z, Show ¶; the four
+alignments, line and paragraph spacing), **Styles** (a gallery showing each
+style in itself, with every style under its arrow), **Editing** (Find,
+Replace) and **Voice** (Dictate). Menus drop over the page. Shading and
+borders are left off until the page can do them (§14).

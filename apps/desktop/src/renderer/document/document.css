@@ -1381,3 +1381,341 @@
 .ProseMirror ins.wp-ins { color: #1f5fa8; text-decoration: underline; text-decoration-color: #1f5fa8; }
 .ProseMirror del.wp-del { color: #c0392b; text-decoration: line-through; }
 .wp-status-note.wp-tracking { color: #c0392b; font-weight: 600; }
+
+/* ---------------------------------------------------------------------------
+   Home, as Word lays it out (from Ken, 21 November): two rows of small tools,
+   big buttons where Word has them, split buttons with a menu under the arrow,
+   a styles gallery. A little more finish than Word: softer corners, a gentle
+   lift on hover, the accent blue for what is on. */
+
+.wp-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wp-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.wp-stack-row {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+}
+
+.wp-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  justify-content: center;
+}
+
+.wp-stack .wp-tool {
+  height: 24px;
+  justify-content: flex-start;
+}
+
+.wp-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: background-color 0.12s, border-color 0.12s, box-shadow 0.12s;
+}
+
+.wp-tool svg {
+  flex: none;
+}
+
+.wp-tool.big,
+.wp-drop.big .wp-drop-face,
+.wp-drop.big:not(.split) .wp-drop-arrow {
+  flex-direction: column;
+  height: 62px;
+  min-width: 50px;
+  padding: 4px 6px 2px;
+  gap: 2px;
+}
+
+.wp-caption {
+  font-size: 11.5px;
+  line-height: 1.1;
+}
+
+.wp-face-text {
+  font-size: 14px;
+  font-family: 'Segoe UI', -apple-system, system-ui, sans-serif;
+  line-height: 1;
+  min-width: 12px;
+  text-align: center;
+}
+
+.wp-face-text.serif {
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+.wp-face-text.small {
+  font-size: 12.5px;
+}
+
+.wp-divider {
+  width: 1px;
+  align-self: stretch;
+  margin: 3px 3px;
+  background: var(--border);
+}
+
+.wp-chevron {
+  opacity: 0.7;
+}
+
+/* Split and drop-down buttons, and their menus. */
+.wp-drop {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+}
+
+.wp-drop.split .wp-drop-face {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  padding-right: 3px;
+}
+
+.wp-drop.split .wp-drop-arrow {
+  min-width: 14px;
+  padding: 0 2px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.wp-drop.big.split {
+  flex-direction: column;
+}
+
+.wp-drop.big.split .wp-drop-face {
+  border-radius: 4px 4px 0 0;
+  padding-right: 6px;
+  height: 48px;
+}
+
+.wp-drop.big.split .wp-drop-arrow {
+  height: 14px;
+  border-radius: 0 0 4px 4px;
+}
+
+.wp-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 60;
+  min-width: 180px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--panel, #fff);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18), 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.wp-menu-item {
+  text-align: left;
+  padding: 6px 10px;
+  font-size: 12.5px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.wp-menu-item:hover,
+.wp-menu-item.active {
+  background: var(--hover, rgba(255, 255, 255, 0.08));
+}
+
+.wp-menu-head {
+  padding: 6px 10px 2px;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted, #8a8a8a);
+}
+
+.wp-palette {
+  display: grid;
+  grid-template-columns: repeat(5, 22px);
+  gap: 5px;
+  padding: 4px 4px 8px;
+}
+
+.wp-palette .wp-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+}
+
+.wp-palette .wp-swatch:hover {
+  transform: scale(1.12);
+}
+
+/* The styles gallery: each style shown in itself. */
+.wp-gallery {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.wp-style-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  width: 78px;
+  height: 52px;
+  padding: 5px 4px 3px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.wp-style-tile:hover {
+  border-color: var(--border);
+}
+
+.wp-style-sample {
+  white-space: nowrap;
+  font-family: Calibri, Carlito, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  line-height: 1.1;
+}
+
+.wp-style-sample.title {
+  font-family: 'Calibri Light', Calibri, Carlito, sans-serif;
+  font-size: 19px;
+}
+
+.wp-style-sample.h1 {
+  color: #2f5496;
+  font-size: 16px;
+}
+
+.wp-style-sample.h2 {
+  color: #2f5496;
+  font-size: 14px;
+}
+
+.wp-style-sample.h3 {
+  color: #1f3763;
+  font-size: 13px;
+}
+
+.wp-style-sample.quote {
+  font-style: italic;
+  color: #404040;
+}
+
+.wp-style-name {
+  font-size: 10.5px;
+  color: var(--muted, #777);
+}
+
+.wp-gallery .wp-drop-arrow {
+  height: auto;
+  min-width: 18px;
+}
+
+/* In the word processor's light scheme. */
+.workspace.wp-mode .wp-panel {
+  background: linear-gradient(#ffffff, #f7f8fa);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+  color: #252525;
+}
+
+.workspace.wp-mode .wp-tool,
+.workspace.wp-mode .wp-style-tile,
+.workspace.wp-mode .wp-menu-item {
+  color: #2b2b2b;
+}
+
+.workspace.wp-mode .wp-panel .wp-tool {
+  border-radius: 5px;
+}
+
+.workspace.wp-mode .wp-panel .wp-tool:hover:not(:disabled) {
+  background: #edf1f7;
+  border-color: #d5dde9;
+}
+
+.workspace.wp-mode .wp-drop.split:hover .wp-tool {
+  border-color: #d5dde9;
+}
+
+.workspace.wp-mode .wp-divider {
+  background: #e3e6eb;
+}
+
+.workspace.wp-mode .wp-gallery {
+  background: #fff;
+  border-color: #dfe3e9;
+}
+
+.workspace.wp-mode .wp-style-tile:hover {
+  background: #f2f5fa;
+  border-color: #d5dde9;
+}
+
+.workspace.wp-mode .wp-panel .wp-style-tile.active {
+  background: #e3ecfa;
+  border-color: #9fbbe6;
+}
+
+.workspace.wp-mode .wp-style-name {
+  color: #666;
+}
+
+.workspace.wp-mode .wp-menu {
+  background: #fff;
+  border-color: #dfe3e9;
+  color: #252525;
+}
+
+.workspace.wp-mode .wp-menu-item:hover {
+  background: #edf1f7;
+}
+
+.workspace.wp-mode .wp-menu-item.active {
+  background: #e3ecfa;
+  color: #185abd;
+}
+
+.workspace.wp-mode .wp-select {
+  border: 1px solid #cfd5dd;
+  border-radius: 5px;
+  background: #fff;
+  color: #252525;
+}
+
+.workspace.wp-mode .wp-group-label {
+  color: #707070;
+}
+
+.workspace.wp-mode .wp-palette .wp-swatch {
+  border-color: #d0d4da;
+}
+
+.wp-group-tools:has(.wp-gallery) {
+  max-width: none;
+}
