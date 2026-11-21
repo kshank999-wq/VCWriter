@@ -508,3 +508,12 @@ and + and a double-click for 100%; zoomed past the window, the page keeps its
 shape and scrolls sideways. The window has a grip in its bottom-right corner:
 drag to size it (it stays put and grows right and down), double-click for the
 usual size; the size is remembered.
+
+**Return cuts a paragraph in two** (from Ken, 21 November: *take a piece that
+was already written in one paragraph… and just hit enter to create a new
+paragraph like you would in a word processor*). Return with the caret inside
+a line splits it there (`splitInlineAt`): the words after the caret become a
+new line of the same style, with the caret at its start; emphasis across the
+cut is closed and reopened, a citation is never cut. Return at the very start
+opens an empty line above; only at the end of a line does Return go on to the
+next style. Every format, since it is how every word processor behaves.

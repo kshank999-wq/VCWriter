@@ -204,3 +204,35 @@ export const toggleInline = (text: string, start: number, end: number, mark: Inl
     selectionEnd: to + width,
   };
 };
+
+/**
+ * **A line cut in two at the caret** (from Ken, 21 November: *take a piece
+ * that was already written in one paragraph… and just hit enter to create a
+ * new paragraph like you would in a word processor*). Emphasis that runs
+ * across the cut is closed at the end of the first half and opened again at
+ * the start of the second, so both halves keep their styling; a citation
+ * token is never cut through. The space at the cut goes with it.
+ */
+export const splitInlineAt = (text: string, at: number): { before: string; after: string } => {
+  let cut = Math.max(0, Math.min(at, text.length));
+  const open: string[] = [];
+  let offset = 0;
+  for (const span of parseInlineMarks(text)) {
+    const end = offset + span.text.length;
+    if (span.citation && cut > offset && cut < end) cut = end;
+    if (offset >= cut) break;
+    if (span.marker && !span.citation && (MARKS as readonly string[]).includes(span.text) && end <= cut) {
+      if (open[open.length - 1] === span.text) open.pop();
+      else open.push(span.text);
+    }
+    offset = end;
+  }
+  const head = text.slice(0, cut).replace(/[ \t]+$/, '');
+  const tail = text.slice(cut).replace(/^[ \t]+/, '');
+  const closing = [...open].reverse().join('');
+  const opening = open.join('');
+  // A mark opened and closed on nothing is no mark at all.
+  const before = head.endsWith(opening) && opening ? head.slice(0, head.length - opening.length) : head + closing;
+  const after = tail.startsWith(closing) && closing ? tail.slice(closing.length) : opening + tail;
+  return { before, after };
+};

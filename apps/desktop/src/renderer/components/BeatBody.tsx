@@ -79,6 +79,7 @@ import {
   styleShortcuts,
   subHeadingsUnder,
   toggleInline,
+  splitInlineAt,
   lineTypeOf,
   setByWriter,
   withLineType,
@@ -638,6 +639,25 @@ export function BeatBody({
     else setFocusId(element.id);
   };
 
+  /** This line cut at the caret into two of its own style (see Return, below). */
+  const splitAt = (element: ManuscriptElement, index: number, start: number, end: number) => {
+    const text = element.text.slice(0, start) + element.text.slice(end);
+    if (start === 0) {
+      const above = { ...makeElement(element.type), characterId: element.characterId, attributes: element.attributes };
+      const next = [...elements];
+      next.splice(index, 1, above, { ...element, text });
+      setElements(next);
+      setSelection({ id: element.id, start: 0, end: 0 });
+      return;
+    }
+    const cut = splitInlineAt(text, start);
+    const second = { ...makeElement(element.type), text: cut.after, characterId: element.characterId, attributes: element.attributes };
+    const next = [...elements];
+    next.splice(index, 1, { ...element, text: cut.before }, second);
+    setElements(next);
+    setSelection({ id: second.id, start: 0, end: 0 });
+  };
+
   const removeAt = (index: number) => {
     const previous = elements[index - 1];
     setElements(elements.filter((_, position) => position !== index));
@@ -993,6 +1013,21 @@ export function BeatBody({
     // Return continues what you are doing.
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
+      /**
+       * **Return in the middle of a line cuts it in two** (from Ken, 21
+       * November: *take a piece that was already written in one paragraph…
+       * and just hit enter to create a new paragraph like you would in a word
+       * processor*). The words after the caret (less any selection) become a
+       * new line of the same style, the caret at its start; Return at the
+       * very start opens an empty line above. Only at the end of a line does
+       * Return go on to the next style, as Final Draft's does.
+       */
+      const start = input.selectionStart;
+      const end = input.selectionEnd;
+      if (!empty && (start < element.text.length || end < element.text.length)) {
+        splitAt(element, index, start, end);
+        return;
+      }
       applyTyping(onEnter(format, element.type, empty), element, index);
       return;
     }

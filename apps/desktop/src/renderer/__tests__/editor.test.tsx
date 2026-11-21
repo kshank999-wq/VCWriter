@@ -90,19 +90,37 @@ const longScript = (): ProjectFile => {
 const elementTypes = (): string[] =>
   screen.getAllByLabelText('Element type').map((node) => (node as HTMLSelectElement).value);
 
+
+/** Return where a writer presses it after typing: at the end of the line. */
+const pressReturn = (node: HTMLElement) => {
+  const box = node as HTMLTextAreaElement;
+  if (typeof box.setSelectionRange === 'function') box.setSelectionRange(box.value.length, box.value.length);
+  fireEvent.keyDown(node, { key: 'Enter' });
+};
+
 describe('writing keyboard flow', () => {
+  it('cuts a line in two when Return is pressed in the middle of it, as a word processor does', () => {
+    render(<Harness initial={screenplayWithAction()} />);
+    const action = screen.getByDisplayValue('Rain hammers the glass.') as HTMLTextAreaElement;
+    action.setSelectionRange(5, 5);
+    fireEvent.keyDown(action, { key: 'Enter' });
+    expect(elementTypes()).toEqual(['action', 'action']);
+    expect(screen.getByDisplayValue('Rain')).toBeTruthy();
+    expect(screen.getByDisplayValue('hammers the glass.')).toBeTruthy();
+  });
+
   it('creates the conventional next element on Return', () => {
     render(<Harness initial={screenplayWithAction()} />);
     const action = screen.getByDisplayValue('Rain hammers the glass.');
 
-    fireEvent.keyDown(action, { key: 'Enter' });
+    pressReturn(action);
     expect(elementTypes()).toEqual(['action', 'action']);
 
     // Retype the new element as a character cue; Return then gives dialogue.
     const selects = screen.getAllByLabelText('Element type');
     fireEvent.change(selects[1]!, { target: { value: 'character' } });
     const cue = screen.getAllByPlaceholderText('character')[0] as HTMLTextAreaElement;
-    fireEvent.keyDown(cue, { key: 'Enter' });
+    pressReturn(cue);
 
     expect(elementTypes()).toEqual(['action', 'character', 'dialogue']);
   });
@@ -154,7 +172,7 @@ describe('writing keyboard flow', () => {
     fireEvent.keyDown(line(), { key: 'Tab' });
     expect(elementTypes()).toEqual(['parenthetical']);
     const wryly = screen.getByDisplayValue('(Rain hammers the glass.)');
-    fireEvent.keyDown(wryly, { key: 'Enter' });
+    pressReturn(wryly);
     expect(elementTypes()).toEqual(['parenthetical', 'dialogue']);
 
     // And Tab in the speech reaches for a parenthetical, not back to a cue —
@@ -197,7 +215,7 @@ describe('writing keyboard flow', () => {
 
   it('removes an empty element on Backspace at the start', () => {
     render(<Harness initial={screenplayWithAction()} />);
-    fireEvent.keyDown(screen.getByDisplayValue('Rain hammers the glass.'), { key: 'Enter' });
+    pressReturn(screen.getByDisplayValue('Rain hammers the glass.'));
     expect(elementTypes()).toHaveLength(2);
 
     const added = screen.getAllByPlaceholderText('action')[1] as HTMLTextAreaElement;
@@ -252,7 +270,7 @@ describe('the whole script in story order', () => {
     expect(elementTypes()).toEqual(['character']);
 
     // Return gives the element that conventionally follows a cue.
-    fireEvent.keyDown(screen.getByDisplayValue('Rain hammers the glass.'), { key: 'Enter' });
+    pressReturn(screen.getByDisplayValue('Rain hammers the glass.'));
     expect(elementTypes()).toEqual(['character', 'dialogue']);
 
     // And what is typed into it is the manuscript, not a copy of it.
