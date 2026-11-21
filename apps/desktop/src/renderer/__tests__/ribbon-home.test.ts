@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { Editor } from '@tiptap/core';
 import { documentExtensions } from '../document/extensions';
 import { changeCase, sortParagraphs } from '../document/Ribbon';
+import { deeperListItem } from '../document/extensions';
 
 /**
  * The Home tab's Word commands (from Ken, 21 November): Change Case keeps
@@ -48,5 +49,28 @@ describe('Sort', () => {
     expect(e.getText({ blockSeparator: '|' })).toBe('Apples|figs|pears');
     e.commands.setTextSelection(2);
     expect(sortParagraphs(e)).toBe(false);
+  });
+});
+
+describe('outline lists, as Word has them', () => {
+  it('goes down a level for every Tab, even with no line above to go under, and comes back out', () => {
+    const e = make('<ol><li><p>Test</p></li></ol><p>After</p>');
+    e.commands.setTextSelection(7);
+    e.commands.splitListItem('listItem');
+    const tab = () => e.commands.sinkListItem('listItem') || deeperListItem(e.view.state, e.view.dispatch);
+    tab();
+    tab();
+    tab();
+    e.commands.insertContent('deep');
+    const depth = () => {
+      let levels = 0;
+      for (let at = e.state.selection.$from.depth; at > 0; at -= 1) if (e.state.selection.$from.node(at).type.name === 'orderedList') levels += 1;
+      return levels;
+    };
+    expect(depth()).toBe(4);
+    for (let i = 0; i < 3; i += 1) e.commands.liftListItem('listItem');
+    expect(depth()).toBe(1);
+    // The holders, left empty, are gone.
+    expect(e.getHTML()).not.toContain('data-bare');
   });
 });

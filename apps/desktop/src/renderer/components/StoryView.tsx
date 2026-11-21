@@ -22,6 +22,7 @@ import {
   printsBookHeadings,
   sectionHeading,
   subsectionHeading,
+  isSectionText,
 } from '@vcwriter/domain';
 import { BookHeadingLine } from './BookHeadingLine';
 import { BeatBody } from './BeatBody';
@@ -739,7 +740,8 @@ export function StoryView({
                     }}
                   >
                     {display.beatNames && !numbers.passages.has(beat.id as string) ? beatHeader(beat) : null}
-                    {headed ? (
+                    {/* A section's own text has no heading of its own (from Ken, 21 November). */}
+                    {headed && !isSectionText(file, beat) ? (
                       <BookHeadingLine
                         heading={subsectionHeading(file, beat, numbers)}
                         untitled={`Untitled ${nouns.sub.toLowerCase()}`}

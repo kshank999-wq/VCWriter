@@ -1072,3 +1072,17 @@ microphone at the first stretch the speech model could not hear — on the
 desktop, typically the first one, while the model warms up — so Dictate
 seemed to do nothing. Like the writing screen, it now says so in the status
 bar and listens on; a session that truly cannot go on ends itself.
+
+**Lists and page setup as Word has them** (from Ken, 21 November, with Word's
+screens beside each). A numbered list numbers each level down in a new style,
+1. a. i. and round again (bullets • ○ ▪), on the page, in print and in the
+Word file. Tab takes a line down a level every time it is pressed, even with
+no line above to go under (`deeperListItem` puts it in a holder that prints
+nothing); Shift+Tab brings it back, and neither key ever takes the cursor out
+of the page. Margins lists each preset with a picture of the page, its name
+and its measures, then *Custom margins…*; Size lists every standard sheet
+(Letter, Legal, Tabloid, Executive, Statement, 8.5 × 13, A3–A6, B5, photo
+sizes, book trims 5 × 8 and 6 × 9, envelopes) with its measures, then
+*Custom size…* (`paper: 'custom'`, `customSize` in inches). Word's
+*Borderless* sizes (a printer's matter) and *Mirrored* margins (documents have
+no facing pages yet) are left off.

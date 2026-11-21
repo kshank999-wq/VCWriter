@@ -1831,3 +1831,105 @@
   gap: 5px;
   padding: 0 6px;
 }
+
+/* **Lists number as Word numbers them** (from Ken, 21 November): each level
+   down a new style, 1. a. i. and round again; bullets • ○ ▪. A list given a
+   style of its own (Numbering's menu) keeps it. */
+.wp-doc ol:not([type]) { list-style-type: decimal; }
+.wp-doc :is(ol) :is(ol):not([type]) { list-style-type: lower-alpha; }
+.wp-doc :is(ol) :is(ol) :is(ol):not([type]) { list-style-type: lower-roman; }
+.wp-doc :is(ol) :is(ol) :is(ol) :is(ol):not([type]) { list-style-type: decimal; }
+.wp-doc :is(ol) :is(ol) :is(ol) :is(ol) :is(ol):not([type]) { list-style-type: lower-alpha; }
+.wp-doc :is(ol) :is(ol) :is(ol) :is(ol) :is(ol) :is(ol):not([type]) { list-style-type: lower-roman; }
+.wp-doc :is(ol) :is(ol) :is(ol) :is(ol) :is(ol) :is(ol) :is(ol):not([type]) { list-style-type: decimal; }
+.wp-doc :is(ol) :is(ol) :is(ol) :is(ol) :is(ol) :is(ol) :is(ol) :is(ol):not([type]) { list-style-type: lower-alpha; }
+.wp-doc :is(ol) :is(ol) :is(ol) :is(ol) :is(ol) :is(ol) :is(ol) :is(ol) :is(ol):not([type]) { list-style-type: lower-roman; }
+.wp-doc ul { list-style-type: disc; }
+.wp-doc ul ul { list-style-type: circle; }
+.wp-doc ul ul ul { list-style-type: square; }
+.wp-doc ul ul ul ul { list-style-type: disc; }
+.wp-doc ul ul ul ul ul { list-style-type: circle; }
+.wp-doc ul ul ul ul ul ul { list-style-type: square; }
+
+/* A level's holder (see `deeperListItem`): prints nothing and is not counted. */
+.wp-doc li[data-bare] {
+  display: block;
+}
+
+.wp-doc li[data-bare] > p:first-child {
+  display: none;
+}
+
+/* Margins and Size, as Word lists them: a picture, the name, the measures. */
+.wp-choice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.wp-menu-item .wp-choice-name {
+  display: block;
+  font-size: 13.5px;
+}
+
+.wp-menu-item .wp-choice-detail {
+  display: block;
+  font-size: 11.5px;
+  opacity: 0.65;
+  margin-top: 1px;
+}
+
+.wp-margin-thumb .wp-thumb-page {
+  fill: #fff;
+  stroke: #c3c8d0;
+}
+
+.wp-margin-thumb .wp-thumb-guide {
+  stroke: #a9c1e8;
+  stroke-width: 0.6;
+}
+
+.wp-margin-thumb .wp-thumb-text {
+  fill: none;
+  stroke: #2f6fd6;
+  stroke-width: 1.2;
+}
+
+.wp-menu-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-height: min(420px, 60vh);
+  overflow-y: auto;
+  min-width: 230px;
+}
+
+.wp-custom {
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+  padding-top: 4px;
+}
+
+.workspace.wp-mode .wp-custom {
+  border-top-color: #e3e6eb;
+}
+
+.wp-custom > summary {
+  cursor: pointer;
+  padding: 7px 10px;
+  font-size: 12.5px;
+  border-radius: 5px;
+  list-style: none;
+}
+
+.wp-custom > summary::-webkit-details-marker {
+  display: none;
+}
+
+.wp-custom > summary:hover {
+  background: var(--hover, rgba(255, 255, 255, 0.08));
+}
+
+.workspace.wp-mode .wp-custom > summary:hover {
+  background: #edf1f7;
+}

@@ -5,8 +5,8 @@ import type { BookHeading } from '@vcwriter/domain';
  * prints — the number bold and to the left, the title in title case — with
  * the switch that takes it out (from Ken: *you need the option to be able to
  * turn those on or off. So if you want to merge two sections, you can just
- * turn off that label*). A heading switched off stays visible here, faint
- * and struck through, so it can be switched back on; it prints nothing.
+ * turn off that label*). A heading switched off is not drawn at all, here or
+ * in print; the Heading tick in the writing window's top bar brings it back.
  */
 export function BookHeadingLine({
   heading,
@@ -20,6 +20,10 @@ export function BookHeadingLine({
 }) {
   // A passage runs on from its subsection: no heading, not even a hidden one.
   if (heading.passage) return null;
+  // **Off is gone, not crossed out** (from Ken, 21 November: *this needs to
+  // not be crossed out but instead turned off*). It is switched back on with
+  // the Heading tick in the writing window's top bar, or the Inspector's.
+  if (!heading.shown) return null;
   const on = heading.shown;
   const Tag = heading.level === 'section' ? 'h2' : 'h3';
   return (

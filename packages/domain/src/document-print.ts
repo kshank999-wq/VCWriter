@@ -30,6 +30,14 @@ export const DOCUMENT_CONTENT_CSS = `
 .wp-doc li > p { margin: 0 0 2pt; }
 .wp-doc ul ul { list-style-type: circle; }
 .wp-doc ul ul ul { list-style-type: square; }
+.wp-doc ol ol { list-style-type: lower-alpha; }
+.wp-doc ol ol ol { list-style-type: lower-roman; }
+.wp-doc ol ol ol ol { list-style-type: decimal; }
+.wp-doc ol ol ol ol ol { list-style-type: lower-alpha; }
+.wp-doc ol ol ol ol ol ol { list-style-type: lower-roman; }
+.wp-doc ol ol ol ol ol ol ol { list-style-type: decimal; }
+.wp-doc li[data-bare] { display: block; }
+.wp-doc li[data-bare] > p:first-child { display: none; }
 .wp-doc ol[type="a"] { list-style-type: lower-alpha; }
 .wp-doc ol[type="A"] { list-style-type: upper-alpha; }
 .wp-doc ol[type="i"] { list-style-type: lower-roman; }

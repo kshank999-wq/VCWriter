@@ -93,13 +93,14 @@ export const setDocumentPageSetup = (
       ...document.pageSetup,
       ...patch,
       margins: { ...document.pageSetup.margins, ...patch.margins },
+      customSize: { ...document.pageSetup.customSize, ...patch.customSize },
     }),
     updatedAt: nowIso(),
   }));
 
 /** The sheet as it is turned: width and height in inches. */
 export const pageSize = (setup: DocumentPageSetup): { width: number; height: number } => {
-  const paper = PAPER_SIZES[setup.paper];
+  const paper = setup.paper === 'custom' ? (setup.customSize ?? { width: 8.5, height: 11 }) : PAPER_SIZES[setup.paper];
   return setup.orientation === 'landscape'
     ? { width: paper.height, height: paper.width }
     : { width: paper.width, height: paper.height };

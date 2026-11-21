@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Editor } from '@tiptap/core';
-import { PAGE_NUMBER_PRESETS, PAPER_SIZES, type DocumentPageSetup, type PageNumberPreset, type PaperSize } from '@vcwriter/domain';
+import { PAGE_NUMBER_PRESETS, PAPER_SIZES, inchesLabel, pageSize, type DocumentPageSetup, type PageNumberPreset, type StandardPaper } from '@vcwriter/domain';
 import { useFontLibrary } from './fonts';
 import { NO_FILL, SHAPES, SHAPE_FILLS, insertShape, shapeSvg, type ShapeId } from './shapes';
 import type { DocumentSpeech } from './speech';
@@ -79,11 +79,38 @@ export const applyStyle = (editor: Editor, style: string): void => {
 };
 
 const MARGIN_PRESETS: { label: string; margins: DocumentPageSetup['margins'] }[] = [
-  { label: 'Normal (1 in)', margins: { top: 1, right: 1, bottom: 1, left: 1 } },
-  { label: 'Narrow (0.5 in)', margins: { top: 0.5, right: 0.5, bottom: 0.5, left: 0.5 } },
+  { label: 'Normal', margins: { top: 1, right: 1, bottom: 1, left: 1 } },
+  { label: 'Narrow', margins: { top: 0.5, right: 0.5, bottom: 0.5, left: 0.5 } },
   { label: 'Moderate', margins: { top: 1, right: 0.75, bottom: 1, left: 0.75 } },
   { label: 'Wide', margins: { top: 1, right: 2, bottom: 1, left: 2 } },
 ];
+
+/** What a page setup's paper is called. */
+const paperName = (setup: DocumentPageSetup): string =>
+  setup.paper === 'custom' ? `Custom ${inchesLabel(setup.customSize.width, setup.customSize.height)}` : `${PAPER_SIZES[setup.paper].name} ${inchesLabel(PAPER_SIZES[setup.paper].width, PAPER_SIZES[setup.paper].height)}`;
+
+/** A Letter page drawn small, with its margins: Word's picture beside each margin choice. */
+function MarginThumb({ margins }: { margins: DocumentPageSetup['margins'] }) {
+  const scale = 3;
+  const w = 8.5 * scale;
+  const h = 11 * scale;
+  return (
+    <svg className="wp-margin-thumb" width={w + 2} height={h + 2} viewBox={`-1 -1 ${w + 2} ${h + 2}`} aria-hidden="true">
+      <rect x={0} y={0} width={w} height={h} rx={1} className="wp-thumb-page" />
+      <path
+        d={`M${margins.left * scale} 0V${h}M${w - margins.right * scale} 0V${h}M0 ${margins.top * scale}H${w}M0 ${h - margins.bottom * scale}H${w}`}
+        className="wp-thumb-guide"
+      />
+      <rect
+        x={margins.left * scale}
+        y={margins.top * scale}
+        width={w - (margins.left + margins.right) * scale}
+        height={h - (margins.top + margins.bottom) * scale}
+        className="wp-thumb-text"
+      />
+    </svg>
+  );
+}
 
 export interface FileActions {
   save(): void;
@@ -1135,29 +1162,43 @@ function LayoutTab({ pageSetup, onPageSetup, editor }: TabProps) {
         <Drop label="Margins" face={BIG.margins} caption="Margins" big>
           {(close) => (
             <>
+              {/* As Word shows them (from Ken, 21 November): a picture of the
+                  page with its margins, the name, the measurements. */}
               {MARGIN_PRESETS.map((one, index) => (
-                <MenuItem key={one.label} label={one.label} active={preset === index} onPick={() => (close(), onPageSetup({ margins: one.margins }))} />
+                <MenuItem key={one.label} label={one.label} active={preset === index} onPick={() => (close(), onPageSetup({ margins: one.margins }))}>
+                  <span className="wp-choice">
+                    <MarginThumb margins={one.margins} />
+                    <span>
+                      <span className="wp-choice-name">{one.label}</span>
+                      <span className="wp-choice-detail">
+                        Top: {one.margins.top}", Bottom: {one.margins.bottom}", Left: {one.margins.left}", Right: {one.margins.right}"
+                      </span>
+                    </span>
+                  </span>
+                </MenuItem>
               ))}
-              <div className="wp-menu-head">Your own, in inches</div>
-              <div className="wp-margin-fields">
-                {(['top', 'bottom', 'left', 'right'] as const).map((side) => (
-                  <label key={side} className="wp-field narrow">
-                    <span>{side[0]!.toUpperCase() + side.slice(1)}</span>
-                    <input
-                      type="number"
-                      min={0}
-                      max={4}
-                      step={0.05}
-                      value={pageSetup.margins[side]}
-                      aria-label={`${side} margin, inches`}
-                      onChange={(event) => {
-                        const value = Number(event.target.value);
-                        if (Number.isFinite(value)) onPageSetup({ margins: { [side]: Math.min(4, Math.max(0, value)) } });
-                      }}
-                    />
-                  </label>
-                ))}
-              </div>
+              <details className="wp-custom" open={preset < 0}>
+                <summary>Custom margins…</summary>
+                <div className="wp-margin-fields">
+                  {(['top', 'bottom', 'left', 'right'] as const).map((side) => (
+                    <label key={side} className="wp-field narrow">
+                      <span>{side[0]!.toUpperCase() + side.slice(1)} (in)</span>
+                      <input
+                        type="number"
+                        min={0}
+                        max={4}
+                        step={0.05}
+                        value={pageSetup.margins[side]}
+                        aria-label={`${side} margin, inches`}
+                        onChange={(event) => {
+                          const value = Number(event.target.value);
+                          if (Number.isFinite(value)) onPageSetup({ margins: { [side]: Math.min(4, Math.max(0, value)) } });
+                        }}
+                      />
+                    </label>
+                  ))}
+                </div>
+              </details>
             </>
           )}
         </Drop>
@@ -1169,12 +1210,44 @@ function LayoutTab({ pageSetup, onPageSetup, editor }: TabProps) {
             </>
           )}
         </Drop>
-        <Drop label="Size" title={`Paper: ${PAPER_SIZES[pageSetup.paper].name}`} face={BIG.size} caption="Size" big>
-          {(close) =>
-            (Object.keys(PAPER_SIZES) as PaperSize[]).map((paper) => (
-              <MenuItem key={paper} label={PAPER_SIZES[paper].name} active={pageSetup.paper === paper} onPick={() => (close(), onPageSetup({ paper }))} />
-            ))
-          }
+        <Drop label="Size" title={`Paper: ${paperName(pageSetup)}`} face={BIG.size} caption="Size" big>
+          {(close) => (
+            <>
+              <div className="wp-menu-scroll">
+                {(Object.keys(PAPER_SIZES) as StandardPaper[]).map((paper) => (
+                  <MenuItem key={paper} label={PAPER_SIZES[paper].name} active={pageSetup.paper === paper} onPick={() => (close(), onPageSetup({ paper }))}>
+                    <span className="wp-choice-name">{PAPER_SIZES[paper].name}</span>
+                    <span className="wp-choice-detail">{inchesLabel(PAPER_SIZES[paper].width, PAPER_SIZES[paper].height)}</span>
+                  </MenuItem>
+                ))}
+              </div>
+              {/* The writer's own (from Ken, 21 November: *also custom size feature*). */}
+              <details className="wp-custom" open={pageSetup.paper === 'custom'}>
+                <summary>Custom size…</summary>
+                <div className="wp-margin-fields">
+                  {(['width', 'height'] as const).map((side) => (
+                    <label key={side} className="wp-field narrow">
+                      <span>{side === 'width' ? 'Width' : 'Height'} (in)</span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={22}
+                        step={0.05}
+                        value={pageSetup.paper === 'custom' ? pageSetup.customSize[side] : pageSize({ ...pageSetup, orientation: 'portrait' })[side]}
+                        aria-label={`Page ${side}, inches`}
+                        onChange={(event) => {
+                          const value = Number(event.target.value);
+                          if (!Number.isFinite(value)) return;
+                          const from = pageSetup.paper === 'custom' ? pageSetup.customSize : pageSize({ ...pageSetup, orientation: 'portrait' });
+                          onPageSetup({ paper: 'custom', customSize: { ...from, [side]: Math.min(22, Math.max(1, value)) } });
+                        }}
+                      />
+                    </label>
+                  ))}
+                </div>
+              </details>
+            </>
+          )}
         </Drop>
         <Drop label="Breaks" face={BIG.breaks} caption="Breaks" big>
           {(close) => <MenuItem label="Page break — start the next page here" onPick={() => (close(), chain().setPageBreak().run())} />}

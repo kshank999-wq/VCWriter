@@ -437,6 +437,8 @@ const listXml = (node: DocNode, context: Context, level: number, inherited?: num
           if (child.type === 'bulletList' || child.type === 'orderedList') {
             return listXml(child, context, Math.min(8, level + 1), numId);
           }
+          // A level's holder (a line taken down a level with nothing above it) prints nothing.
+          if (index === 0 && item.attrs?.['bare'] && child.type === 'paragraph') return '';
           if (child.type === 'paragraph' || child.type === 'heading') {
             return index === 0
               ? paragraphXml(child, context, { list: { numId: numId as number, level } })
@@ -681,7 +683,9 @@ const BULLETS = ['•', 'o', '▪'];
 const abstractXml = (kind: ListKind): string => {
   const levels = Array.from({ length: 9 }, (_, level) => {
     const indent = 720 * (level + 1);
-    const format = kind === 'bullet' ? 'bullet' : LEVEL_TEXT[kind];
+    // A plain numbered list numbers as Word's does, each level down a new
+    // style: 1. a. i. and round again (from Ken, 21 November).
+    const format = kind === 'bullet' ? 'bullet' : kind === 'decimal' ? (['decimal', 'lowerLetter', 'lowerRoman'] as const)[level % 3]! : LEVEL_TEXT[kind];
     const text = kind === 'bullet' ? BULLETS[level % BULLETS.length] : `%${level + 1}.`;
     return (
       `<w:lvl w:ilvl="${level}"><w:start w:val="1"/><w:numFmt w:val="${format}"/>` +

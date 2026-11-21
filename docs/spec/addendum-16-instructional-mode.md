@@ -517,3 +517,11 @@ new line of the same style, with the caret at its start; emphasis across the
 cut is closed and reopened, a citation is never cut. Return at the very start
 opens an empty line above; only at the end of a line does Return go on to the
 next style. Every format, since it is how every word processor behaves.
+
+**A heading switched off is gone** (from Ken, 21 November: *this needs to not
+be crossed out but instead turned off and in each section or beat you can
+turn on title or heading with a check box in the top bar*). Off, a section or
+subsection heading is not drawn at all — no struck-through "Untitled
+subsection". The writing window's top bar has a **Heading** tick beside *In
+book*: on a section's own text it is the section's heading, on a subsection
+its own. A section's text never shows a subsection heading line.

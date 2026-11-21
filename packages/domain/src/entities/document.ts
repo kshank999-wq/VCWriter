@@ -47,18 +47,49 @@ export const docNodeSchema: z.ZodType<DocNode> = z.lazy(() =>
 );
 
 /** The paper a document is set on. Inches, as Word's own Page Setup speaks. */
-export const paperSizeSchema = z.enum(['letter', 'legal', 'a4', 'a5']);
+/**
+ * **Every standard paper size, and the writer's own** (from Ken, 21 November:
+ * *need all standard sizes and also custom size feature*, with Word's Size
+ * list beside it). Word's list, less its *Borderless* twins — whether a sheet
+ * prints to its edge is the printer's to say, not the document's — and with
+ * the book trims a writer reaches for.
+ */
+export const PAPER_SIZES = {
+  letter: { name: 'Letter', width: 8.5, height: 11 },
+  legal: { name: 'Legal', width: 8.5, height: 14 },
+  tabloid: { name: 'Tabloid', width: 11, height: 17 },
+  executive: { name: 'Executive', width: 7.25, height: 10.5 },
+  statement: { name: 'Statement', width: 5.5, height: 8.5 },
+  folio: { name: '8.5 × 13', width: 8.5, height: 13 },
+  a3: { name: 'A3', width: 11.69, height: 16.54 },
+  a4: { name: 'A4', width: 8.27, height: 11.69 },
+  a5: { name: 'A5', width: 5.83, height: 8.27 },
+  a6: { name: 'A6', width: 4.13, height: 5.83 },
+  b5: { name: 'B5', width: 6.93, height: 9.84 },
+  b5jis: { name: 'B5 (JIS)', width: 7.17, height: 10.12 },
+  'photo-4x6': { name: '4 × 6', width: 4, height: 6 },
+  'photo-5x7': { name: '5 × 7', width: 5, height: 7 },
+  'photo-8x10': { name: '8 × 10', width: 8, height: 10 },
+  'trade-5x8': { name: 'Book 5 × 8', width: 5, height: 8 },
+  'trade-6x9': { name: 'Book 6 × 9', width: 6, height: 9 },
+  envelope10: { name: 'Envelope #10', width: 4.13, height: 9.5 },
+  'envelope-dl': { name: 'Envelope DL', width: 4.33, height: 8.66 },
+  'envelope-c5': { name: 'Envelope C5', width: 6.38, height: 9.02 },
+} as const satisfies Record<string, { name: string; width: number; height: number }>;
+
+export type StandardPaper = keyof typeof PAPER_SIZES;
+export const paperSizeSchema = z.enum([...(Object.keys(PAPER_SIZES) as [StandardPaper, ...StandardPaper[]]), 'custom']);
 export type PaperSize = z.infer<typeof paperSizeSchema>;
 
-export const PAPER_SIZES: Record<PaperSize, { name: string; width: number; height: number }> = {
-  letter: { name: 'Letter (8.5 × 11 in)', width: 8.5, height: 11 },
-  legal: { name: 'Legal (8.5 × 14 in)', width: 8.5, height: 14 },
-  a4: { name: 'A4 (210 × 297 mm)', width: 8.27, height: 11.69 },
-  a5: { name: 'A5 (148 × 210 mm)', width: 5.83, height: 8.27 },
-};
+/** A size in inches, as Word writes it under each: 8.5" × 11". */
+export const inchesLabel = (width: number, height: number): string => `${Number(width.toFixed(2))}" × ${Number(height.toFixed(2))}"`;
 
 export const documentPageSetupSchema = z.object({
-  paper: paperSizeSchema.default('letter'),
+  paper: paperSizeSchema.catch('letter').default('letter'),
+  /** The writer's own size, in inches, for `paper: 'custom'`. */
+  customSize: z
+    .object({ width: z.number().min(1).max(22).default(8.5), height: z.number().min(1).max(22).default(11) })
+    .default({}),
   orientation: z.enum(['portrait', 'landscape']).default('portrait'),
   margins: z
     .object({

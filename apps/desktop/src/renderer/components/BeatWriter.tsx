@@ -561,6 +561,28 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
               <span>View master</span>
             </label>
           ) : null}
+          {/* **Its heading, on or off, here at the top** (from Ken, 21
+              November: *in each section or beat you can turn on title or
+              heading with a check box in the top bar*). For a section's own
+              text, the section's heading; for a subsection, its own. Off, the
+              heading is simply not there — on the page or in the book. */}
+          {headed && !ownerSubsection ? (
+            <label className="check" title={sectionText ? 'The section’s heading (number and title) in the book' : 'This subsection’s heading (number and title) in the book; off, its words run on from what is before'}>
+              <input
+                type="checkbox"
+                aria-label="Heading"
+                checked={sectionText ? unit?.headingShown !== false : beat.headingShown !== false}
+                onChange={(event) =>
+                  onUpdate((current) =>
+                    sectionText && unit
+                      ? updateUnit(current, unit.id, { headingShown: event.target.checked })
+                      : updateBeat(current, beat.id, { headingShown: event.target.checked }),
+                  )
+                }
+              />
+              <span>Heading</span>
+            </label>
+          ) : null}
           <label className="check" title={`Off: the ${nouns.sub.toLowerCase()} keeps its text and leaves the ${nouns.manuscript.toLowerCase()}`}>
             <input
               type="checkbox"

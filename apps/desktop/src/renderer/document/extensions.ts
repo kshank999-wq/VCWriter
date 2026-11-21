@@ -1,6 +1,6 @@
 import { Extension, Mark, Node, mergeAttributes } from '@tiptap/core';
 import type { Node as PmNode } from '@tiptap/pm/model';
-import { Plugin, PluginKey, type EditorState, type Transaction } from '@tiptap/pm/state';
+import { Plugin, PluginKey, TextSelection, type EditorState, type Transaction } from '@tiptap/pm/state';
 import { headingNumbers, type DocNode, type HeadingNumbering } from '@vcwriter/domain';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import StarterKit from '@tiptap/starter-kit';
@@ -158,13 +158,19 @@ export const BlockFormat = Extension.create({
     return {
       Tab: () => {
         if (this.editor.isActive('table')) return false;
-        if (this.editor.isActive('listItem')) return this.editor.commands.sinkListItem('listItem');
+        // As many levels as the writer presses Tab for (from Ken, 21 November:
+        // *I need to be able to tab as many times not locking it*). Where there
+        // is no line above at this level to go under, it goes down anyway.
+        if (this.editor.isActive('listItem')) return this.editor.commands.sinkListItem('listItem') || deeperListItem(this.editor.view.state, this.editor.view.dispatch);
         return this.editor.commands.insertContent('\t');
       },
       'Shift-Tab': () => {
         if (this.editor.isActive('table')) return false;
-        if (this.editor.isActive('listItem')) return this.editor.commands.liftListItem('listItem');
-        return this.editor.commands.indentBlocks(-1);
+        // Never handed back to the browser, which would take the cursor out of
+        // the page (Ken's *locking*): with nothing left to bring out, nothing happens.
+        if (this.editor.isActive('listItem')) return this.editor.commands.liftListItem('listItem') || true;
+        this.editor.commands.indentBlocks(-1);
+        return true;
       },
     };
   },
@@ -1011,6 +1017,86 @@ export const TableOfContents = Node.create({
   },
 });
 
+/**
+ * **A list item down a level with nothing above it to go under** (from Ken,
+ * 21 November, with Word beside it: pressing Tab again and again takes a line
+ * deeper each time, and Word numbers each level 1., a., i., 1.…). ProseMirror
+ * can only nest an item under the one before it; the first item of a level
+ * has none. So it goes inside a *bare* item: a holder at this level that
+ * prints nothing — no marker, no line, not counted — and whose only content is
+ * the deeper list. Shift+Tab brings the item back out, and the holder, left
+ * empty, goes (`ListLevels`).
+ */
+export const deeperListItem = (state: EditorState, dispatch?: (tr: Transaction) => void): boolean => {
+  const { $from } = state.selection;
+  let depth = $from.depth;
+  while (depth > 0 && $from.node(depth).type.name !== 'listItem') depth -= 1;
+  if (depth < 2) return true;
+  const item = $from.node(depth);
+  const list = $from.node(depth - 1);
+  if ($from.index(depth - 1) > 0) return true;
+  const deeperLevels = (() => {
+    let levels = 0;
+    for (let at = depth; at > 0; at -= 1) if ($from.node(at).type.name === 'listItem') levels += 1;
+    return levels;
+  })();
+  if (deeperLevels >= 9) return true;
+  const schema = state.schema;
+  const holder = schema.nodes['listItem']!.create({ bare: true }, [schema.nodes['paragraph']!.create(), list.type.create(list.attrs, item)]);
+  const start = $from.before(depth);
+  const tr = state.tr.replaceWith(start, start + item.nodeSize, holder);
+  // Inside the holder: its open, the empty paragraph (2), the list's open — then the item, as it was.
+  const inside = $from.pos - start;
+  tr.setSelection(TextSelection.create(tr.doc, start + 1 + 2 + 1 + inside));
+  dispatch?.(tr.scrollIntoView());
+  return true;
+};
+
+/** The bare holders' attribute, and their tidying when they hold nothing. */
+export const ListLevels = Extension.create({
+  name: 'listLevels',
+  addGlobalAttributes() {
+    return [
+      {
+        types: ['listItem'],
+        attributes: {
+          bare: {
+            default: false,
+            parseHTML: (element: HTMLElement) => element.hasAttribute('data-bare'),
+            renderHTML: (attributes: Record<string, unknown>) => (attributes['bare'] ? { 'data-bare': 'true' } : {}),
+          },
+        },
+      },
+    ];
+  },
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        key: new PluginKey('listLevels'),
+        appendTransaction: (transactions, _old, state) => {
+          if (!transactions.some((one) => one.docChanged)) return null;
+          const empty: { pos: number; size: number }[] = [];
+          const typed: number[] = [];
+          state.doc.descendants((node, pos) => {
+            if (node.type.name !== 'listItem' || !node.attrs['bare']) return true;
+            const holds = node.childCount > 1;
+            const words = (node.firstChild?.textContent ?? '').length > 0;
+            if (words) typed.push(pos);
+            else if (!holds) empty.push({ pos, size: node.nodeSize });
+            return true;
+          });
+          if (empty.length === 0 && typed.length === 0) return null;
+          const tr = state.tr;
+          // Words typed into a holder make it an ordinary line again.
+          for (const pos of typed) tr.setNodeMarkup(pos, undefined, { ...state.doc.nodeAt(pos)!.attrs, bare: false });
+          for (const one of empty.reverse()) tr.delete(tr.mapping.map(one.pos), tr.mapping.map(one.pos + one.size));
+          return tr;
+        },
+      }),
+    ];
+  },
+});
+
 /** Everything the document editor is built from. */
 export const documentExtensions = () => [
   StarterKit.configure({
@@ -1027,6 +1113,7 @@ export const documentExtensions = () => [
   Image.configure({ allowBase64: true, inline: false, resize: { enabled: true, alwaysPreserveAspectRatio: true, minWidth: 16, minHeight: 8 } }),
   Placeholder.configure({ placeholder: 'Start typing…' }),
   BlockFormat,
+  ListLevels,
   PageBreak,
   Search,
   ExtractMark,
