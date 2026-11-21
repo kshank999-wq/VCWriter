@@ -532,3 +532,13 @@ to their tab down the right, every time a section or subsection is opened;
 the corner grip's size, once set, is kept. Mark up puts its tools in the
 toolbar row just under the top bar, where B, I and U stand while writing,
 rather than on the page.
+
+**The beat's name and its heading** (from Ken, 21 November: *whatever you
+type in the top of the screen is going to be the title of the beat. That's
+critical so you know which beat you're writing. And it's just those beat
+headings that don't show up on the page unless you want them to… The 2.1, why
+you want to write, that's the section or scene heading*). In the writing
+window the name box is always the beat's own name, shown on the track; the
+Heading tick prints that name as a heading or not; the section heading is the
+section's and neither touches it. A section's text with no name yet shows on
+the track as *Section text*.

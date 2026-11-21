@@ -1696,9 +1696,10 @@ function TrackRow({
                         {STATUS_GLYPH[beat.status]}
                       </span>
                       {/* The internal beat title is an authoring reference only (§5.3). */}
-                      <span className={isSectionText(file, beat) ? 'beat-row-title section-text' : 'beat-row-title'}>
+                      <span className={isSectionText(file, beat) && !beat.title.trim() ? 'beat-row-title section-text' : 'beat-row-title'}>
                         {/* A book's section text is the section's own words, under its heading (from Ken, 21 November). */}
-                        {isSectionText(file, beat)
+                        {/* Its own name always (from Ken, 21 November), the number only where its heading prints. */}
+                        {isSectionText(file, beat) && !beat.title.trim()
                           ? 'Section text'
                           : numberedTitle(numbers.subs.get(beat.id as string) ?? '', beat.title, `Untitled ${nouns.sub.toLowerCase()}`)}
                       </span>

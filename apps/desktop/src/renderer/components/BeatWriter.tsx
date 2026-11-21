@@ -393,25 +393,22 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
         // for every bar rather than written out on each.
         {...(onGrab ? { onPointerDown: onGrab } : {})}
       >
-        {/* A book's section text is named by its section (from Ken, 21 November). */}
-        <span className="writer-caption muted">{sectionText ? `${nouns.unit} ${numbers.units.get(beat.unitId as string) ?? ''}`.trim() : `${nouns.sub} name`}</span>
-        {sectionText && unit ? (
-          <input
-            className="writer-name"
-            aria-label={`${nouns.unit} name`}
-            placeholder={`Name this ${nouns.unit.toLowerCase()}`}
-            value={unit.title}
-            onChange={(event) => onUpdate((current) => updateUnit(current, unit.id, { title: event.target.value }))}
-          />
-        ) : (
-          <input
-            className="writer-name"
-            aria-label={`${nouns.sub} name`}
-            placeholder={`Name this ${nouns.sub.toLowerCase()}`}
-            value={beat.title}
-            onChange={(event) => onUpdate((current) => updateBeat(current, beat.id, { title: event.target.value }))}
-          />
-        )}
+        {/* **The box is the beat's own name, always** (from Ken, 21 November:
+            *whatever you type in the top of the screen is going to be the
+            title of the beat… critical so you know which beat you're
+            writing*). It names the beat on the track; whether it prints is
+            the Heading tick's. The section's heading is the section's. */}
+        <span className="writer-caption muted">
+          {sectionText && numbers.units.get(beat.unitId as string) ? `${nouns.unit} ${numbers.units.get(beat.unitId as string)} · ` : ''}
+          {nouns.sub} name
+        </span>
+        <input
+          className="writer-name"
+          aria-label={`${nouns.sub} name`}
+          placeholder={`Name this ${nouns.sub.toLowerCase()}`}
+          value={beat.title}
+          onChange={(event) => onUpdate((current) => updateBeat(current, beat.id, { title: event.target.value }))}
+        />
         <div className="writer-tools">
           {/* **The beat's plan beside it** (from Ken): the notes, characters
               and ideas the Outliner holds under this beat, in a side panel
@@ -568,24 +565,17 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
               <span>View master</span>
             </label>
           ) : null}
-          {/* **Its heading, on or off, here at the top** (from Ken, 21
-              November: *in each section or beat you can turn on title or
-              heading with a check box in the top bar*). For a section's own
-              text, the section's heading; for a subsection, its own. Off, the
-              heading is simply not there — on the page or in the book. */}
+          {/* **This beat's heading, on or off, here at the top** (from Ken, 21
+              November: *it's just those beat headings that don't show up on
+              the page unless you want them to… that's the title to turn on
+              and off*). Never the section's heading. */}
           {headed && !ownerSubsection ? (
-            <label className="check" title={sectionText ? 'The section’s heading (number and title) in the book' : 'This subsection’s heading (number and title) in the book; off, its words run on from what is before'}>
+            <label className="check" title="This beat's name as a heading on the page and in the book; off, its words run on under the section with no heading">
               <input
                 type="checkbox"
                 aria-label="Heading"
-                checked={sectionText ? unit?.headingShown !== false : beat.headingShown !== false}
-                onChange={(event) =>
-                  onUpdate((current) =>
-                    sectionText && unit
-                      ? updateUnit(current, unit.id, { headingShown: event.target.checked })
-                      : updateBeat(current, beat.id, { headingShown: event.target.checked }),
-                  )
-                }
+                checked={beat.headingShown !== false}
+                onChange={(event) => onUpdate((current) => updateBeat(current, beat.id, { headingShown: event.target.checked }))}
               />
               <span>Heading</span>
             </label>
@@ -729,7 +719,7 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
               ) : null}
             </p>
           ) : null}
-          {headed && !ownerSubsection && !sectionText ? (
+          {headed && !ownerSubsection ? (
             <BookHeadingLine
               heading={subsectionHeading(file, beat)}
               untitled="Untitled subsection"
