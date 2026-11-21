@@ -25015,3 +25015,45 @@ textarea.edit-check-line {
   align-items: center;
   gap: 10px;
 }
+
+/* The AI check (addendum 47): what it costs, what you have, then run it. */
+.ai-check {
+  margin: 10px 14px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface, transparent);
+  max-width: 72ch;
+}
+.ai-check header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ai-check h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+.ai-check p {
+  margin: 8px 0;
+}
+.ai-check-figures {
+  display: flex;
+  gap: 24px;
+  margin: 10px 0;
+}
+.ai-check-figures dt {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+.ai-check-figures dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+}
+.ai-check-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}

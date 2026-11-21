@@ -51,6 +51,8 @@ interface EditorPanelProps {
   currentBeatId?: BeatId | null;
   /** The Edit Check's *Return to writing*. */
   onReturnToWriting?(): void;
+  /** Bumped by Editor → AI check…, to open the Edit Check's AI check. */
+  aiCheckAsked?: number;
 }
 
 /**
@@ -104,6 +106,7 @@ export function EditorPanel({
   onPopOut,
   currentBeatId = null,
   onReturnToWriting,
+  aiCheckAsked = 0,
 }: EditorPanelProps) {
   const indexed = hasBookIndex(file.project.format);
   // A tab that is not there cannot be the one that is open: closing a project
@@ -267,6 +270,7 @@ export function EditorPanel({
           currentBeatId={currentBeatId ?? null}
           onGoTo={(beatId) => onGoTo?.(beatId as BeatId)}
           {...(onReturnToWriting ? { onReturnToWriting } : {})}
+          aiCheckAsked={aiCheckAsked}
         />
       ) : openTab === 'grid' ? (
         <>

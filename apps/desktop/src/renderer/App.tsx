@@ -49,7 +49,7 @@ import {
 } from '@vcwriter/domain';
 import { DocumentWorkspace } from './document/DocumentWorkspace';
 import { documentCommands } from './document/document-commands';
-import { guideFor, openCredits, openGuide } from './help-links';
+import { guideFor, openCredits, openEditCredits, openGuide } from './help-links';
 import { useProject } from './use-project';
 import { useBuildStanding } from './use-build-standing';
 import { useWritingAccess } from './use-writing-access';
@@ -382,6 +382,8 @@ export default function App() {
    * writer around while they work through it.
    */
   const [resumeReview, setResumeReview] = useState(0);
+  /** Bumped by Editor → AI check…, so the Edit Check opens its AI check panel. */
+  const [aiCheckAsked, setAiCheckAsked] = useState(0);
   const openedProjectId = file?.project.id ?? null;
   useEffect(() => {
     setResumeDismissed(false);
@@ -954,6 +956,12 @@ export default function App() {
         case 'editor.daily':
           setEditorTab('daily');
           return setView('editor');
+        case 'editor.aiCheck':
+          setEditorTab('daily');
+          setAiCheckAsked((count) => count + 1);
+          return setView('editor');
+        case 'editor.buyCredits':
+          return openEditCredits();
         case 'editor.final':
           setEditorTab('final');
           return setView('editor');
@@ -1976,6 +1984,7 @@ export default function App() {
               currentUnitId={selectedBeat?.unitId ?? null}
               currentBeatId={selectedBeat?.id ?? null}
               onReturnToWriting={() => setView('write')}
+              aiCheckAsked={aiCheckAsked}
               openOn={editorTab}
               onGoTo={(beatId) => {
                 setSelectedBeatId(beatId);

@@ -16,6 +16,8 @@ import { ManageSubscription } from './manage-subscription';
 import { Devices } from './devices';
 import { SetPassword } from './set-password';
 import { DeleteAccount } from './delete-account';
+import { EditCredits } from './edit-credits';
+import { balanceOf } from '@/lib/edit-credits';
 
 export const metadata: Metadata = { title: 'My account' };
 export const dynamic = 'force-dynamic';
@@ -34,7 +36,7 @@ const grantOf = (value: unknown): LicenseGrant => licenseGrantSchema.catch('purc
  * time and retrieve the current authorised build for either platform, see what
  * they bought, and have their license sent again without contacting support.
  */
-export default async function AccountPage() {
+export default async function AccountPage({ searchParams }: { searchParams?: { credits?: string } }) {
   const user = await currentUser();
   if (!user) {
     return (
@@ -72,6 +74,7 @@ export default async function AccountPage() {
   ]);
 
   const { plan: notes } = await notesPlanFor(user.id);
+  const credits = await balanceOf(user.id).catch(() => 0);
 
   const activeLicenses = (licenses ?? []).filter((license) => license.status === 'active');
 
@@ -148,6 +151,8 @@ export default async function AccountPage() {
           </div>
         )}
       </section>
+
+      <EditCredits balance={credits} justBought={searchParams?.credits === 'added'} />
 
       {activeLicenses.length > 0 ? (
         <section>

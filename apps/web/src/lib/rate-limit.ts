@@ -57,6 +57,11 @@ export const RULES = {
    */
   learningAid: { name: 'learning-aid', limit: 40, windowSeconds: 3600 },
   /**
+   * The AI deep check (addendum 47) is paid for in credits, so this is not a
+   * spending limit but a runaway guard: a whole novel is about thirty runs.
+   */
+  deepCheck: { name: 'deep-check', limit: 120, windowSeconds: 3600 },
+  /**
    * Naming groupings in a sitting's notes (addendum 26 §14a), in a bucket of
    * its own for the learning aid's reason. A writer presses this a handful of
    * times per sitting — once when the categories are thin and again when the

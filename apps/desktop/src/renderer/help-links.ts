@@ -83,3 +83,10 @@ export const CREDITS_URL = 'https://vc-writer.com/credits';
 export const openCredits = (): void => {
   window.open(CREDITS_URL, '_blank', 'noopener');
 };
+
+/** Edit credits for the AI check (addendum 47): bought on the account page, in the browser. */
+export const EDIT_CREDITS_URL = 'https://vc-writer.com/account#edit-credits';
+
+export const openEditCredits = (): void => {
+  window.open(EDIT_CREDITS_URL, '_blank', 'noopener');
+};

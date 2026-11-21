@@ -112,8 +112,8 @@ export interface EditFinding {
   message: string;
   rule: string;
   fix: string | null;
-  /** Where it came from: the program's own rules, or the grammar checker. */
-  source: 'rules' | 'grammar';
+  /** Where it came from: the program's own rules, the grammar checker, or the paid AI deep check. */
+  source: 'rules' | 'grammar' | 'ai';
 }
 
 export interface EditReview {
@@ -268,7 +268,15 @@ export const runEditCheck = (file: ProjectFile, options: { scope?: EditScope; ou
   findings.sort((a, b) => (order.get(a.elementId) ?? 0) - (order.get(b.elementId) ?? 0) || a.start - b.start);
 
   const before = editReviewOf(file);
-  const kept = before.findings.filter((one) => !inScope.has(one.elementId) && order.has(one.elementId));
+  // The AI deep check's findings were paid for and the rules cannot make them
+  // again: they are kept through a re-check while their words are still there.
+  const kept = before.findings.flatMap((one) => {
+    if (!order.has(one.elementId)) return [];
+    if (!inScope.has(one.elementId)) return [one];
+    if (one.source !== 'ai') return [];
+    const anchor = findingAnchor(file, one);
+    return anchor.state === 'stale' ? [] : [{ ...one, start: anchor.start, end: anchor.end }];
+  });
   const all = [...kept, ...findings].sort((a, b) => (order.get(a.elementId) ?? 0) - (order.get(b.elementId) ?? 0) || a.start - b.start);
   const keys = new Set(all.map((one) => one.key));
   const known = new Set(before.findings.map((one) => one.key));
@@ -281,6 +289,56 @@ export const runEditCheck = (file: ProjectFile, options: { scope?: EditScope; ou
     findings: all,
     decisions,
     fresh: findings.filter((one) => !known.has(one.key)).map((one) => one.key),
+  });
+};
+
+/**
+ * **The AI deep check's findings, added to the review** (addendum 47). They
+ * replace the last deep check's findings on the same lines and leave every
+ * other finding, and every decision, as it was. None carries a fix: the deep
+ * check points, it never rewrites.
+ */
+export const addDeepFindings = (file: ProjectFile, checked: readonly string[], hits: readonly OutsideHit[]): ProjectFile => {
+  const review = editReviewOf(file);
+  const lines = new Set(checked);
+  const order = new Map(linesInScope(file, { kind: 'all' }).map((one, index) => [one.elementId, index]));
+  const textOf = new Map(linesInScope(file, { kind: 'all' }).map((one) => [one.elementId, one.text]));
+  const counts = new Map<string, number>();
+  const added: EditFinding[] = [];
+  for (const one of hits) {
+    if (!order.has(one.elementId)) continue;
+    const quote = (textOf.get(one.elementId) ?? '').slice(one.start, one.end);
+    if (!quote) continue;
+    const tally = `${one.ruleId}|${one.elementId}|${quote.toLowerCase()}`;
+    const nth = counts.get(tally) ?? 0;
+    counts.set(tally, nth + 1);
+    added.push({
+      key: keyFor(one.ruleId, one.elementId, quote, nth),
+      beatId: one.beatId,
+      elementId: one.elementId,
+      start: one.start,
+      end: one.end,
+      quote,
+      category: one.category,
+      ruleId: one.ruleId,
+      severity: one.severity === 'error' ? 'concern' : one.severity,
+      confidence: one.confidence,
+      message: one.message,
+      rule: one.rule,
+      fix: null,
+      source: 'ai',
+    });
+  }
+  const known = new Set(review.findings.map((one) => one.key));
+  const findings = [...review.findings.filter((one) => !(one.source === 'ai' && lines.has(one.elementId))), ...added].sort(
+    (a, b) => (order.get(a.elementId) ?? 0) - (order.get(b.elementId) ?? 0) || a.start - b.start,
+  );
+  const keys = new Set(findings.map((one) => one.key));
+  return withReview(file, {
+    ...review,
+    findings,
+    decisions: Object.fromEntries(Object.entries(review.decisions).filter(([key]) => keys.has(key))),
+    fresh: added.filter((one) => !known.has(one.key)).map((one) => one.key),
   });
 };
 

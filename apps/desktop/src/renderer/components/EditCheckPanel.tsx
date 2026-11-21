@@ -29,6 +29,7 @@ import {
   type ProjectFile,
 } from '@vcwriter/domain';
 import { grammarHits, type GrammarProgress } from '../grammar-check';
+import { AiCheckPanel } from './AiCheckPanel';
 
 /**
  * **The Edit Check** — the Editors' first tab, refined to the VC Writer Editor
@@ -56,6 +57,8 @@ interface Props {
   onGoTo(beatId: string): void;
   /** Absent in a window of its own, where there is no Write page behind it. */
   onReturnToWriting?(): void;
+  /** Bumped by Editor → AI check…, to open the AI check. */
+  aiCheckAsked?: number;
 }
 
 type Show = 'open' | 'new' | 'deferred' | 'done' | 'all';
@@ -64,12 +67,12 @@ type Weight = 'all' | 'error' | 'concern' | 'info';
 const SEVERITY_WORDS = { error: 'Error', concern: 'Possible concern', info: 'Note' } as const;
 const STATUS_WORDS: Record<EditStatus, string> = { open: 'Open', fixed: 'Fixed', dismissed: 'Dismissed', intentional: 'Intentional', deferred: 'Deferred' };
 const CONFIDENCE_WORDS = { high: 'Sure', medium: 'Fairly sure', low: 'Unsure — worth a look' } as const;
-const CATEGORY_ORDER: EditCategory[] = ['spelling', 'grammar', 'punctuation', 'format', 'pov', 'structure', 'clarity', 'verbs', 'style', 'pacing'];
+const CATEGORY_ORDER: EditCategory[] = ['spelling', 'grammar', 'punctuation', 'format', 'pov', 'story', 'structure', 'clarity', 'verbs', 'style', 'pacing'];
 
 /** Where the writer was in the review, kept for the visit so Go to manuscript and back lands on the same finding (spec §5). */
 const remembered = new Map<string, string>();
 
-export function EditCheckPanel({ file, onUpdate, currentUnitId, currentBeatId, onGoTo, onReturnToWriting }: Props) {
+export function EditCheckPanel({ file, onUpdate, currentUnitId, currentBeatId, onGoTo, onReturnToWriting, aiCheckAsked = 0 }: Props) {
   const review = useMemo(() => editReviewOf(file), [file]);
   const profile = useMemo(() => editorProfileOf(file), [file]);
   const mode = editModeOf(file);
@@ -85,6 +88,10 @@ export function EditCheckPanel({ file, onUpdate, currentUnitId, currentBeatId, o
   const [wide, setWide] = useState(false);
   const [editing, setEditing] = useState(false);
   const cancel = useRef<AbortController | null>(null);
+  const [aiOpen, setAiOpen] = useState(aiCheckAsked > 0);
+  useEffect(() => {
+    if (aiCheckAsked > 0) setAiOpen(true);
+  }, [aiCheckAsked]);
 
   const visible = useMemo(
     () =>
@@ -291,9 +298,14 @@ export function EditCheckPanel({ file, onUpdate, currentUnitId, currentBeatId, o
               </button>
             </>
           ) : (
-            <button type="button" className="primary" onClick={() => void run()}>
-              Run Edit Check
-            </button>
+            <>
+              <button type="button" className="primary" onClick={() => void run()}>
+                Run Edit Check
+              </button>
+              <button type="button" className="ghost" onClick={() => setAiOpen(true)} title="Paid with edit credits. Points out problems; never rewrites.">
+                AI check…
+              </button>
+            </>
           )}
           {tally.total > 0 ? (
             <span className="edit-check-done muted small">
@@ -307,6 +319,20 @@ export function EditCheckPanel({ file, onUpdate, currentUnitId, currentBeatId, o
           ) : null}
         </div>
       </header>
+
+      {aiOpen ? (
+        <AiCheckPanel
+          file={file}
+          scope={scope}
+          scopeName={scope.kind === 'all' ? 'The whole project' : scope.kind === 'unit' ? 'The current section' : 'The current beat'}
+          onUpdate={onUpdate}
+          onClose={() => setAiOpen(false)}
+          onDone={(message) => {
+            setNotice(message);
+            setShow('new');
+          }}
+        />
+      ) : null}
 
       {notice ? (
         <p className="notice banner" role="status">

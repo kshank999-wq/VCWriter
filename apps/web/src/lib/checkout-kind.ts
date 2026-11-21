@@ -12,11 +12,13 @@
  */
 export const OWN_PRODUCT = 'vc-writer';
 
-export type CheckoutKind = 'desktop' | 'room' | 'other-product';
+export type CheckoutKind = 'desktop' | 'room' | 'edit-credits' | 'other-product';
 
 export const checkoutKind = (session: { metadata?: Record<string, string> | null }): CheckoutKind => {
   const product = session.metadata?.['product'];
   if (product && product !== OWN_PRODUCT) return 'other-product';
   if (session.metadata?.['room_id']) return 'room';
+  // A pack of edit credits for the AI deep check (addendum 47): a one-time payment, no licence.
+  if (session.metadata?.['kind'] === 'edit-credits') return 'edit-credits';
   return 'desktop';
 };

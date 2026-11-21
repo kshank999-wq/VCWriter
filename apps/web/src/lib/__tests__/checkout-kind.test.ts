@@ -16,5 +16,6 @@ describe('checkout kind', () => {
 
   it('is no desktop purchase for a Writers Room seat checkout', () => {
     expect(checkoutKind({ metadata: { room_id: 'r1' } })).toBe('room');
+    expect(checkoutKind({ metadata: { product: 'vc-writer', kind: 'edit-credits', pack: 'pack-5' } })).toBe('edit-credits');
   });
 });

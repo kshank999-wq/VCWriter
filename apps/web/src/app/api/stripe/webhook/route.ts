@@ -9,6 +9,7 @@ import { sendPurchaseEmail } from '@/lib/email';
 import { recordSubscription, subscriptionKind } from '@/lib/room-billing';
 import { recordDesktopSubscription } from '@/lib/desktop-subscription';
 import { checkoutKind } from '@/lib/checkout-kind';
+import { grantPurchase, reversePurchase } from '@/lib/edit-credits';
 
 /**
  * When the subscription is paid up to, asked of Stripe rather than guessed.
@@ -87,7 +88,11 @@ export async function POST(request: Request): Promise<Response> {
       // **Only VC Writer's own desktop checkouts make a licence.** Stripe sends
       // every VC product's events here, and a Writers Room seat checkout is
       // billed through its subscription events instead (`checkoutKind`).
-      if (checkoutKind(session) !== 'desktop') {
+      if (checkoutKind(session) === 'edit-credits') {
+        // A pack of edit credits (addendum 47): words on the writer's ledger,
+        // once per checkout however often Stripe delivers it.
+        await grantPurchase(session);
+      } else if (checkoutKind(session) !== 'desktop') {
         // Another product's sale, or a room's seats: nothing to fulfil here.
       } else if (purchaseSettled(session.payment_status)) {
         const email = session.customer_details?.email ?? session.customer_email;
@@ -154,7 +159,10 @@ export async function POST(request: Request): Promise<Response> {
       // Entitlement state must be able to follow the money (§12.2).
       const charge = event.data.object as Stripe.Charge;
       const paymentIntentId = typeof charge.payment_intent === 'string' ? charge.payment_intent : null;
-      if (paymentIntentId) {
+      // A refunded or disputed pack of edit credits is taken back off the ledger.
+      if (paymentIntentId && (await reversePurchase(paymentIntentId))) {
+        // Not a licence purchase; nothing else to follow.
+      } else if (paymentIntentId) {
         const status = event.type === 'charge.refunded' ? 'refunded' : 'disputed';
         const { data: order } = await client
           .from('orders')

@@ -20,6 +20,9 @@ import {
   type SceneVerdict,
   type ProjectFile,
   type ProjectFormat,
+  type DeepCheckAnswer,
+  type DeepCheckInput,
+  type EditCreditStanding,
 } from '@vcwriter/domain';
 import { exportProjectPdf, printProject, type PrintKind } from './export-pdf';
 import { applyApplicationMenu, commandSender, type MenuSpec } from './menu';
@@ -43,6 +46,8 @@ import {
   noteCategoriesStatus,
   requestNoteCategories,
   sceneReviewStatus,
+  requestDeepCheck,
+  editCreditStanding,
   signOut,
   syncProject,
   roomStanding,
@@ -978,6 +983,22 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
       }
     },
   );
+
+  ipcMain.handle('cloud:deepCheck', async (_event, input: DeepCheckInput): Promise<DesktopApiResult<DeepCheckAnswer>> => {
+    try {
+      return ok(await requestDeepCheck(input));
+    } catch (cause) {
+      return fail(cause);
+    }
+  });
+
+  ipcMain.handle('cloud:editCredits', async (): Promise<DesktopApiResult<EditCreditStanding>> => {
+    try {
+      return ok(await editCreditStanding());
+    } catch (cause) {
+      return fail(cause);
+    }
+  });
 
   ipcMain.handle('cloud:sceneReviewStatus', async (): Promise<DesktopApiResult<SceneReviewAvailability>> => {
     try {

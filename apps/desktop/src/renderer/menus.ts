@@ -54,6 +54,8 @@ export type CommandId =
   | 'editor.replace'
   | 'editor.findNext'
   | 'editor.daily'
+  | 'editor.aiCheck'
+  | 'editor.buyCredits'
   | 'editor.final'
   | 'editor.storyGrid'
   | 'editor.index'
@@ -203,7 +205,10 @@ export const menusFor = (format: ProjectFormat | null): readonly Menu[] => {
       null,
       // The two editors of spec §8: the daily pass, and the one that reads
       // the whole thing. "More advanced" is where the rest will go.
-      { command: 'editor.daily', label: 'Daily editor' },
+      { command: 'editor.daily', label: 'Edit Check' },
+      // The paid AI check (addendum 47): it points, it never rewrites.
+      { command: 'editor.aiCheck', label: 'AI check…' },
+      { command: 'editor.buyCredits', label: 'Buy edit credits…' },
       { command: 'editor.final', label: 'Final editor' },
       { command: 'editor.storyGrid', label: 'Story Grid' },
       // Where each scene begins and ends (addendum 13). Every format has

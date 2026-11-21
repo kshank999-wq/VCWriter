@@ -25,6 +25,7 @@ export type EditCategory =
   | 'verbs'
   | 'style'
   | 'pacing'
+  | 'story'
   | 'format';
 
 export const EDIT_CATEGORY_NAMES: Record<EditCategory, string> = {
@@ -37,6 +38,7 @@ export const EDIT_CATEGORY_NAMES: Record<EditCategory, string> = {
   verbs: 'Verbs & diction',
   style: 'Style & rhythm',
   pacing: 'Pacing & flow',
+  story: 'Story & continuity',
   format: 'Format',
 };
 

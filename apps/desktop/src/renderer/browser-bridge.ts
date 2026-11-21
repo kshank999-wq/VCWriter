@@ -22,6 +22,8 @@ import {
   type LearningSuggestion,
   type RecoveryReason,
   type SceneVerdict,
+  type DeepCheckAnswer,
+  type EditCreditStanding,
 } from '@vcwriter/domain';
 import type { DesktopApiResult, OpenResult, VcWriterApi } from '../preload/index';
 import {
@@ -1110,6 +1112,34 @@ export const createBrowserBridge = (): BrowserBridge => {
         return ok(payload.verdict);
       } catch {
         return fail('The structural read could not be sent. Check your connection.');
+      }
+    },
+
+    /** The AI check and the credit balance (addendum 47), same origin, same cookie. */
+    async deepCheck(input) {
+      try {
+        const response = await fetch('/api/ai/deep-check', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(input),
+        });
+        const payload = (await response.json().catch(() => null)) as (DeepCheckAnswer & { error?: string }) | null;
+        if (!response.ok || !payload?.findings) return fail(payload?.error ?? `The AI check failed (${response.status})`);
+        return ok(payload);
+      } catch {
+        return fail('The AI check could not be sent. Check your connection.');
+      }
+    },
+
+    async editCredits() {
+      try {
+        const response = await fetch('/api/edit-credits', { credentials: 'same-origin' });
+        const payload = (await response.json().catch(() => null)) as (EditCreditStanding & { error?: string }) | null;
+        if (!response.ok || !payload) return fail(payload?.error ?? 'Your edit credits could not be read.');
+        return ok({ signedIn: payload.signedIn, configured: payload.configured, balance: payload.balance });
+      } catch {
+        return fail('Your edit credits could not be read.');
       }
     },
 

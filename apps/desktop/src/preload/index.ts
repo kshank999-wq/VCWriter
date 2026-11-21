@@ -2,6 +2,9 @@ import { contextBridge, ipcRenderer, webFrame } from 'electron';
 import type {
   Assignment,
   CaptureItem,
+  DeepCheckAnswer,
+  DeepCheckInput,
+  EditCreditStanding,
   PhoneProjectName,
   Comment,
   DeskStanding,
@@ -407,6 +410,10 @@ export interface VcWriterApi {
     position?: string;
     format: 'screenplay' | 'prose';
   }): Promise<DesktopApiResult<SceneVerdict>>;
+  /** One run of the paid AI check (addendum 47). Findings only; never replacement text. */
+  deepCheck?(input: DeepCheckInput): Promise<DesktopApiResult<DeepCheckAnswer>>;
+  /** The writer's edit-credit balance, in words. */
+  editCredits?(): Promise<DesktopApiResult<EditCreditStanding>>;
   /** Whether a read can be asked for, and if not, what to tell the writer. */
   sceneReviewStatus(): Promise<DesktopApiResult<{ available: boolean; reason: string | null }>>;
   /**
@@ -626,6 +633,8 @@ const api: VcWriterApi = {
   removeDeletedNotes: (ids) => ipcRenderer.invoke('cloud:removeDeletedNotes', ids),
   reviewScene: (input) => ipcRenderer.invoke('cloud:reviewScene', input),
   sceneReviewStatus: () => ipcRenderer.invoke('cloud:sceneReviewStatus'),
+  deepCheck: (input) => ipcRenderer.invoke('cloud:deepCheck', input),
+  editCredits: () => ipcRenderer.invoke('cloud:editCredits'),
   suggestLearningAid: (input) => ipcRenderer.invoke('cloud:suggestLearningAid', input),
   learningAidStatus: () => ipcRenderer.invoke('cloud:learningAidStatus'),
   suggestNoteCategories: (input) => ipcRenderer.invoke('cloud:suggestNoteCategories', input),

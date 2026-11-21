@@ -22,6 +22,9 @@ import {
   toRows,
   whatToDo,
   type CaptureItem,
+  type DeepCheckAnswer,
+  type DeepCheckInput,
+  type EditCreditStanding,
   type MergeResult,
   type PhoneProjectName,
   type ProjectFile,
@@ -383,6 +386,39 @@ export const sceneReviewStatus = async (): Promise<SceneReviewAvailability> => {
     // Offline is not an error worth a dialog; the button simply says so.
     return { available: false, reason: 'vc-writer.com could not be reached.' };
   }
+};
+
+/**
+ * **The AI check** (addendum 47): one run, paid for in edit credits. The key
+ * is on vc-writer.com; what leaves the machine is the passage's lines and the
+ * writer's point-of-view settings.
+ */
+export const requestDeepCheck = async (input: DeepCheckInput): Promise<DeepCheckAnswer> => {
+  const { data, error } = await supabase().auth.getSession();
+  if (error || !data.session) throw new CloudError('Sign in to use the AI check.');
+  const response = await fetch(`${SITE_URL}/api/ai/deep-check`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${data.session.access_token}` },
+    body: JSON.stringify(input),
+  }).catch(() => {
+    throw new CloudError('vc-writer.com could not be reached. Check your connection and try again.');
+  });
+  const payload = (await response.json().catch(() => null)) as (Partial<DeepCheckAnswer> & { error?: string }) | null;
+  if (!response.ok || !payload?.findings) throw new CloudError(payload?.error ?? `The AI check failed (${response.status})`);
+  return payload as DeepCheckAnswer;
+};
+
+/** The writer's edit-credit balance. Costs nothing and reaches no model. */
+export const editCreditStanding = async (): Promise<EditCreditStanding> => {
+  if (!isCloudConfigured()) return { signedIn: false, configured: false, balance: 0 };
+  const { data, error } = await supabase().auth.getSession();
+  if (error || !data.session) return { signedIn: false, configured: true, balance: 0 };
+  const response = await fetch(`${SITE_URL}/api/edit-credits`, { headers: { authorization: `Bearer ${data.session.access_token}` } }).catch(() => {
+    throw new CloudError('vc-writer.com could not be reached.');
+  });
+  const payload = (await response.json().catch(() => null)) as (EditCreditStanding & { error?: string }) | null;
+  if (!response.ok || !payload) throw new CloudError(payload?.error ?? 'Your edit credits could not be read.');
+  return { signedIn: payload.signedIn, configured: payload.configured, balance: payload.balance };
 };
 
 export interface SceneReviewAvailability {

@@ -20,7 +20,7 @@ more words the passage lacks, or reads as replacement advice. Dropped
 findings are counted. Marketing line: **AI editing that never rewrites. No
 cheaters.**
 
-## Credits (to build after the measurement)
+## Credits
 
 - Packs of **$5, $10 and $20**, one-time Stripe payments, bought from the
   account page and from **Edit → Buy edit credits…** in the app.
@@ -39,6 +39,31 @@ cheaters.**
   each run.
 - The check runs on the server (the key never ships in an installer), opt-in,
   with a plain statement that the passage is sent to Anthropic for the check.
+
+## As built (21 November 2026)
+
+- **Ledger** (migration 0090, `edit_credit_entries`): one row per purchase,
+  check, refund or reversal, in words; the balance is the sum. Writers read
+  their own rows; only the server writes. `spend_edit_credits` takes a lock
+  per writer and refuses a check the balance cannot cover.
+- **Buying**: the account page's *Edit credits* section
+  (`account/edit-credits.tsx`) starts a one-time Stripe Checkout naming only
+  the pack id (`/api/edit-credits/checkout`); the webhook adds the words once
+  per checkout (`kind: edit-credits` in the metadata) and takes them back on
+  a refund or dispute. Tax is Stripe Tax, added on top.
+- **In the app**: *Editor → Edit Check*, *AI check…* and *Buy edit credits…*
+  (which opens the account page). The Edit Check has an **AI check…** button
+  beside *Run Edit Check*: it shows words, cost in credits and balance, says
+  the passage goes to Anthropic, and runs scene by scene
+  (`splitIntoRuns`: a scene whole up to 6,000 words; short scenes share a
+  run), with *Stop after this part*.
+- **The run** (`/api/ai/deep-check`): charged first, refunded if the check
+  fails, its token cost written on its ledger row.
+- **In the review**: findings are `source: 'ai'`, a possible concern or a note,
+  never a fix. They replace the last AI check's findings on the same lines,
+  and they survive a re-run of the Edit Check while their words are unchanged
+  (they were paid for). Continuity and dropped setups are a new category,
+  *Story & continuity*.
 
 ## Measuring
 
