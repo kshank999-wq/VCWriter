@@ -25156,3 +25156,61 @@ dialog.writer-dialog {
   border: none;
   border-radius: 0;
 }
+
+/* A block quote's source, under it (from Ken, 21 November): the library as a
+   drop-down, how it reads, the page. Amber while it still needs one. */
+.quote-source {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0 8px calc(var(--indent, 5ch) + 4px);
+  font-family: var(--ui-font, inherit);
+  font-size: 11px;
+}
+
+.quote-source select,
+.quote-source input {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  max-width: 320px;
+}
+
+.quote-source.needs select {
+  border-color: #d99a2b;
+  color: #b7791f;
+  font-weight: 600;
+}
+
+.quote-page {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted, #888);
+}
+
+.quote-page input {
+  width: 64px;
+}
+
+.element .ink .cite-chip::after {
+  white-space: nowrap;
+}
+
+/* On the white page, the source row's controls in the page's own colours. */
+.quote-source select,
+.quote-source input {
+  background: #fff;
+  color: #333;
+  border: 1px solid #c9c4b8;
+}
+
+.quote-source.needs select {
+  background: #fff7e6;
+}
+
+.quote-reads {
+  color: #6b6252;
+  font-style: italic;
+}

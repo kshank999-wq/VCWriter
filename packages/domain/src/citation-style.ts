@@ -408,7 +408,8 @@ export const citationNotes = (file: ProjectFile, occurrences: readonly CitationO
   const settings = citationSettingsOf(file);
   if (!usesFootnotes(settings)) return [];
   const form = noteFormOf(settings);
-  return occurrences.map((occurrence) => ({
+  // An author-date citation reads in the text: no note for it.
+  return occurrences.filter((occurrence) => occurrence.citation?.form !== 'author-date').map((occurrence) => ({
     occurrence,
     marker: occurrence.marker,
     text:
@@ -421,6 +422,9 @@ export const citationNotes = (file: ProjectFile, occurrences: readonly CitationO
 /** What a citation prints as in the text: its marker in a footnote style, or the parenthetical in APA and MLA. */
 export const citationInText = (file: ProjectFile, occurrence: CitationOccurrence): string => {
   const settings = citationSettingsOf(file);
+  if (occurrence.citation?.form === 'author-date') {
+    return occurrence.reference ? formatInText(occurrence.reference, occurrence.citation, 'apa') : '(source missing)';
+  }
   if (usesFootnotes(settings)) return occurrence.marker;
   if (!occurrence.citation || !occurrence.reference) return '(source missing)';
   return formatInText(occurrence.reference, occurrence.citation, settings.style === 'apa' ? 'apa' : 'mla');

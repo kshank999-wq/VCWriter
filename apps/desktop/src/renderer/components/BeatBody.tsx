@@ -113,6 +113,12 @@ import {
   citationOccurrences,
   insertCitation,
   tokensIn,
+  trailingCitation,
+  withTrailingCitation,
+  referencesOf,
+  referenceCreator,
+  formatInText,
+  type ReferenceId,
   updateCitation,
 } from '@vcwriter/domain';
 
@@ -318,6 +324,9 @@ function MicrophoneGlyph({ listening }: { listening: boolean }) {
     </svg>
   );
 }
+
+/** The drop-down's last line: a source not in the library yet. */
+const NEW_SOURCE = '__new-source';
 
 export function BeatBody({
   file,
@@ -894,7 +903,14 @@ export function BeatBody({
     // or source has gone is marked as needing attention.
     const out = new Map<string, string>();
     for (const occurrence of citationOccurrences(file)) {
-      if (!out.has(occurrence.key)) out.set(occurrence.key, occurrence.citation && occurrence.reference ? occurrence.marker : '');
+      if (out.has(occurrence.key)) continue;
+      // An author-date citation reads as itself, (Smith, 2019, p. 42), in the text.
+      // Short in its chip, which keeps the token's room; the full reading is under the quote.
+      const shown =
+        occurrence.citation?.form === 'author-date' && occurrence.reference
+          ? `${referenceCreator(occurrence.reference) || 'Source'}${/\d{4}/.exec(occurrence.reference.date)?.[0] ? ` ${/\d{4}/.exec(occurrence.reference.date)![0]}` : ''}`
+          : occurrence.marker;
+      out.set(occurrence.key, occurrence.citation && occurrence.reference ? shown : '');
     }
     return out;
   }, [cites, file]);
@@ -933,6 +949,74 @@ export function BeatBody({
       setSelection({ id: element.id, start: start + made.token.length, end: start + made.token.length });
     }
     setCiting(null);
+  };
+
+  /** A block quote's source: chosen from the library, read author-date or in the book's style, with its page. */
+  const quoteSource = (element: ManuscriptElement) => {
+    const at = trailingCitation(element.text);
+    const citation = at ? citationByKey(file, at.key) : null;
+    const library = referencesOf(file);
+    const name = (one: (typeof library)[number]) => {
+      const who = referenceCreator(one) || 'Unknown';
+      const year = /\d{4}/.exec(one.date)?.[0];
+      return `${who}${year ? `, ${year}` : ''} — ${one.title || 'Untitled'}`.slice(0, 90);
+    };
+    const choose = (value: string) => {
+      if (value === NEW_SOURCE) {
+        setCiting({ elementId: element.id, at: element.text.length });
+        return;
+      }
+      if (!value) return;
+      if (citation) {
+        onUpdate((current) => updateCitation(current, citation.id, { referenceId: value as ReferenceId }));
+        return;
+      }
+      const made = insertCitation(file, { referenceId: value as ReferenceId, form: 'author-date' });
+      onUpdate((current) => ({ ...current, citations: [...current.citations, made.citation] }));
+      updateElement(element.id, { text: withTrailingCitation(element.text, made.token) });
+    };
+    return (
+      <div className={citation ? 'quote-source' : 'quote-source needs'}>
+        <select aria-label="Source of this quote" value={citation ? (citation.referenceId as string) : ''} onChange={(event) => choose(event.target.value)}>
+          {citation ? null : <option value="">Needs citation</option>}
+          {library.map((one) => (
+            <option key={one.id} value={one.id}>
+              {name(one)}
+            </option>
+          ))}
+          <option value={NEW_SOURCE}>New source in the library…</option>
+        </select>
+        {citation ? (
+          <>
+            <select
+              aria-label="How the citation reads"
+              value={citation.form}
+              onChange={(event) => onUpdate((current) => updateCitation(current, citation.id, { form: event.target.value as 'style' | 'author-date' }))}
+            >
+              <option value="author-date">Author and date</option>
+              <option value="style">The book’s citation style</option>
+            </select>
+            <span className="quote-reads">
+              Reads:{' '}
+              {(() => {
+                const source = file.references.find((one) => one.id === citation.referenceId);
+                if (!source) return 'source missing';
+                return citation.form === 'author-date' ? formatInText(source, citation, 'apa') : 'a note in the book’s citation style';
+              })()}
+            </span>
+            <label className="quote-page">
+              <span>Page</span>
+              <input
+                aria-label="Page"
+                placeholder="—"
+                value={citation.locator}
+                onChange={(event) => onUpdate((current) => updateCitation(current, citation.id, { locatorKind: 'page', locator: event.target.value }))}
+              />
+            </label>
+          </>
+        ) : null}
+      </div>
+    );
   };
 
   /** Take a citation's marker out of its line; the source stays in the library. */
@@ -1378,6 +1462,14 @@ export function BeatBody({
               }}
             />
           </div>
+
+          {/* **A block quote asks for its source** (from Ken, 21 November:
+              *the block quote at the end needs to ask you for the reference
+              or citation. And if you don't have it yet, it'll say need
+              citation… click that and it'll list all the citations that you
+              have… usually author and date, if not a page number*). Under
+              the quote: the library as a drop-down, how it reads, and the page. */}
+          {cites && !readOnly && element.type === 'blockquote' ? quoteSource(element) : null}
 
           {/* Which voice is this? Offered beside the name, closed by choosing
               one or by pressing Escape (addendum 02 §19). */}

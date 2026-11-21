@@ -263,7 +263,7 @@ const freshKey = (file: ProjectFile): string => {
 /** A new citation of a source: the record, and the token to put in the text where it stands. */
 export const insertCitation = (
   file: ProjectFile,
-  input: { referenceId: ReferenceId; locatorKind?: LocatorKind; locator?: string; note?: string },
+  input: { referenceId: ReferenceId; locatorKind?: LocatorKind; locator?: string; note?: string; form?: Citation['form'] },
 ): { file: ProjectFile; citation: Citation; token: string } => {
   const at = nowIso();
   const citation = citationSchema.parse({
@@ -274,6 +274,7 @@ export const insertCitation = (
     locatorKind: input.locatorKind ?? 'page',
     locator: input.locator ?? '',
     note: input.note ?? '',
+    form: input.form ?? 'style',
     createdAt: at,
     updatedAt: at,
   });
@@ -284,7 +285,7 @@ export const insertCitation = (
 export const updateCitation = (
   file: ProjectFile,
   id: CitationId,
-  patch: Partial<Pick<Citation, 'referenceId' | 'locatorKind' | 'locator' | 'note'>>,
+  patch: Partial<Pick<Citation, 'referenceId' | 'locatorKind' | 'locator' | 'note' | 'form'>>,
 ): ProjectFile => ({
   ...file,
   citations: file.citations.map((citation) => (citation.id === id ? citationSchema.parse({ ...citation, ...patch, updatedAt: nowIso() }) : citation)),
@@ -356,6 +357,8 @@ export const citationOccurrences = (file: ProjectFile): CitationOccurrence[] => 
   const seenSources = new Set<string>();
   const out: CitationOccurrence[] = [];
   let inChapter = 0;
+  /** Footnote-numbered citations so far: an author-date one is not counted. */
+  let noted = 0;
   /** Every token in a run of words, in order, credited to where it stands. */
   const cite = (text: string, where: Pick<CitationOccurrence, 'unitId' | 'beatId' | 'elementId' | 'partId'>) => {
     if (!text.includes('[^')) return;
@@ -363,7 +366,12 @@ export const citationOccurrences = (file: ProjectFile): CitationOccurrence[] => 
       if (!span.citation) continue;
       const citation = byKey.get(span.citation) ?? null;
       const reference = citation ? (byId.get(citation.referenceId) ?? null) : null;
-      inChapter += 1;
+      // An author-date citation reads in the text and takes no number (Ken, 21 November).
+      const inText = citation?.form === 'author-date';
+      if (!inText) {
+        inChapter += 1;
+        noted += 1;
+      }
       const index = out.length + 1;
       const firstOfSource = reference ? !seenSources.has(reference.id) : false;
       if (reference) seenSources.add(reference.id);
@@ -376,7 +384,7 @@ export const citationOccurrences = (file: ProjectFile): CitationOccurrence[] => 
         index,
         inChapter,
         firstOfSource,
-        marker: markerLabel(settings.restartEach === 'chapter' ? inChapter : index, settings.markers, settings.symbolOverflow),
+        marker: inText ? '' : markerLabel(settings.restartEach === 'chapter' ? inChapter : noted, settings.markers, settings.symbolOverflow),
       });
     }
   };
@@ -539,3 +547,23 @@ export const citationCounts = (file: ProjectFile): Map<string, number> => {
 /** Tokens that point at nothing: a citation deleted, or its source. Shown, so nothing prints wrong unnoticed. */
 export const danglingCitations = (file: ProjectFile): CitationOccurrence[] =>
   citationOccurrences(file).filter((occurrence) => occurrence.citation === null || occurrence.reference === null);
+
+
+/**
+ * **A block quote's source, at its end** (from Ken, 21 November: *the block
+ * quote at the end needs to ask you for the reference or citation… if you
+ * don't have it yet, it'll say need citation*). The citation token the line
+ * ends with, if it ends with one.
+ */
+export const trailingCitation = (text: string): { key: string; start: number; end: number } | null => {
+  const tokens = tokensIn(text);
+  const last = tokens[tokens.length - 1];
+  return last && text.slice(last.end).trim() === '' ? last : null;
+};
+
+/** The quote's line with a citation token at its end: put after the last word, in place of any there already. */
+export const withTrailingCitation = (text: string, token: string): string => {
+  const last = trailingCitation(text);
+  const base = (last ? text.slice(0, last.start) : text).replace(/\s+$/, '');
+  return `${base}${token}`;
+};

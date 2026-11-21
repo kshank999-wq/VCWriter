@@ -104,6 +104,15 @@ export const citationSchema = z.object({
   locator: z.string().max(120).default(''),
   /** The writer's own words added to the note. */
   note: z.string().max(5000).default(''),
+  /**
+   * **How it reads in the text** (from Ken, 21 November: *the block quote is
+   * usually author and date, if not a page number. So you can select that
+   * format*). `style` follows the book's citation style — a footnote marker,
+   * or APA's or MLA's parentheses. `author-date` is always *(Author, Year)*,
+   * with the page where one is given, in the text, whatever the style: it
+   * takes no footnote and no number.
+   */
+  form: z.enum(['style', 'author-date']).catch('style').default('style'),
   ...timestamps,
 });
 export type Citation = z.infer<typeof citationSchema>;

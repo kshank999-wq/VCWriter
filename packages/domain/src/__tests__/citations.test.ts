@@ -10,6 +10,10 @@ import {
   citationMarkers,
   citationNotes,
   citationOccurrences,
+  citationInText,
+  citationNotes,
+  trailingCitation,
+  withTrailingCitation,
   citationSettingsOf,
   createProjectFile,
   danglingCitations,
@@ -294,5 +298,29 @@ describe('the styles', () => {
     const note = formatNote(made.reference, { locatorKind: 'section', locator: '2', note: 'see also chapter 4' }, 'chicago', true);
     expect(note).toBe('*Stars \\* and \\_lines\\_*, sec. 2. See also chapter 4.'.replace('See', 'see'));
     expect(plainInline(note)).toBe('Stars * and _lines_, sec. 2. see also chapter 4.');
+  });
+});
+
+describe('a block quote’s source (from Ken, 21 November)', () => {
+  it('finds the citation a quote ends with, and puts one at its end in place of any there', () => {
+    expect(trailingCitation('A long quote.[^ab12cd]')).toEqual({ key: 'ab12cd', start: 13, end: 22 });
+    expect(trailingCitation('Cited[^ab12cd] mid-way.')).toBeNull();
+    expect(withTrailingCitation('A long quote.  ', '[^000fff]')).toBe('A long quote.[^000fff]');
+    expect(withTrailingCitation('A long quote.[^ab12cd]', '[^000fff]')).toBe('A long quote.[^000fff]');
+  });
+
+  it('reads author and date, with the page, in the text, and takes no footnote number', () => {
+    const made = addReference(book([]).file, BOOK);
+    let file = made.file;
+    const note = insertCitation(file, { referenceId: made.reference.id, locator: '9' });
+    file = note.file;
+    const quote = insertCitation(file, { referenceId: made.reference.id, locator: '42', form: 'author-date' });
+    file = quote.file;
+    const after = insertCitation(file, { referenceId: made.reference.id, locator: '50' });
+    file = write(after.file, file.beats[0]!.id, [`First${note.token}`, `A quote.${quote.token}`, `Later${after.token}`]);
+    const occurrences = citationOccurrences(file);
+    expect(occurrences.map((one) => one.marker)).toEqual(['1', '', '2']);
+    expect(citationInText(file, occurrences[1]!)).toMatch(/^\(.+, \d{4}, p\. 42\)$/);
+    expect(citationNotes(file).length).toBe(2);
   });
 });
