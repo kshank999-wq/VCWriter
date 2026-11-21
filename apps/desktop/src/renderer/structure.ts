@@ -3,6 +3,8 @@ import {
   addUnit,
   beatsForUnit,
   findUnit,
+  isInstructional,
+  writeSectionText,
   unitsForTrack,
   unitsInStoryOrder,
   type Beat,
@@ -59,6 +61,11 @@ export const addSceneAfter = (file: ProjectFile, selection: Selection): Added | 
   const position = anchor ? order.findIndex((candidate) => candidate.id === anchor.id) : order.length - 1;
 
   const created = addUnit(file, { trackId, index: position + 1 });
+  // A book's new section opens on its own text, not a subsection (from Ken, 21 November).
+  if (isInstructional(file.project.format)) {
+    const text = writeSectionText(created.file, created.unit.id);
+    return { file: text.file, beatId: text.beatId, unitId: created.unit.id };
+  }
   const withBeat = addBeat(created.file, { unitId: created.unit.id });
   return { file: withBeat.file, beatId: withBeat.beat.id, unitId: created.unit.id };
 };

@@ -25057,3 +25057,9 @@ textarea.edit-check-line {
   gap: 8px;
   margin-top: 10px;
 }
+
+/* A book's section text on the track: the section's own words, not a subsection. */
+.beat-row-title.section-text {
+  font-style: italic;
+  opacity: 0.8;
+}

@@ -202,6 +202,7 @@ export * from './standing.js';
 export * from './assist.js';
 export * from './spending.js';
 export * from './edit-credits.js';
+export * from './section-text.js';
 export * from './notify.js';
 export * from './markup.js';
 export * from './work.js';

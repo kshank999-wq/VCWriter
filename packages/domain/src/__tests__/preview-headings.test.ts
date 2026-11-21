@@ -15,7 +15,7 @@ describe('book headings on the printed page', () => {
     const unit = file.units[0]!;
     const beat = file.beats.find((one) => one.unitId === unit.id)!;
     file = updateUnit(file, unit.id, { title: 'why do you want to write?' });
-    file = updateBeat(file, beat.id, { title: 'the first page', manuscript: { elements: [para('00000000-0000-4000-8000-000000000001', 'Begin anywhere.')] } });
+    file = updateBeat(file, beat.id, { title: 'the first page', headingShown: true, manuscript: { elements: [para('00000000-0000-4000-8000-000000000001', 'Begin anywhere.')] } });
     return { file, unit, beat };
   };
 

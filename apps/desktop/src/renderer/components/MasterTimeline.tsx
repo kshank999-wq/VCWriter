@@ -14,6 +14,9 @@ import {
   passageBeatIds,
   subsectionOfPassage,
   trackBeatsForUnit,
+  isInstructional,
+  isSectionText,
+  writeSectionText,
   countWords,
   outlineRowForBeat,
   sculptorNodeForBeat,
@@ -1693,12 +1696,11 @@ function TrackRow({
                         {STATUS_GLYPH[beat.status]}
                       </span>
                       {/* The internal beat title is an authoring reference only (§5.3). */}
-                      <span className="beat-row-title">
-                        {numberedTitle(
-                          numbers.subs.get(beat.id as string) ?? '',
-                          beat.title,
-                          `Untitled ${nouns.sub.toLowerCase()}`,
-                        )}
+                      <span className={isSectionText(file, beat) ? 'beat-row-title section-text' : 'beat-row-title'}>
+                        {/* A book's section text is the section's own words, under its heading (from Ken, 21 November). */}
+                        {isSectionText(file, beat)
+                          ? 'Section text'
+                          : numberedTitle(numbers.subs.get(beat.id as string) ?? '', beat.title, `Untitled ${nouns.sub.toLowerCase()}`)}
                       </span>
                       {/* Who speaks in the beat, as the cast's colours (addendum 02 §6). */}
                       <span className="cast" aria-hidden="true">
@@ -1730,6 +1732,22 @@ function TrackRow({
                       onBeatWidth(BEAT_CHIP_MAX);
                     }}
                   />
+                ) : null}
+                {isInstructional(file.project.format) && !beats.some((one) => isSectionText(file, one)) ? (
+                  <li className="block-add">
+                    <button
+                      type="button"
+                      className="ghost"
+                      title="Write straight under the section's heading, with no subsection"
+                      onClick={() => {
+                        const made = writeSectionText(file, unit.id);
+                        onUpdate((current) => (current === file ? made.file : writeSectionText(current, unit.id).file));
+                        onOpenBeat?.(made.beatId);
+                      }}
+                    >
+                      + section text
+                    </button>
+                  </li>
                 ) : null}
                 <li className="block-add">
                   <button

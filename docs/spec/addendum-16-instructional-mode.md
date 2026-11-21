@@ -465,3 +465,25 @@ to the left and bold. Title case.*
   applied live, on by default. A heading switched off prints nothing, so two
   sections or subsections read as one. In the editing view it stays visible,
   faint and struck through, with the switch to put it back.
+
+## A section's own text (21 November 2026)
+
+From Ken: *you need to be able to write directly under the 1.1… section 1.1,
+I should be able to write that without another subheading. Otherwise, every
+single paragraph or every single thought would be divided up by another
+subheading. And this is an instructional book, so it needs to say sections and
+subsections, not beats.*
+
+- A section's first subsection with its heading off is **the section's text**
+  (`section-text.ts`): printed straight under the section heading, no
+  number, shown on the track as *Section text*. A new book and a new section
+  start with one. A section with only subsections offers **+ section text** on
+  the track, which puts one first and opens it.
+- A subsection with its heading off takes no number, so the headed ones count
+  1.1.1, 1.1.2… with no gaps. Switching the heading on makes it a subsection
+  again.
+- Opening a book turns an old first subsection still called *Opening beat*
+  into the section's text (`sectionTextFromOpeningBeats`).
+- The writing screen names the section text by its section (*Section 1.1*,
+  the name field renames the section) and says *Start writing this section*
+  or *…this subsection*, never *beat*.

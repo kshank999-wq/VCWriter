@@ -1,7 +1,7 @@
 import { upgradeBoards } from './sculptor-upgrade.js';
 import { z } from 'zod';
 import { newId } from './ids.js';
-import { initialOrderKeys, orderKeyBetween } from './ordering.js';
+import { initialOrderKeys, orderKeyBetween, sortByOrderKey } from './ordering.js';
 import { nowIso } from './entities/common.js';
 import { characterCategorySchema, characterSchema } from './entities/character.js';
 import { defaultCharacterCategories } from './characters.js';
@@ -378,7 +378,30 @@ export const parseProjectFile = (raw: unknown): ProjectFile => {
   }
   // Story Sculptor 2.0 (addendum 03 v2 §13): version-1 boards upgraded once,
   // the old board kept whole beside the new one.
-  return renameSortedNotesFolder(upgradeBoards(result.data).file);
+  return sectionTextFromOpeningBeats(renameSortedNotesFolder(upgradeBoards(result.data).file));
+};
+
+/**
+ * **A book's "Opening beat" is its section's own text** (from Ken, 21
+ * November: *you need to be able to write directly under the 1.1… section
+ * 1.1, I should be able to write that without another subheading*). Every
+ * new project used to start its first section with a subsection called
+ * *Opening beat*, heading on — so a book's 1.1 opened on a "1.1.1 Opening
+ * Beat" nobody asked for. In an instructional book that first beat, under
+ * that name, becomes what it was meant to be: the section's text, heading off,
+ * unnumbered. Any other title is the writer's own and is left alone.
+ */
+export const sectionTextFromOpeningBeats = (file: ProjectFile): ProjectFile => {
+  if (!isInstructional(file.project.format)) return file;
+  const firsts = new Set<string>();
+  const byUnit = new Map<string, ProjectFile['beats']>();
+  for (const beat of file.beats) byUnit.set(beat.unitId as string, [...(byUnit.get(beat.unitId as string) ?? []), beat]);
+  for (const beats of byUnit.values()) {
+    const first = sortByOrderKey(beats)[0];
+    if (first && first.headingShown !== false && first.title.trim().toLowerCase() === 'opening beat') firsts.add(first.id as string);
+  }
+  if (firsts.size === 0) return file;
+  return { ...file, beats: file.beats.map((beat) => (firsts.has(beat.id as string) ? { ...beat, title: '', headingShown: false } : beat)) };
 };
 
 export const serializeProjectFile = (file: ProjectFile): string =>
@@ -513,7 +536,10 @@ export const createProjectFile = (options: CreateProjectOptions): ProjectFile =>
         id: newId(),
         projectId,
         unitId,
-        title: 'Opening beat',
+        // A book's first section is written straight under its own heading
+        // (from Ken, 21 November): its text, not a subsection called "Opening beat".
+        title: isInstructional(options.format) ? '' : 'Opening beat',
+        ...(isInstructional(options.format) ? { headingShown: false } : {}),
         orderKey: orderKeyBetween(null, null),
         createdAt: timestamp,
         updatedAt: timestamp,

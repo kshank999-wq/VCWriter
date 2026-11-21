@@ -104,6 +104,7 @@ export const structureNumbers = (file: ProjectFile): StructureNumbers => {
   const chapters = new Map<string, string>();
   const units = new Map<string, string>();
   const subs = new Map<string, string>();
+  const instructional = isInstructional(file.project.format);
 
   /**
    * **The outline's numbers, wherever a division came from it** (from Ken,
@@ -166,6 +167,10 @@ export const structureNumbers = (file: ProjectFile): StructureNumbers => {
     beatsForUnit(file, unit.id).forEach((beat) => {
       // A passage is part of the subsection before it, and is not counted.
       if (passages.has(beat.id as string)) return;
+      // Nor is text with its heading off (from Ken, 21 November): a section's
+      // own text, or words run on with no subsection heading, take no number,
+      // so the subsections that are headed count 1, 2, 3 with no gaps.
+      if (instructional && beat.headingShown === false) return;
       const plannedSub = fromOutline.get(beat.id as string);
       if (plannedSub) {
         under = lastPart(plannedSub);

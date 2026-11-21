@@ -23,6 +23,8 @@ import {
   startRevision,
   switchRevision,
   nounsFor,
+  isSectionText,
+  structureNumbers,
   updateBeat,
   type Beat,
   type BeatId,
@@ -368,6 +370,8 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
 
   // §14: a writer in Book Mode is never made to work around Beat or Script.
   const nouns = nounsFor(file.project.format);
+  const sectionText = isSectionText(file, beat);
+  const numbers = structureNumbers(file);
   return (
     <>
       <ManuscriptDataLists file={file} />
@@ -381,14 +385,25 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
         // for every bar rather than written out on each.
         {...(onGrab ? { onPointerDown: onGrab } : {})}
       >
-        <span className="writer-caption muted">{nouns.sub} name</span>
-        <input
-          className="writer-name"
-          aria-label={`${nouns.sub} name`}
-          placeholder={`Name this ${nouns.sub.toLowerCase()}`}
-          value={beat.title}
-          onChange={(event) => onUpdate((current) => updateBeat(current, beat.id, { title: event.target.value }))}
-        />
+        {/* A book's section text is named by its section (from Ken, 21 November). */}
+        <span className="writer-caption muted">{sectionText ? `${nouns.unit} ${numbers.units.get(beat.unitId as string) ?? ''}`.trim() : `${nouns.sub} name`}</span>
+        {sectionText && unit ? (
+          <input
+            className="writer-name"
+            aria-label={`${nouns.unit} name`}
+            placeholder={`Name this ${nouns.unit.toLowerCase()}`}
+            value={unit.title}
+            onChange={(event) => onUpdate((current) => updateUnit(current, unit.id, { title: event.target.value }))}
+          />
+        ) : (
+          <input
+            className="writer-name"
+            aria-label={`${nouns.sub} name`}
+            placeholder={`Name this ${nouns.sub.toLowerCase()}`}
+            value={beat.title}
+            onChange={(event) => onUpdate((current) => updateBeat(current, beat.id, { title: event.target.value }))}
+          />
+        )}
         <div className="writer-tools">
           {/* **The beat's plan beside it** (from Ken): the notes, characters
               and ideas the Outliner holds under this beat, in a side panel
@@ -684,7 +699,7 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
               ) : null}
             </p>
           ) : null}
-          {headed && !ownerSubsection ? (
+          {headed && !ownerSubsection && !sectionText ? (
             <BookHeadingLine
               heading={subsectionHeading(file, beat)}
               untitled="Untitled subsection"
@@ -709,6 +724,7 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
           {marking ? null : <BeatBody
             file={file}
             beat={beat}
+            emptyLabel={`Start writing this ${sectionText ? nouns.unit.toLowerCase() : nouns.sub.toLowerCase()}`}
             breaks={breaks}
             onUpdate={onUpdate}
             onActivate={() => onSelect?.(beat.id)}
