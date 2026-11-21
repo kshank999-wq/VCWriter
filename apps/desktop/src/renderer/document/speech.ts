@@ -69,7 +69,7 @@ export function useDocumentSpeech(editor: Editor | null, onSay: (message: string
     const started = startDictation({
       onFinal: (text) => {
         const words = text.trim();
-        if (!words) return;
+        if (!words || editor.isDestroyed) return;
         // A space between this and what is already there, unless at a line's start.
         const { $from } = editor.state.selection;
         const before = $from.parent.textBetween(0, $from.parentOffset, ' ', ' ');
@@ -78,10 +78,14 @@ export function useDocumentSpeech(editor: Editor | null, onSay: (message: string
         setHeard('');
       },
       onInterim: setHeard,
-      onError: (why) => {
-        onSay(why);
-        stopDictating();
-      },
+      // **A stretch that could not be heard is not the end of dictating**
+      // (from Ken, 21 November: *the dictate function does not work in the
+      // document*). The writing screen says so and listens on; this page used
+      // to stop the microphone at the first hiccup — typically the first
+      // stretch, while the speech model warms up — so Dictate seemed to do
+      // nothing. Where listening truly cannot go on (no microphone, the model
+      // could not be set up), the session ends itself and `onEnd` follows.
+      onError: (why) => onSay(why),
       onEnd: () => {
         session.current = null;
         setDictating(false);

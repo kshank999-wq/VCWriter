@@ -1065,3 +1065,10 @@ The View tab's switches are tick boxes, as Word's are. The pictures are VC
 Writer's own (`BIG` in `document/icons.tsx`): two-tone line drawings over a
 soft blue panel, not copies of Word's. Nothing that worked before was taken
 away.
+
+**Dictation keeps listening** (from Ken, 21 November: *the dictate function
+does not work in the document word processor*). The document stopped the
+microphone at the first stretch the speech model could not hear — on the
+desktop, typically the first one, while the model warms up — so Dictate
+seemed to do nothing. Like the writing screen, it now says so in the status
+bar and listens on; a session that truly cannot go on ends itself.
