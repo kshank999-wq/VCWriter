@@ -497,3 +497,14 @@ now joins its own chapter, matched by link, then name, then order. A section's
 text never becomes an outline row, and a row whose subsection has its heading
 off takes no number. *Heading in the book* is a tick in the Inspector, and the
 *Heading on / off* switch on the page is always shown.
+
+**The writing window's zoom and size** (from Ken, 21 November: *the screen
+gets bigger, but the text stays the same size… make that a slider… put a
+little drag in the corner so you can resize the window*). The manuscript's
+lines took the generic `.field` size (12px) whatever the zoom; they now take
+the page's, so the words grow and shrink with the page, everywhere a
+manuscript is drawn. The zoom is a slider, 50% to 250% in steps of 5, with −
+and + and a double-click for 100%; zoomed past the window, the page keeps its
+shape and scrolls sideways. The window has a grip in its bottom-right corner:
+drag to size it (it stays put and grows right and down), double-click for the
+usual size; the size is remembered.

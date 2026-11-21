@@ -25065,3 +25065,81 @@ textarea.edit-check-line {
   font-style: italic;
   opacity: 0.8;
 }
+
+/* Manuscript lines are the page's size, not a form field's (from Ken, 21
+   November: *the screen gets bigger, but the text stays the same size*). The
+   generic `.field` rule set them at 12px whatever the zoom. */
+.element .field {
+  font-size: inherit;
+}
+
+/* The writing window's zoom slider and its corner grip. */
+.writer-zoom input[type='range'] {
+  width: 140px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  accent-color: var(--gold, #c9a45c);
+}
+
+.writer-zoom-value {
+  min-width: 3.2em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+dialog.writer-dialog {
+  position: fixed;
+}
+
+.writer-resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 18px;
+  height: 18px;
+  cursor: nwse-resize;
+  z-index: 5;
+  touch-action: none;
+  background:
+    linear-gradient(135deg, transparent 0 55%, var(--gold, #c9a45c) 55% 61%, transparent 61% 70%, var(--gold, #c9a45c) 70% 76%, transparent 76% 85%, var(--gold, #c9a45c) 85% 91%, transparent 91%);
+  opacity: 0.7;
+}
+
+.writer-resize:hover {
+  opacity: 1;
+}
+
+/* **The page keeps its shape at any zoom** (from Ken, 21 November). Zoomed
+   past the window, the page scrolls sideways as a word processor's does,
+   rather than being squeezed to the window with its margins still growing. */
+.writer-body:not(.comparing) {
+  grid-template-columns: minmax(auto, 1fr) auto;
+  overflow: auto;
+}
+
+.writer-body:not(.comparing) > .writer-sheet {
+  max-width: none;
+}
+
+.heading-toggle-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0 8px;
+}
+
+.inspector-fields .heading-toggle-field {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  text-align: left;
+}
+
+.inspector-fields .heading-toggle-field input {
+  width: auto;
+  flex: none;
+  margin: 0;
+}

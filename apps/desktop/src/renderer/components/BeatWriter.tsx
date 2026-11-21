@@ -67,7 +67,8 @@ const NEW_REVISION = '__new__';
 const WORKING = '__working__';
 
 /** What the page can be scaled to, as a fraction of its true printed size. */
-const ZOOMS = [0.75, 0.85, 1, 1.15, 1.35, 1.6];
+const ZOOM_MIN = 0.5;
+const ZOOM_MAX = 2.5;
 
 export interface BeatWriterProps {
   file: ProjectFile;
@@ -869,15 +870,28 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
           >
             Reformat
           </button>
-          <label className="writer-zoom">
-            <span className="muted">Page</span>
-            <select aria-label="Page size" value={zoom} onChange={(event) => setZoom(Number(event.target.value))}>
-              {ZOOMS.map((step) => (
-                <option key={step} value={step}>
-                  {Math.round(step * 100)}%
-                </option>
-              ))}
-            </select>
+          {/* **Zoom, by a slider** (from Ken, 21 November: *make that a
+              slider so you can zoom it up, fine tune it*): the page and its
+              words together, 50% to 250%, in steps of 5. */}
+          <label className="writer-zoom" title="Drag to make the page and its words bigger or smaller · double-click for 100%">
+            <span className="muted">Zoom</span>
+            <button type="button" className="ghost small" aria-label="Zoom out" onClick={() => setZoom(Math.max(ZOOM_MIN, Math.round((zoom - 0.1) * 20) / 20))}>
+              −
+            </button>
+            <input
+              type="range"
+              aria-label="Zoom"
+              min={ZOOM_MIN}
+              max={ZOOM_MAX}
+              step={0.05}
+              value={zoom}
+              onChange={(event) => setZoom(Number(event.target.value))}
+              onDoubleClick={() => setZoom(1)}
+            />
+            <button type="button" className="ghost small" aria-label="Zoom in" onClick={() => setZoom(Math.min(ZOOM_MAX, Math.round((zoom + 0.1) * 20) / 20))}>
+              +
+            </button>
+            <output className="writer-zoom-value">{Math.round(zoom * 100)}%</output>
           </label>
           <span>Return for the next element · Tab to change its type</span>
         </span>

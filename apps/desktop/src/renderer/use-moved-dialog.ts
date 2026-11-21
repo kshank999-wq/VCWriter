@@ -45,6 +45,8 @@ export function useMovedDialog(
   placed: CSSProperties | undefined;
   /** Put this on the bar: `onPointerDown={grab}`. */
   grab(event: ReactPointerEvent<HTMLElement>): void;
+  /** Hold it where it stands now, so a resize from its corner grows it right and down rather than out from the middle. */
+  pin(): void;
 } {
   const [at, setAt] = useState<{ left: number; top: number } | null>(null);
   const from = useRef<{ x: number; y: number; left: number; top: number } | null>(null);
@@ -80,8 +82,14 @@ export function useMovedDialog(
     };
   }, [dialog]);
 
+  const pin = () => {
+    const box = dialog.current?.getBoundingClientRect();
+    if (box) setAt((was) => was ?? { left: box.left, top: box.top });
+  };
+
   return {
     placed: at ? { position: 'fixed', margin: 0, left: `${at.left}px`, top: `${at.top}px` } : undefined,
     grab,
+    pin,
   };
 }

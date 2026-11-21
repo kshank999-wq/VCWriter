@@ -2,6 +2,8 @@ import { findBeat, nounsFor, outlineRowForBeat, sculptorNodeForBeat, type BeatId
 import { BeatWriter } from './BeatWriter';
 import { useModal } from '../use-modal';
 import { useMovedDialog } from '../use-moved-dialog';
+import { useRef } from 'react';
+import { usePreference } from '../use-split';
 
 interface BeatDialogProps {
   file: ProjectFile;
@@ -45,7 +47,36 @@ export function BeatDialog({ file, beatId, onClose, onUpdate, onSelect, onPopOut
   const beat = beatId ? findBeat(file, beatId) : undefined;
   const dialog = useModal(Boolean(beat));
   // A different beat is a fresh screen, so it opens where a dialog opens.
-  const { placed, grab } = useMovedDialog(dialog, beatId);
+  const { placed, grab, pin } = useMovedDialog(dialog, beatId);
+  /**
+   * **Its size, by its corner** (from Ken, 21 November: *put a little drag in
+   * the corner so you can resize the window as you want to… make the text
+   * bigger and easier to work and make the window the appropriate size*).
+   * Remembered, so it opens the size it was left.
+   */
+  const [size, setSize] = usePreference<{ width: number; height: number } | null>('writerWindowSize', null);
+  const sizing = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
+  const startResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    const box = dialog.current?.getBoundingClientRect();
+    if (!box) return;
+    event.preventDefault();
+    event.stopPropagation();
+    pin();
+    sizing.current = { x: event.clientX, y: event.clientY, width: box.width, height: box.height };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+  const resize = (event: React.PointerEvent<HTMLDivElement>) => {
+    const start = sizing.current;
+    const box = dialog.current?.getBoundingClientRect();
+    if (!start || !box) return;
+    setSize({
+      width: Math.round(Math.min(Math.max(start.width + event.clientX - start.x, 560), window.innerWidth - box.left - 4)),
+      height: Math.round(Math.min(Math.max(start.height + event.clientY - start.y, 360), window.innerHeight - box.top - 4)),
+    });
+  };
+  const endResize = () => {
+    sizing.current = null;
+  };
 
   return (
     <dialog
@@ -54,7 +85,7 @@ export function BeatDialog({ file, beatId, onClose, onUpdate, onSelect, onPopOut
       aria-label={nounsFor(file.project.format).sub}
       // Moved, it is placed rather than centred; untouched, the browser
       // centres it and no style of ours says otherwise.
-      style={placed}
+      style={{ ...placed, ...(size ? { width: `min(${size.width}px, calc(100vw - 8px))`, height: `min(${size.height}px, calc(100vh - 8px))` } : {}) }}
       onClose={onClose}
     >
       {beat ? (
@@ -71,6 +102,17 @@ export function BeatDialog({ file, beatId, onClose, onUpdate, onSelect, onPopOut
           onGoToSculptor={onGoToSculptor && sculptorNodeForBeat(file, beat.id) ? () => onGoToSculptor(beat.id) : null}
         />
       ) : null}
+      <div
+        className="writer-resize"
+        role="separator"
+        aria-label="Resize the window"
+        title="Drag to make the window bigger or smaller · double-click for the usual size"
+        onPointerDown={startResize}
+        onPointerMove={resize}
+        onPointerUp={endResize}
+        onPointerCancel={endResize}
+        onDoubleClick={() => setSize(null)}
+      />
     </dialog>
   );
 }
