@@ -25244,3 +25244,41 @@ dialog.writer-dialog {
 ::highlight(vcw-span) {
   background-color: rgba(120, 165, 240, 0.45);
 }
+
+/* Read aloud on a book's page (from Ken, 22 November). */
+.read-aloud {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 10px;
+}
+
+.read-aloud select {
+  font-size: 11px;
+  padding: 2px 4px;
+  max-width: 170px;
+}
+
+.read-aloud-play {
+  padding: 3px 10px;
+  border-radius: 14px;
+  border: 1px solid var(--gold, #c9a45c);
+  background: transparent;
+  color: var(--gold, #c9a45c);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.read-aloud-play.on {
+  background: var(--gold, #c9a45c);
+  color: #111;
+}
+
+.read-aloud-problem {
+  color: #e06c6c;
+  font-size: 11px;
+}
+
+::highlight(vcw-reading) {
+  background-color: rgba(120, 200, 140, 0.35);
+}

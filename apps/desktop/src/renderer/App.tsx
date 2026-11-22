@@ -228,6 +228,8 @@ export default function App() {
   const [viewerZoom, setViewerZoom] = usePreference('viewerZoom', VIEWER_ZOOM_DEFAULT);
   /** Read back, floating over the main screen (from Ken). */
   const [readBackOpen, setReadBackOpen] = useState(false);
+  /** Bumped by Read back on a book: the Write page starts reading aloud. */
+  const [readAloudAsk, setReadAloudAsk] = useState(0);
   const [isolatedCharacter, setIsolatedCharacter] = useState('');
   // What the Script shows besides the manuscript (addendum 02 §6).
   const [scriptDisplay, setScriptDisplay] = usePreference<ScriptDisplay>('scriptDisplay', DEFAULT_SCRIPT_DISPLAY);
@@ -1336,6 +1338,7 @@ export default function App() {
       <MasterPanel
         file={file}
         layout={layout ?? undefined}
+        readAloudAsk={readAloudAsk}
         selectedBeatId={selectedBeat?.id ?? null}
         // Chosen in the script: the track follows the beat, not a block chosen there before.
         onSelectBeat={(beatId) => {
@@ -1822,6 +1825,7 @@ export default function App() {
               <MasterPanel
               file={file}
               layout={layout ?? undefined}
+              readAloudAsk={readAloudAsk}
               selectedBeatId={selectedBeat?.id ?? null}
               onSelectBeat={setSelectedBeatId}
               onUpdate={project.update}
@@ -2255,7 +2259,10 @@ export default function App() {
             // Any other page closes the room that is open: the bar is how a
             // writer gets anywhere, rooms included.
             next === 'readback'
-              ? setReadBackOpen((was) => !was)
+              ? // A book reads aloud from its own page (from Ken, 22 November); a script keeps its read back.
+                isProseFormat(file.project.format)
+                ? (closeRooms(), setView('write'), setReadAloudAsk((n) => n + 1))
+                : setReadBackOpen((was) => !was)
               : next === 'editor' && away.has('editors')
                 ? openPane('editors')
                 : next === 'outline' && away.has('outliner')

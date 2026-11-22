@@ -1,4 +1,5 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ReadAloud } from '../read-aloud';
 import {
   layoutForFile,
   beatsForUnit,
@@ -23,6 +24,7 @@ import {
   sectionHeading,
   subsectionHeading,
   isSectionText,
+  linesInScope,
 } from '@vcwriter/domain';
 import { BookHeadingLine } from './BookHeadingLine';
 import { BeatBody } from './BeatBody';
@@ -101,6 +103,8 @@ interface StoryViewProps {
   onOpenUnit?(unitId: StructuralUnitId): void;
   /** A beat name was double-clicked: open the beat in the writing screen. */
   onOpenBeat?(beatId: BeatId): void;
+  /** Bumped by Read back on the bar: start reading aloud (a book). */
+  readAloudAsk?: number;
 }
 
 /**
@@ -138,9 +142,18 @@ export function StoryView({
   onPageStyle,
   onOpenUnit,
   onOpenBeat,
+  readAloudAsk = 0,
 }: StoryViewProps) {
   const layout = useMemo(() => givenLayout ?? storyLayout(file), [givenLayout, file]);
   const prose = isProseFormat(file.project.format);
+  const storyRoot = useRef<HTMLDivElement | null>(null);
+  const readScope = useCallback(() => storyRoot.current, []);
+  const latestFile = useRef(file);
+  latestFile.current = file;
+  const readLines = useCallback(
+    () => linesInScope(latestFile.current, { kind: 'all' }).map((line) => ({ id: line.elementId, type: line.type, text: line.text })),
+    [],
+  );
   /**
    * How the printed page spaces its lines, said to the sheet as classes: a
    * manuscript is double spaced, and where its paragraphs run on (the
@@ -523,6 +536,7 @@ export function StoryView({
 
   return (
     <div
+      ref={storyRoot}
       onClickCapture={divide ? pickForDivide : undefined}
       className={[
         'story script-view',
@@ -566,6 +580,9 @@ export function StoryView({
             ⚙
           </button>
           <span className="muted">{paged ? 'Pages' : 'Continuous'}</span>
+          {/* Read aloud from the page itself (from Ken, 22 November): a book's
+              read back is a play button here, not a window of its own. */}
+          {prose ? <ReadAloud lines={readLines} scope={readScope} autoStart={readAloudAsk} /> : null}
           {/* Dividing where the writer points (addendum 21 §10), on prose,
               where an imported book needs its chapters and passages put
               where they belong. A script's scenes are its sluglines. */}

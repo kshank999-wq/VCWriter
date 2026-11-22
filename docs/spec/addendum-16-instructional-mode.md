@@ -542,3 +542,15 @@ window the name box is always the beat's own name, shown on the track; the
 Heading tick prints that name as a heading or not; the section heading is the
 section's and neither touches it. A section's text with no name yet shows on
 the track as *Section text*.
+
+**Read aloud from the page** (from Ken, 22 November: *the readback function
+doesn't work… maybe we need to … just read right out of the manuscript or
+script window. Doesn't really need to be something separate. It can just be a
+playback button… if you hit play, it starts at the beginning. If you select
+at a location, it will start playing from there… And the voices are from the
+new library*). On a book (every prose format) the Write page and the writing
+window carry **▶ Read aloud** with the voice and the speed (`read-aloud.tsx`):
+it reads the lines in order in a natural voice, from the start or from where
+the cursor was last put, lights the line being read and keeps it in view, and
+a click elsewhere while reading moves the reading there. Read back on the bar
+goes to the Write page and starts reading. Scripts keep their read back.

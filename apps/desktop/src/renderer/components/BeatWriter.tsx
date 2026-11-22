@@ -1,5 +1,6 @@
 import { BookHeadingLine } from './BookHeadingLine';
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { ReadAloud } from '../read-aloud';
 import {
   findPassageInDraft,
   countWords,
@@ -381,6 +382,10 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
   const nouns = nounsFor(file.project.format);
   const sectionText = isSectionText(file, beat);
   const citeLabels = useMemo(() => citationLabels(file), [file]);
+  const latestBeat = useRef(beat);
+  latestBeat.current = beat;
+  const beatLines = useCallback(() => latestBeat.current.manuscript.elements.map((one) => ({ id: one.id as string, type: one.type, text: one.text })), []);
+  const sheetScope = useCallback(() => (document.querySelector('dialog.writer-dialog[open] .writer-body') as HTMLElement | null) ?? (document.querySelector('.writer-body') as HTMLElement | null), []);
   const numbers = structureNumbers(file);
   return (
     <>
@@ -424,6 +429,8 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
           >
             Notes{planCount > 0 ? ` (${planCount})` : ''}
           </button>
+          {/* Read aloud from this page (from Ken, 22 November). */}
+          {isProseFormat(file.project.format) ? <ReadAloud lines={beatLines} scope={sheetScope} /> : null}
           {onGoToOutline ? (
             <button
               type="button"

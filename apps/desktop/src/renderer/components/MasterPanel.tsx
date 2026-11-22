@@ -5,6 +5,8 @@ import type { PageStyle } from './ScriptOptions';
 import { paneNamesFor } from '../panes';
 
 interface MasterPanelProps {
+  /** Bumped by Read back on a book: the page starts reading aloud. */
+  readAloudAsk?: number;
   file: ProjectFile;
   layout?: StoryLayout;
   selectedBeatId: BeatId | null;
