@@ -25214,3 +25214,33 @@ dialog.writer-dialog {
   color: #6b6252;
   font-style: italic;
 }
+
+/* A citation in Mark up and in a markup draft: its marker shown, its code kept
+   in the line unseen so marks keep their places (from Ken, 21 November). */
+.marked-cite-code {
+  font-size: 0;
+}
+
+.marked-cite::after {
+  content: attr(data-marker);
+  display: inline-block;
+  margin: 0 1px;
+  padding: 0 3px;
+  font-size: 0.65em;
+  font-weight: 700;
+  vertical-align: super;
+  line-height: 1;
+  color: #9a7a2e;
+  background: color-mix(in srgb, #c9a45c 18%, transparent);
+  border-radius: 3px;
+}
+
+.marked-cite.missing::after {
+  color: #c0504d;
+  background: color-mix(in srgb, #e06c6c 18%, transparent);
+}
+
+/* A selection across lines (from Ken, 21 November), in the selection's colour. */
+::highlight(vcw-span) {
+  background-color: rgba(120, 165, 240, 0.45);
+}

@@ -567,3 +567,25 @@ export const withTrailingCitation = (text: string, token: string): string => {
   const base = (last ? text.slice(0, last.start) : text).replace(/\s+$/, '');
   return `${base}${token}`;
 };
+
+/**
+ * **What each citation shows on the page while writing or marking up**, by
+ * its key: the footnote marker, or for an author-date citation its short form
+ * (*Flesch 1946*). Empty where its record or source has gone — shown as
+ * needing attention.
+ */
+export const citationLabels = (file: ProjectFile): Map<string, string> => {
+  const out = new Map<string, string>();
+  for (const occurrence of citationOccurrences(file)) {
+    if (out.has(occurrence.key)) continue;
+    if (!occurrence.citation || !occurrence.reference) {
+      out.set(occurrence.key, '');
+      continue;
+    }
+    if (occurrence.citation.form === 'author-date') {
+      const year = /\d{4}/.exec(occurrence.reference.date)?.[0];
+      out.set(occurrence.key, `${referenceCreator(occurrence.reference) || 'Source'}${year ? ` ${year}` : ''}`);
+    } else out.set(occurrence.key, occurrence.marker);
+  }
+  return out;
+};

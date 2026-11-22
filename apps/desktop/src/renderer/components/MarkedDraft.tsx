@@ -1,6 +1,8 @@
 import React, { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
+  CITATION_TOKEN,
+  plainInline,
   MARK_COLOURS,
   MARK_KIND_NAMES,
   describeMark,
@@ -25,15 +27,17 @@ import {
 export const MarkedDraft = ({
   revision,
   onArchive,
+  cites = null,
 }: {
   revision: BeatRevision;
+  cites?: ReadonlyMap<string, string> | null;
   /** Send it to the archive, or bring it back. Nothing is erased. */
   onArchive(archived: boolean): void;
 }): React.ReactElement => (
   <div className="marked-draft">
     <div className="marked-draft-page">
       {revision.manuscript.elements.map((element) => (
-        <MarkedLine key={element.id} id={element.id as string} type={element.type} text={element.text} marks={marksOn(revision.marks, element.id as string)} />
+        <MarkedLine key={element.id} id={element.id as string} type={element.type} text={element.text} marks={marksOn(revision.marks, element.id as string)} cites={cites} />
       ))}
     </div>
     <div className="marked-draft-list">
@@ -59,17 +63,51 @@ export const MarkedDraft = ({
   </div>
 );
 
+/**
+ * **A citation reads as its marker, not its code** (from Ken, 21 November: *fix
+ * the citation codes in mark up mode*). The token's characters stay in the
+ * line, unseen, so a mark's place in the words is the same as the draft's;
+ * the chip shows the footnote number or *Flesch 1946*.
+ */
+const withCites = (text: string, cites: ReadonlyMap<string, string> | null): React.ReactNode => {
+  if (!text.includes('[^')) return text;
+  const parts: React.ReactNode[] = [];
+  let rest = text;
+  let n = 0;
+  for (let at = rest.indexOf('[^'); at >= 0; at = rest.indexOf('[^')) {
+    const token = CITATION_TOKEN.exec(rest.slice(at));
+    if (!token) {
+      parts.push(rest.slice(0, at + 2));
+      rest = rest.slice(at + 2);
+      continue;
+    }
+    if (at > 0) parts.push(rest.slice(0, at));
+    const label = cites?.get(token[1]!) ?? '';
+    parts.push(
+      <span key={`c${n++}`} className={label ? 'marked-cite' : 'marked-cite missing'} data-marker={label || '?'} title={label ? `Citation ${label}` : 'A citation whose source is missing'}>
+        <span className="marked-cite-code">{token[0]}</span>
+      </span>,
+    );
+    rest = rest.slice(at + token[0].length);
+  }
+  if (rest) parts.push(rest);
+  return parts;
+};
+
 export const MarkedLine = ({
   id,
   type,
   text,
   marks,
   numbers,
+  cites = null,
 }: {
   id: string;
   type: string;
   text: string;
   marks: Mark[];
+  /** Each citation's label by its key, so a token reads as its marker rather than its code (from Ken, 21 November). */
+  cites?: ReadonlyMap<string, string> | null;
   /** Each mark's number, for the little circle at its end (from Ken, 13 November). */
   numbers?: ReadonlyMap<string, number>;
 }) => {
@@ -80,7 +118,7 @@ export const MarkedLine = ({
       {segments.map((segment, index) => {
         const from = at;
         at += segment.text.length;
-        if (segment.marks.length === 0) return <span key={index}>{segment.text}</span>;
+        if (segment.marks.length === 0) return <span key={index}>{withCites(segment.text, cites)}</span>;
         const highlight = segment.marks.find((mark) => mark.kind === 'highlight');
         const ending = segment.marks.filter(
           (mark) => mark.kind === 'suggest' && Math.min(mark.end, text.length) === from + segment.text.length,
@@ -92,7 +130,7 @@ export const MarkedLine = ({
               style={highlight ? { background: highlight.colour } : undefined}
               title={segment.marks.map((mark) => describeMark(mark)).join('\n')}
             >
-              {segment.text}
+              {withCites(segment.text, cites)}
             </span>
             {ending.map((mark) => (
               <ins key={mark.id} className="marked-insert" title={describeMark(mark)}>
@@ -172,7 +210,9 @@ export const MarkingPage = ({
   onSave,
   onCancel,
   toolsSlot = null,
+  cites = null,
 }: {
+  cites?: ReadonlyMap<string, string> | null;
   manuscript: ManuscriptSegment;
   /**
    * **Where the tools go: just under the top bar** (from Ken, 21 November:
@@ -308,6 +348,7 @@ export const MarkingPage = ({
             text={element.text}
             marks={marksOn(marks, element.id as string)}
             numbers={numbers}
+            cites={cites}
           />
         ))}
       </div>
@@ -329,7 +370,7 @@ export const MarkingPage = ({
                   >
                     {MARK_KIND_NAMES[mark.kind]}
                   </span>{' '}
-                  {mark.quote.trim() ? <q>{mark.quote.trim().slice(0, 80)}</q> : null}
+                  {plainInline(mark.quote).trim() ? <q>{plainInline(mark.quote).trim().slice(0, 80)}</q> : null}
                   {mark.kind === 'suggest' ? <span> → “{mark.replacement}”</span> : null}
                   <textarea
                     className="markup-note-say"

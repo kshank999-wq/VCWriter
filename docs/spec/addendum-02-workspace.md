@@ -3326,3 +3326,20 @@ what you're looking at, or have that little side left hand gold line.*
   Clicking into a shot's box selects it in the tracks without moving the
   sheet.
 - A choice made in the page itself does not flash or move the page.
+
+## Selecting across lines (21 November 2026)
+
+From Ken: *you have a heading, a paragraph, block quote, and other things that
+are separated, you need to be able to highlight all of those, copy and paste
+those to another beat… drag and highlight all those and be able to cut,
+paste.* Each line of the manuscript is a box of its own, so the browser's
+selection stops at its edge. `BeatBody` keeps a selection of its own that does
+not: a drag that leaves its line spans from the press to the pointer, Shift+
+click extends to another line, and Ctrl/Cmd+A on a wholly selected line takes
+every line. It is drawn over the ink as a highlight. Copy puts the plain words
+on the clipboard and keeps the lines with their kinds; pasted anywhere in the
+program they come back as the kinds of line they were (heading, paragraph,
+block quote; action, cue, dialogue). Cut, Delete and Backspace take the span
+out and join what was either side; typing replaces it. A press elsewhere lets
+it go. In Mark up and in a markup draft, a citation shows as its marker (¹,
+*Flesch 1946*), its code kept in the line unseen so marks keep their places.

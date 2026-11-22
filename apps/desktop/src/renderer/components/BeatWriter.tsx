@@ -24,6 +24,7 @@ import {
   switchRevision,
   nounsFor,
   isSectionText,
+  citationLabels,
   structureNumbers,
   updateBeat,
   type Beat,
@@ -379,6 +380,7 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
   // §14: a writer in Book Mode is never made to work around Beat or Script.
   const nouns = nounsFor(file.project.format);
   const sectionText = isSectionText(file, beat);
+  const citeLabels = useMemo(() => citationLabels(file), [file]);
   const numbers = structureNumbers(file);
   return (
     <>
@@ -729,6 +731,7 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
           {marking ? (
             <MarkingPage
               toolsSlot={tools}
+              cites={citeLabels}
               manuscript={beat.manuscript}
               name={markerName}
               onName={setMarkerName}
@@ -796,6 +799,7 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
             </p>
             {isMarkupDraft(one.revision) ? (
               <MarkedDraft
+                cites={citeLabels}
                 revision={one.revision}
                 onArchive={(archived) => onUpdate((current) => archiveRevision(current, beat.id, one.revision.id, archived))}
               />
@@ -820,7 +824,7 @@ export function BeatWriter({ file, beat, onUpdate, onSelect, onClose, onPopOut, 
             ) : masterBeat.manuscript ? (
               <div className="marked-draft-page">
                 {masterBeat.manuscript.elements.map((element) => (
-                  <MarkedLine key={element.id as string} id={element.id as string} type={element.type} text={element.text} marks={[]} />
+                  <MarkedLine key={element.id as string} id={element.id as string} type={element.type} text={element.text} marks={[]} cites={citeLabels} />
                 ))}
               </div>
             ) : (

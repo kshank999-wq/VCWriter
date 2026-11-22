@@ -113,6 +113,8 @@ import {
   citationOccurrences,
   insertCitation,
   tokensIn,
+  plainInline,
+  citationLabels,
   trailingCitation,
   withTrailingCitation,
   referencesOf,
@@ -324,6 +326,26 @@ function MicrophoneGlyph({ listening }: { listening: boolean }) {
     </svg>
   );
 }
+
+/** A selection from a place in one line to a place in another. */
+interface LineSpan {
+  anchor: { id: ManuscriptElementId; at: number };
+  focus: { id: ManuscriptElementId; at: number };
+}
+
+/** One line's part of a copied span, with its kind, so it pastes back as what it was. */
+interface CopiedLine {
+  type: ManuscriptElementType;
+  text: string;
+  characterId: ManuscriptElement['characterId'];
+  attributes: ManuscriptElement['attributes'];
+}
+
+/** The last lines copied in this window: pasted anywhere here, they come back with their kinds. */
+let copiedLines: { text: string; lines: CopiedLine[] } | null = null;
+
+/** Which beat's page drew the span on screen, so another's tidying does not take it down. */
+let spanOwner: string | null = null;
 
 /** The drop-down's last line: a source not in the library yet. */
 const NEW_SOURCE = '__new-source';
@@ -782,6 +804,11 @@ export function BeatBody({
   const handlePaste = (event: React.ClipboardEvent<HTMLTextAreaElement>, element: ManuscriptElement, index: number) => {
     const pasted = event.clipboardData.getData('text/plain');
     if (pasted.trim().length === 0 || !pasted.includes('\n')) return;
+    // Lines copied from this program come back as the kinds of line they were.
+    if (pasteLines(element, index, event.currentTarget.selectionStart, event.currentTarget.selectionEnd, pasted)) {
+      event.preventDefault();
+      return;
+    }
     const parts = reformatText(pasted, format);
     if (parts.length <= 1) return;
 
@@ -897,23 +924,8 @@ export function BeatBody({
    */
   // Citations, on a book that cites (addendum 43): each token drawn as its marker.
   const cites = isInstructional(file.project.format);
-  const markers = useMemo(() => {
-    if (!cites) return null;
-    // The first place each token stands decides its marker; one whose citation
-    // or source has gone is marked as needing attention.
-    const out = new Map<string, string>();
-    for (const occurrence of citationOccurrences(file)) {
-      if (out.has(occurrence.key)) continue;
-      // An author-date citation reads as itself, (Smith, 2019, p. 42), in the text.
-      // Short in its chip, which keeps the token's room; the full reading is under the quote.
-      const shown =
-        occurrence.citation?.form === 'author-date' && occurrence.reference
-          ? `${referenceCreator(occurrence.reference) || 'Source'}${/\d{4}/.exec(occurrence.reference.date)?.[0] ? ` ${/\d{4}/.exec(occurrence.reference.date)![0]}` : ''}`
-          : occurrence.marker;
-      out.set(occurrence.key, occurrence.citation && occurrence.reference ? shown : '');
-    }
-    return out;
-  }, [cites, file]);
+  // Each token's label: its footnote marker, or an author-date citation's short form.
+  const markers = useMemo(() => (cites ? citationLabels(file) : null), [cites, file]);
 
   /** Open Insert Citation for the line the cursor is in, at the cursor or after what is picked. */
   const citeHere = () => {
@@ -1058,6 +1070,244 @@ export function BeatBody({
     if (input) setSelection({ id: element.id, start: input.selectionStart, end: input.selectionEnd });
   };
 
+  // ------------------------------------------------------------ across lines
+  /**
+   * **Selecting across lines** (from Ken, 21 November: *you have a heading, a
+   * paragraph, block quote… you need to be able to highlight all of those,
+   * copy and paste those to another beat… drag and highlight all those and be
+   * able to cut, paste*). Each line is a box of its own, so the browser's
+   * selection stops at its edge; this is the selection that does not: from a
+   * place in one line to a place in another, drawn over the ink, and cut,
+   * copied, pasted or deleted as one. A drag that leaves its line starts it;
+   * Shift+click on another line extends to it; Ctrl/Cmd+A twice takes the lot.
+   */
+  const [span, setSpan] = useState<LineSpan | null>(null);
+  const spanRef = useRef<LineSpan | null>(null);
+  spanRef.current = span;
+  const dragFrom = useRef<{ id: ManuscriptElementId; at: number; fresh: boolean } | null>(null);
+
+  /** The span in reading order: the first line and place, and the last. */
+  const ordered = (one: LineSpan) => {
+    const order = latest.current;
+    const a = order.findIndex((element) => element.id === one.anchor.id);
+    const f = order.findIndex((element) => element.id === one.focus.id);
+    if (a < 0 || f < 0) return null;
+    return a < f || (a === f && one.anchor.at <= one.focus.at)
+      ? { from: { index: a, at: one.anchor.at }, to: { index: f, at: one.focus.at } }
+      : { from: { index: f, at: one.focus.at }, to: { index: a, at: one.anchor.at } };
+  };
+
+  /** What the span holds: each line's part of it, with its kind. */
+  const spanned = (one: LineSpan): CopiedLine[] => {
+    const at = ordered(one);
+    if (!at) return [];
+    return latest.current.slice(at.from.index, at.to.index + 1).map((element, offset) => {
+      const index = at.from.index + offset;
+      const start = index === at.from.index ? at.from.at : 0;
+      const end = index === at.to.index ? at.to.at : element.text.length;
+      return { type: element.type, text: element.text.slice(start, end), characterId: element.characterId, attributes: element.attributes };
+    });
+  };
+
+  /** Take the span out: the first line keeps what was before it, joined to what was after it in the last. */
+  const removeSpan = (one: LineSpan): { id: ManuscriptElementId; at: number } | null => {
+    const at = ordered(one);
+    if (!at) return null;
+    const order = latest.current;
+    const first = order[at.from.index]!;
+    const last = order[at.to.index]!;
+    const joined = first.text.slice(0, at.from.at) + last.text.slice(at.to.at);
+    const next = [...order.slice(0, at.from.index), { ...first, text: joined }, ...order.slice(at.to.index + 1)];
+    setElements(next);
+    setSpan(null);
+    setSelection({ id: first.id, start: at.from.at, end: at.from.at });
+    return { id: first.id, at: at.from.at };
+  };
+
+  const copySpan = (one: LineSpan) => {
+    const lines = spanned(one);
+    const text = lines.map((line) => plainInline(line.text)).join('\n');
+    copiedLines = { text, lines };
+    void navigator.clipboard?.writeText(text).catch(() => undefined);
+  };
+
+  /** Lines copied here, put in at the caret as the kinds of line they were; false where the clipboard holds something else. */
+  const pasteLines = (element: ManuscriptElement, index: number, start: number, end: number, pasted: string): boolean => {
+    if (!copiedLines || copiedLines.text !== pasted || copiedLines.lines.length < 2) return false;
+    const made = copiedLines.lines.map((line) => ({ ...makeElement(line.type), text: line.text, characterId: line.characterId, attributes: line.attributes }));
+    const before = element.text.slice(0, start);
+    const after = element.text.slice(end);
+    const next = [...latest.current];
+    const at = before.trim().length > 0 ? index + 1 : index;
+    if (before.trim().length > 0) next[index] = { ...element, text: before };
+    next.splice(at, before.trim().length > 0 ? 0 : 1, ...made);
+    if (after.trim().length > 0) next.splice(at + made.length, 0, { ...makeElement(element.type), text: after });
+    setElements(next);
+    const tail = made[made.length - 1];
+    if (tail) setSelection({ id: tail.id, start: tail.text.length, end: tail.text.length });
+    return true;
+  };
+
+  // A drag that leaves its line becomes a span; one that comes back is the line's own selection again.
+  useEffect(() => {
+    const move = (event: PointerEvent) => {
+      const from = dragFrom.current;
+      if (!from || (event.buttons & 1) === 0) return;
+      const under = document.elementFromPoint(event.clientX, event.clientY)?.closest('[data-element-id]') as HTMLElement | null;
+      const id = under?.dataset['elementId'] as ManuscriptElementId | undefined;
+      if (!id || !latest.current.some((element) => element.id === id)) return;
+      if (id === from.id) {
+        if (spanRef.current) setSpan(null);
+        return;
+      }
+      const box = inputs.current.get(id);
+      const element = latest.current.find((one) => one.id === id)!;
+      const down = latest.current.findIndex((one) => one.id === id) > latest.current.findIndex((one) => one.id === from.id);
+      // Where the press was, as the first line's own selection says once the
+      // drag has left it: its start going down, its end going up.
+      const first = inputs.current.get(from.id);
+      if (from.fresh && first) {
+        from.at = down ? first.selectionStart : first.selectionEnd;
+        from.fresh = false;
+      }
+      // That line's own selection would draw over ours.
+      first?.setSelectionRange(from.at, from.at);
+      const point = box ? offsetAtPoint(box, event.clientX, event.clientY) : null;
+      setSpan({ anchor: { id: from.id, at: from.at }, focus: { id, at: point ?? (down ? element.text.length : 0) } });
+    };
+    const up = () => {
+      const from = dragFrom.current;
+      dragFrom.current = null;
+      // A span made: the first line keeps only a caret, so its own selection draws nothing.
+      if (from && spanRef.current) inputs.current.get(from.id)?.setSelectionRange(from.at, from.at);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    return () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+  }, []);
+
+  // The span drawn over the ink, as the page's own selection colour.
+  useEffect(() => {
+    const registry = (globalThis as unknown as { CSS?: { highlights?: Map<string, unknown> } }).CSS?.highlights;
+    const HighlightCtor = (globalThis as unknown as { Highlight?: new (...ranges: Range[]) => unknown }).Highlight;
+    const page = pageRef.current;
+    if (!registry || !HighlightCtor || !page) return undefined;
+    // One name, as the stylesheet must spell it; only the beat that drew the span takes it down.
+    const name = 'vcw-span';
+    const at = span ? ordered(span) : null;
+    if (!at) {
+      if (spanOwner === (beat.id as string)) {
+        registry.delete(name);
+        spanOwner = null;
+      }
+      return undefined;
+    }
+    spanOwner = beat.id as string;
+    const ranges: Range[] = [];
+    latest.current.slice(at.from.index, at.to.index + 1).forEach((element, offset) => {
+      const index = at.from.index + offset;
+      const start = index === at.from.index ? at.from.at : 0;
+      const end = index === at.to.index ? at.to.at : element.text.length;
+      const range = end > start ? inkRange(page, element.id as string, start, end) : null;
+      if (range) ranges.push(range);
+    });
+    registry.set(name, new HighlightCtor(...ranges));
+    return () => {
+      if (spanOwner === (beat.id as string)) registry.delete(name);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [span, elements]);
+
+  // A press anywhere but this page's lines lets the span go, so no key typed elsewhere acts on it.
+  useEffect(() => {
+    if (!span) return undefined;
+    const away = (event: PointerEvent) => {
+      if (event.button !== 0) return;
+      if (!pageRef.current?.contains(event.target as Node)) setSpan(null);
+    };
+    window.addEventListener('pointerdown', away, true);
+    return () => window.removeEventListener('pointerdown', away, true);
+  }, [span]);
+
+  // The keys, while a span is there: copy, cut, paste, delete, or type over it.
+  useEffect(() => {
+    if (!span) return undefined;
+    const keys = (event: KeyboardEvent) => {
+      const one = spanRef.current;
+      if (!one) return;
+      const chord = event.metaKey || event.ctrlKey;
+      const key = event.key.toLowerCase();
+      if (chord && key === 'c') {
+        event.preventDefault();
+        copySpan(one);
+        return;
+      }
+      if (chord && key === 'x') {
+        event.preventDefault();
+        copySpan(one);
+        removeSpan(one);
+        return;
+      }
+      if (chord && key === 'v') {
+        event.preventDefault();
+        const caret = removeSpan(one);
+        void navigator.clipboard?.readText().then((pasted) => {
+          if (!caret || !pasted) return;
+          const index = latest.current.findIndex((element) => element.id === caret.id);
+          const element = latest.current[index];
+          if (!element) return;
+          if (pasteLines(element, index, caret.at, caret.at, pasted)) return;
+          const text = element.text.slice(0, caret.at) + pasted + element.text.slice(caret.at);
+          updateElement(element.id, { text });
+          setSelection({ id: element.id, start: caret.at + pasted.length, end: caret.at + pasted.length });
+        });
+        return;
+      }
+      if (event.key === 'Backspace' || event.key === 'Delete') {
+        event.preventDefault();
+        removeSpan(one);
+        return;
+      }
+      if (event.key === 'Escape' || event.key.startsWith('Arrow')) {
+        setSpan(null);
+        return;
+      }
+      if (!chord && !event.altKey && event.key.length === 1) {
+        // Typing over a span replaces it, as in any word processor.
+        event.preventDefault();
+        const caret = removeSpan(one);
+        if (!caret) return;
+        const element = latest.current.find((line) => line.id === caret.id);
+        if (!element) return;
+        updateElement(element.id, { text: element.text.slice(0, caret.at) + event.key + element.text.slice(caret.at) });
+        setSelection({ id: element.id, start: caret.at + 1, end: caret.at + 1 });
+      }
+    };
+    window.addEventListener('keydown', keys, true);
+    return () => window.removeEventListener('keydown', keys, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [span]);
+
+  /** A press in a line: the start of a drag that may cross lines, or Shift+click to extend to it. */
+  const pressLine = (event: React.PointerEvent<HTMLTextAreaElement>, element: ManuscriptElement) => {
+    if (event.button !== 0) return;
+    const box = event.currentTarget;
+    const at = offsetAtPoint(box, event.clientX, event.clientY) ?? box.selectionStart;
+    if (event.shiftKey) {
+      const from = spanRef.current?.anchor ?? (atLine && atLine !== element.id ? { id: atLine, at: inputs.current.get(atLine)?.selectionStart ?? 0 } : null);
+      if (from && from.id !== element.id) {
+        event.preventDefault();
+        setSpan({ anchor: from, focus: { id: element.id, at } });
+        return;
+      }
+    }
+    setSpan(null);
+    dragFrom.current = { id: element.id, at, fresh: true };
+  };
+
   /** The last AutoCorrect, so Backspace straight after can take it back. */
   const corrected = useRef<{ id: ManuscriptElementId; text: string; caret: number; from: number; to: number; was: string } | null>(null);
 
@@ -1087,6 +1337,15 @@ export function BeatBody({
       const edit = toggleInline(element.text, input.selectionStart, input.selectionEnd, mark);
       updateElement(element.id, { text: edit.text });
       setSelection({ id: element.id, start: edit.selectionStart, end: edit.selectionEnd });
+      return;
+    }
+
+    // Ctrl/Cmd+A on a line already wholly selected takes every line (Ken, 21 November).
+    if (chord && !event.altKey && event.key.toLowerCase() === 'a' && input.selectionStart === 0 && input.selectionEnd === input.value.length && elements.length > 1) {
+      event.preventDefault();
+      const firstLine = elements[0]!;
+      const lastLine = elements[elements.length - 1]!;
+      setSpan({ anchor: { id: firstLine.id, at: 0 }, focus: { id: lastLine.id, at: lastLine.text.length } });
       return;
     }
 
@@ -1384,6 +1643,7 @@ export function BeatBody({
                   ? { list: 'vcwriter-slugs' }
                   : {})}
               readOnly={readOnly}
+              onPointerDown={(event) => pressLine(event, element)}
               onFocus={() => {
                 setAtLine(element.id);
                 onActivate?.();

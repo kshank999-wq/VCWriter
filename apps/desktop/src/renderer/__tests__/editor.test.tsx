@@ -99,6 +99,29 @@ const pressReturn = (node: HTMLElement) => {
 };
 
 describe('writing keyboard flow', () => {
+  it('selects across lines with Ctrl+A twice, copies them, and pastes them back as the kinds of line they were', () => {
+    const file = screenplayWithAction();
+    const three = updateBeat(file, file.beats[0]!.id, {
+      manuscript: {
+        elements: [
+          { id: 'a1111111-1111-4111-8111-111111111111' as never, type: 'action', text: 'Rain hammers the glass.', characterId: null, attributes: {} },
+          { id: 'b1111111-1111-4111-8111-111111111111' as never, type: 'character', text: 'MARA', characterId: null, attributes: {} },
+          { id: 'c1111111-1111-4111-8111-111111111111' as never, type: 'dialogue', text: 'Let it rain.', characterId: null, attributes: {} },
+        ],
+      },
+    });
+    render(<Harness initial={three} />);
+    const first = screen.getByDisplayValue('Rain hammers the glass.') as HTMLTextAreaElement;
+    first.setSelectionRange(0, first.value.length);
+    fireEvent.keyDown(first, { key: 'a', ctrlKey: true });
+    fireEvent.keyDown(window, { key: 'c', ctrlKey: true });
+    // Pasted at the end of the speech: the three lines come back as action, cue and dialogue.
+    const last = screen.getByDisplayValue('Let it rain.') as HTMLTextAreaElement;
+    last.setSelectionRange(last.value.length, last.value.length);
+    fireEvent.paste(last, { clipboardData: { getData: () => 'Rain hammers the glass.\nMARA\nLet it rain.' } });
+    expect(elementTypes()).toEqual(['action', 'character', 'dialogue', 'action', 'character', 'dialogue']);
+  });
+
   it('puts a common slip right as its word is finished, and Backspace takes it back', () => {
     render(<Harness initial={screenplayWithAction()} />);
     const action = screen.getByDisplayValue('Rain hammers the glass.') as HTMLTextAreaElement;
