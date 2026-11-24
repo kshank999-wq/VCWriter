@@ -121,3 +121,42 @@ export const checksumMatches = (expected: string, actual: string): boolean => {
   if (left.length === 0 || right.length === 0) return false;
   return left === right;
 };
+
+/**
+ * **Whether the last update went in** (addendum 48), asked at the start after
+ * an install was begun. The version this copy reports says it: the same as
+ * (or newer than) the one installed means it went in; still older means the
+ * installer stopped, and the writer is told why rather than left guessing —
+ * and never tried again on its own, which could loop.
+ */
+export const updateOutcome = (tried: string | null, current: string): 'none' | 'installed' | 'failed' => {
+  if (!tried) return 'none';
+  return isNewerVersion(tried, current) ? 'failed' : 'installed';
+};
+
+/** Why an install stopped: the last `FAILED:` line of its log, or null. */
+export const updateFailureReason = (log: string): string | null => {
+  const lines = log.split(/\r?\n/);
+  for (let index = lines.length - 1; index >= 0; index -= 1) {
+    const line = lines[index]!.trim();
+    if (line.startsWith('FAILED: ')) return line.slice('FAILED: '.length).trim() || null;
+  }
+  return null;
+};
+
+/** How long without a key or a click before an update may close the app by itself. */
+export const UPDATE_IDLE_MS = 2 * 60 * 1000;
+
+/**
+ * **May a downloaded update install now, unasked?** Composer's rule, for a
+ * writer: only with *Install updates automatically* on, everything saved,
+ * nothing being read aloud or dictated, and the writer away from the keys for
+ * a couple of minutes. Otherwise it waits and goes in at the next start —
+ * an update never closes the app under someone's hands.
+ */
+export const mayInstallUnasked = (input: {
+  automatic: boolean;
+  saved: boolean;
+  busy: boolean;
+  idleMs: number;
+}): boolean => input.automatic && input.saved && !input.busy && input.idleMs >= UPDATE_IDLE_MS;

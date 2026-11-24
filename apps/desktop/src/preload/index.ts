@@ -478,7 +478,16 @@ export interface VcWriterApi {
     expectedSha256: string;
     version: string;
   }): Promise<DesktopApiResult<{ path: string; version: string; verified: boolean }>>;
-  installUpdate(path: string): Promise<DesktopApiResult<true>>;
+  /** Installs the downloaded update and quits for the installer; the error says why not. */
+  installUpdate(): Promise<DesktopApiResult<true>>;
+  /** The update setting, a download waiting, and how the last install went (read once). */
+  updateState?(): Promise<DesktopApiResult<UpdateState>>;
+  setAutomaticUpdates?(on: boolean): Promise<DesktopApiResult<true>>;
+  /** The last update's installer, opened by hand (or the account page if it has gone). */
+  openUpdateInstaller?(): Promise<DesktopApiResult<true>>;
+  showUpdateLog?(): Promise<DesktopApiResult<true>>;
+  /** How far the update download has got, 0..1. */
+  onUpdateProgress?(listener: (fraction: number) => void): () => void;
   /** Whether the writer has opted in to sending error reports. Off by default. */
   reportingSettings(): Promise<DesktopApiResult<{ enabled: boolean }>>;
   setReporting(enabled: boolean): Promise<DesktopApiResult<{ enabled: boolean }>>;
@@ -578,6 +587,13 @@ export interface UpdateStatus {
   currentVersion: string;
 }
 
+export interface UpdateState {
+  currentVersion: string;
+  automatic: boolean;
+  ready: string | null;
+  report: { outcome: 'installed' | 'failed'; version: string; reason: string | null; log: string | null; installer: boolean } | null;
+}
+
 export interface AccountStatus {
   configured: boolean;
   signedIn: boolean;
@@ -645,7 +661,18 @@ const api: VcWriterApi = {
   licenseStanding: (recheck) => ipcRenderer.invoke('license:standing', recheck === true),
   checkForUpdate: () => ipcRenderer.invoke('update:check'),
   downloadUpdate: (input) => ipcRenderer.invoke('update:download', input),
-  installUpdate: (path) => ipcRenderer.invoke('update:install', path),
+  installUpdate: () => ipcRenderer.invoke('update:install'),
+  updateState: () => ipcRenderer.invoke('update:state'),
+  setAutomaticUpdates: (on) => ipcRenderer.invoke('update:setAutomatic', on),
+  openUpdateInstaller: () => ipcRenderer.invoke('update:openInstaller'),
+  showUpdateLog: () => ipcRenderer.invoke('update:showLog'),
+  onUpdateProgress: (listener) => {
+    const handler = (_event: unknown, fraction: number) => listener(fraction);
+    ipcRenderer.on('update:progress', handler);
+    return () => {
+      ipcRenderer.removeListener('update:progress', handler);
+    };
+  },
   reportingSettings: () => ipcRenderer.invoke('reporting:get'),
   setReporting: (enabled) => ipcRenderer.invoke('reporting:set', enabled),
   reportError: (input) => ipcRenderer.invoke('reporting:report', input),

@@ -62,7 +62,18 @@ import {
 } from './cloud';
 import { deviceFingerprint, deviceName, devicePlatform } from './device';
 import { licenseStanding, noteActivated, thisComputerActivated } from './license-check';
-import { checkForUpdate, downloadUpdate, runInstaller, type DownloadedUpdate, type UpdateStatus } from './updater';
+import {
+  checkForUpdate,
+  downloadUpdate,
+  installUpdate,
+  openUpdateInstaller,
+  setAutomaticUpdates,
+  showUpdateLog,
+  updateState,
+  type DownloadedUpdate,
+  type UpdateState,
+  type UpdateStatus,
+} from './updater';
 import { reportError, reportingSettings, setReportingEnabled } from './reporting';
 import { kindlePreviewerStatus, openInKindlePreviewer } from './kindle-previewer';
 import {
@@ -1123,27 +1134,72 @@ export const registerIpcHandlers = (getWindow: () => BrowserWindow | null, panes
     }
   });
 
+  /** Downloads through the account, telling the window how far it has got. */
   ipcMain.handle(
     'update:download',
     async (
-      _event,
+      event,
       input: { expectedSha256: string; version: string },
     ): Promise<DesktopApiResult<DownloadedUpdate>> => {
       try {
-        return ok(await downloadUpdate({ ...input, accessToken: await accessToken() }));
+        let last = -1;
+        return ok(
+          await downloadUpdate({
+            ...input,
+            accessToken: await accessToken(),
+            onProgress: (fraction) => {
+              const percent = Math.floor(fraction * 100);
+              if (percent === last || event.sender.isDestroyed()) return;
+              last = percent;
+              event.sender.send('update:progress', fraction);
+            },
+          }),
+        );
       } catch (cause) {
         return fail(cause);
       }
     },
   );
 
-  ipcMain.handle('update:install', async (_event, path: string): Promise<DesktopApiResult<true>> => {
+  /** Installs the downloaded update and quits; the error says why not. */
+  ipcMain.handle('update:install', async (): Promise<DesktopApiResult<true>> => {
     try {
-      await runInstaller(path);
+      const why = await installUpdate();
+      return why ? fail(new Error(why)) : ok(true);
+    } catch (cause) {
+      return fail(cause);
+    }
+  });
+
+  ipcMain.handle('update:state', async (): Promise<DesktopApiResult<UpdateState>> => {
+    try {
+      return ok(await updateState());
+    } catch (cause) {
+      return fail(cause);
+    }
+  });
+
+  ipcMain.handle('update:setAutomatic', async (_event, on: boolean): Promise<DesktopApiResult<true>> => {
+    try {
+      await setAutomaticUpdates(on === true);
       return ok(true);
     } catch (cause) {
       return fail(cause);
     }
+  });
+
+  ipcMain.handle('update:openInstaller', async (): Promise<DesktopApiResult<true>> => {
+    try {
+      const why = await openUpdateInstaller();
+      return why ? fail(new Error(why)) : ok(true);
+    } catch (cause) {
+      return fail(cause);
+    }
+  });
+
+  ipcMain.handle('update:showLog', (): DesktopApiResult<true> => {
+    showUpdateLog();
+    return ok(true);
   });
 
   // --- error reporting ------------------------------------------------------

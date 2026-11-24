@@ -70,6 +70,7 @@ import {
 import { PaneFrame } from './components/PaneFrame';
 import { TitleBar } from './components/TitleBar';
 import { StaleBuildNotice } from './components/StaleBuildNotice';
+import { UpdateDialog, UpdateNotice, updates, useUpdater, useUpdates } from './updates';
 import { WritingNotice } from './components/WritingNotice';
 import { Welcome } from './components/Welcome';
 import { MasterTimeline } from './components/MasterTimeline';
@@ -1055,6 +1056,8 @@ export default function App() {
           return openGuide(null);
         case 'help.credits':
           return openCredits();
+        case 'help.updates':
+          return updates.openDialog();
         case 'help.spec':
         case 'help.about':
           return setPreferencesOpen(true);
@@ -1080,7 +1083,29 @@ export default function App() {
    * One list, used by the bar in the window and by the native menu, so the
    * two can never say different things.
    */
-  const menus = useMemo(() => menusFor(file?.project.format ?? null), [file?.project.format]);
+  /**
+   * Updates (addendum 48): a look shortly after start, and the Help item,
+   * which names the update once one is downloaded, as Composer's does.
+   */
+  useUpdater({
+    signedIn: () => account.signedIn,
+    signedInNow: account.signedIn,
+    saved: () => project.saveState !== 'dirty' && project.saveState !== 'saving',
+    saveNow: () => project.saveNow(),
+    signIn: () => setView('account'),
+  });
+  const update = useUpdates();
+  const updateLabel =
+    update.phase === 'ready' && update.version ? `Install Update ${update.version}…` : 'Check for Updates…';
+  const menus = useMemo(
+    () =>
+      menusFor(file?.project.format ?? null).map((menu) =>
+        menu.id !== 'help'
+          ? menu
+          : { ...menu, items: menu.items.map((item) => (item?.command === 'help.updates' ? { ...item, label: updateLabel } : item)) },
+      ),
+    [file?.project.format, updateLabel],
+  );
 
   /**
    * The native menu, rebuilt whenever a tick changes. On a Mac this is the
@@ -1157,6 +1182,8 @@ export default function App() {
     return (
       <>
         {activation}
+        <UpdateDialog />
+        <UpdateNotice />
         {/* Said here too (addendum 32 §8). Somebody who starts a project on a
             read-only copy and finds they cannot type a word has been trapped
             by a screen that knew and did not say. */}
@@ -1740,6 +1767,9 @@ export default function App() {
       {/* A lapsed subscription (addendum 32 §8). Above the project's own
           errors, because it explains every one of them that follows. */}
       {activation}
+      <UpdateDialog />
+      {/* An update downloading, waiting, or just installed (addendum 48). */}
+      <UpdateNotice />
       <WritingNotice access={access} onActivate={() => setActivationOpen(true)} />
       {/* And a page older than the deployment it is talking to (§9a). */}
       <StaleBuildNotice movedOn={buildMovedOn} />

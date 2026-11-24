@@ -89,7 +89,8 @@ export type CommandId =
   | 'help.guides'
   | 'help.spec'
   | 'help.about'
-  | 'help.credits';
+  | 'help.credits'
+  | 'help.updates';
 
 export interface MenuItem {
   command: CommandId;
@@ -300,6 +301,8 @@ export const menusFor = (format: ProjectFormat | null): readonly Menu[] => {
       { command: 'help.guide', label: 'Guide for this screen', accelerator: 'F1' },
       { command: 'help.guides', label: 'All guides' },
       null,
+      { command: 'help.updates', label: 'Check for Updates…' },
+      null,
       { command: 'help.spec', label: 'What this build does' },
       { command: 'help.about', label: 'About VC Writer' },
       { command: 'help.credits', label: 'Open-source credits' },
@@ -371,6 +374,8 @@ const DOCUMENT_MENUS: readonly Menu[] = [
       // The guides on vc-writer.com (addendum 35 §9).
       { command: 'help.guide', label: 'Guide for this screen', accelerator: 'F1' },
       { command: 'help.guides', label: 'All guides' },
+      null,
+      { command: 'help.updates', label: 'Check for Updates…' },
       null,
       { command: 'help.spec', label: 'What this build does' },
       { command: 'help.about', label: 'About VC Writer' },

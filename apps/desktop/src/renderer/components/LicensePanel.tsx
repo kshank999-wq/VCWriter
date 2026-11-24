@@ -1,14 +1,14 @@
-import { useCallback, useEffect, useState } from 'react';
-import type { UpdateStatus } from '../../preload/index';
+import { useEffect, useState } from 'react';
 import { ACTIVATED_EVENT } from '../use-writing-access';
+import { UpdatePanel, updates } from '../updates';
 
 /**
  * Licensing this computer, and updating it (spec §3.3).
  *
  * Both are deliberate acts here rather than things that happen to the writer.
- * An update in particular is never applied silently: VC Writer is where someone
- * keeps work in progress, and restarting it uninvited mid-scene is not a
- * trade worth making for a faster rollout.
+ * Updates are Help → Check for Updates' panel (addendum 48): an update never
+ * restarts VC Writer under the writer's hands — unasked, only when everything
+ * is saved and they are away from the keys, else at the next start.
  */
 export function LicensePanel() {
   const [serial, setSerial] = useState('');
@@ -16,26 +16,10 @@ export function LicensePanel() {
   const [activation, setActivation] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const [update, setUpdate] = useState<UpdateStatus | null>(null);
-  const [checking, setChecking] = useState(false);
-  const [downloading, setDownloading] = useState(false);
-  const [downloaded, setDownloaded] = useState<{ path: string; version: string } | null>(null);
-
-  const check = useCallback(async () => {
-    setChecking(true);
-    setError(null);
-    const result = await window.vcwriter.checkForUpdate();
-    setChecking(false);
-    if (!result.ok || !result.data) {
-      setError(result.error ?? 'The update check failed');
-      return;
-    }
-    setUpdate(result.data);
-  }, []);
-
+  // Asked afresh whenever the page opens, as Help → Check for Updates does.
   useEffect(() => {
-    void check();
-  }, [check]);
+    void updates.check();
+  }, []);
 
   const activate = async () => {
     setActivating(true);
@@ -63,24 +47,6 @@ export function LicensePanel() {
     setSerial('');
     window.dispatchEvent(new Event(ACTIVATED_EVENT));
   };
-
-  const download = async () => {
-    if (update?.decision.action !== 'update') return;
-    setDownloading(true);
-    setError(null);
-    const result = await window.vcwriter.downloadUpdate({
-      expectedSha256: update.decision.sha256,
-      version: update.decision.version,
-    });
-    setDownloading(false);
-    if (!result.ok || !result.data) {
-      setError(result.error ?? 'The update could not be downloaded');
-      return;
-    }
-    setDownloaded({ path: result.data.path, version: result.data.version });
-  };
-
-  const decision = update?.decision;
 
   return (
     <div className="account">
@@ -110,44 +76,7 @@ export function LicensePanel() {
       {activation ? <p className="notice">{activation}</p> : null}
 
       <h2>Updates</h2>
-      {checking ? (
-        <p className="muted">Checking…</p>
-      ) : decision?.action === 'update' ? (
-        <>
-          <p>
-            Version {decision.version} is available. You have {update?.currentVersion}.
-          </p>
-          {decision.releaseNotes ? <p className="muted">{decision.releaseNotes}</p> : null}
-          {downloaded ? (
-            <>
-              <p className="notice">
-                Version {downloaded.version} downloaded and its checksum verified. Installing will close VC
-                Writer — your work is saved first.
-              </p>
-              <button type="button" className="primary" onClick={() => void window.vcwriter.installUpdate(downloaded.path)}>
-                Install and restart
-              </button>
-            </>
-          ) : (
-            <button type="button" className="primary" disabled={downloading} onClick={() => void download()}>
-              {downloading ? 'Downloading…' : 'Download update'}
-            </button>
-          )}
-        </>
-      ) : decision?.action === 'unsupported_os' ? (
-        <p className="notice">
-          Version {decision.version} needs {decision.requires} or later, so it is not offered on this computer.
-          The version you have keeps working.
-        </p>
-      ) : decision?.action === 'no_build' ? (
-        <p className="muted">No build has been published for this platform yet.</p>
-      ) : (
-        <p className="muted">VC Writer {update?.currentVersion} is up to date.</p>
-      )}
-
-      <button type="button" className="ghost" disabled={checking} onClick={() => void check()}>
-        Check again
-      </button>
+      <UpdatePanel />
 
       {error ? (
         <p className="error" role="alert">

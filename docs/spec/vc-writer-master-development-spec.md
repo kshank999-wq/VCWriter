@@ -84,7 +84,10 @@ hands-free idea and scene capture away from the desktop.
 - Activation, deactivation and lost-device replacement flows exist so support
   does not require manual database edits.
 - The application can check for a newer compatible build and guide the user
-  through updating.
+  through updating. As built (addendum 48): VC Composer's updater — Help →
+  Check for Updates, a quiet look after start-up, a verified background
+  download, and Install and Restart (by itself when the writer is away and
+  everything is saved, else at the next start).
 - Download URLs are never hard-coded in the client: use backend-managed release
   metadata or signed, expiring URLs.
 - Preserve backward-compatible project migration and create a
