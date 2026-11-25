@@ -143,6 +143,22 @@ const firstCapture = async (): Promise<string | null> => {
   return (data as { captured_at: string | null } | null)?.captured_at ?? null;
 };
 
+/**
+ * The account's licences given rather than bought (addendum 44), which
+ * include Notes. The customer's own rows, under row level security.
+ */
+const givenLicences = async (): Promise<{ grant: string; status: string; expiresAt: string | null }[]> => {
+  const { data } = await serverClient()
+    .from('licenses')
+    .select('grant_kind, status, expires_at')
+    .in('grant_kind', ['academic', 'master']);
+  return ((data ?? []) as { grant_kind: string; status: string; expires_at: string | null }[]).map((row) => ({
+    grant: row.grant_kind,
+    status: row.status,
+    expiresAt: row.expires_at ?? null,
+  }));
+};
+
 export const notesPlanFor = async (userId: string): Promise<{ plan: NotesPlan; subscription: NotesSubscription | null }> => {
   let subscription = await readNotesSubscription();
   const now = new Date().toISOString();
@@ -164,7 +180,7 @@ export const notesPlanFor = async (userId: string): Promise<{ plan: NotesPlan; s
   if (mayCaptureNotes(live)) return { plan: live, subscription };
 
   return {
-    plan: notesPlan({ subscription, firstCapturedAt: await firstCapture(), now }),
+    plan: notesPlan({ subscription, firstCapturedAt: await firstCapture(), given: await givenLicences(), now }),
     subscription,
   };
 };

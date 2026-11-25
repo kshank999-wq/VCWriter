@@ -226,3 +226,34 @@ describe('somebody who was here before it was paid', () => {
     expect(plan.kind).toBe('included');
   });
 });
+
+describe('a licence given rather than bought includes Notes (addendum 44 §6)', () => {
+  const now = '2026-11-25T00:00:00.000Z';
+  it('sends on a live academic licence, and says until when', () => {
+    const plan = notesPlan({ subscription: null, given: [{ grant: 'academic', status: 'active', expiresAt: '2027-02-25T00:00:00.000Z' }], now });
+    expect(plan).toEqual({ kind: 'given', grant: 'academic', until: '2027-02-25T00:00:00.000Z' });
+    expect(mayCaptureNotes(plan)).toBe(true);
+    expect(mayOfferNotes(plan)).toBe(false);
+    expect(describeNotesPlan(plan)).toContain('Included with your academic licence until 25 February 2027');
+  });
+  it('sends on a master licence, which never ends, over an academic one', () => {
+    const plan = notesPlan({
+      subscription: null,
+      given: [
+        { grant: 'academic', status: 'active', expiresAt: '2027-02-25T00:00:00.000Z' },
+        { grant: 'master', status: 'active', expiresAt: null },
+      ],
+      now,
+    });
+    expect(plan).toEqual({ kind: 'given', grant: 'master', until: null });
+  });
+  it('does not on one that has ended, been suspended, or was bought', () => {
+    for (const one of [
+      { grant: 'academic', status: 'active', expiresAt: '2026-11-01T00:00:00.000Z' },
+      { grant: 'academic', status: 'suspended', expiresAt: null },
+      { grant: 'purchase', status: 'active', expiresAt: null },
+    ]) {
+      expect(mayCaptureNotes(notesPlan({ subscription: null, given: [one], now }))).toBe(false);
+    }
+  });
+});

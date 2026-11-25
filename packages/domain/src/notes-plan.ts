@@ -199,6 +199,12 @@ export type NotesPlan =
   | { kind: 'never' }
   /** Was here before it was a paid app, and keeps it. */
   | { kind: 'included'; since: string }
+  /**
+   * A licence given rather than bought — academic or master (addendum 44) —
+   * covers the phone too (from Ken, 25 November: *make the free licenses
+   * include the phone app*). `until` is when the licence ends, or null.
+   */
+  | { kind: 'given'; grant: 'academic' | 'master'; until: string | null }
   /** Paid up. `until` is when it next renews, or when it runs out if it will not. */
   | { kind: 'paid'; store: NotesStore; plan: NotesPlanKind | null; until: string | null; renews: boolean }
   /** The shop is chasing a payment. Access continues, and the writer should be told. */
@@ -228,6 +234,11 @@ export const notesPlan = (input: {
    * `NOTES_FREE_FROM` is somebody who was here first, and they keep it.
    */
   firstCapturedAt?: string | null;
+  /**
+   * The account's licences given rather than bought, if any: a live one
+   * includes Notes, so a tester or a class is invited once, for both.
+   */
+  given?: readonly { grant: string; status: string; expiresAt: string | null }[];
   /** ISO. Taken rather than read off the clock so a reading is testable. */
   now: string;
 }): NotesPlan => {
@@ -237,10 +248,20 @@ export const notesPlan = (input: {
    * were here early — and a subscription that lapses falls back to this, which
    * is the generous answer and the right one.
    */
-  const early = (): NotesPlan | null =>
-    input.firstCapturedAt && input.firstCapturedAt < NOTES_FREE_FROM
+  const early = (): NotesPlan | null => {
+    const live = (input.given ?? []).filter(
+      (one) =>
+        (one.grant === 'academic' || one.grant === 'master') &&
+        one.status === 'active' &&
+        (one.expiresAt === null || one.expiresAt > input.now),
+    );
+    // Of two, the one that lasts longer answers: a master licence never ends.
+    const best = live.sort((a, b) => (a.expiresAt === null ? -1 : b.expiresAt === null ? 1 : b.expiresAt.localeCompare(a.expiresAt)))[0];
+    if (best) return { kind: 'given', grant: best.grant as 'academic' | 'master', until: best.expiresAt };
+    return input.firstCapturedAt && input.firstCapturedAt < NOTES_FREE_FROM
       ? { kind: 'included', since: input.firstCapturedAt }
       : null;
+  };
 
   const found = input.subscription;
   if (!found || found.state === 'none') return early() ?? { kind: 'never' };
@@ -285,7 +306,7 @@ export const notesPlan = (input: {
  * is why there is no second predicate here to be reached for by mistake.
  */
 export const mayCaptureNotes = (plan: NotesPlan): boolean =>
-  plan.kind === 'paid' || plan.kind === 'grace' || plan.kind === 'included';
+  plan.kind === 'paid' || plan.kind === 'grace' || plan.kind === 'included' || plan.kind === 'given';
 
 /** The bit of the promise that is about the work, said wherever a refusal is. */
 export const NOTES_PROMISE =
@@ -303,6 +324,7 @@ export const notesRefusal = (plan: NotesPlan): string | null => {
     case 'paid':
     case 'grace':
     case 'included':
+    case 'given':
       return null;
     case 'never':
       return `Notes needs a subscription — ${NOTES_PRICE_WORDS.yearly} or ${NOTES_PRICE_WORDS.monthly}, from the app. ${NOTES_PROMISE}`;
@@ -334,6 +356,13 @@ export const describeNotesPlan = (plan: NotesPlan): string => {
       return `Not subscribed. Notes is ${NOTES_PRICE_WORDS.yearly} or ${NOTES_PRICE_WORDS.monthly}, bought in the app.`;
     case 'included':
       return 'Included. You were using Notes before it became a paid app, so it stays yours — there is nothing to buy.';
+    case 'given': {
+      const when = day(plan.until);
+      const which = plan.grant === 'master' ? 'master' : 'academic';
+      return when
+        ? `Included with your ${which} licence until ${when} — there is nothing to buy.`
+        : `Included with your ${which} licence — there is nothing to buy.`;
+    }
     case 'paid': {
       const when = day(plan.until);
       const named = plan.plan ? NOTES_PRICE_WORDS[plan.plan] : 'Subscribed';

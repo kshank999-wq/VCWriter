@@ -270,18 +270,22 @@ export const licenseGranted = (input: LicenseGrantedInput): RenderedEmail => {
         }.`;
   const how =
     'Sign in at vc-writer.com with this email address — a sign-in link is fine, no password is needed — to download VC Writer for Windows or macOS. It activates the first time you sign in on a computer.';
+  // Given licences include Notes on the phone (addendum 44 §6).
+  const phone =
+    'It also includes VC Writer Notes on your phone: sign in to the app with this same email address and your notes send to your desk, with nothing to buy.';
   return {
     template: 'license_granted',
-    version: 1,
+    version: 2,
     subject: input.kind === 'master' ? 'Your VC Writer master license' : 'Your VC Writer academic license',
     html: shell(
       input.kind === 'master' ? 'Your master license' : 'Your academic license',
       `<p style="margin:0 0 16px">${escapeHtml(what)}</p>
        ${serialBlock(input.serial)}
        ${primaryLink(input.accountUrl, 'Sign in and download')}
-       ${note(`${diamond}${escapeHtml(how)}`)}`,
+       ${note(`${diamond}${escapeHtml(how)}`)}
+       ${note(`${diamond}${escapeHtml(phone)}`)}`,
     ),
-    text: ['VC WRITER', '', what, '', `Your license: ${input.serial}`, '', `Sign in and download: ${input.accountUrl}`, '', how, '', 'vc-writer.com'].join('\n'),
+    text: ['VC WRITER', '', what, '', `Your license: ${input.serial}`, '', `Sign in and download: ${input.accountUrl}`, '', how, '', phone, '', 'vc-writer.com'].join('\n'),
   };
 };
 

@@ -75,3 +75,26 @@ a generated id. Every computer he signs in on now activates on it.
 Notes needs nothing for him. His first note predates 30 September, so his
 account reads `included` (addendum 27 §14.1): the phone sends and syncs
 without a subscription.
+
+## 6. The phone comes with it
+
+From Ken, 25 November 2026, inviting writers to test the program and the
+phone app: *make the free licenses include the phone app.*
+
+- A live academic or master licence includes Notes: `notesPlan` takes the
+  account's given licences and reads `{ kind: 'given', grant, until }` where
+  nothing is being paid for. It sends, it is never offered a subscription,
+  and the line says *Included with your academic licence until …*. A
+  subscription, where there is one, still answers first.
+- Live means `active` and not past `expires_at`. A suspended or ended one
+  stops it, exactly as it stops the desk. A bought desktop licence does not
+  include Notes; Notes is its own subscription.
+- `notesPlanFor` reads the licences under the customer's own row level
+  security (the 0002 policy). The phone asks the server, so no new phone
+  build was needed.
+- The `license_granted` email (version 2) says so: sign in to the app with
+  the same email address.
+
+So a tester is invited once, on **Admin → Licenses**, for both the program
+and the phone. On iPhone the app reaches them through TestFlight's external
+testing; on Android through the APK link (or Play's internal testing track).

@@ -118,5 +118,7 @@ describe('a given licence (addendum 44)', () => {
     expect(email.html).not.toContain('<High>');
     const master = licenseGranted({ serial: 'X', kind: 'master', grantedTo: '', seats: 'any number of computers', expiresAt: null, accountUrl: 'u' });
     expect(master.text).toContain('covers any number of computers and does not expire');
+    // And the phone, which comes with it (addendum 44 §6).
+    expect(email.text).toContain('includes VC Writer Notes on your phone');
   });
 });
