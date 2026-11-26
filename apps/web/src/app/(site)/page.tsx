@@ -3,6 +3,7 @@ import { walkthroughBySlug } from '@/lib/walkthroughs';
 import Link from 'next/link';
 import { Emblem } from '../wordmark';
 import { ModuleChooser } from './module-chooser';
+import { startableFormatCards } from '@vcwriter/domain';
 import { ToolChooser } from './tool-chooser';
 
 const FEATURES = [
@@ -40,6 +41,10 @@ const FEATURES = [
   },
 ];
 
+const WORDS = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve'];
+const count = startableFormatCards().length;
+const MODULE_COUNT = WORDS[count] ?? String(count);
+
 export default function HomePage() {
   return (
     <>
@@ -64,7 +69,16 @@ export default function HomePage() {
         </figure>
       </div>
 
-      {/* The companion app, at the top (from Ken: *capturing every idea when
+      <section id="modules">
+        <h2>
+          What are you <em>writing?</em>
+        </h2>
+        <p className="lede">{MODULE_COUNT} modules, one program. Choose yours to see what VC Writer does for that kind of work.</p>
+        <ModuleChooser />
+      </section>
+
+      {/* The companion app, under the modules (from Ken, 26 November; before
+          that at the top: *capturing every idea when
           inspiration takes you, and organizing and loading it right into your
           writing software*). */}
       <section id="notes-app" className="notes-band">
@@ -80,12 +94,6 @@ export default function HomePage() {
         <Link href="/notes" className="button secondary">
           VC Writer Notes
         </Link>
-      </section>
-
-      <section id="modules">
-        <h2>What are you writing?</h2>
-        <p className="lede">Choose a module to see what VC Writer does for that kind of work.</p>
-        <ModuleChooser />
       </section>
 
       {/* Layout and publishing, under all the modules (from Ken): one line and
