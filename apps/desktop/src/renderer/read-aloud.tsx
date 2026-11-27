@@ -122,11 +122,27 @@ export function ReadAloud({ lines, scope, autoStart = 0 }: { lines: () => ReadLi
   const readingRef = useRef(reading);
   readingRef.current = reading;
 
-  // Asked to read from elsewhere (the Read back button on the bar).
+  /**
+   * Asked to read from elsewhere (Read back on the bar, or Editor → Read back).
+   *
+   * **The ask is kept until it can be answered** (from Ken, 27 November, on
+   * 1.0.62: *the readback function doesn't do anything*). Arriving from another
+   * page, this mounts with the ask already made and before the voices' status
+   * has come back, and an ask read only once was dropped. And an ask with no
+   * voices on the computer fetches them, then reads, rather than doing nothing.
+   */
+  const answered = useRef(0);
+  const asked = autoStart > answered.current;
   useEffect(() => {
-    if (autoStart > 0 && natural.installed) void run(placed.current);
+    if (!asked || !natural.available) return;
+    if (natural.installed) {
+      answered.current = autoStart;
+      void run(placed.current);
+    } else if (natural.progress === null && !natural.checking) {
+      void natural.install();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoStart]);
+  }, [autoStart, asked, natural.available, natural.installed, natural.checking]);
 
   // Never leave a voice talking after the page goes.
   useEffect(() => () => stop(), [stop]);

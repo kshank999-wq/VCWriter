@@ -34,6 +34,8 @@ export interface NaturalVoicesState {
   installed: boolean;
   /** 0–1 while downloading, null otherwise. */
   progress: number | null;
+  /** Still asking whether they are installed (the first answer has not come back). */
+  checking: boolean;
   error: string | null;
   install(): Promise<void>;
   remove(): Promise<void>;
@@ -43,14 +45,17 @@ export function useNaturalVoices(): NaturalVoicesState {
   const bridge = naturalBridge();
   const [installed, setInstalled] = useState(false);
   const [progress, setProgress] = useState<number | null>(null);
+  const [checking, setChecking] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let live = true;
     const check = () =>
       void bridge?.status().then((result) => {
-        if (live && result.ok && result.data) setInstalled(result.data.installed);
-      });
+        if (!live) return;
+        if (result.ok && result.data) setInstalled(result.data.installed);
+        setChecking(false);
+      }).catch(() => live && setChecking(false));
     check();
     window.addEventListener(CHANGED, check);
     return () => {
@@ -77,7 +82,7 @@ export function useNaturalVoices(): NaturalVoicesState {
     window.dispatchEvent(new Event(CHANGED));
   }, [bridge]);
 
-  return { available: Boolean(bridge), installed, progress, error, install, remove };
+  return { available: Boolean(bridge), installed, progress, checking: Boolean(bridge) && checking, error, install, remove };
 }
 
 /**
