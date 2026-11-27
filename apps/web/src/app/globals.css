@@ -568,7 +568,7 @@ section > .lede {
   letter-spacing: 0.12em;
   font-size: 14px;
   font-weight: 600;
-  color: var(--module);
+  color: var(--gold);
 }
 
 .module-option span {
@@ -583,7 +583,7 @@ section > .lede {
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--module);
+  color: var(--gold);
   opacity: 0;
   transform: translateX(-4px);
   transition: opacity 0.18s, transform 0.18s;
@@ -609,6 +609,9 @@ section > .lede {
   border-color: var(--module);
   box-shadow: 0 0 0 1px var(--module);
 }
+
+/* The words stay gold: in the modules' colours, one after another, they read
+   as a rainbow (from Ken, 27 November). The colour is the boxes' and marks'. */
 
 /* The home page's heading over them: a little louder than the rest. */
 #modules h2 {
