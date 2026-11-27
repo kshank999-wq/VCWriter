@@ -616,13 +616,6 @@ section > .lede {
   margin-bottom: 4px;
 }
 
-#modules h2 em {
-  font-style: normal;
-  background: linear-gradient(90deg, #ef6a4c, #f5b544, #52d08f, #4fb3e8, #9b7bff, #f0568e);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
 
 /* Phones cannot hover: the way in is always said there. */
 @media (hover: none) {

@@ -70,9 +70,7 @@ export default function HomePage() {
       </div>
 
       <section id="modules">
-        <h2>
-          What are you <em>writing?</em>
-        </h2>
+        <h2>What are you writing?</h2>
         <p className="lede">{MODULE_COUNT} modules, one program. Choose yours to see what VC Writer does for that kind of work.</p>
         <ModuleChooser />
       </section>
