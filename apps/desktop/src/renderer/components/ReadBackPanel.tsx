@@ -41,7 +41,13 @@ export function ReadBackPanel({ file: stored, currentUnitId, onUpdate }: ReadBac
   const natural = useNaturalVoices();
   const player = useRef<NaturalPlayer | null>(null);
   const file = useMemo(() => withNaturalVoicesOnly(stored), [stored]);
-  const voices = useMemo(() => (natural.installed ? naturalVoiceDescriptors() : []), [natural.installed]);
+  /**
+   * Every natural voice, offered for the cast **before they are downloaded**
+   * too (from Ken, 27 November: *we should be able to select from several …
+   * in the screenplay modules, we should be able to assign voices*): choosing
+   * is writing down a name, and only playing needs them on this computer.
+   */
+  const voices = useMemo(() => naturalVoiceDescriptors(), []);
   const [scope, setScope] = useState<'scene' | 'project'>('scene');
   const [rate, setRate] = useState(1);
   const [playing, setPlaying] = useState(false);
@@ -149,9 +155,22 @@ export function ReadBackPanel({ file: stored, currentUnitId, onUpdate }: ReadBac
             />
             <span className="muted">{rate.toFixed(1)}×</span>
           </label>
-          <button type="button" className="primary" disabled={!supported || playing} onClick={() => void play(0)}>
-            Play
-          </button>
+          {supported || !natural.available ? (
+            <button type="button" className="primary" disabled={!supported || playing} onClick={() => void play(0)}>
+              Play
+            </button>
+          ) : (
+            // Not a greyed-out Play: the button that makes Play possible.
+            <button
+              type="button"
+              className="primary nowrap"
+              disabled={natural.progress !== null}
+              title="Read back uses VC Writer's natural voices: download them once (about 100 MB, free, works offline)"
+              onClick={() => void natural.install()}
+            >
+              {natural.progress !== null ? `Getting voices ${Math.round(natural.progress * 100)}%` : '▶ Get the voices'}
+            </button>
+          )}
           <button type="button" disabled={!playing} onClick={stop}>
             Stop
           </button>
@@ -159,6 +178,9 @@ export function ReadBackPanel({ file: stored, currentUnitId, onUpdate }: ReadBac
       </div>
 
       {failed ? <p className="notice">A line could not be read and was skipped.</p> : null}
+
+      {/* Up here, where it is seen: until they are downloaded, this is how reading starts. */}
+      <NaturalVoicesBox natural={natural} />
 
       <p className="muted">
         {plan.steps.length} {plan.steps.length === 1 ? 'line' : 'lines'} · about {Math.round(seconds / 60)} min
@@ -209,8 +231,6 @@ export function ReadBackPanel({ file: stored, currentUnitId, onUpdate }: ReadBac
           read by the narrator.
         </p>
       ) : null}
-
-      <NaturalVoicesBox natural={natural} />
 
       <div className="panel-header">
         <h3>Voices</h3>

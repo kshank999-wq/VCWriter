@@ -25341,3 +25341,7 @@ dialog.writer-dialog {
 .update-notice.warning {
   border-color: #c9873a;
 }
+
+.readback .nowrap {
+  white-space: nowrap;
+}

@@ -978,6 +978,13 @@ export default function App() {
           setEditorTab('polarity');
           return setView('editor');
         case 'editor.readBack':
+          // A book reads aloud from its own page, as the bar's Read back does (from Ken, 27 November:
+          // the instructional book's Read back opened the old screen, its Play greyed out).
+          if (file && isProseFormat(file.project.format)) {
+            closeRooms();
+            setView('write');
+            return setReadAloudAsk((n) => n + 1);
+          }
           return setView('readback');
 
         case 'file.new.episode':

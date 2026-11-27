@@ -66,6 +66,16 @@ const bridge = (installed: boolean) => {
 };
 
 describe('natural voices in read-back', () => {
+  it('lets the cast be chosen before the voices are downloaded, and Play is the download (from Ken)', async () => {
+    const { install } = bridge(false);
+    render(<ReadBackPanel file={scene()} currentUnitId={null} onUpdate={() => undefined} />);
+    const narrator = screen.getByLabelText('Narrator voice') as HTMLSelectElement;
+    expect(narrator.options.length).toBeGreaterThan(10);
+    fireEvent.click(await screen.findByRole('button', { name: '▶ Get the voices' }));
+    await screen.findByRole('button', { name: 'Play' });
+    expect(install).toHaveBeenCalledOnce();
+  });
+
   it('offers the download, and lists the natural voices once it is done', async () => {
     const { install } = bridge(false);
     render(<ReadBackPanel file={scene()} currentUnitId={null} onUpdate={() => undefined} />);
